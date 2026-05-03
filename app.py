@@ -49,9 +49,9 @@ defaults = {
     "historial": [],
     "session_type": "",
     "open_salida_form": False,
-    "salida_year": "",
-    "salida_boat": "",
-    "salida_name": "",
+    "salida_year": None,
+    "salida_boat": None,
+    "salida_name": None,
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -75,12 +75,22 @@ def do_logout():
     st.session_state["confirm_state"] = "idle"
     st.session_state["session_type"] = ""
     st.session_state["open_salida_form"] = False
-    st.session_state["salida_year"] = ""
-    st.session_state["salida_boat"] = ""
-    st.session_state["salida_name"] = ""
-    for key in ["nombre_copia", "copy_url", "process_title"]:
+    st.session_state["salida_year"] = None
+    st.session_state["salida_boat"] = None
+    st.session_state["salida_name"] = None
+
+    for key in [
+        "nombre_copia",
+        "copy_url",
+        "process_title",
+        "opened_url",
+        "salida_year_widget",
+        "salida_boat_widget",
+        "salida_name_widget",
+    ]:
         if key in st.session_state:
             del st.session_state[key]
+
     st.rerun()
 
 def render_step(label, detail, state):
@@ -117,11 +127,40 @@ def iniciar_proceso(session_type, template_id, prefix_name, process_title):
     st.session_state["process_title"] = process_title
     st.rerun()
 
+def reset_salida_downstream(level):
+    if level == "year":
+        st.session_state["salida_boat"] = None
+        st.session_state["salida_name"] = None
+        if "salida_boat_widget" in st.session_state:
+            del st.session_state["salida_boat_widget"]
+        if "salida_name_widget" in st.session_state:
+            del st.session_state["salida_name_widget"]
+    elif level == "boat":
+        st.session_state["salida_name"] = None
+        if "salida_name_widget" in st.session_state:
+            del st.session_state["salida_name_widget"]
+
+def on_year_change():
+    st.session_state["salida_year"] = st.session_state.get("salida_year_widget")
+    reset_salida_downstream("year")
+
+def on_boat_change():
+    st.session_state["salida_boat"] = st.session_state.get("salida_boat_widget")
+    reset_salida_downstream("boat")
+
+def on_salida_change():
+    st.session_state["salida_name"] = st.session_state.get("salida_name_widget")
+
 # ──────────────────────────────────────────────────────────────────────────────
 # GOOGLE DRIVE API
 # ──────────────────────────────────────────────────────────────────────────────
 @st.cache_resource
 def get_drive_service():
+    if "gcp_service_account" not in st.secrets:
+        raise Exception(
+            'Falta [gcp_service_account] en .streamlit/secrets.toml o en los Secrets de Streamlit Cloud.'
+        )
+
     creds = service_account.Credentials.from_service_account_info(
         st.secrets["gcp_service_account"],
         scopes=["https://www.googleapis.com/auth/drive.readonly"]
@@ -182,12 +221,11 @@ def get_boats(year_name):
         files = list_folder_items(sub["id"], folders_only=False)
         for file in files:
             name = file["name"].strip()
-            if "_" in name:
-                parts = name.split("_")
-                if len(parts) > 1:
-                    boat = "_".join(parts[:-1]).strip()
-                    if boat:
-                        boat_names.add(boat)
+            match = re.match(r"^(.*)_(\d{6})$", name)
+            if match:
+                boat = match.group(1).strip()
+                if boat:
+                    boat_names.add(boat)
 
     return sorted(boat_names)
 
@@ -209,7 +247,7 @@ def get_departures(year_name, boat_name):
                 departures.append({
                     "nombre": name,
                     "id": file["id"],
-                    "url": file.get("webViewLink", f"https://docs.google.com/spreadsheets/d/{file['id']}/edit")
+                    "url": file.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{file['id']}/edit"
                 })
 
     departures.sort(key=lambda x: x["nombre"])
@@ -330,8 +368,7 @@ div[data-testid="stFormSubmitButton"] > button:hover,
 
 div.st-key-btn_crear_es button,
 div.st-key-btn_crear_grupos button,
-div.st-key-btn_ir_salida button,
-div.st-key-btn_open_salida button {
+div.st-key-btn_ir_salida button {
     background:#FFFFFF !important;
     color:#214D92 !important;
     border:1px solid rgba(33,77,146,0.14) !important;
@@ -344,8 +381,7 @@ div.st-key-btn_open_salida button {
 }
 div.st-key-btn_crear_es button:hover,
 div.st-key-btn_crear_grupos button:hover,
-div.st-key-btn_ir_salida button:hover,
-div.st-key-btn_open_salida button:hover {
+div.st-key-btn_ir_salida button:hover {
     background:#F8FBFF !important;
     color:#163D78 !important;
     border-color:rgba(33,77,146,0.24) !important;
@@ -829,7 +865,7 @@ with col3:
     st.markdown('</div></div>', unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────────────
-# DEBUG DE LA TARJETA IR A SALIDA
+# BLOQUE IR A SALIDA
 # ──────────────────────────────────────────────────────────────────────────────
 if st.session_state.get("open_salida_form"):
     st.markdown('<div class="selector-box">', unsafe_allow_html=True)
@@ -837,12 +873,89 @@ if st.session_state.get("open_salida_form"):
 
     try:
         years = get_years()
-        st.write("Años encontrados:", years)
+
+        current_year = st.session_state.get("salida_year")
+        if current_year not in years:
+            current_year = None
+
+        if "salida_year_widget" not in st.session_state:
+            st.session_state["salida_year_widget"] = current_year
+
+        selected_year = st.selectbox(
+            "AÑO",
+            options=years,
+            index=years.index(current_year) if current_year in years else None,
+            placeholder="Selecciona un año",
+            key="salida_year_widget",
+            on_change=on_year_change
+        )
+
+        if selected_year != st.session_state.get("salida_year"):
+            st.session_state["salida_year"] = selected_year
+
+        boats = get_boats(selected_year) if selected_year else []
+
+        current_boat = st.session_state.get("salida_boat")
+        if current_boat not in boats:
+            current_boat = None
+
+        if "salida_boat_widget" not in st.session_state:
+            st.session_state["salida_boat_widget"] = current_boat
+
+        selected_boat = st.selectbox(
+            "BARCO",
+            options=boats,
+            index=boats.index(current_boat) if current_boat in boats else None,
+            placeholder="Selecciona un barco",
+            key="salida_boat_widget",
+            on_change=on_boat_change,
+            disabled=not selected_year
+        )
+
+        if selected_boat != st.session_state.get("salida_boat"):
+            st.session_state["salida_boat"] = selected_boat
+
+        departures = get_departures(selected_year, selected_boat) if selected_year and selected_boat else []
+        departure_names = [d["nombre"] for d in departures]
+
+        current_departure = st.session_state.get("salida_name")
+        if current_departure not in departure_names:
+            current_departure = None
+
+        if "salida_name_widget" not in st.session_state:
+            st.session_state["salida_name_widget"] = current_departure
+
+        selected_departure = st.selectbox(
+            "SALIDA",
+            options=departure_names,
+            index=departure_names.index(current_departure) if current_departure in departure_names else None,
+            placeholder="Selecciona una salida",
+            key="salida_name_widget",
+            on_change=on_salida_change,
+            disabled=not selected_boat
+        )
+
+        if selected_departure != st.session_state.get("salida_name"):
+            st.session_state["salida_name"] = selected_departure
+
+        if selected_departure:
+            selected_obj = next((d for d in departures if d["nombre"] == selected_departure), None)
+
+            if selected_obj:
+                open_url = selected_obj["url"]
+                st.markdown(
+                    f'<a class="done-link" href="{open_url}" target="_blank">Abrir salida ↗</a>',
+                    unsafe_allow_html=True
+                )
+
     except Exception as e:
         st.exception(e)
 
     st.markdown('</div>', unsafe_allow_html=True)
 
+# ──────────────────────────────────────────────────────────────────────────────
+# PROCESO CREAR SESIÓN
+# ──────────────────────────────────────────────────────────────────────────────
 saved_name = st.session_state.get("nombre_copia", "")
 saved_url = st.session_state.get("copy_url", "")
 process_title = st.session_state.get("process_title", "Estado del Proceso")
@@ -853,10 +966,13 @@ if confirm_state in ("step1", "step2", "step3", "done"):
 
     if confirm_state == "step1":
         render_step("Progreso", "Preparando plantilla...", "active")
+
     elif confirm_state == "step2":
         render_step("Progreso", "Generando copia en Drive...", "active")
+
     elif confirm_state == "step3":
         render_step("Progreso", "Abriendo sesión...", "active")
+
     elif confirm_state == "done":
         render_step("Progreso", "Completo", "done")
         st.markdown(f"""
@@ -875,10 +991,12 @@ if confirm_state in ("step1", "step2", "step3", "done"):
         time.sleep(0.7)
         st.session_state["confirm_state"] = "step2"
         st.rerun()
+
     elif confirm_state == "step2":
         time.sleep(0.7)
         st.session_state["confirm_state"] = "step3"
         st.rerun()
+
     elif confirm_state == "step3":
         time.sleep(0.7)
         st.session_state["confirm_state"] = "done"
@@ -898,6 +1016,9 @@ if confirm_state in ("step1", "step2", "step3", "done"):
             unsafe_allow_html=True
         )
 
+# ──────────────────────────────────────────────────────────────────────────────
+# FOOTER / HISTORIAL / LOGOUT
+# ──────────────────────────────────────────────────────────────────────────────
 st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
 st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
 if st.button("Cerrar sesión", key="btn_logout"):
@@ -922,7 +1043,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · v3.4.1 DEBUG</span>
+    <span class="footer-text">Panel de Control · v3.5.0</span>
     <span class="footer-text">Carpeta: {FOLDER_ID}</span>
 </div>
 """, unsafe_allow_html=True)
