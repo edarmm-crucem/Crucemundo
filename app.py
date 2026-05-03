@@ -33,38 +33,37 @@ section[data-testid="stSidebar"] { display:none !important; }
 .section-eyebrow { font-family:'Sora',sans-serif; font-size:0.62rem; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:#5B6BF8; margin-bottom:0.3rem; }
 .section-heading { font-family:'Sora',sans-serif; font-size:1.05rem; font-weight:600; color:#1A1F36; margin-bottom:1.1rem; }
 
-/* CARD ROW */
-.card-row { display:flex; align-items:center; gap:0; max-width:560px; margin-bottom:0.6rem; }
-.tool-card { background:#fff; border:1.5px solid #E4E7EF; border-right:none; border-radius:12px 0 0 12px; padding:0.85rem 1.1rem; display:flex; align-items:center; gap:0.9rem; flex:1; }
-.tool-card-only { background:#fff; border:1.5px solid #E4E7EF; border-radius:12px; padding:0.85rem 1.1rem; display:flex; align-items:center; gap:0.9rem; max-width:560px; margin-bottom:0.6rem; opacity:0.42; }
+/* TARJETA MÁS ESTRECHA */
+.card-container { max-width: 440px; margin-bottom: 0.8rem; }
+.tool-card { 
+    background:#fff; border:1.5px solid #E4E7EF; border-radius:12px; 
+    padding:1rem 1.1rem; display:flex; align-items:center; gap:0.9rem; 
+}
 .card-icon-wrap { width:36px; height:36px; flex-shrink:0; border-radius:8px; background:#EEF0FD; border:1px solid #D4D8FB; display:flex; align-items:center; justify-content:center; font-size:1.05rem; }
 .card-body { flex:1; min-width:0; }
-.card-name { font-family:'Sora',sans-serif; font-size:0.84rem; font-weight:600; color:#1A1F36; }
-.card-desc { font-family:'DM Sans',sans-serif; font-size:0.72rem; color:#8C93A8; margin-top:0.1rem; }
-.badge-active { font-family:'DM Sans',sans-serif; font-size:0.57rem; font-weight:500; padding:0.13rem 0.48rem; border-radius:50px; text-transform:uppercase; letter-spacing:0.05em; background:#E8FAF2; color:#18835A; border:1px solid #B6E8D3; white-space:nowrap; }
-.badge-soon { font-family:'DM Sans',sans-serif; font-size:0.57rem; font-weight:500; padding:0.13rem 0.48rem; border-radius:50px; text-transform:uppercase; letter-spacing:0.05em; background:#F3F4F8; color:#8C93A8; border:1px solid #DDE0EA; white-space:nowrap; }
-
-/* BTN fused to card */
-.card-btn-wrap { display:flex; }
-.card-btn-wrap button, .stButton>button {
-    background:#5B6BF8 !important; color:#fff !important; border:1.5px solid #5B6BF8 !important;
-    border-radius:0 12px 12px 0 !important;
-    font-family:'Sora',sans-serif !important; font-size:0.78rem !important; font-weight:500 !important;
-    padding:0 1.1rem !important; height:100% !important; min-height:58px !important;
-    box-shadow:none !important; cursor:pointer !important; white-space:nowrap !important;
-    transition:background 0.15s !important;
-}
-.stButton>button:hover { background:#4656E8 !important; }
-.stButton { margin:0 !important; padding:0 !important; }
-
-/* secondary btn (reset) */
-.btn-secondary > div > button {
-    background:#fff !important; color:#5B6BF8 !important;
-    border:1.5px solid #C5CAF8 !important; border-radius:8px !important;
-    font-size:0.76rem !important; min-height:34px !important; padding:0 1rem !important;
+.card-name { font-family:'Sora',sans-serif; font-size:0.88rem; font-weight:600; color:#1A1F36; margin-bottom:0.1rem; }
+.card-desc { font-family:'DM Sans',sans-serif; font-size:0.74rem; color:#8C93A8; }
+.badge-active { font-family:'DM Sans',sans-serif; font-size:0.6rem; font-weight:500; padding:0.15rem 0.55rem; border-radius:50px; text-transform:uppercase; letter-spacing:0.05em; background:#E8FAF2; color:#18835A; border:1px solid #B6E8D3; white-space:nowrap; margin-left:auto; }
+.badge-soon { font-family:'DM Sans',sans-serif; font-size:0.6rem; font-weight:500; padding:0.15rem 0.55rem; border-radius:50px; text-transform:uppercase; letter-spacing:0.05em; background:#F3F4F8; color:#8C93A8; border:1px solid #DDE0EA; white-space:nowrap; margin-left:auto; }
+.tool-card-only { 
+    background:#fff; border:1.5px solid #E4E7EF; border-radius:12px; 
+    padding:1rem 1.1rem; display:flex; align-items:center; gap:0.9rem; 
+    opacity:0.45;
 }
 
-/* PROGRESS */
+/* BOTÓN LIMPIO */
+.clean-btn > div > button {
+    background:#fff !important; color:#2B3147 !important;
+    border:1.5px solid #D9DDEA !important; border-radius:10px !important;
+    font-family:'DM Sans',sans-serif !important; font-size:0.8rem !important;
+    font-weight:500 !important; min-height:40px !important; padding:0 1.1rem !important;
+    box-shadow:none !important;
+}
+.clean-btn > div > button:hover {
+    background:#F7F8FC !important; border-color:#C9D0E3 !important;
+}
+
+/* PROGRESS (sin cambios) */
 .progress-panel { max-width:560px; background:#fff; border:1.5px solid #E4E7EF; border-radius:12px; padding:1.1rem 1.3rem; margin-top:0.3rem; }
 .progress-title { font-family:'Sora',sans-serif; font-size:0.82rem; font-weight:600; color:#1A1F36; margin-bottom:0.9rem; }
 .step { display:flex; align-items:flex-start; gap:0.7rem; margin-bottom:0.6rem; }
@@ -78,6 +77,7 @@ section[data-testid="stSidebar"] { display:none !important; }
 .st-wait   { font-family:'DM Sans',sans-serif; font-size:0.77rem; color:#B0B6CC; }
 .step-detail { font-family:'DM Sans',sans-serif; font-size:0.68rem; color:#8C93A8; font-style:italic; margin-top:0.05rem; }
 .open-btn { display:inline-flex; align-items:center; gap:0.4rem; margin-top:1rem; background:#5B6BF8; color:#fff; border:none; border-radius:8px; padding:0.48rem 1.1rem; font-family:'Sora',sans-serif; font-size:0.78rem; font-weight:500; cursor:pointer; text-decoration:none; }
+.help-text { font-family:'DM Sans',sans-serif; font-size:0.7rem; color:#8C93A8; max-width:440px; margin-top:0.3rem; }
 
 /* HISTORIAL */
 .history-row { display:flex; align-items:center; gap:0.8rem; padding:0.62rem 1rem; border-radius:8px; background:#fff; border:1px solid #E4E7EF; margin-bottom:0.4rem; max-width:560px; }
@@ -115,7 +115,6 @@ copy_url     = (
     f"?title={urllib.parse.quote(nombre_copia)}"
     f"&parents={FOLDER_ID}"
 )
-template_url = f"https://docs.google.com/spreadsheets/d/{TEMPLATE_ID}/edit"
 
 TOOLS = [
     {"id":"confirmacion_es","icon":"📋","name":"Crear nueva confirmación ES","desc":"Copia la plantilla a tu carpeta de Drive","active":True},
@@ -125,31 +124,36 @@ TOOLS = [
 
 confirm_state = st.session_state.get("confirm_state","idle")
 
+# CONTENEDOR ESTRECHO PARA TARJETAS
+st.markdown('<div class="card-container">', unsafe_allow_html=True)
+
 for tool in TOOLS:
     if tool["active"]:
         badge = '<span class="badge-active">Activo</span>'
-        col_card, col_btn = st.columns([5, 1], gap="small")
-        with col_card:
-            st.markdown(f"""
-            <div class="tool-card" style="border-radius:12px; border:1.5px solid #E4E7EF;">
-                <div class="card-icon-wrap">{tool['icon']}</div>
-                <div class="card-body">
-                    <div class="card-name">{tool['name']}</div>
-                    <div class="card-desc">{tool['desc']}</div>
-                </div>
-                {badge}
+        st.markdown(f"""
+        <div class="tool-card">
+            <div class="card-icon-wrap">{tool['icon']}</div>
+            <div class="card-body">
+                <div class="card-name">{tool['name']}</div>
+                <div class="card-desc">{tool['desc']}</div>
             </div>
-            """, unsafe_allow_html=True)
-        with col_btn:
-            st.markdown("<div style='height:2px'></div>", unsafe_allow_html=True)
-            if confirm_state == "idle":
-                if st.button("✨ Crear", key="btn_crear"):
-                    st.session_state["confirm_state"] = "step1"
-                    st.session_state["nombre_copia"]  = nombre_copia
-                    st.session_state["copy_url"]      = copy_url
-                    st.rerun()
-            else:
-                st.button("✨ Crear", key="btn_crear_dis", disabled=True)
+            {badge}
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # INSTRUCCIONES CLARAS
+        st.markdown('<div class="help-text">Pulsa "Crear copia". Se abrirá Google Drive en nueva pestaña. Confirma allí si Google lo pide.</div>', unsafe_allow_html=True)
+        
+        # BOTÓN LIMPIO
+        st.markdown('<div class="clean-btn">', unsafe_allow_html=True)
+        if confirm_state == "idle":
+            if st.button("Crear copia", key="btn_crear"):
+                st.session_state["confirm_state"] = "step1"
+                st.session_state["nombre_copia"]  = nombre_copia
+                st.session_state["copy_url"]      = copy_url
+                st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+        
     else:
         st.markdown(f"""
         <div class="tool-card-only">
@@ -162,7 +166,9 @@ for tool in TOOLS:
         </div>
         """, unsafe_allow_html=True)
 
-# ── PROGRESO ──────────────────────────────────────────────────────────────────
+st.markdown('</div>', unsafe_allow_html=True)  # Cierra card-container
+
+# ── PROGRESO (mejorado) ───────────────────────────────────────────────────────
 saved_name  = st.session_state.get("nombre_copia", nombre_copia)
 saved_url   = st.session_state.get("copy_url", copy_url)
 
@@ -181,9 +187,9 @@ if confirm_state in ("step1","step2","step3","done"):
         return "st-wait"
 
     steps = [
-        ("Abriendo plantilla MASTER",   f"Accediendo al archivo original en Drive"),
-        ("Creando copia del archivo",   f"{saved_name}"),
-        ("Guardando en carpeta destino",f"Carpeta: {FOLDER_ID}"),
+        ("Preparando plantilla",   f"Accediendo al archivo original en Drive"),
+        ("Generando copia",        f"{saved_name}"),
+        ("Abriendo Google Drive",  f"Se abrirá en nueva pestaña"),
     ]
 
     html = '<div class="progress-panel"><div class="progress-title">⚙️ Proceso en curso</div>'
@@ -193,6 +199,10 @@ if confirm_state in ("step1","step2","step3","done"):
 
     if confirm_state == "done":
         html += f'<a class="open-btn" href="{saved_url}" target="_blank">📂 Abrir copia en Drive ↗</a>'
+        html += '<div style="margin-top:1rem; padding:0.8rem; background:#E8FAF2; border:1px solid #B6E8D3; border-radius:8px;">'
+        html += '<div style="font-family:\'DM Sans\',sans-serif; font-size:0.78rem; color:#18835A; font-weight:500;">✅ Siguiente paso:</div>'
+        html += '<div style="font-family:\'DM Sans\',sans-serif; font-size:0.72rem; color:#3D4468; margin-top:0.2rem;">Revisa la pestaña de Google Drive y confirma la copia si aparece el mensaje.</div>'
+        html += '</div>'
 
     html += '</div>'
     st.markdown(html, unsafe_allow_html=True)
@@ -223,9 +233,9 @@ if confirm_state in ("step1","step2","step3","done"):
                     unsafe_allow_html=True)
 
     if confirm_state == "done":
-        st.markdown("<div style='height:0.4rem'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
         with st.container():
-            st.markdown('<div class="btn-secondary">', unsafe_allow_html=True)
+            st.markdown('<div class="clean-btn">', unsafe_allow_html=True)
             if st.button("↩ Nueva confirmación", key="btn_reset"):
                 st.session_state["confirm_state"] = "idle"
                 st.rerun()
@@ -233,7 +243,7 @@ if confirm_state in ("step1","step2","step3","done"):
 
 # ── HISTORIAL ─────────────────────────────────────────────────────────────────
 if st.session_state.get("historial"):
-    st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:1.2rem'></div>", unsafe_allow_html=True)
     st.markdown('<div class="section-eyebrow">🕐 Esta sesión</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-heading">Archivos creados</div>', unsafe_allow_html=True)
     for i, entry in enumerate(st.session_state.historial, 1):
@@ -250,7 +260,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · v1.3.0</span>
+    <span class="footer-text">Panel de Control · v1.4.0</span>
     <span class="footer-text">Carpeta: {FOLDER_ID}</span>
 </div>
 """, unsafe_allow_html=True)
