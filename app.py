@@ -50,6 +50,7 @@ defaults = {
     "confirm_state": "idle",
     "historial": [],
     "session_type": "",
+    "active_panel": None,
     "open_salida_form": False,
     "open_crucero_form": False,
     "salida_year": None,
@@ -73,29 +74,55 @@ def get_saludo():
         return "Buenas tardes"
     return "Buenas noches"
 
-def do_logout():
-    keys_to_reset = [
-        "authenticated", "user_email", "display_name", "confirm_state", "session_type",
-        "open_salida_form", "open_crucero_form",
+def clear_salida_state():
+    for k in [
         "salida_year", "salida_boat", "salida_name",
-        "crucero_year", "crucero_boat"
-    ]
-    for k in keys_to_reset:
-        if k in st.session_state:
-            del st.session_state[k]
+        "salida_year_widget", "salida_boat_widget", "salida_name_widget"
+    ]:
+        st.session_state.pop(k, None)
 
-    widget_keys = [
-        "salida_year_widget", "salida_boat_widget", "salida_name_widget",
+def clear_crucero_state():
+    for k in [
+        "crucero_year", "crucero_boat",
         "crucero_year_widget", "crucero_boat_widget"
+    ]:
+        st.session_state.pop(k, None)
+
+def close_all_panels():
+    st.session_state["open_salida_form"] = False
+    st.session_state["open_crucero_form"] = False
+
+def open_panel(panel_name):
+    close_all_panels()
+
+    if panel_name == "salida":
+        clear_crucero_state()
+        st.session_state["open_salida_form"] = True
+
+    elif panel_name == "crucero":
+        clear_salida_state()
+        st.session_state["open_crucero_form"] = True
+
+    st.session_state["active_panel"] = panel_name
+
+def clear_all_selectors():
+    clear_salida_state()
+    clear_crucero_state()
+    close_all_panels()
+    st.session_state["active_panel"] = None
+
+def do_logout():
+    keys_to_delete = [
+        "authenticated", "user_email", "display_name", "confirm_state",
+        "session_type", "active_panel", "open_salida_form", "open_crucero_form",
+        "salida_year", "salida_boat", "salida_name",
+        "crucero_year", "crucero_boat",
+        "salida_year_widget", "salida_boat_widget", "salida_name_widget",
+        "crucero_year_widget", "crucero_boat_widget",
+        "nombre_copia", "copy_url", "process_title"
     ]
-    for k in widget_keys:
-        if k in st.session_state:
-            del st.session_state[k]
-
-    for key in ["nombre_copia", "copy_url", "process_title"]:
-        if key in st.session_state:
-            del st.session_state[key]
-
+    for k in keys_to_delete:
+        st.session_state.pop(k, None)
     st.rerun()
 
 def render_step(label, detail, state):
@@ -114,6 +141,8 @@ def render_step(label, detail, state):
     """, unsafe_allow_html=True)
 
 def iniciar_proceso(session_type, template_id, prefix_name, process_title):
+    clear_all_selectors()
+
     now = datetime.now()
     fecha_str = now.strftime("%Y%m%d_%H%M")
     display_user = st.session_state.get("display_name", "").strip() or "Sin usuario"
@@ -425,7 +454,7 @@ div[data-testid="stFormSubmitButton"] > button:hover,
 div.st-key-btn_crear_es button,
 div.st-key-btn_crear_grupos button,
 div.st-key-btn_ir_salida button,
-div.st-key-btn_crear_crucero_open button,
+div.st-key-btn_btn_crear_crucero_open button,
 div.st-key-btn_crear_crucero_action button {
     background:#FFFFFF !important;
     color:#214D92 !important;
@@ -440,7 +469,7 @@ div.st-key-btn_crear_crucero_action button {
 div.st-key-btn_crear_es button:hover,
 div.st-key-btn_crear_grupos button:hover,
 div.st-key-btn_ir_salida button:hover,
-div.st-key-btn_crear_crucero_open button:hover,
+div.st-key-btn_btn_crear_crucero_open button:hover,
 div.st-key-btn_crear_crucero_action button:hover {
     background:#F8FBFF !important;
     color:#163D78 !important;
@@ -512,6 +541,25 @@ div.st-key-btn_crear_crucero_action button:hover {
     display:inline-flex; align-items:center; gap:0.35rem; margin-top:0.65rem; background:#D9E9FF;
     color:#214D92 !important; border:1px solid #BDD6FF; border-radius:999px; padding:0.42rem 0.88rem;
     font-size:0.71rem; font-weight:600; text-decoration:none;
+}
+
+.step { display:flex; align-items:flex-start; gap:0.65rem; margin-bottom:0.6rem; }
+.step:last-child { margin-bottom:0; }
+.step-dot {
+    width:18px; height:18px; border-radius:50%; flex-shrink:0; margin-top:0.05rem;
+    display:flex; align-items:center; justify-content:center; font-size:0.55rem; font-weight:700;
+}
+.sd-done { background:#EEF7F1; border:1px solid #D8ECDF; color:#2E7D58; }
+.sd-active { background:#F2F4F9; border:1px solid #DDE2EC; color:#6E778B; }
+.sd-wait { background:#F8F9FC; border:1px solid #E6E9F0; color:#B1B8C9; }
+.step-content { display:flex; flex-direction:column; min-width:0; flex:1; }
+.st-done, .st-active, .st-wait { font-size:0.76rem; }
+.st-done { color:#394255; }
+.st-active { color:#1F2937; font-weight:600; }
+.st-wait { color:#A2ABBD; }
+.step-detail {
+    font-size:0.7rem; color:#8790A4; margin-top:0.08rem;
+    word-wrap:break-word !important; overflow-wrap:break-word !important; white-space:normal !important;
 }
 
 .history-row {
@@ -663,7 +711,7 @@ with col3:
     """, unsafe_allow_html=True)
 
     if st.button("Buscar Salida", key="btn_ir_salida"):
-        st.session_state["open_salida_form"] = not st.session_state["open_salida_form"]
+        open_panel("salida")
         st.rerun()
 
     st.markdown('</div></div>', unsafe_allow_html=True)
@@ -682,7 +730,7 @@ with col4:
     """, unsafe_allow_html=True)
 
     if st.button("Nuevo Crucero", key="btn_crear_crucero_open"):
-        st.session_state["open_crucero_form"] = not st.session_state["open_crucero_form"]
+        open_panel("crucero")
         st.rerun()
 
     st.markdown('</div></div>', unsafe_allow_html=True)
@@ -751,7 +799,10 @@ if st.session_state.get("open_salida_form"):
         if selected_departure:
             selected_obj = next((d for d in departures if d["nombre"] == selected_departure), None)
             if selected_obj:
-                st.markdown(f'<a class="done-link" href="{selected_obj["url"]}" target="_blank">Abrir salida ↗</a>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<a class="done-link" href="{selected_obj["url"]}" target="_blank">Abrir salida ↗</a>',
+                    unsafe_allow_html=True
+                )
 
     except Exception as e:
         st.exception(e)
@@ -816,10 +867,16 @@ if st.session_state.get("open_crucero_form"):
                 result = create_crucero_file(crucero_boat, fecha_salida)
                 if result["status"] == "duplicate":
                     st.warning(f'Ya existe "{result["name"]}".')
-                    st.markdown(f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir archivo existente ↗</a>', unsafe_allow_html=True)
+                    st.markdown(
+                        f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir archivo existente ↗</a>',
+                        unsafe_allow_html=True
+                    )
                 else:
                     st.success(f'Archivo "{result["name"]}" creado correctamente.')
-                    st.markdown(f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir crucero ↗</a>', unsafe_allow_html=True)
+                    st.markdown(
+                        f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir crucero ↗</a>',
+                        unsafe_allow_html=True
+                    )
 
     except Exception as e:
         st.exception(e)
@@ -877,7 +934,10 @@ if confirm_state in ("step1", "step2", "step3", "done"):
 
     if confirm_state == "done" and saved_name and not st.session_state.get("opened_" + saved_name):
         st.session_state["opened_" + saved_name] = True
-        st.markdown(f'<script>setTimeout(()=>window.open("{saved_url}","_blank"),300);</script>', unsafe_allow_html=True)
+        st.markdown(
+            f'<script>setTimeout(()=>window.open("{saved_url}","_blank"),300);</script>',
+            unsafe_allow_html=True
+        )
 
 st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
 st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
@@ -903,7 +963,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · v3.6.0</span>
+    <span class="footer-text">Panel de Control · v3.7.0</span>
     <span class="footer-text">Raíz Drive: {DRIVE_ROOT_ID}</span>
 </div>
 """, unsafe_allow_html=True)
