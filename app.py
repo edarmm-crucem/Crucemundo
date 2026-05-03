@@ -298,15 +298,17 @@ div.stButton > button:disabled {
     background:#F7F6F3;
     border:1px solid #E5E2DC;
     border-radius:20px;
-    padding:0.95rem;
+    padding:1.1rem;
     margin-bottom:0.65rem;
     box-shadow:0 6px 18px rgba(17,24,39,0.025);
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
 }
 .action-top {
     display:flex;
     align-items:flex-start;
     gap:0.78rem;
-    margin-bottom:0.8rem;
 }
 .action-icon {
     width:38px;
@@ -337,6 +339,9 @@ div.stButton > button:disabled {
     color:#7A808E;
     line-height:1.28;
 }
+.action-button-wrap {
+    width: 100%;
+}
 .action-button-wrap div.stButton {
     width:100% !important;
 }
@@ -351,6 +356,8 @@ div.stButton > button:disabled {
     font-weight:600 !important;
     justify-content:center !important;
     box-shadow:none !important;
+    display: flex;
+    align-items: center;
 }
 .action-button-wrap div.stButton > button:hover {
     background:#D0E3FF !important;
@@ -652,18 +659,19 @@ copy_url = (
 
 confirm_state = st.session_state.get("confirm_state", "idle")
 
-st.markdown('<div class="action-box">', unsafe_allow_html=True)
+# TARJETA COMPACTA DE ACCIÓN
 st.markdown(f"""
-<div class="action-top">
-    <div class="action-icon">📋</div>
-    <div class="action-text">
-        <div class="action-title">Nueva Confirmación ES</div>
-        <div class="action-desc">Crear sesión MASTER de trabajo para {DISPLAY_USER}</div>
+<div class="action-box">
+    <div class="action-top">
+        <div class="action-icon">📋</div>
+        <div class="action-text">
+            <div class="action-title">Nueva Confirmación ES</div>
+            <div class="action-desc">Crear sesión MASTER de trabajo para {DISPLAY_USER}</div>
+        </div>
     </div>
-</div>
+    <div class="action-button-wrap">
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="action-button-wrap">', unsafe_allow_html=True)
 if confirm_state == "idle":
     if st.button("Crear", key="btn_crear"):
         st.session_state["confirm_state"] = "step1"
@@ -672,8 +680,8 @@ if confirm_state == "idle":
         st.rerun()
 else:
     st.button("Crear", key="btn_crear_dis", disabled=True)
-st.markdown('</div>', unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown('</div></div>', unsafe_allow_html=True)
 
 saved_name = st.session_state.get("nombre_copia", nombre_copia)
 saved_url = st.session_state.get("copy_url", copy_url)
