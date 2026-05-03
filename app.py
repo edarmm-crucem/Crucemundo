@@ -232,94 +232,66 @@ section[data-testid="stSidebar"] { display:none !important; }
     color:#5D6880;
 }
 
-/* TARJETA */
-.session-card-wrap {
-    width: 220px;   /* AQUÍ CAMBIAS EL ANCHO REAL */
-    margin-bottom: 0.35rem;
-}
-.session-card {
-    width: 100%;
+/* FILA DE ACCIÓN */
+.action-row {
+    max-width: 470px;
     background:#FFFFFF;
     border:1px solid #E3E6EE;
     border-radius:12px;
-    padding:0.5rem 0.55rem;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:0.45rem;
-    min-height:56px;
+    padding:0.65rem 0.8rem;
+    margin-bottom:0.55rem;
 }
-.session-card-left {
-    display:flex;
-    align-items:center;
-    gap:0.45rem;
-    min-width:0;
-    flex:1;
-}
-.card-icon-wrap {
-    width:28px;
-    height:28px;
-    flex-shrink:0;
+.action-icon {
+    width:30px;
+    height:30px;
     border-radius:8px;
     background:#F2F4F9;
     border:1px solid #E3E7F1;
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:0.9rem;
+    font-size:0.95rem;
 }
-.card-body {
-    min-width:0;
-}
-.card-name {
-    font-size:0.8rem;
+.action-title {
+    font-size:0.82rem;
     font-weight:600;
     color:#1D2433;
     line-height:1.05;
 }
-.card-desc {
-    font-size:0.68rem;
+.action-desc {
+    font-size:0.69rem;
     color:#7C869D;
-    margin-top:0.08rem;
-    line-height:1.15;
-}
-.card-action-icon {
-    width:28px;
-    height:28px;
-    flex-shrink:0;
-    border-radius:8px;
-    background:#EEF3FF;
-    border:1px solid #D8E4FF;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:#426DCB;
-    font-size:0.88rem;
-    font-weight:700;
+    margin-top:0.12rem;
+    line-height:1.2;
 }
 
-/* BOTÓN DISCRETO */
-.inline-create-btn {
-    width:220px;
-}
-.inline-create-btn > div > button {
+/* BOTONES */
+.action-btn > div > button {
     background:#FFFFFF !important;
-    color:#5B6680 !important;
-    border:1px solid #E3E7EF !important;
+    color:#394255 !important;
+    border:1px solid #DCE1EB !important;
     border-radius:10px !important;
-    min-height:30px !important;
-    height:30px !important;
-    width:100% !important;
-    font-size:0.7rem !important;
+    min-height:36px !important;
+    height:36px !important;
+    min-width:82px !important;
+    padding:0 0.7rem !important;
+    font-size:0.74rem !important;
     font-weight:500 !important;
     box-shadow:none !important;
+    white-space:nowrap !important;
 }
-.inline-create-btn > div > button:hover {
+.action-btn > div > button:hover,
+.clean-btn > div > button:hover,
+.logout-btn > div > button:hover,
+div[data-testid="stFormSubmitButton"] > button:hover {
     background:#F7F8FB !important;
-    border-color:#D3D9E6 !important;
+    border-color:#CDD4E2 !important;
 }
-
-/* BOTONES GENERALES */
+.action-btn > div > button:disabled {
+    color:#AAB2C4 !important;
+    background:#F7F8FB !important;
+    border-color:#E3E7EF !important;
+}
 .clean-btn > div > button,
 .logout-btn > div > button,
 div[data-testid="stFormSubmitButton"] > button {
@@ -332,12 +304,6 @@ div[data-testid="stFormSubmitButton"] > button {
     min-height:40px !important;
     padding:0 1rem !important;
     box-shadow:none !important;
-}
-.clean-btn > div > button:hover,
-.logout-btn > div > button:hover,
-div[data-testid="stFormSubmitButton"] > button:hover {
-    background:#F7F8FB !important;
-    border-color:#CDD4E2 !important;
 }
 
 /* PROCESO */
@@ -584,30 +550,30 @@ copy_url = (
 
 confirm_state = st.session_state.get("confirm_state", "idle")
 
-st.markdown('<div class="session-card-wrap">', unsafe_allow_html=True)
-st.markdown("""
-<div class="session-card">
-    <div class="session-card-left">
-        <div class="card-icon-wrap">📋</div>
-        <div class="card-body">
-            <div class="card-name">Nueva sesión</div>
-            <div class="card-desc">Crear copia MASTER</div>
-        </div>
-    </div>
-    <div class="card-action-icon">↗</div>
-</div>
-""", unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
+st.markdown('<div class="action-row">', unsafe_allow_html=True)
+col_icon, col_text, col_btn = st.columns([0.6, 3.6, 1.1], gap="small")
 
-st.markdown('<div class="inline-create-btn">', unsafe_allow_html=True)
-if confirm_state == "idle":
-    if st.button("Crear sesión", key="btn_crear"):
-        st.session_state["confirm_state"] = "step1"
-        st.session_state["nombre_copia"] = nombre_copia
-        st.session_state["copy_url"] = copy_url
-        st.rerun()
-else:
-    st.button("Crear sesión", key="btn_crear_dis", disabled=True)
+with col_icon:
+    st.markdown('<div class="action-icon">📋</div>', unsafe_allow_html=True)
+
+with col_text:
+    st.markdown("""
+    <div class="action-title">Nueva sesión</div>
+    <div class="action-desc">Crear copia MASTER</div>
+    """, unsafe_allow_html=True)
+
+with col_btn:
+    st.markdown('<div class="action-btn">', unsafe_allow_html=True)
+    if confirm_state == "idle":
+        if st.button("Crear", key="btn_crear"):
+            st.session_state["confirm_state"] = "step1"
+            st.session_state["nombre_copia"] = nombre_copia
+            st.session_state["copy_url"] = copy_url
+            st.rerun()
+    else:
+        st.button("Crear", key="btn_crear_dis", disabled=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
 st.markdown('</div>', unsafe_allow_html=True)
 
 saved_name = st.session_state.get("nombre_copia", nombre_copia)
@@ -717,7 +683,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · v2.9.0</span>
+    <span class="footer-text">Panel de Control · v3.0.0</span>
     <span class="footer-text">Carpeta: {FOLDER_ID}</span>
 </div>
 """, unsafe_allow_html=True)
