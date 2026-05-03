@@ -99,7 +99,7 @@ st.markdown("""
 
 * { box-sizing: border-box; }
 
-html, body, [class*="css"]  {
+html, body, [class*="css"] {
     font-family: 'DM Sans', sans-serif;
 }
 
@@ -226,26 +226,25 @@ section[data-testid="stSidebar"] { display:none !important; }
     color:#5D6880;
 }
 
-/* TARJETA */
-/* AQUÍ CAMBIAS EL ANCHO: prueba 190px, 180px, 170px... */
-.card-row-wrap {
-    width:100px;
-    margin-bottom:0.7rem;
+/* FILA TARJETA + BOTÓN */
+.session-row {
+    max-width: 290px;   /* ancho total del conjunto */
 }
-.tool-card-compact {
-    width:100%;
+.session-card {
+    width: 100%;
+    max-width: 180px;   /* <-- AQUI CAMBIAS EL ANCHO REAL DE LA TARJETA */
     background:#FFFFFF;
     border:1px solid #E3E6EE;
     border-radius:12px;
-    padding:0.7rem 0.78rem;
+    padding:0.45rem 0.52rem;
     display:flex;
     align-items:center;
-    gap:0.62rem;
-    min-height:62px;
+    gap:0.45rem;
+    min-height:50px;
 }
 .card-icon-wrap {
-    width:30px;
-    height:30px;
+    width:28px;
+    height:28px;
     flex-shrink:0;
     border-radius:8px;
     background:#F2F4F9;
@@ -253,23 +252,23 @@ section[data-testid="stSidebar"] { display:none !important; }
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:0.92rem;
+    font-size:0.9rem;
 }
 .card-body {
     flex:1;
     min-width:0;
 }
 .card-name {
-    font-size:0.82rem;
+    font-size:0.8rem;
     font-weight:600;
     color:#1D2433;
-    line-height:1.1;
+    line-height:1.05;
 }
 .card-desc {
-    font-size:0.7rem;
+    font-size:0.68rem;
     color:#7C869D;
-    margin-top:0.12rem;
-    line-height:1.2;
+    margin-top:0.08rem;
+    line-height:1.15;
 }
 
 /* BOTONES */
@@ -280,8 +279,8 @@ section[data-testid="stSidebar"] { display:none !important; }
     border-radius:10px !important;
     min-height:36px !important;
     height:36px !important;
-    min-width:78px !important;
-    padding:0 0.7rem !important;
+    min-width:72px !important;
+    padding:0 0.65rem !important;
     font-size:0.74rem !important;
     font-weight:500 !important;
     box-shadow:none !important;
@@ -557,13 +556,12 @@ copy_url = (
 
 confirm_state = st.session_state.get("confirm_state", "idle")
 
-st.markdown('<div class="card-row-wrap">', unsafe_allow_html=True)
-
-col_card, col_btn = st.columns([3.0, 1.0], gap="small")
+st.markdown('<div class="session-row">', unsafe_allow_html=True)
+col_card, col_btn = st.columns([2.1, 1], gap="small")
 
 with col_card:
     st.markdown("""
-    <div class="tool-card-compact">
+    <div class="session-card">
         <div class="card-icon-wrap">📋</div>
         <div class="card-body">
             <div class="card-name">Nueva sesión</div>
@@ -575,13 +573,13 @@ with col_card:
 with col_btn:
     st.markdown('<div class="compact-btn">', unsafe_allow_html=True)
     if confirm_state == "idle":
-        if st.button("Abrir", key="btn_crear"):
+        if st.button("Crear", key="btn_crear"):
             st.session_state["confirm_state"] = "step1"
             st.session_state["nombre_copia"] = nombre_copia
             st.session_state["copy_url"] = copy_url
             st.rerun()
     else:
-        st.button("Abrir", key="btn_crear_dis", disabled=True)
+        st.button("Crear", key="btn_crear_dis", disabled=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown('</div>', unsafe_allow_html=True)
@@ -693,7 +691,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · v2.5.0</span>
+    <span class="footer-text">Panel de Control · v2.6.0</span>
     <span class="footer-text">Carpeta: {FOLDER_ID}</span>
 </div>
 """, unsafe_allow_html=True)
