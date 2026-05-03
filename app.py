@@ -226,13 +226,13 @@ section[data-testid="stSidebar"] { display:none !important; }
     color:#5D6880;
 }
 
-/* FILA TARJETA + BOTÓN */
+/* BLOQUE TARJETA + BOTÓN */
 .session-row {
-    max-width: 290px;   /* ancho total del conjunto */
+    max-width: 320px;
 }
 .session-card {
     width: 100%;
-    max-width: 180px;   /* <-- AQUI CAMBIAS EL ANCHO REAL DE LA TARJETA */
+    max-width: 185px;  /* aquí cambias el ancho de la tarjeta */
     background:#FFFFFF;
     border:1px solid #E3E6EE;
     border-radius:12px;
@@ -271,7 +271,10 @@ section[data-testid="stSidebar"] { display:none !important; }
     line-height:1.15;
 }
 
-/* BOTONES */
+/* BOTÓN CREAR */
+.compact-btn {
+    padding-top: 6px;
+}
 .compact-btn > div > button {
     background:#FFFFFF !important;
     color:#394255 !important;
@@ -280,7 +283,7 @@ section[data-testid="stSidebar"] { display:none !important; }
     min-height:36px !important;
     height:36px !important;
     min-width:72px !important;
-    padding:0 0.65rem !important;
+    padding:0 0.7rem !important;
     font-size:0.74rem !important;
     font-weight:500 !important;
     box-shadow:none !important;
@@ -557,7 +560,7 @@ copy_url = (
 confirm_state = st.session_state.get("confirm_state", "idle")
 
 st.markdown('<div class="session-row">', unsafe_allow_html=True)
-col_card, col_btn = st.columns([2.1, 1], gap="small")
+col_card, col_btn = st.columns([2.4, 1], gap="small")
 
 with col_card:
     st.markdown("""
@@ -691,7 +694,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · v2.6.0</span>
+    <span class="footer-text">Panel de Control · v2.7.0</span>
     <span class="footer-text">Carpeta: {FOLDER_ID}</span>
 </div>
 """, unsafe_allow_html=True)
