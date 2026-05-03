@@ -339,13 +339,21 @@ div.stButton > button:disabled {
     color:#7A808E;
     line-height:1.28;
 }
+
+/* CONTENEDOR DEL BOTÓN: Centrado absoluto */
 .action-button-wrap {
-    display: flex;
-    justify-content: center;
-    width: 100%;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    margin-top: 0.4rem;
 }
+
+/* Forzamos al botón de Streamlit a ser más estrecho y estar centrado */
 .action-button-wrap div.stButton {
-    width:60% !important;
+    width:50% !important;
+    display: flex !important;
+    justify-content: center !important;
 }
 .action-button-wrap div.stButton > button {
     width:100% !important;
