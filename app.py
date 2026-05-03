@@ -82,37 +82,37 @@ section[data-testid="stSidebar"] { display:none !important; }
     margin-bottom:1rem;
 }
 
-/* TARJETA MUCHO MÁS ESTRECHA */
+/* TARJETA */
 .card-row-wrap {
-    max-width:330px;
+    max-width:315px;
     margin-bottom:0.65rem;
 }
 .tool-card-compact {
     background:#fff;
     border:1.5px solid #E4E7EF;
     border-radius:12px;
-    padding:0.68rem 0.78rem;
+    padding:0.65rem 0.74rem;
     display:flex;
     align-items:center;
-    gap:0.65rem;
-    min-height:62px;
+    gap:0.62rem;
+    min-height:60px;
 }
 .tool-card-soon {
-    max-width:290px;
+    max-width:280px;
     background:#fff;
     border:1.5px solid #E4E7EF;
     border-radius:12px;
-    padding:0.68rem 0.78rem;
+    padding:0.65rem 0.74rem;
     display:flex;
     align-items:center;
-    gap:0.65rem;
-    min-height:62px;
+    gap:0.62rem;
+    min-height:60px;
     margin-bottom:0.45rem;
     opacity:0.45;
 }
 .card-icon-wrap {
-    width:31px;
-    height:31px;
+    width:30px;
+    height:30px;
     flex-shrink:0;
     border-radius:8px;
     background:#EEF0FD;
@@ -120,7 +120,7 @@ section[data-testid="stSidebar"] { display:none !important; }
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:0.96rem;
+    font-size:0.92rem;
 }
 .card-body {
     flex:1;
@@ -128,23 +128,23 @@ section[data-testid="stSidebar"] { display:none !important; }
 }
 .card-name {
     font-family:'Sora',sans-serif;
-    font-size:0.77rem;
+    font-size:0.75rem;
     font-weight:600;
     color:#1A1F36;
     line-height:1.18;
 }
 .card-desc {
     font-family:'DM Sans',sans-serif;
-    font-size:0.68rem;
+    font-size:0.67rem;
     color:#8C93A8;
-    margin-top:0.08rem;
+    margin-top:0.07rem;
     line-height:1.25;
 }
 .badge-active, .badge-soon {
     font-family:'DM Sans',sans-serif;
-    font-size:0.52rem;
+    font-size:0.5rem;
     font-weight:500;
-    padding:0.10rem 0.36rem;
+    padding:0.10rem 0.34rem;
     border-radius:999px;
     text-transform:uppercase;
     letter-spacing:0.05em;
@@ -161,21 +161,18 @@ section[data-testid="stSidebar"] { display:none !important; }
     border:1px solid #DDE0EA;
 }
 
-/* BOTÓN AL LADO, CERCA */
-.compact-btn {
-    margin-top:0;
-}
+/* BOTÓN */
 .compact-btn > div > button {
     background:#FFFFFF !important;
     color:#2B3147 !important;
     border:1.5px solid #D9DDEA !important;
     border-radius:10px !important;
-    min-height:62px !important;
-    height:62px !important;
-    min-width:72px !important;
-    padding:0 0.72rem !important;
+    min-height:60px !important;
+    height:60px !important;
+    min-width:70px !important;
+    padding:0 0.68rem !important;
     font-family:'DM Sans',sans-serif !important;
-    font-size:0.72rem !important;
+    font-size:0.71rem !important;
     font-weight:500 !important;
     box-shadow:none !important;
     white-space:nowrap !important;
@@ -190,13 +187,13 @@ section[data-testid="stSidebar"] { display:none !important; }
     border-color:#E1E5EF !important;
 }
 
-/* PANEL DE PROCESO */
+/* PANEL PROCESO */
 .progress-panel {
     max-width:560px;
     background:#fff;
     border:1.5px solid #E4E7EF;
     border-radius:12px;
-    padding:1.08rem 1.2rem;
+    padding:1.05rem 1.18rem;
     margin-top:0.55rem;
 }
 .progress-title {
@@ -204,13 +201,13 @@ section[data-testid="stSidebar"] { display:none !important; }
     font-size:0.82rem;
     font-weight:600;
     color:#1A1F36;
-    margin-bottom:0.5rem;
+    margin-bottom:0.45rem;
 }
 .progress-note {
     font-family:'DM Sans',sans-serif;
     font-size:0.72rem;
     color:#8C93A8;
-    margin-bottom:0.95rem;
+    margin-bottom:0.9rem;
     line-height:1.35;
 }
 .step {
@@ -272,8 +269,6 @@ section[data-testid="stSidebar"] { display:none !important; }
     font-style:italic;
     margin-top:0.05rem;
 }
-
-/* CAJA FINAL */
 .done-box {
     margin-top:1rem;
     padding:0.85rem 0.9rem;
@@ -392,6 +387,33 @@ section[data-testid="stSidebar"] { display:none !important; }
 """, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────────────
+# FUNCIONES DE RENDER
+# ──────────────────────────────────────────────────────────────────────────────
+def render_step(label, detail, state):
+    dot_class = {
+        "done": "sd-done",
+        "active": "sd-active",
+        "wait": "sd-wait"
+    }[state]
+    text_class = {
+        "done": "st-done",
+        "active": "st-active",
+        "wait": "st-wait"
+    }[state]
+    symbol = {"done": "✓", "active": "→", "wait": "•"}[state]
+
+    st.markdown(f"""
+    <div class="step">
+        <div class="step-dot {dot_class}">{symbol}</div>
+        <div>
+            <div class="{text_class}">{label}</div>
+            <div class="step-detail">{detail}</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # HEADER
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown(f"""
@@ -420,10 +442,11 @@ if USER_NAME:
 else:
     nombre_copia = f"SESION - MASTER - {fecha_str}"
 
+# URL /copy con carpeta destino
 copy_url = (
     f"https://docs.google.com/spreadsheets/d/{TEMPLATE_ID}/copy"
-    f"?title={urllib.parse.quote(nombre_copia)}"
-    f"&parents={FOLDER_ID}"
+    f"?copyDestination={FOLDER_ID}"
+    f"&title={urllib.parse.quote(nombre_copia)}"
 )
 
 TOOLS = [
@@ -458,7 +481,7 @@ confirm_state = st.session_state.get("confirm_state", "idle")
 for tool in TOOLS:
     if tool["active"]:
         st.markdown('<div class="card-row-wrap">', unsafe_allow_html=True)
-        col_card, col_btn = st.columns([4.9, 1.1], gap="small")
+        col_card, col_btn = st.columns([4.8, 1.05], gap="small")
 
         with col_card:
             st.markdown(f"""
@@ -505,81 +528,59 @@ saved_name = st.session_state.get("nombre_copia", nombre_copia)
 saved_url  = st.session_state.get("copy_url", copy_url)
 
 if confirm_state in ("step1", "step2", "step3", "done"):
-    step_map = {"step1": 0, "step2": 1, "step3": 2, "done": 3}
-    cur = step_map[confirm_state]
+    st.markdown('<div class="progress-panel">', unsafe_allow_html=True)
+    st.markdown('<div class="progress-title">⚙️ Proceso</div>', unsafe_allow_html=True)
 
-    def dot(i):
-        if i < cur:
-            return '<div class="step-dot sd-done">✓</div>'
-        if i == cur:
-            return '<div class="step-dot sd-active">→</div>'
-        return f'<div class="step-dot sd-wait">{i+1}</div>'
-
-    def txt(i):
-        if i < cur:
-            return "st-done"
-        if i == cur:
-            return "st-active"
-        return "st-wait"
-
-    # Textos que cambian de verdad en cada fase
     if confirm_state == "step1":
-        steps = [
-            ("Preparando sesión", "Iniciando la plantilla MASTER"),
-            ("Creando copia", "Pendiente"),
-            ("Sesión lista", "Pendiente"),
-        ]
-        panel_note = "Estamos creando la sesión de trabajo automáticamente."
+        st.markdown(
+            '<div class="progress-note">Preparando la sesión de trabajo para el usuario actual.</div>',
+            unsafe_allow_html=True
+        )
+        render_step("Preparando sesión", "Iniciando plantilla MASTER", "active")
+        render_step("Creando copia", "Pendiente", "wait")
+        render_step("Sesión lista", "Pendiente", "wait")
+
     elif confirm_state == "step2":
-        steps = [
-            ("Preparando sesión", "Plantilla MASTER localizada"),
-            ("Creando copia", saved_name),
-            ("Sesión lista", "Pendiente"),
-        ]
-        panel_note = "La copia se está generando en tu carpeta de trabajo."
+        st.markdown(
+            '<div class="progress-note">La copia se está generando en Google Drive con el usuario que la solicita.</div>',
+            unsafe_allow_html=True
+        )
+        render_step("Preparando sesión", "Plantilla MASTER localizada", "done")
+        render_step("Creando copia", saved_name, "active")
+        render_step("Sesión lista", "Pendiente", "wait")
+
     elif confirm_state == "step3":
-        steps = [
-            ("Preparando sesión", "Plantilla MASTER localizada"),
-            ("Creando copia", saved_name),
-            ("Sesión lista", "Preparando apertura"),
-        ]
-        panel_note = "La sesión ya casi está lista. En breve podrás abrirla."
-    else:
-        steps = [
-            ("Preparando sesión", "Plantilla MASTER localizada"),
-            ("Creando copia", saved_name),
-            ("Sesión lista", "Copia preparada correctamente"),
-        ]
-        panel_note = "La sesión se ha creado correctamente."
+        st.markdown(
+            f'<div class="progress-note">Se está preparando la apertura en la carpeta destino {FOLDER_ID}.</div>',
+            unsafe_allow_html=True
+        )
+        render_step("Preparando sesión", "Plantilla MASTER localizada", "done")
+        render_step("Creando copia", saved_name, "done")
+        render_step("Sesión lista", "Preparando apertura", "active")
 
-    html = '<div class="progress-panel">'
-    html += '<div class="progress-title">⚙️ Proceso</div>'
-    html += f'<div class="progress-note">{panel_note}</div>'
+    elif confirm_state == "done":
+        st.markdown(
+            '<div class="progress-note">La sesión ya está preparada. Si no se abre sola, puedes abrirla manualmente.</div>',
+            unsafe_allow_html=True
+        )
+        render_step("Preparando sesión", "Plantilla MASTER localizada", "done")
+        render_step("Creando copia", saved_name, "done")
+        render_step("Sesión lista", "Copia preparada correctamente", "done")
 
-    for i, (label, detail) in enumerate(steps):
-        html += f'''
-        <div class="step">
-            {dot(i)}
-            <div>
-                <div class="{txt(i)}">{label}</div>
-                <div class="step-detail">{detail}</div>
-            </div>
-        </div>
-        '''
-
-    if confirm_state == "done":
-        html += f'''
+        st.markdown(f"""
         <div class="done-box">
             <div class="done-title">Sesión creada</div>
-            <div class="done-text">La copia está preparada. Si no se abre sola, pulsa para abrir tu sesión de trabajo.</div>
+            <div class="done-text">
+                La copia debe quedar en la carpeta destino y asociada al usuario que realiza la acción.
+                Si Google no la abre automáticamente, pulsa el botón para abrir la sesión.
+            </div>
             <a class="done-link" href="{saved_url}" target="_blank">Abrir sesión ↗</a>
         </div>
-        '''
+        """, unsafe_allow_html=True)
 
-    html += '</div>'
-    st.markdown(html, unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    # Flujo automático por fases
+    # Flujo automático
     if confirm_state == "step1":
         time.sleep(0.9)
         st.session_state["confirm_state"] = "step2"
@@ -649,7 +650,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · v1.6.0</span>
+    <span class="footer-text">Panel de Control · v1.7.0</span>
     <span class="footer-text">Carpeta: {FOLDER_ID}</span>
 </div>
 """, unsafe_allow_html=True)
