@@ -298,12 +298,12 @@ div.stButton > button:disabled {
     background:#F7F6F3;
     border:1px solid #E5E2DC;
     border-radius:20px;
-    padding:1.1rem;
+    padding:1.2rem;
     margin-bottom:0.65rem;
     box-shadow:0 6px 18px rgba(17,24,39,0.025);
     display: flex;
     flex-direction: column;
-    gap: 0.8rem;
+    gap: 1rem;
 }
 .action-top {
     display:flex;
@@ -340,10 +340,12 @@ div.stButton > button:disabled {
     line-height:1.28;
 }
 .action-button-wrap {
+    display: flex;
+    justify-content: center;
     width: 100%;
 }
 .action-button-wrap div.stButton {
-    width:100% !important;
+    width:60% !important;
 }
 .action-button-wrap div.stButton > button {
     width:100% !important;
@@ -351,13 +353,13 @@ div.stButton > button:disabled {
     color:#214D92 !important;
     border:1px solid #BDD6FF !important;
     border-radius:14px !important;
-    min-height:42px !important;
+    min-height:40px !important;
     font-size:0.79rem !important;
     font-weight:600 !important;
-    justify-content:center !important;
-    box-shadow:none !important;
     display: flex;
-    align-items: center;
+    justify-content:center !important;
+    align-items: center !important;
+    box-shadow:none !important;
 }
 .action-button-wrap div.stButton > button:hover {
     background:#D0E3FF !important;
