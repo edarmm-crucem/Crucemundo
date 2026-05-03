@@ -31,7 +31,7 @@ VALID_USERS = {
 VALID_PASSWORD = "Crucemundo26!"
 
 # ──────────────────────────────────────────────────────────────────────────────
-# SESSION
+# STATE
 # ──────────────────────────────────────────────────────────────────────────────
 defaults = {
     "authenticated": False,
@@ -69,7 +69,7 @@ def reset_new_session():
 def render_step(label, detail, state):
     dot_class = {"done": "sd-done", "active": "sd-active", "wait": "sd-wait"}[state]
     text_class = {"done": "st-done", "active": "st-active", "wait": "st-wait"}[state]
-    symbol = {"done": "✓", "active": "→", "wait": "•"}[state]
+    symbol = {"done": "✓", "active": "•", "wait": "•"}[state]
 
     st.markdown(f"""
     <div class="step">
@@ -86,26 +86,27 @@ def render_step(label, detail, state):
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
 
 * { box-sizing: border-box; }
 
-[data-testid="stAppViewContainer"] { background:#F5F6FA; }
+html, body, [class*="css"]  {
+    font-family: 'DM Sans', sans-serif;
+}
+
+[data-testid="stAppViewContainer"] { background:#F4F5F8; }
 [data-testid="stHeader"] { background:transparent !important; }
 section[data-testid="stSidebar"] { display:none !important; }
 
 .block-container {
-    padding-top:0 !important;
-    padding-bottom:0 !important;
-    padding-left:0 !important;
-    padding-right:0 !important;
+    padding:0 !important;
     max-width:100% !important;
 }
 
 /* HEADER */
 .portal-header {
-    background:#fff;
-    border-bottom:1px solid #E4E7EF;
+    background:#FFFFFF;
+    border-bottom:1px solid #E6E8EF;
     padding:1rem 3rem;
     display:flex;
     align-items:center;
@@ -115,7 +116,7 @@ section[data-testid="stSidebar"] { display:none !important; }
 .portal-header-left {
     display:flex;
     align-items:center;
-    gap:1rem;
+    gap:0.9rem;
 }
 .portal-logo {
     height:42px;
@@ -124,46 +125,42 @@ section[data-testid="stSidebar"] { display:none !important; }
     display:block;
 }
 .portal-title {
-    font-family:'Sora',sans-serif;
-    font-size:1.08rem;
+    font-size:1rem;
     font-weight:600;
-    color:#1A1F36;
+    color:#1D2433;
+    line-height:1.1;
 }
 .portal-subtitle {
-    font-family:'DM Sans',sans-serif;
-    font-size:0.73rem;
-    color:#8C93A8;
-    margin-top:0.05rem;
+    font-size:0.74rem;
+    color:#7C869D;
+    margin-top:0.08rem;
 }
 .user-top {
-    font-family:'DM Sans',sans-serif;
-    font-size:0.72rem;
-    color:#5B6785;
-    background:#F7F8FC;
+    font-size:0.74rem;
+    color:#566079;
+    background:#F8F9FC;
     border:1px solid #E4E7EF;
     border-radius:999px;
-    padding:0.45rem 0.8rem;
+    padding:0.42rem 0.78rem;
 }
 
 /* MAIN */
 .main-content {
-    padding:1.8rem 3rem 3rem;
+    padding:1.7rem 3rem 3rem;
 }
 .section-eyebrow {
-    font-family:'Sora',sans-serif;
-    font-size:0.6rem;
+    font-size:0.66rem;
     font-weight:600;
-    letter-spacing:0.12em;
+    letter-spacing:0.08em;
     text-transform:uppercase;
-    color:#5B6BF8;
-    margin-bottom:0.28rem;
+    color:#5D6B85;
+    margin-bottom:0.22rem;
 }
 .section-heading {
-    font-family:'Sora',sans-serif;
-    font-size:0.98rem;
+    font-size:1rem;
     font-weight:600;
-    color:#1A1F36;
-    margin-bottom:0.9rem;
+    color:#1D2433;
+    margin-bottom:0.95rem;
 }
 
 /* LOGIN */
@@ -171,151 +168,141 @@ section[data-testid="stSidebar"] { display:none !important; }
     display:flex;
     align-items:flex-start;
     justify-content:center;
-    padding:1.2rem 2rem 2rem;
+    padding:1.4rem 2rem 2rem;
 }
 .login-card {
     width:100%;
-    max-width:420px;
+    max-width:430px;
     background:#fff;
-    border:1px solid #E4E7EF;
+    border:1px solid #E5E8F0;
     border-radius:16px;
-    padding:1.4rem 1.4rem 1.2rem;
-    box-shadow:0 10px 30px rgba(16,24,40,0.05);
+    padding:1.45rem 1.45rem 1.2rem;
+    box-shadow:0 12px 30px rgba(17,24,39,0.04);
 }
 .login-logo {
-    height:48px;
+    height:46px;
     width:auto;
-    margin:0 auto 1rem auto;
+    margin:0 auto 0.95rem auto;
     display:block;
 }
 .login-title {
-    font-family:'Sora',sans-serif;
-    font-size:1.05rem;
+    font-size:1.02rem;
     font-weight:600;
-    color:#1A1F36;
-    margin-bottom:0.25rem;
+    color:#1D2433;
+    margin-bottom:0.18rem;
 }
 .login-subtitle {
-    font-family:'DM Sans',sans-serif;
-    font-size:0.78rem;
-    color:#8C93A8;
+    font-size:0.79rem;
+    color:#7C869D;
     margin-bottom:1rem;
     line-height:1.35;
 }
 .login-note {
-    font-family:'DM Sans',sans-serif;
-    font-size:0.7rem;
-    color:#8C93A8;
+    font-size:0.72rem;
+    color:#8A93A8;
     margin-top:0.8rem;
 }
 
-/* USER PILL */
+/* PILL */
 .user-pill {
     display:inline-flex;
     align-items:center;
     gap:0.4rem;
-    margin:0.1rem 0 1rem;
-    padding:0.38rem 0.65rem;
+    margin:0.08rem 0 1rem;
+    padding:0.38rem 0.68rem;
     border-radius:999px;
     background:#fff;
     border:1px solid #E4E7EF;
-    font-family:'DM Sans',sans-serif;
-    font-size:0.7rem;
-    color:#5B6785;
+    font-size:0.73rem;
+    color:#5D6880;
 }
 
-/* TARJETA SOLO MÁS CORTA */
+/* TARJETA MÁS CORTA Y LIMPIA */
 .card-row-wrap {
-    width:280px;
-    margin-bottom:0.55rem;
+    width:232px;
+    margin-bottom:0.7rem;
 }
 .tool-card-compact {
     width:100%;
-    background:#fff;
-    border:1.5px solid #E4E7EF;
-    border-radius:11px;
-    padding:0.55rem 0.62rem;
+    background:#FFFFFF;
+    border:1px solid #E3E6EE;
+    border-radius:12px;
+    padding:0.7rem 0.78rem;
     display:flex;
     align-items:center;
-    gap:0.55rem;
-    min-height:54px;
+    gap:0.62rem;
+    min-height:62px;
 }
 .tool-card-soon {
-    width:280px;
-    background:#fff;
-    border:1.5px solid #E4E7EF;
-    border-radius:11px;
-    padding:0.55rem 0.62rem;
+    width:232px;
+    background:#FFFFFF;
+    border:1px solid #E3E6EE;
+    border-radius:12px;
+    padding:0.7rem 0.78rem;
     display:flex;
     align-items:center;
-    gap:0.55rem;
-    min-height:54px;
-    margin-bottom:0.4rem;
-    opacity:0.45;
+    gap:0.62rem;
+    min-height:62px;
+    margin-bottom:0.45rem;
+    opacity:0.5;
 }
 .card-icon-wrap {
-    width:27px;
-    height:27px;
+    width:30px;
+    height:30px;
     flex-shrink:0;
-    border-radius:7px;
-    background:#EEF0FD;
-    border:1px solid #D4D8FB;
+    border-radius:8px;
+    background:#F2F4F9;
+    border:1px solid #E3E7F1;
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:0.86rem;
+    font-size:0.92rem;
 }
 .card-body {
     flex:1;
     min-width:0;
 }
 .card-name {
-    font-family:'Sora',sans-serif;
-    font-size:0.71rem;
+    font-size:0.82rem;
     font-weight:600;
-    color:#1A1F36;
-    line-height:1.15;
+    color:#1D2433;
+    line-height:1.1;
 }
 .card-desc {
-    font-family:'DM Sans',sans-serif;
-    font-size:0.63rem;
-    color:#8C93A8;
-    margin-top:0.05rem;
+    font-size:0.7rem;
+    color:#7C869D;
+    margin-top:0.12rem;
     line-height:1.2;
 }
 .badge-active, .badge-soon {
-    font-family:'DM Sans',sans-serif;
-    font-size:0.46rem;
+    font-size:0.58rem;
     font-weight:500;
-    padding:0.08rem 0.28rem;
+    padding:0.14rem 0.32rem;
     border-radius:999px;
-    text-transform:uppercase;
-    letter-spacing:0.05em;
     white-space:nowrap;
 }
 .badge-active {
-    background:#E8FAF2;
-    color:#18835A;
-    border:1px solid #B6E8D3;
+    background:#EEF7F1;
+    color:#2E7D58;
+    border:1px solid #D8ECDf;
 }
 .badge-soon {
-    background:#F3F4F8;
-    color:#8C93A8;
-    border:1px solid #DDE0EA;
+    background:#F4F5F8;
+    color:#96A0B4;
+    border:1px solid #E4E7EF;
 }
 
-/* BOTONES */
+/* BOTÓN MÁS INTEGRADO */
 .compact-btn > div > button {
     background:#FFFFFF !important;
-    color:#2B3147 !important;
-    border:1.5px solid #D9DDEA !important;
+    color:#394255 !important;
+    border:1px solid #DCE1EB !important;
     border-radius:10px !important;
-    min-height:54px !important;
-    height:54px !important;
-    min-width:64px !important;
-    padding:0 0.58rem !important;
-    font-family:'DM Sans',sans-serif !important;
-    font-size:0.68rem !important;
+    min-height:36px !important;
+    height:36px !important;
+    min-width:78px !important;
+    padding:0 0.7rem !important;
+    font-size:0.74rem !important;
     font-weight:500 !important;
     box-shadow:none !important;
     white-space:nowrap !important;
@@ -324,22 +311,21 @@ section[data-testid="stSidebar"] { display:none !important; }
 .clean-btn > div > button:hover,
 .logout-btn > div > button:hover,
 div[data-testid="stFormSubmitButton"] > button:hover {
-    background:#F7F8FC !important;
-    border-color:#C9D0E3 !important;
+    background:#F7F8FB !important;
+    border-color:#CDD4E2 !important;
 }
 .compact-btn > div > button:disabled {
-    color:#A7AEC3 !important;
-    background:#F7F8FC !important;
-    border-color:#E1E5EF !important;
+    color:#AAB2C4 !important;
+    background:#F7F8FB !important;
+    border-color:#E3E7EF !important;
 }
 .clean-btn > div > button,
 .logout-btn > div > button,
 div[data-testid="stFormSubmitButton"] > button {
-    background:#fff !important;
-    color:#2B3147 !important;
-    border:1.5px solid #D9DDEA !important;
+    background:#FFFFFF !important;
+    color:#394255 !important;
+    border:1px solid #DCE1EB !important;
     border-radius:10px !important;
-    font-family:'DM Sans',sans-serif !important;
     font-size:0.76rem !important;
     font-weight:500 !important;
     min-height:40px !important;
@@ -347,117 +333,100 @@ div[data-testid="stFormSubmitButton"] > button {
     box-shadow:none !important;
 }
 
-/* PANEL PROCESO */
+/* PROCESO */
 .progress-panel {
     max-width:560px;
-    background:#fff;
+    background:#FFFFFF;
     border:1px solid #E4E7EF;
-    border-radius:12px;
-    padding:1rem 1.1rem;
-    margin-top:0.55rem;
+    border-radius:14px;
+    padding:1rem 1.05rem;
+    margin-top:0.45rem;
 }
 .progress-title {
-    font-family:'Sora',sans-serif;
-    font-size:0.8rem;
+    font-size:0.84rem;
     font-weight:600;
-    color:#1A1F36;
-    margin-bottom:0.42rem;
+    color:#1D2433;
+    margin-bottom:0.35rem;
 }
 .progress-note {
-    font-family:'DM Sans',sans-serif;
-    font-size:0.71rem;
-    color:#8C93A8;
-    margin-bottom:0.88rem;
-    line-height:1.34;
+    font-size:0.73rem;
+    color:#7C869D;
+    margin-bottom:0.9rem;
+    line-height:1.35;
 }
 .step {
     display:flex;
     align-items:flex-start;
-    gap:0.66rem;
-    margin-bottom:0.58rem;
+    gap:0.68rem;
+    margin-bottom:0.62rem;
 }
 .step:last-child { margin-bottom:0; }
 .step-dot {
-    width:19px;
-    height:19px;
+    width:18px;
+    height:18px;
     border-radius:50%;
     flex-shrink:0;
-    margin-top:0.03rem;
+    margin-top:0.05rem;
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:0.6rem;
+    font-size:0.55rem;
     font-weight:700;
 }
 .sd-done {
-    background:#E8FAF2;
-    border:1.5px solid #B6E8D3;
-    color:#18835A;
+    background:#EEF7F1;
+    border:1px solid #D8ECDF;
+    color:#2E7D58;
 }
 .sd-active {
-    background:#EEF0FD;
-    border:1.5px solid #C5CAF8;
-    color:#5B6BF8;
+    background:#F2F4F9;
+    border:1px solid #DDE2EC;
+    color:#6E778B;
 }
 .sd-wait {
-    background:#F5F6FA;
-    border:1.5px solid #DDE0EA;
-    color:#B0B6CC;
+    background:#F8F9FC;
+    border:1px solid #E6E9F0;
+    color:#B1B8C9;
 }
-.st-done {
-    font-family:'DM Sans',sans-serif;
-    font-size:0.75rem;
-    color:#3D4468;
+.st-done, .st-active, .st-wait {
+    font-size:0.76rem;
 }
-.st-active {
-    font-family:'DM Sans',sans-serif;
-    font-size:0.75rem;
-    color:#1A1F36;
-    font-weight:500;
-}
-.st-wait {
-    font-family:'DM Sans',sans-serif;
-    font-size:0.75rem;
-    color:#B0B6CC;
-}
+.st-done { color:#394255; }
+.st-active { color:#1D2433; font-weight:600; }
+.st-wait { color:#A2ABBD; }
 .step-detail {
-    font-family:'DM Sans',sans-serif;
-    font-size:0.66rem;
-    color:#8C93A8;
-    font-style:italic;
-    margin-top:0.04rem;
+    font-size:0.69rem;
+    color:#8790A4;
+    margin-top:0.06rem;
 }
 .done-box {
     margin-top:0.95rem;
-    padding:0.8rem 0.86rem;
-    background:#EEF4FF;
-    border:1px solid #D8E4FF;
-    border-radius:8px;
+    padding:0.85rem 0.9rem;
+    background:#F6F8FC;
+    border:1px solid #E1E6F0;
+    border-radius:10px;
 }
 .done-title {
-    font-family:'DM Sans',sans-serif;
-    font-size:0.75rem;
-    color:#2B4EA2;
-    font-weight:500;
+    font-size:0.77rem;
+    color:#1D2433;
+    font-weight:600;
 }
 .done-text {
-    font-family:'DM Sans',sans-serif;
-    font-size:0.7rem;
-    color:#5B6785;
+    font-size:0.71rem;
+    color:#657087;
     margin-top:0.16rem;
-    line-height:1.32;
+    line-height:1.34;
 }
 .done-link {
     display:inline-flex;
     align-items:center;
-    gap:0.4rem;
-    margin-top:0.7rem;
-    background:#5B6BF8;
-    color:#fff !important;
-    border:none;
-    border-radius:8px;
-    padding:0.45rem 0.9rem;
-    font-family:'DM Sans',sans-serif;
+    gap:0.35rem;
+    margin-top:0.68rem;
+    background:#FFFFFF;
+    color:#394255 !important;
+    border:1px solid #DCE1EB;
+    border-radius:9px;
+    padding:0.42rem 0.82rem;
     font-size:0.72rem;
     font-weight:500;
     text-decoration:none;
@@ -467,44 +436,40 @@ div[data-testid="stFormSubmitButton"] > button {
 .history-row {
     display:flex;
     align-items:center;
-    gap:0.8rem;
-    padding:0.62rem 1rem;
-    border-radius:8px;
-    background:#fff;
+    gap:0.78rem;
+    padding:0.64rem 0.95rem;
+    border-radius:10px;
+    background:#FFFFFF;
     border:1px solid #E4E7EF;
-    margin-bottom:0.4rem;
+    margin-bottom:0.42rem;
     max-width:560px;
 }
 .history-num {
     width:20px;
     height:20px;
-    border-radius:5px;
-    background:#EEF0FD;
-    border:1px solid #D4D8FB;
+    border-radius:6px;
+    background:#F2F4F9;
+    border:1px solid #E3E7F1;
     display:flex;
     align-items:center;
     justify-content:center;
-    font-family:'Sora',sans-serif;
-    font-size:0.6rem;
+    font-size:0.62rem;
     font-weight:600;
-    color:#5B6BF8;
+    color:#5D6880;
     flex-shrink:0;
 }
 .history-name {
-    font-family:'DM Sans',sans-serif;
     font-size:0.76rem;
-    color:#3D4468;
+    color:#394255;
     flex:1;
 }
 .history-time {
-    font-family:'DM Sans',sans-serif;
     font-size:0.68rem;
-    color:#B0B6CC;
+    color:#A2ABBD;
 }
 .history-link {
-    font-family:'DM Sans',sans-serif;
-    font-size:0.7rem;
-    color:#5B6BF8;
+    font-size:0.71rem;
+    color:#5D6880;
     text-decoration:none;
     font-weight:500;
 }
@@ -513,15 +478,14 @@ div[data-testid="stFormSubmitButton"] > button {
 .portal-footer {
     padding:1rem 3rem;
     border-top:1px solid #E4E7EF;
-    background:#fff;
+    background:#FFFFFF;
     display:flex;
     justify-content:space-between;
     align-items:center;
 }
 .footer-text {
-    font-family:'DM Sans',sans-serif;
-    font-size:0.7rem;
-    color:#B0B6CC;
+    font-size:0.71rem;
+    color:#A2ABBD;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -530,7 +494,7 @@ div[data-testid="stFormSubmitButton"] > button {
 # LOGIN
 # ──────────────────────────────────────────────────────────────────────────────
 if not st.session_state["authenticated"]:
-    left, center, right = st.columns([1.2, 1, 1.2])
+    left, center, right = st.columns([1.15, 1, 1.15])
 
     with center:
         st.markdown('<div class="login-wrap">', unsafe_allow_html=True)
@@ -593,8 +557,8 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="main-content">', unsafe_allow_html=True)
-st.markdown('<div class="section-eyebrow">⚡ Acciones rápidas</div>', unsafe_allow_html=True)
-st.markdown('<div class="section-heading">Herramientas disponibles</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-eyebrow">Acciones</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-heading">Sesión de trabajo</div>', unsafe_allow_html=True)
 st.markdown(
     f'<div class="user-pill">👤 {DISPLAY_USER} · {USER_EMAIL}</div>',
     unsafe_allow_html=True
@@ -610,106 +574,73 @@ copy_url = (
     f"&title={urllib.parse.quote(nombre_copia)}"
 )
 
-TOOLS = [
-    {"id": "confirmacion_es", "icon": "📋", "name": "Sesión", "desc": "Crear copia", "active": True},
-    {"id": "soon_1", "icon": "📊", "name": "Próx.", "desc": "Nueva", "active": False},
-    {"id": "soon_2", "icon": "📁", "name": "Próx.", "desc": "Nueva", "active": False},
-]
-
 confirm_state = st.session_state.get("confirm_state", "idle")
 
-for tool in TOOLS:
-    if tool["active"]:
-        st.markdown('<div class="card-row-wrap">', unsafe_allow_html=True)
-        col_card, col_btn = st.columns([4.2, 1.0], gap="small")
+st.markdown('<div class="card-row-wrap">', unsafe_allow_html=True)
+col_card, col_btn = st.columns([3.8, 1.15], gap="small")
 
-        with col_card:
-            st.markdown(f"""
-            <div class="tool-card-compact">
-                <div class="card-icon-wrap">{tool['icon']}</div>
-                <div class="card-body">
-                    <div class="card-name">{tool['name']}</div>
-                    <div class="card-desc">{tool['desc']}</div>
-                </div>
-                <span class="badge-active">Activo</span>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with col_btn:
-            st.markdown('<div class="compact-btn">', unsafe_allow_html=True)
-            if confirm_state == "idle":
-                if st.button("Crear", key="btn_crear"):
-                    st.session_state["confirm_state"] = "step1"
-                    st.session_state["nombre_copia"] = nombre_copia
-                    st.session_state["copy_url"] = copy_url
-                    st.rerun()
-            else:
-                st.button("Crear", key="btn_crear_dis", disabled=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    else:
-        st.markdown(f"""
-        <div class="tool-card-soon">
-            <div class="card-icon-wrap">{tool['icon']}</div>
-            <div class="card-body">
-                <div class="card-name">{tool['name']}</div>
-                <div class="card-desc">{tool['desc']}</div>
-            </div>
-            <span class="badge-soon">Próximo</span>
+with col_card:
+    st.markdown("""
+    <div class="tool-card-compact">
+        <div class="card-icon-wrap">📋</div>
+        <div class="card-body">
+            <div class="card-name">Nueva sesión</div>
+            <div class="card-desc">Crear copia MASTER</div>
         </div>
-        """, unsafe_allow_html=True)
+        <span class="badge-active">Lista</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col_btn:
+    st.markdown('<div class="compact-btn">', unsafe_allow_html=True)
+    if confirm_state == "idle":
+        if st.button("Abrir", key="btn_crear"):
+            st.session_state["confirm_state"] = "step1"
+            st.session_state["nombre_copia"] = nombre_copia
+            st.session_state["copy_url"] = copy_url
+            st.rerun()
+    else:
+        st.button("Abrir", key="btn_crear_dis", disabled=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 saved_name = st.session_state.get("nombre_copia", nombre_copia)
-saved_url  = st.session_state.get("copy_url", copy_url)
+saved_url = st.session_state.get("copy_url", copy_url)
 
 if confirm_state in ("step1", "step2", "step3", "done"):
     st.markdown('<div class="progress-panel">', unsafe_allow_html=True)
-    st.markdown('<div class="progress-title">⚙️ Proceso</div>', unsafe_allow_html=True)
+    st.markdown('<div class="progress-title">Proceso</div>', unsafe_allow_html=True)
 
     if confirm_state == "step1":
-        st.markdown(
-            '<div class="progress-note">Preparando la sesión de trabajo.</div>',
-            unsafe_allow_html=True
-        )
-        render_step("Preparando sesión", "Iniciando plantilla MASTER", "active")
-        render_step("Creando copia", "Pendiente", "wait")
-        render_step("Sesión lista", "Pendiente", "wait")
+        st.markdown('<div class="progress-note">Preparando la plantilla.</div>', unsafe_allow_html=True)
+        render_step("Preparación", "Plantilla MASTER", "active")
+        render_step("Copia", "Pendiente", "wait")
+        render_step("Apertura", "Pendiente", "wait")
 
     elif confirm_state == "step2":
-        st.markdown(
-            '<div class="progress-note">Google Drive está generando la copia con el usuario actual.</div>',
-            unsafe_allow_html=True
-        )
-        render_step("Preparando sesión", "Plantilla MASTER localizada", "done")
-        render_step("Creando copia", saved_name, "active")
-        render_step("Sesión lista", "Pendiente", "wait")
+        st.markdown('<div class="progress-note">Generando copia en Drive.</div>', unsafe_allow_html=True)
+        render_step("Preparación", "Correcto", "done")
+        render_step("Copia", saved_name, "active")
+        render_step("Apertura", "Pendiente", "wait")
 
     elif confirm_state == "step3":
-        st.markdown(
-            '<div class="progress-note">Preparando la apertura en la carpeta destino.</div>',
-            unsafe_allow_html=True
-        )
-        render_step("Preparando sesión", "Plantilla MASTER localizada", "done")
-        render_step("Creando copia", saved_name, "done")
-        render_step("Sesión lista", "Preparando apertura", "active")
+        st.markdown('<div class="progress-note">Preparando la apertura.</div>', unsafe_allow_html=True)
+        render_step("Preparación", "Correcto", "done")
+        render_step("Copia", saved_name, "done")
+        render_step("Apertura", "Listando acceso", "active")
 
     elif confirm_state == "done":
-        st.markdown(
-            '<div class="progress-note">La sesión ya está preparada. Si no se abre sola, puedes abrirla manualmente.</div>',
-            unsafe_allow_html=True
-        )
-        render_step("Preparando sesión", "Plantilla MASTER localizada", "done")
-        render_step("Creando copia", saved_name, "done")
-        render_step("Sesión lista", "Copia preparada correctamente", "done")
+        st.markdown('<div class="progress-note">La sesión está preparada.</div>', unsafe_allow_html=True)
+        render_step("Preparación", "Correcto", "done")
+        render_step("Copia", saved_name, "done")
+        render_step("Apertura", "Lista", "done")
 
         st.markdown(f"""
         <div class="done-box">
             <div class="done-title">Sesión creada</div>
             <div class="done-text">
-                Google Drive mostrará su pantalla propia de confirmación de copia.
-                Si no se abre sola, pulsa el botón para abrir la sesión.
+                Si Drive no se abre automáticamente, usa este acceso.
             </div>
             <a class="done-link" href="{saved_url}" target="_blank">Abrir sesión ↗</a>
         </div>
@@ -718,17 +649,17 @@ if confirm_state in ("step1", "step2", "step3", "done"):
     st.markdown('</div>', unsafe_allow_html=True)
 
     if confirm_state == "step1":
-        time.sleep(0.8)
+        time.sleep(0.7)
         st.session_state["confirm_state"] = "step2"
         st.rerun()
 
     elif confirm_state == "step2":
-        time.sleep(0.8)
+        time.sleep(0.7)
         st.session_state["confirm_state"] = "step3"
         st.rerun()
 
     elif confirm_state == "step3":
-        time.sleep(0.8)
+        time.sleep(0.7)
         st.session_state["confirm_state"] = "done"
 
         existing = [h["nombre"] for h in st.session_state["historial"]]
@@ -738,7 +669,6 @@ if confirm_state in ("step1", "step2", "step3", "done"):
                 "hora": datetime.now().strftime("%H:%M:%S"),
                 "url": saved_url,
             })
-
         st.rerun()
 
     if confirm_state == "done" and not st.session_state.get("opened_" + saved_name):
@@ -765,7 +695,7 @@ with col_logout:
 
 if st.session_state.get("historial"):
     st.markdown("<div style='height:1.2rem'></div>", unsafe_allow_html=True)
-    st.markdown('<div class="section-eyebrow">🕐 Esta sesión</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-eyebrow">Esta sesión</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-heading">Archivos creados</div>', unsafe_allow_html=True)
 
     for i, entry in enumerate(st.session_state["historial"], 1):
@@ -782,7 +712,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · v2.2.0</span>
+    <span class="footer-text">Panel de Control · v2.3.0</span>
     <span class="footer-text">Carpeta: {FOLDER_ID}</span>
 </div>
 """, unsafe_allow_html=True)
