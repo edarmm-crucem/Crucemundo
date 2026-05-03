@@ -154,36 +154,30 @@ section[data-testid="stSidebar"] { display:none !important; }
 
 /* MAIN */
 .main-content {
-    padding:1.7rem 3rem 3rem;
+    padding:1.5rem 3rem 3rem;
 }
 .section-eyebrow {
     display:inline-flex;
     align-items:center;
-    padding:0.28rem 0.62rem;
+    padding:0.32rem 0.7rem;
     border-radius:999px;
     background:#E8F0FF;
     border:1px solid #CFE0FF;
     color:#2F63BF;
-    font-size:0.66rem;
+    font-size:0.67rem;
     font-weight:700;
     letter-spacing:0.08em;
     text-transform:uppercase;
-    margin-bottom:0.5rem;
-}
-.section-heading {
-    font-size:1rem;
-    font-weight:600;
-    color:#1D2433;
-    margin-bottom:0.95rem;
+    margin-bottom:0.8rem;
 }
 
 /* LOGIN */
 .login-page {
     min-height:100vh;
     display:flex;
-    align-items:center;
+    align-items:flex-start;
     justify-content:center;
-    padding:2.5rem 1.25rem;
+    padding:1.15rem 1.25rem 2rem;
 }
 .login-shell {
     width:100%;
@@ -194,16 +188,16 @@ section[data-testid="stSidebar"] { display:none !important; }
     background:#FFFFFF;
     border:1px solid #E5E8F0;
     border-radius:18px;
-    padding:1.6rem 1.6rem 1.35rem;
+    padding:1.35rem 1.6rem 1.15rem;
     box-shadow:0 10px 30px rgba(17,24,39,0.03);
     margin-bottom:0.8rem;
     text-align:left;
 }
 .login-logo {
-    height:70px;
+    height:86px;
     width:auto;
     display:block;
-    margin:0 auto 1rem auto;
+    margin:0 auto 0.9rem auto;
     object-fit:contain;
 }
 .login-title {
@@ -255,14 +249,14 @@ div.stButton > button,
 div[data-testid="stFormSubmitButton"] > button,
 .clean-btn > div > button,
 .logout-btn > div > button {
-    background:#FFFFFF !important;
-    color:#394255 !important;
-    border:1px solid #DCE1EB !important;
+    background:#DCEBFF !important;
+    color:#214D92 !important;
+    border:1px solid #BDD6FF !important;
     border-radius:10px !important;
     min-height:38px !important;
     padding:0 1rem !important;
     font-size:0.76rem !important;
-    font-weight:500 !important;
+    font-weight:600 !important;
     box-shadow:none !important;
     width:auto !important;
 }
@@ -270,13 +264,14 @@ div.stButton > button:hover,
 div[data-testid="stFormSubmitButton"] > button:hover,
 .clean-btn > div > button:hover,
 .logout-btn > div > button:hover {
-    background:#F7F8FB !important;
-    border-color:#CDD4E2 !important;
+    background:#D0E3FF !important;
+    border-color:#AFCBFF !important;
+    color:#183F7A !important;
 }
 div.stButton > button:disabled {
-    color:#AAB2C4 !important;
-    background:#F7F8FB !important;
-    border-color:#E3E7EF !important;
+    color:#8AA2C7 !important;
+    background:#EEF4FF !important;
+    border-color:#D8E6FF !important;
 }
 
 /* USER PILL */
@@ -295,39 +290,39 @@ div.stButton > button:disabled {
 
 /* ACCIÓN SIMPLE */
 .action-inline {
-    max-width:420px;
+    max-width:560px;
     display:flex;
     align-items:center;
-    gap:0.55rem;
-    margin-bottom:0.4rem;
+    gap:0.7rem;
+    margin-bottom:0.28rem;
 }
 .action-icon {
-    width:30px;
-    height:30px;
-    border-radius:8px;
+    width:34px;
+    height:34px;
+    border-radius:10px;
     background:#F2F4F9;
     border:1px solid #E3E7F1;
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:0.95rem;
+    font-size:1rem;
     flex-shrink:0;
 }
 .action-text {
     display:flex;
     flex-direction:column;
-    gap:0.08rem;
+    gap:0.1rem;
 }
 .action-title {
-    font-size:0.82rem;
+    font-size:0.97rem;
     font-weight:600;
     color:#1D2433;
     line-height:1.05;
 }
 .action-desc {
-    font-size:0.69rem;
+    font-size:0.73rem;
     color:#7C869D;
-    line-height:1.2;
+    line-height:1.25;
 }
 
 /* PROCESO */
@@ -419,13 +414,13 @@ div.stButton > button:disabled {
     align-items:center;
     gap:0.35rem;
     margin-top:0.68rem;
-    background:#FFFFFF;
-    color:#394255 !important;
-    border:1px solid #DCE1EB;
+    background:#DCEBFF;
+    color:#214D92 !important;
+    border:1px solid #BDD6FF;
     border-radius:9px;
     padding:0.42rem 0.82rem;
     font-size:0.72rem;
-    font-weight:500;
+    font-weight:600;
     text-decoration:none;
 }
 
@@ -495,16 +490,23 @@ div.stButton > button:disabled {
     }
 
     .login-page {
-        padding:1.25rem 0.9rem;
-        align-items:flex-start;
+        padding:0.75rem 0.9rem 1.4rem;
     }
 
     .login-head {
-        padding:1.2rem 1.1rem 1rem;
+        padding:1.15rem 1.1rem 1rem;
     }
 
     .login-logo {
-        height:60px;
+        height:70px;
+    }
+
+    .action-title {
+        font-size:0.9rem;
+    }
+
+    .action-desc {
+        font-size:0.71rem;
     }
 }
 </style>
@@ -579,8 +581,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="main-content">', unsafe_allow_html=True)
-st.markdown('<div class="section-eyebrow">ACCIONES</div>', unsafe_allow_html=True)
-st.markdown('<div class="section-heading">Sesión de trabajo</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-eyebrow">ACCIONES RÁPIDAS</div>', unsafe_allow_html=True)
 st.markdown(
     f'<div class="user-pill">👤 {DISPLAY_USER} · {USER_EMAIL}</div>',
     unsafe_allow_html=True
@@ -598,12 +599,12 @@ copy_url = (
 
 confirm_state = st.session_state.get("confirm_state", "idle")
 
-st.markdown("""
+st.markdown(f"""
 <div class="action-inline">
     <div class="action-icon">📋</div>
     <div class="action-text">
-        <div class="action-title">Nueva sesión</div>
-        <div class="action-desc">Crear copia MASTER</div>
+        <div class="action-title">Nueva Confirmación ES</div>
+        <div class="action-desc">Crear sesión MASTER de trabajo para {DISPLAY_USER}</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -707,7 +708,6 @@ with col_logout:
 if st.session_state.get("historial"):
     st.markdown("<div style='height:1.2rem'></div>", unsafe_allow_html=True)
     st.markdown('<div class="section-eyebrow">ESTA SESIÓN</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-heading">Archivos creados</div>', unsafe_allow_html=True)
 
     for i, entry in enumerate(st.session_state["historial"], 1):
         st.markdown(f"""
@@ -723,7 +723,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · v3.1.0</span>
+    <span class="footer-text">Panel de Control · v3.2.0</span>
     <span class="footer-text">Carpeta: {FOLDER_ID}</span>
 </div>
 """, unsafe_allow_html=True)
