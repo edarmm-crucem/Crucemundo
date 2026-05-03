@@ -140,7 +140,7 @@ section.stMain .block-container,
     padding-bottom:1rem !important;
     padding-left:1rem !important;
     padding-right:1rem !important;
-    max-width:760px !important;
+    max-width:980px !important;
     margin:0 auto !important;
 }
 
@@ -213,7 +213,7 @@ div[data-testid="stTextInput"] input {
     color:#1F2937 !important;
 }
 
-/* BOTONES */
+/* BOTONES GENERALES */
 div.stButton {
     width:fit-content !important;
 }
@@ -237,6 +237,33 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     background:#D0E3FF !important;
     border-color:#AFCBFF !important;
     color:#183F7A !important;
+}
+
+/* BOTONES PASTILLA ES Y GRUPOS */
+div.st-key-btn_crear_es button,
+div.st-key-btn_crear_grupos button {
+    background:#FFFFFF !important;
+    color:#214D92 !important;
+    border:1px solid rgba(33,77,146,0.14) !important;
+    border-radius:999px !important;
+    min-height:38px !important;
+    padding:0 1.15rem !important;
+    font-size:0.76rem !important;
+    font-weight:600 !important;
+    box-shadow:none !important;
+}
+div.st-key-btn_crear_es button:hover,
+div.st-key-btn_crear_grupos button:hover {
+    background:#F8FBFF !important;
+    color:#163D78 !important;
+    border-color:rgba(33,77,146,0.24) !important;
+}
+div.st-key-btn_crear_es_dis button,
+div.st-key-btn_crear_grupos_dis button {
+    border-radius:999px !important;
+    background:#F4F6FA !important;
+    color:#94A0B8 !important;
+    border:1px solid #E0E6F0 !important;
 }
 
 /* HEADER */
@@ -310,7 +337,7 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     display:inline-flex;
     align-items:center;
     gap:0.4rem;
-    margin:0.02rem 0 0.95rem;
+    margin:0.02rem 0 1rem;
     padding:0.38rem 0.68rem;
     border-radius:999px;
     background:#fff;
@@ -324,74 +351,75 @@ div[data-testid="stFormSubmitButton"] > button:hover,
 /* TARJETAS */
 .action-box {
     width:100%;
-    max-width:520px;
-    background:transparent !important;
-    border:none !important;
-    border-radius:0 !important;
-    box-shadow:none !important;
-    padding:0 !important;
-    margin-bottom:1rem;
+    min-height:170px;
+    border-radius:22px;
+    padding:1rem;
+    margin-bottom:0.1rem;
     display:flex;
     flex-direction:column;
-    gap:0.8rem;
+    justify-content:space-between;
+    gap:0.9rem;
+    border:1px solid transparent;
+}
+.card-es {
+    background:#F3F7FF;
+    border-color:#D9E5FF;
+}
+.card-grupos {
+    background:#F4FBF6;
+    border-color:#D8EEDC;
 }
 .action-top {
     display:flex;
     align-items:flex-start;
-    gap:0.7rem;
+    gap:0.75rem;
 }
 .action-icon {
-    width:36px;
-    height:36px;
-    border-radius:10px;
-    background:#EFEDE8;
-    border:1px solid #E2DED7;
+    width:38px;
+    height:38px;
+    border-radius:12px;
     display:flex;
     align-items:center;
     justify-content:center;
     font-size:1rem;
     flex-shrink:0;
 }
+.card-es .action-icon {
+    background:#E6EEFF;
+    border:1px solid #D2DFFF;
+}
+.card-grupos .action-icon {
+    background:#E7F5EA;
+    border:1px solid #D0EAD7;
+}
 .action-text {
     display:flex;
     flex-direction:column;
-    gap:0.15rem;
+    gap:0.18rem;
     min-width:0;
 }
 .action-title {
-    font-size:0.94rem;
-    font-weight:600;
+    font-size:0.95rem;
+    font-weight:700;
     color:#1F2937;
     line-height:1.1;
 }
 .action-desc {
-    font-size:0.72rem;
-    color:#7A808E;
-    line-height:1.26;
+    font-size:0.73rem;
+    color:#6F7B91;
+    line-height:1.3;
 }
 .action-button-wrap {
     display:flex !important;
-    justify-content:center !important;
+    justify-content:flex-start !important;
     align-items:center !important;
     width:100% !important;
-    margin-top:0.15rem;
+    margin-top:0.1rem;
 }
 .action-button-wrap div.stButton {
     width:auto !important;
     display:flex !important;
-    justify-content:center !important;
-}
-.action-button-wrap div.stButton > button {
-    width:auto !important;
-    background:#D9E9FF !important;
-    color:#214D92 !important;
-    border:1px solid #BDD6FF !important;
-    border-radius:12px !important;
-    min-height:36px !important;
-    padding:0 1.2rem !important;
-    font-size:0.77rem !important;
-    font-weight:600 !important;
-    box-shadow:none !important;
+    justify-content:flex-start !important;
 }
 
 /* PROCESO */
@@ -399,7 +427,7 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     width:100%;
     max-width:520px;
     padding:0;
-    margin-top:0.35rem;
+    margin-top:0.7rem;
     display:flex;
     flex-direction:column;
 }
@@ -490,8 +518,8 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     background:#D9E9FF;
     color:#214D92 !important;
     border:1px solid #BDD6FF;
-    border-radius:10px;
-    padding:0.4rem 0.8rem;
+    border-radius:999px;
+    padding:0.42rem 0.88rem;
     font-size:0.71rem;
     font-weight:600;
     text-decoration:none;
@@ -502,13 +530,13 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     display:flex;
     align-items:center;
     gap:0.75rem;
-    padding:0.2rem 0;
+    padding:0.28rem 0;
     border-radius:0 !important;
     background:transparent !important;
     border:none !important;
     margin-bottom:0.35rem;
     width:100%;
-    max-width:520px;
+    max-width:620px;
     box-shadow:none !important;
 }
 .history-num {
@@ -565,7 +593,7 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     color:#A2ABBD;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 840px) {
     .portal-header {
         flex-direction:column;
         align-items:flex-start;
@@ -658,57 +686,59 @@ st.markdown(
 
 confirm_state = st.session_state.get("confirm_state", "idle")
 
-# TARJETA 1 - ES
-st.markdown(f"""
-<div class="action-box">
-    <div class="action-top">
-        <div class="action-icon">📋</div>
-        <div class="action-text">
-            <div class="action-title">Nueva Confirmación ES</div>
-            <div class="action-desc">Crear sesión MASTER de trabajo para {DISPLAY_USER}</div>
+col1, col2 = st.columns(2, gap="medium")
+
+with col1:
+    st.markdown(f"""
+    <div class="action-box card-es">
+        <div class="action-top">
+            <div class="action-icon">📋</div>
+            <div class="action-text">
+                <div class="action-title">Nueva Confirmación ES</div>
+                <div class="action-desc">Crear sesión MASTER de trabajo para {DISPLAY_USER}</div>
+            </div>
         </div>
-    </div>
-    <div class="action-button-wrap">
-""", unsafe_allow_html=True)
+        <div class="action-button-wrap">
+    """, unsafe_allow_html=True)
 
-if confirm_state in ("idle", "done"):
-    if st.button("Crear Sesión ES", key="btn_crear_es"):
-        iniciar_proceso(
-            session_type="es",
-            template_id=TEMPLATE_ID_ES,
-            prefix_name="MASTER",
-            process_title="Estado del Proceso: Crear Sesión MASTER_CONFIRMATION"
-        )
-else:
-    st.button("Crear Sesión ES", key="btn_crear_es_dis", disabled=True)
+    if confirm_state in ("idle", "done"):
+        if st.button("Crear Sesión ES", key="btn_crear_es"):
+            iniciar_proceso(
+                session_type="es",
+                template_id=TEMPLATE_ID_ES,
+                prefix_name="MASTER",
+                process_title="Estado del Proceso: Crear Sesión MASTER_CONFIRMATION"
+            )
+    else:
+        st.button("Crear Sesión ES", key="btn_crear_es_dis", disabled=True)
 
-st.markdown('</div></div>', unsafe_allow_html=True)
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
-# TARJETA 2 - GRUPOS
-st.markdown(f"""
-<div class="action-box">
-    <div class="action-top">
-        <div class="action-icon">👥</div>
-        <div class="action-text">
-            <div class="action-title">Nueva Confirmación GRUPOS</div>
-            <div class="action-desc">Crear sesión MASTER GRUPOS de trabajo para {DISPLAY_USER}</div>
+with col2:
+    st.markdown(f"""
+    <div class="action-box card-grupos">
+        <div class="action-top">
+            <div class="action-icon">👥</div>
+            <div class="action-text">
+                <div class="action-title">Nueva Confirmación GRUPOS</div>
+                <div class="action-desc">Crear sesión MASTER GRUPOS de trabajo para {DISPLAY_USER}</div>
+            </div>
         </div>
-    </div>
-    <div class="action-button-wrap">
-""", unsafe_allow_html=True)
+        <div class="action-button-wrap">
+    """, unsafe_allow_html=True)
 
-if confirm_state in ("idle", "done"):
-    if st.button("Crear Sesión GRUPOS", key="btn_crear_grupos"):
-        iniciar_proceso(
-            session_type="grupos",
-            template_id=TEMPLATE_ID_GRUPOS,
-            prefix_name="MASTER GRUPOS",
-            process_title="Estado del Proceso: Crear Sesión MASTER_GRUPOS"
-        )
-else:
-    st.button("Crear Sesión GRUPOS", key="btn_crear_grupos_dis", disabled=True)
+    if confirm_state in ("idle", "done"):
+        if st.button("Crear Sesión GRUPOS", key="btn_crear_grupos"):
+            iniciar_proceso(
+                session_type="grupos",
+                template_id=TEMPLATE_ID_GRUPOS,
+                prefix_name="MASTER GRUPOS",
+                process_title="Estado del Proceso: Crear Sesión MASTER_GRUPOS"
+            )
+    else:
+        st.button("Crear Sesión GRUPOS", key="btn_crear_grupos_dis", disabled=True)
 
-st.markdown('</div></div>', unsafe_allow_html=True)
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
 saved_name = st.session_state.get("nombre_copia", "")
 saved_url = st.session_state.get("copy_url", "")
