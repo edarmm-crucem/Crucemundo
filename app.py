@@ -1,11 +1,12 @@
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, date
 import urllib.parse
 import time
 import re
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CONFIG
@@ -22,8 +23,9 @@ LOGO_URL = f"https://lh3.googleusercontent.com/d/{LOGO_ID}"
 
 TEMPLATE_ID_ES = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
 TEMPLATE_ID_GRUPOS = "1Z7ktX3PhVkMibWpzdrDDqAT4aPsmjzSJPf1SgZcL5-w"
-FOLDER_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
+TEMPLATE_ID_CRUCERO = "1zSJPi6St_Z5Jw1c6eieVnKI4NyEdP7E9n3WTZ9yy3C0"
 
+FOLDER_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
 DRIVE_ROOT_ID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
 
 VALID_USERS = {
@@ -49,9 +51,12 @@ defaults = {
     "historial": [],
     "session_type": "",
     "open_salida_form": False,
+    "open_crucero_form": False,
     "salida_year": None,
     "salida_boat": None,
     "salida_name": None,
+    "crucero_year": None,
+    "crucero_boat": None,
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -69,25 +74,25 @@ def get_saludo():
     return "Buenas noches"
 
 def do_logout():
-    st.session_state["authenticated"] = False
-    st.session_state["user_email"] = ""
-    st.session_state["display_name"] = ""
-    st.session_state["confirm_state"] = "idle"
-    st.session_state["session_type"] = ""
-    st.session_state["open_salida_form"] = False
-    st.session_state["salida_year"] = None
-    st.session_state["salida_boat"] = None
-    st.session_state["salida_name"] = None
+    keys_to_reset = [
+        "authenticated", "user_email", "display_name", "confirm_state", "session_type",
+        "open_salida_form", "open_crucero_form",
+        "salida_year", "salida_boat", "salida_name",
+        "crucero_year", "crucero_boat"
+    ]
+    for k in keys_to_reset:
+        if k in st.session_state:
+            del st.session_state[k]
 
-    for key in [
-        "nombre_copia",
-        "copy_url",
-        "process_title",
-        "opened_url",
-        "salida_year_widget",
-        "salida_boat_widget",
-        "salida_name_widget",
-    ]:
+    widget_keys = [
+        "salida_year_widget", "salida_boat_widget", "salida_name_widget",
+        "crucero_year_widget", "crucero_boat_widget"
+    ]
+    for k in widget_keys:
+        if k in st.session_state:
+            del st.session_state[k]
+
+    for key in ["nombre_copia", "copy_url", "process_title"]:
         if key in st.session_state:
             del st.session_state[key]
 
@@ -131,14 +136,11 @@ def reset_salida_downstream(level):
     if level == "year":
         st.session_state["salida_boat"] = None
         st.session_state["salida_name"] = None
-        if "salida_boat_widget" in st.session_state:
-            del st.session_state["salida_boat_widget"]
-        if "salida_name_widget" in st.session_state:
-            del st.session_state["salida_name_widget"]
+        st.session_state.pop("salida_boat_widget", None)
+        st.session_state.pop("salida_name_widget", None)
     elif level == "boat":
         st.session_state["salida_name"] = None
-        if "salida_name_widget" in st.session_state:
-            del st.session_state["salida_name_widget"]
+        st.session_state.pop("salida_name_widget", None)
 
 def on_year_change():
     st.session_state["salida_year"] = st.session_state.get("salida_year_widget")
@@ -151,19 +153,29 @@ def on_boat_change():
 def on_salida_change():
     st.session_state["salida_name"] = st.session_state.get("salida_name_widget")
 
+def reset_crucero_downstream(level):
+    if level == "year":
+        st.session_state["crucero_boat"] = None
+        st.session_state.pop("crucero_boat_widget", None)
+
+def on_crucero_year_change():
+    st.session_state["crucero_year"] = st.session_state.get("crucero_year_widget")
+    reset_crucero_downstream("year")
+
+def on_crucero_boat_change():
+    st.session_state["crucero_boat"] = st.session_state.get("crucero_boat_widget")
+
 # ──────────────────────────────────────────────────────────────────────────────
 # GOOGLE DRIVE API
 # ──────────────────────────────────────────────────────────────────────────────
 @st.cache_resource
 def get_drive_service():
     if "gcp_service_account" not in st.secrets:
-        raise Exception(
-            'Falta [gcp_service_account] en .streamlit/secrets.toml o en los Secrets de Streamlit Cloud.'
-        )
+        raise Exception('Falta [gcp_service_account] en secrets.')
 
     creds = service_account.Credentials.from_service_account_info(
         st.secrets["gcp_service_account"],
-        scopes=["https://www.googleapis.com/auth/drive.readonly"]
+        scopes=["https://www.googleapis.com/auth/drive"]
     )
     return build("drive", "v3", credentials=creds)
 
@@ -179,7 +191,7 @@ def list_folder_items(parent_id, folders_only=False):
     while True:
         response = service.files().list(
             q=q,
-            fields="nextPageToken, files(id, name, mimeType, webViewLink)",
+            fields="nextPageToken, files(id, name, mimeType, webViewLink, description)",
             supportsAllDrives=True,
             includeItemsFromAllDrives=True,
             corpora="allDrives",
@@ -188,11 +200,60 @@ def list_folder_items(parent_id, folders_only=False):
         ).execute()
 
         results.extend(response.get("files", []))
-        page_token = response.get("nextPageToken", None)
+        page_token = response.get("nextPageToken")
         if not page_token:
             break
 
     return results
+
+def find_child_folder(parent_id, folder_name):
+    folders = list_folder_items(parent_id, folders_only=True)
+    for f in folders:
+        if f["name"].strip() == folder_name.strip():
+            return f
+    return None
+
+def create_folder(parent_id, folder_name):
+    service = get_drive_service()
+    body = {
+        "name": folder_name,
+        "mimeType": "application/vnd.google-apps.folder",
+        "parents": [parent_id]
+    }
+    return service.files().create(
+        body=body,
+        fields="id, name",
+        supportsAllDrives=True
+    ).execute()
+
+def get_or_create_folder(parent_id, folder_name):
+    existing = find_child_folder(parent_id, folder_name)
+    if existing:
+        return existing
+    return create_folder(parent_id, folder_name)
+
+def find_file_by_name(parent_id, file_name):
+    items = list_folder_items(parent_id, folders_only=False)
+    for f in items:
+        if f["name"].strip() == file_name.strip():
+            return f
+    return None
+
+def copy_file_to_folder(file_id, new_name, parent_folder_id, description=None):
+    service = get_drive_service()
+    body = {
+        "name": new_name,
+        "parents": [parent_folder_id],
+    }
+    if description:
+        body["description"] = description
+
+    return service.files().copy(
+        fileId=file_id,
+        body=body,
+        fields="id, name, webViewLink",
+        supportsAllDrives=True
+    ).execute()
 
 @st.cache_data(ttl=300)
 def get_years():
@@ -202,11 +263,8 @@ def get_years():
 
 @st.cache_data(ttl=300)
 def get_year_folder_id(year_name):
-    folders = list_folder_items(DRIVE_ROOT_ID, folders_only=True)
-    for f in folders:
-        if f["name"].strip() == year_name:
-            return f["id"]
-    return None
+    folder = find_child_folder(DRIVE_ROOT_ID, year_name)
+    return folder["id"] if folder else None
 
 @st.cache_data(ttl=300)
 def get_boats(year_name):
@@ -214,20 +272,9 @@ def get_boats(year_name):
     if not year_folder_id:
         return []
 
-    boat_names = set()
-    subfolders = list_folder_items(year_folder_id, folders_only=True)
-
-    for sub in subfolders:
-        files = list_folder_items(sub["id"], folders_only=False)
-        for file in files:
-            name = file["name"].strip()
-            match = re.match(r"^(.*)_(\d{6})$", name)
-            if match:
-                boat = match.group(1).strip()
-                if boat:
-                    boat_names.add(boat)
-
-    return sorted(boat_names)
+    folders = list_folder_items(year_folder_id, folders_only=True)
+    boats = sorted({f["name"].strip() for f in folders if f["name"].strip()})
+    return boats
 
 @st.cache_data(ttl=300)
 def get_departures(year_name, boat_name):
@@ -235,23 +282,73 @@ def get_departures(year_name, boat_name):
     if not year_folder_id:
         return []
 
-    departures = []
-    subfolders = list_folder_items(year_folder_id, folders_only=True)
+    boat_folder = find_child_folder(year_folder_id, boat_name)
+    if not boat_folder:
+        return []
+
+    files = list_folder_items(boat_folder["id"], folders_only=False)
     pattern = re.compile(rf"^{re.escape(boat_name)}_(\d{{6}})$")
 
-    for sub in subfolders:
-        files = list_folder_items(sub["id"], folders_only=False)
-        for file in files:
-            name = file["name"].strip()
-            if pattern.match(name):
-                departures.append({
-                    "nombre": name,
-                    "id": file["id"],
-                    "url": file.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{file['id']}/edit"
-                })
+    departures = []
+    for file in files:
+        name = file["name"].strip()
+        if pattern.match(name):
+            departures.append({
+                "nombre": name,
+                "id": file["id"],
+                "url": file.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{file['id']}/edit"
+            })
 
     departures.sort(key=lambda x: x["nombre"])
     return departures
+
+def create_crucero_file(barco, fecha_obj):
+    if not barco or not fecha_obj:
+        raise Exception("Faltan datos de barco o fecha.")
+
+    año = str(fecha_obj.year)
+    yy = fecha_obj.strftime("%y")
+    mm = fecha_obj.strftime("%m")
+    dd = fecha_obj.strftime("%d")
+    fecha_es = fecha_obj.strftime("%d/%m/%Y")
+    nombre_nuevo = f"{barco}_{yy}{mm}{dd}"
+
+    carpeta_año = get_or_create_folder(DRIVE_ROOT_ID, año)
+    carpeta_barco = get_or_create_folder(carpeta_año["id"], barco)
+
+    duplicado = find_file_by_name(carpeta_barco["id"], nombre_nuevo)
+    if duplicado:
+        return {
+            "status": "duplicate",
+            "name": nombre_nuevo,
+            "url": duplicado.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{duplicado['id']}/edit"
+        }
+
+    descripcion = (
+        f"Barco: {barco} | Salida: {fecha_es} | "
+        f"Creado: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} | "
+        f"Los archivos de sesión deben borrarse a los 30 días."
+    )
+
+    copia = copy_file_to_folder(
+        TEMPLATE_ID_CRUCERO,
+        nombre_nuevo,
+        carpeta_barco["id"],
+        descripcion
+    )
+
+    get_years.clear()
+    get_year_folder_id.clear()
+    get_boats.clear()
+    get_departures.clear()
+
+    return {
+        "status": "created",
+        "name": nombre_nuevo,
+        "url": copia.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{copia['id']}/edit",
+        "year": año,
+        "boat": barco
+    }
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CSS
@@ -259,14 +356,8 @@ def get_departures(year_name, boat_name):
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
-
 * { box-sizing: border-box; }
-
-html, body, [class*="css"] {
-    font-family: 'DM Sans', sans-serif;
-    background:#FFFFFF !important;
-}
-
+html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; background:#FFFFFF !important; }
 [data-testid="stAppViewContainer"] { background:#FFFFFF !important; }
 [data-testid="stHeader"] { background:transparent !important; }
 section[data-testid="stSidebar"] { display:none !important; }
@@ -279,71 +370,36 @@ section.stMain .block-container,
     padding-bottom:1rem !important;
     padding-left:1rem !important;
     padding-right:1rem !important;
-    max-width:1100px !important;
+    max-width:1250px !important;
     margin:0 auto !important;
 }
 
-.login-page {
-    min-height:auto;
-    display:flex;
-    align-items:flex-start;
-    justify-content:center;
-    padding:0.2rem 1rem 1rem;
-}
-.login-shell {
-    width:100%;
-    max-width:390px;
-    margin:0 auto;
-}
-.login-head {
-    text-align:center;
-    margin-bottom:0.55rem;
-}
-.login-logo {
-    height:56px;
-    width:auto;
-    margin:0 auto 0.65rem auto;
-    display:block;
-}
-.login-title {
-    font-size:1.08rem;
-    font-weight:700;
-    color:#1F2937;
-}
-.login-subtitle {
-    font-size:0.78rem;
-    color:#7C869D;
-    margin-top:0.28rem;
-}
-.login-form-box {
-    background:transparent !important;
-    border:none !important;
-    padding:0 !important;
-}
-.login-note {
-    margin-top:0.65rem;
-    text-align:center;
-    font-size:0.72rem;
-    color:#8A93A5;
-}
+.login-page { min-height:auto; display:flex; align-items:flex-start; justify-content:center; padding:0.2rem 1rem 1rem; }
+.login-shell { width:100%; max-width:390px; margin:0 auto; }
+.login-head { text-align:center; margin-bottom:0.55rem; }
+.login-logo { height:56px; width:auto; margin:0 auto 0.65rem auto; display:block; }
+.login-title { font-size:1.08rem; font-weight:700; color:#1F2937; }
+.login-subtitle { font-size:0.78rem; color:#7C869D; margin-top:0.28rem; }
+.login-form-box { background:transparent !important; border:none !important; padding:0 !important; }
+.login-note { margin-top:0.65rem; text-align:center; font-size:0.72rem; color:#8A93A5; }
 
 div[data-testid="stTextInput"] label,
-div[data-testid="stSelectbox"] label {
+div[data-testid="stSelectbox"] label,
+div[data-testid="stDateInput"] label {
     color:#4D576D !important;
     font-size:0.78rem !important;
     font-weight:500 !important;
 }
 div[data-testid="stTextInput"] input,
-div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+div[data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+div[data-testid="stDateInput"] input {
     background:#F8FAFC !important;
     border:1px solid #E5EAF2 !important;
     border-radius:12px !important;
     color:#1F2937 !important;
 }
 
-div.stButton {
-    width:fit-content !important;
-}
+div.stButton { width:fit-content !important; }
 div.stButton > button,
 div[data-testid="stFormSubmitButton"] > button,
 .logout-btn > div > button {
@@ -368,7 +424,9 @@ div[data-testid="stFormSubmitButton"] > button:hover,
 
 div.st-key-btn_crear_es button,
 div.st-key-btn_crear_grupos button,
-div.st-key-btn_ir_salida button {
+div.st-key-btn_ir_salida button,
+div.st-key-btn_crear_crucero_open button,
+div.st-key-btn_crear_crucero_action button {
     background:#FFFFFF !important;
     color:#214D92 !important;
     border:1px solid rgba(33,77,146,0.14) !important;
@@ -381,18 +439,12 @@ div.st-key-btn_ir_salida button {
 }
 div.st-key-btn_crear_es button:hover,
 div.st-key-btn_crear_grupos button:hover,
-div.st-key-btn_ir_salida button:hover {
+div.st-key-btn_ir_salida button:hover,
+div.st-key-btn_crear_crucero_open button:hover,
+div.st-key-btn_crear_crucero_action button:hover {
     background:#F8FBFF !important;
     color:#163D78 !important;
     border-color:rgba(33,77,146,0.24) !important;
-}
-
-div.st-key-btn_crear_es_dis button,
-div.st-key-btn_crear_grupos_dis button {
-    border-radius:999px !important;
-    background:#F4F6FA !important;
-    color:#94A0B8 !important;
-    border:1px solid #E0E6F0 !important;
 }
 
 .portal-header {
@@ -403,314 +455,86 @@ div.st-key-btn_crear_grupos_dis button {
     gap:1rem;
     margin-bottom:0.55rem;
 }
-.portal-header-left {
-    display:flex;
-    align-items:center;
-    gap:0.9rem;
-}
-.portal-logo {
-    height:42px;
-    width:auto;
-    object-fit:contain;
-    display:block;
-}
-.portal-title {
-    font-size:0.96rem;
-    font-weight:600;
-    color:#1F2937;
-    line-height:1.15;
-}
-.portal-subtitle {
-    font-size:0.72rem;
-    color:#7C869D;
-    margin-top:0.08rem;
-}
-.user-top {
-    font-size:0.72rem;
-    color:#566079;
-    white-space:nowrap;
-}
+.portal-header-left { display:flex; align-items:center; gap:0.9rem; }
+.portal-logo { height:42px; width:auto; object-fit:contain; display:block; }
+.portal-title { font-size:0.96rem; font-weight:600; color:#1F2937; line-height:1.15; }
+.portal-subtitle { font-size:0.72rem; color:#7C869D; margin-top:0.08rem; }
+.user-top { font-size:0.72rem; color:#566079; white-space:nowrap; }
 
 .main-content { padding:0; }
 .section-eyebrow {
-    display:inline-flex;
-    align-items:center;
-    padding:0.34rem 0.74rem;
-    border-radius:999px;
-    background:#EAF1FF;
-    border:1px solid #D6E3FF;
-    color:#2E5FB8;
-    font-size:0.66rem;
-    font-weight:700;
-    letter-spacing:0.08em;
-    text-transform:uppercase;
-    margin-bottom:0.75rem;
+    display:inline-flex; align-items:center; padding:0.34rem 0.74rem; border-radius:999px;
+    background:#EAF1FF; border:1px solid #D6E3FF; color:#2E5FB8;
+    font-size:0.66rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.75rem;
 }
 .user-pill {
-    display:inline-flex;
-    align-items:center;
-    gap:0.4rem;
-    margin:0.02rem 0 1rem;
-    padding:0.38rem 0.68rem;
-    border-radius:999px;
-    background:#fff;
-    border:1px solid #E4E7EF;
-    font-size:0.72rem;
-    color:#5D6880;
-    max-width:100%;
-    word-break:break-word;
+    display:inline-flex; align-items:center; gap:0.4rem; margin:0.02rem 0 1rem;
+    padding:0.38rem 0.68rem; border-radius:999px; background:#fff; border:1px solid #E4E7EF;
+    font-size:0.72rem; color:#5D6880; max-width:100%; word-break:break-word;
 }
 
 .action-box {
-    width:100%;
-    min-height:176px;
-    border-radius:22px;
-    padding:1rem;
-    margin-bottom:0.1rem;
-    display:flex;
-    flex-direction:column;
-    justify-content:space-between;
-    gap:0.9rem;
-    border:1px solid transparent;
+    width:100%; min-height:176px; border-radius:22px; padding:1rem; margin-bottom:0.1rem;
+    display:flex; flex-direction:column; justify-content:space-between; gap:0.9rem; border:1px solid transparent;
 }
-.card-es {
-    background:#F3F7FF;
-    border-color:#D9E5FF;
-}
-.card-grupos {
-    background:#F4FBF6;
-    border-color:#D8EEDC;
-}
-.card-salida {
-    background:#FFF8F1;
-    border-color:#F1DFC7;
-}
-.action-top {
-    display:flex;
-    align-items:flex-start;
-    gap:0.75rem;
-}
+.card-es { background:#F3F7FF; border-color:#D9E5FF; }
+.card-grupos { background:#F4FBF6; border-color:#D8EEDC; }
+.card-salida { background:#FFF8F1; border-color:#F1DFC7; }
+.card-crucero { background:#F7F4FF; border-color:#E4DDF9; }
+
+.action-top { display:flex; align-items:flex-start; gap:0.75rem; }
 .action-icon {
-    width:38px;
-    height:38px;
-    border-radius:12px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:1rem;
-    flex-shrink:0;
+    width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+    font-size:1rem; flex-shrink:0;
 }
-.card-es .action-icon {
-    background:#E6EEFF;
-    border:1px solid #D2DFFF;
-}
-.card-grupos .action-icon {
-    background:#E7F5EA;
-    border:1px solid #D0EAD7;
-}
-.card-salida .action-icon {
-    background:#FFF0DD;
-    border:1px solid #F2DEC0;
-}
-.action-text {
-    display:flex;
-    flex-direction:column;
-    gap:0.18rem;
-    min-width:0;
-}
-.action-title {
-    font-size:0.95rem;
-    font-weight:700;
-    color:#1F2937;
-    line-height:1.1;
-}
-.action-desc {
-    font-size:0.73rem;
-    color:#6F7B91;
-    line-height:1.3;
-}
+.card-es .action-icon { background:#E6EEFF; border:1px solid #D2DFFF; }
+.card-grupos .action-icon { background:#E7F5EA; border:1px solid #D0EAD7; }
+.card-salida .action-icon { background:#FFF0DD; border:1px solid #F2DEC0; }
+.card-crucero .action-icon { background:#EEE8FF; border:1px solid #DDD2FF; }
+
+.action-text { display:flex; flex-direction:column; gap:0.18rem; min-width:0; }
+.action-title { font-size:0.95rem; font-weight:700; color:#1F2937; line-height:1.1; }
+.action-desc { font-size:0.73rem; color:#6F7B91; line-height:1.3; }
 .action-button-wrap {
-    display:flex !important;
-    justify-content:flex-start !important;
-    align-items:center !important;
-    width:100% !important;
-    margin-top:0.1rem;
+    display:flex !important; justify-content:flex-start !important; align-items:center !important; width:100% !important; margin-top:0.1rem;
 }
 
 .selector-box {
-    margin-top:1rem;
-    width:100%;
-    max-width:720px;
-    padding:1rem;
-    border-radius:18px;
-    background:#FFFCF7;
-    border:1px solid #F1E7D9;
+    margin-top:1rem; width:100%; max-width:760px; padding:1rem; border-radius:18px;
+    background:#FFFCF7; border:1px solid #F1E7D9;
+}
+.selector-box-purple {
+    margin-top:1rem; width:100%; max-width:760px; padding:1rem; border-radius:18px;
+    background:#FBF9FF; border:1px solid #E8E0FA;
 }
 
-.progress-panel {
-    width:100%;
-    max-width:520px;
-    padding:0;
-    margin-top:0.7rem;
-    display:flex;
-    flex-direction:column;
-}
-.progress-title {
-    font-size:0.83rem;
-    font-weight:600;
-    color:#1F2937;
-    margin-bottom:0.35rem;
-}
-.step {
-    display:flex;
-    align-items:flex-start;
-    gap:0.65rem;
-    margin-bottom:0.6rem;
-}
-.step:last-child { margin-bottom:0; }
-.step-dot {
-    width:18px;
-    height:18px;
-    border-radius:50%;
-    flex-shrink:0;
-    margin-top:0.05rem;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:0.55rem;
-    font-weight:700;
-}
-.sd-done {
-    background:#EEF7F1;
-    border:1px solid #D8ECDF;
-    color:#2E7D58;
-}
-.sd-active {
-    background:#F2F4F9;
-    border:1px solid #DDE2EC;
-    color:#6E778B;
-}
-.sd-wait {
-    background:#F8F9FC;
-    border:1px solid #E6E9F0;
-    color:#B1B8C9;
-}
-.step-content {
-    display:flex;
-    flex-direction:column;
-    min-width:0;
-    flex:1;
-}
-.st-done, .st-active, .st-wait {
-    font-size:0.76rem;
-}
-.st-done { color:#394255; }
-.st-active { color:#1F2937; font-weight:600; }
-.st-wait { color:#A2ABBD; }
-.step-detail {
-    font-size:0.7rem;
-    color:#8790A4;
-    margin-top:0.08rem;
-}
-.done-box {
-    margin-top:0.8rem;
-    padding:0 !important;
-    background:transparent !important;
-    border:none !important;
-}
-.done-title {
-    font-size:0.76rem;
-    color:#1F2937;
-    font-weight:600;
-}
-.done-text {
-    font-size:0.71rem;
-    color:#657087;
-    margin-top:0.15rem;
-    line-height:1.3;
-}
 .done-link {
-    display:inline-flex;
-    align-items:center;
-    gap:0.35rem;
-    margin-top:0.65rem;
-    background:#D9E9FF;
-    color:#214D92 !important;
-    border:1px solid #BDD6FF;
-    border-radius:999px;
-    padding:0.42rem 0.88rem;
-    font-size:0.71rem;
-    font-weight:600;
-    text-decoration:none;
+    display:inline-flex; align-items:center; gap:0.35rem; margin-top:0.65rem; background:#D9E9FF;
+    color:#214D92 !important; border:1px solid #BDD6FF; border-radius:999px; padding:0.42rem 0.88rem;
+    font-size:0.71rem; font-weight:600; text-decoration:none;
 }
 
 .history-row {
-    display:flex;
-    align-items:center;
-    gap:0.75rem;
-    padding:0.28rem 0;
-    margin-bottom:0.35rem;
-    width:100%;
-    max-width:620px;
+    display:flex; align-items:center; gap:0.75rem; padding:0.28rem 0; margin-bottom:0.35rem; width:100%; max-width:620px;
 }
 .history-num {
-    width:22px;
-    height:22px;
-    border-radius:7px;
-    background:#F2F4F9;
-    border:1px solid #E3E7F1;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:0.62rem;
-    font-weight:600;
-    color:#5D6880;
-    flex-shrink:0;
+    width:22px; height:22px; border-radius:7px; background:#F2F4F9; border:1px solid #E3E7F1;
+    display:flex; align-items:center; justify-content:center; font-size:0.62rem; font-weight:600; color:#5D6880; flex-shrink:0;
 }
 .history-name {
-    font-size:0.75rem;
-    color:#394255;
-    flex:1;
-    word-wrap:break-word;
-    overflow-wrap:break-word;
-    white-space:normal;
+    font-size:0.75rem; color:#394255; flex:1; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;
 }
-.history-time {
-    font-size:0.68rem;
-    color:#A2ABBD;
-    white-space:nowrap;
-}
-.history-link {
-    font-size:0.71rem;
-    color:#5D6880;
-    text-decoration:none;
-    font-weight:500;
-    white-space:nowrap;
-}
+.history-time { font-size:0.68rem; color:#A2ABBD; white-space:nowrap; }
+.history-link { font-size:0.71rem; color:#5D6880; text-decoration:none; font-weight:500; white-space:nowrap; }
 
 .portal-footer {
-    margin-top:1rem;
-    padding:0.5rem 0 0 0;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:0.8rem;
-    flex-wrap:wrap;
+    margin-top:1rem; padding:0.5rem 0 0 0; display:flex; justify-content:space-between; align-items:center; gap:0.8rem; flex-wrap:wrap;
 }
-.footer-text {
-    font-size:0.71rem;
-    color:#A2ABBD;
-}
+.footer-text { font-size:0.71rem; color:#A2ABBD; }
 
-@media (max-width: 900px) {
-    .portal-header {
-        flex-direction:column;
-        align-items:flex-start;
-    }
-    .portal-footer {
-        flex-direction:column;
-        align-items:flex-start;
-    }
+@media (max-width: 1100px) {
+    .portal-header { flex-direction:column; align-items:flex-start; }
+    .portal-footer { flex-direction:column; align-items:flex-start; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -725,9 +549,7 @@ if not st.session_state["authenticated"]:
     <div class="login-head">
         <img class="login-logo" src="{LOGO_URL}" alt="Logo">
         <div class="login-title">Acceso</div>
-        <div class="login-subtitle">
-            Introduce tu mail y la contraseña.
-        </div>
+        <div class="login-subtitle">Introduce tu mail y la contraseña.</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -754,12 +576,7 @@ if not st.session_state["authenticated"]:
                 st.rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown("""
-        <div class="login-note">
-            El mail valida el acceso y el alias se usará para nombrar la sesión.
-        </div>
-    """, unsafe_allow_html=True)
-
+    st.markdown('<div class="login-note">El mail valida el acceso y el alias se usará para nombrar la sesión.</div>', unsafe_allow_html=True)
     st.markdown('</div></div>', unsafe_allow_html=True)
     st.stop()
 
@@ -786,12 +603,9 @@ st.markdown(f"""
 
 st.markdown('<div class="main-content">', unsafe_allow_html=True)
 st.markdown('<div class="section-eyebrow">ACCIONES RÁPIDAS</div>', unsafe_allow_html=True)
-st.markdown(
-    f'<div class="user-pill">👤 {DISPLAY_USER} · {USER_EMAIL}</div>',
-    unsafe_allow_html=True
-)
+st.markdown(f'<div class="user-pill">👤 {DISPLAY_USER} · {USER_EMAIL}</div>', unsafe_allow_html=True)
 
-col1, col2, col3 = st.columns(3, gap="medium")
+col1, col2, col3, col4 = st.columns(4, gap="medium")
 
 with col1:
     st.markdown(f"""
@@ -808,12 +622,7 @@ with col1:
 
     if confirm_state in ("idle", "done"):
         if st.button("Crear Sesión ES", key="btn_crear_es"):
-            iniciar_proceso(
-                session_type="es",
-                template_id=TEMPLATE_ID_ES,
-                prefix_name="MASTER",
-                process_title="Estado del Proceso: Crear Sesión MASTER_CONFIRMATION"
-            )
+            iniciar_proceso("es", TEMPLATE_ID_ES, "MASTER", "Estado del Proceso: Crear Sesión MASTER_CONFIRMATION")
     else:
         st.button("Crear Sesión ES", key="btn_crear_es_dis", disabled=True)
 
@@ -834,12 +643,7 @@ with col2:
 
     if confirm_state in ("idle", "done"):
         if st.button("Crear Sesión GRUPOS", key="btn_crear_grupos"):
-            iniciar_proceso(
-                session_type="grupos",
-                template_id=TEMPLATE_ID_GRUPOS,
-                prefix_name="MASTER GRUPOS",
-                process_title="Estado del Proceso: Crear Sesión MASTER_GRUPOS"
-            )
+            iniciar_proceso("grupos", TEMPLATE_ID_GRUPOS, "MASTER GRUPOS", "Estado del Proceso: Crear Sesión MASTER_GRUPOS")
     else:
         st.button("Crear Sesión GRUPOS", key="btn_crear_grupos_dis", disabled=True)
 
@@ -864,22 +668,35 @@ with col3:
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-# ──────────────────────────────────────────────────────────────────────────────
-# BLOQUE IR A SALIDA
-# ──────────────────────────────────────────────────────────────────────────────
+with col4:
+    st.markdown("""
+    <div class="action-box card-crucero">
+        <div class="action-top">
+            <div class="action-icon">🚢</div>
+            <div class="action-text">
+                <div class="action-title">Crear crucero</div>
+                <div class="action-desc">Crear salida nueva desde plantilla y guardarla en año/barco</div>
+            </div>
+        </div>
+        <div class="action-button-wrap">
+    """, unsafe_allow_html=True)
+
+    if st.button("Nuevo Crucero", key="btn_crear_crucero_open"):
+        st.session_state["open_crucero_form"] = not st.session_state["open_crucero_form"]
+        st.rerun()
+
+    st.markdown('</div></div>', unsafe_allow_html=True)
+
+# IR A SALIDA
 if st.session_state.get("open_salida_form"):
     st.markdown('<div class="selector-box">', unsafe_allow_html=True)
     st.markdown("#### Seleccionar salida")
 
     try:
         years = get_years()
-
         current_year = st.session_state.get("salida_year")
         if current_year not in years:
             current_year = None
-
-        if "salida_year_widget" not in st.session_state:
-            st.session_state["salida_year_widget"] = current_year
 
         selected_year = st.selectbox(
             "AÑO",
@@ -894,13 +711,9 @@ if st.session_state.get("open_salida_form"):
             st.session_state["salida_year"] = selected_year
 
         boats = get_boats(selected_year) if selected_year else []
-
         current_boat = st.session_state.get("salida_boat")
         if current_boat not in boats:
             current_boat = None
-
-        if "salida_boat_widget" not in st.session_state:
-            st.session_state["salida_boat_widget"] = current_boat
 
         selected_boat = st.selectbox(
             "BARCO",
@@ -922,9 +735,6 @@ if st.session_state.get("open_salida_form"):
         if current_departure not in departure_names:
             current_departure = None
 
-        if "salida_name_widget" not in st.session_state:
-            st.session_state["salida_name_widget"] = current_departure
-
         selected_departure = st.selectbox(
             "SALIDA",
             options=departure_names,
@@ -940,45 +750,103 @@ if st.session_state.get("open_salida_form"):
 
         if selected_departure:
             selected_obj = next((d for d in departures if d["nombre"] == selected_departure), None)
-
             if selected_obj:
-                open_url = selected_obj["url"]
-                st.markdown(
-                    f'<a class="done-link" href="{open_url}" target="_blank">Abrir salida ↗</a>',
-                    unsafe_allow_html=True
-                )
+                st.markdown(f'<a class="done-link" href="{selected_obj["url"]}" target="_blank">Abrir salida ↗</a>', unsafe_allow_html=True)
 
     except Exception as e:
         st.exception(e)
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ──────────────────────────────────────────────────────────────────────────────
+# CREAR CRUCERO
+if st.session_state.get("open_crucero_form"):
+    st.markdown('<div class="selector-box-purple">', unsafe_allow_html=True)
+    st.markdown("#### Crear crucero")
+
+    try:
+        years = get_years()
+        current_c_year = st.session_state.get("crucero_year")
+        if current_c_year not in years:
+            current_c_year = None
+
+        crucero_year = st.selectbox(
+            "AÑO DESTINO",
+            options=years,
+            index=years.index(current_c_year) if current_c_year in years else None,
+            placeholder="Selecciona un año",
+            key="crucero_year_widget",
+            on_change=on_crucero_year_change
+        )
+
+        if crucero_year != st.session_state.get("crucero_year"):
+            st.session_state["crucero_year"] = crucero_year
+
+        crucero_boats = get_boats(crucero_year) if crucero_year else []
+        current_c_boat = st.session_state.get("crucero_boat")
+        if current_c_boat not in crucero_boats:
+            current_c_boat = None
+
+        crucero_boat = st.selectbox(
+            "BARCO",
+            options=crucero_boats,
+            index=crucero_boats.index(current_c_boat) if current_c_boat in crucero_boats else None,
+            placeholder="Selecciona un barco",
+            key="crucero_boat_widget",
+            on_change=on_crucero_boat_change,
+            disabled=not crucero_year
+        )
+
+        if crucero_boat != st.session_state.get("crucero_boat"):
+            st.session_state["crucero_boat"] = crucero_boat
+
+        fecha_salida = st.date_input(
+            "FECHA DE SALIDA",
+            value=date.today(),
+            format="DD/MM/YYYY"
+        )
+
+        if crucero_boat and fecha_salida:
+            preview_name = f"{crucero_boat}_{fecha_salida.strftime('%y%m%d')}"
+            st.caption(f"Nombre previsto: {preview_name}")
+
+        if st.button("Crear Crucero", key="btn_crear_crucero_action", disabled=not (crucero_year and crucero_boat and fecha_salida)):
+            if int(crucero_year) != fecha_salida.year:
+                st.error("El año seleccionado no coincide con el año de la fecha.")
+            else:
+                result = create_crucero_file(crucero_boat, fecha_salida)
+                if result["status"] == "duplicate":
+                    st.warning(f'Ya existe "{result["name"]}".')
+                    st.markdown(f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir archivo existente ↗</a>', unsafe_allow_html=True)
+                else:
+                    st.success(f'Archivo "{result["name"]}" creado correctamente.')
+                    st.markdown(f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir crucero ↗</a>', unsafe_allow_html=True)
+
+    except Exception as e:
+        st.exception(e)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
 # PROCESO CREAR SESIÓN
-# ──────────────────────────────────────────────────────────────────────────────
 saved_name = st.session_state.get("nombre_copia", "")
 saved_url = st.session_state.get("copy_url", "")
 process_title = st.session_state.get("process_title", "Estado del Proceso")
 
 if confirm_state in ("step1", "step2", "step3", "done"):
-    st.markdown('<div class="progress-panel">', unsafe_allow_html=True)
-    st.markdown(f'<div class="progress-title">{process_title}</div>', unsafe_allow_html=True)
+    st.markdown('<div class="selector-box" style="max-width:520px;">', unsafe_allow_html=True)
+    st.markdown(f"#### {process_title}")
 
     if confirm_state == "step1":
         render_step("Progreso", "Preparando plantilla...", "active")
-
     elif confirm_state == "step2":
         render_step("Progreso", "Generando copia en Drive...", "active")
-
     elif confirm_state == "step3":
         render_step("Progreso", "Abriendo sesión...", "active")
-
     elif confirm_state == "done":
         render_step("Progreso", "Completo", "done")
         st.markdown(f"""
-        <div class="done-box">
-            <div class="done-title">Sesión creada</div>
-            <div class="done-text">
+        <div style="margin-top:0.8rem;">
+            <div style="font-size:0.76rem;color:#1F2937;font-weight:600;">Sesión creada</div>
+            <div style="font-size:0.71rem;color:#657087;margin-top:0.15rem;line-height:1.3;">
                 Puedes abrir tu sesión en el botón de abajo.
             </div>
             <a class="done-link" href="{saved_url}" target="_blank">Abrir sesión ↗</a>
@@ -991,12 +859,10 @@ if confirm_state in ("step1", "step2", "step3", "done"):
         time.sleep(0.7)
         st.session_state["confirm_state"] = "step2"
         st.rerun()
-
     elif confirm_state == "step2":
         time.sleep(0.7)
         st.session_state["confirm_state"] = "step3"
         st.rerun()
-
     elif confirm_state == "step3":
         time.sleep(0.7)
         st.session_state["confirm_state"] = "done"
@@ -1011,14 +877,8 @@ if confirm_state in ("step1", "step2", "step3", "done"):
 
     if confirm_state == "done" and saved_name and not st.session_state.get("opened_" + saved_name):
         st.session_state["opened_" + saved_name] = True
-        st.markdown(
-            f'<script>setTimeout(()=>window.open("{saved_url}","_blank"),300);</script>',
-            unsafe_allow_html=True
-        )
+        st.markdown(f'<script>setTimeout(()=>window.open("{saved_url}","_blank"),300);</script>', unsafe_allow_html=True)
 
-# ──────────────────────────────────────────────────────────────────────────────
-# FOOTER / HISTORIAL / LOGOUT
-# ──────────────────────────────────────────────────────────────────────────────
 st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
 st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
 if st.button("Cerrar sesión", key="btn_logout"):
@@ -1043,7 +903,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · v3.5.0</span>
-    <span class="footer-text">Carpeta: {FOLDER_ID}</span>
+    <span class="footer-text">Panel de Control · v3.6.0</span>
+    <span class="footer-text">Raíz Drive: {DRIVE_ROOT_ID}</span>
 </div>
 """, unsafe_allow_html=True)
