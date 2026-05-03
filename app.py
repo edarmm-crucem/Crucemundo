@@ -13,10 +13,12 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-LOGO_ID     = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
-LOGO_URL    = f"https://lh3.googleusercontent.com/d/{LOGO_ID}"
-TEMPLATE_ID = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
-FOLDER_ID   = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
+LOGO_ID = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
+LOGO_URL = f"https://lh3.googleusercontent.com/d/{LOGO_ID}"
+
+TEMPLATE_ID_ES = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
+TEMPLATE_ID_GRUPOS = "1Z7ktX3PhVkMibWpzdrDDqAT4aPsmjzSJPf1SgZcL5-w"
+FOLDER_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
 
 VALID_USERS = {
     "support@crucemundo.com": "Albina",
@@ -39,6 +41,7 @@ defaults = {
     "display_name": "",
     "confirm_state": "idle",
     "historial": [],
+    "session_type": "",
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -60,10 +63,13 @@ def do_logout():
     st.session_state["user_email"] = ""
     st.session_state["display_name"] = ""
     st.session_state["confirm_state"] = "idle"
+    st.session_state["session_type"] = ""
     if "nombre_copia" in st.session_state:
         del st.session_state["nombre_copia"]
     if "copy_url" in st.session_state:
         del st.session_state["copy_url"]
+    if "process_title" in st.session_state:
+        del st.session_state["process_title"]
     st.rerun()
 
 def render_step(label, detail, state):
@@ -80,6 +86,25 @@ def render_step(label, detail, state):
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+def iniciar_proceso(session_type, template_id, prefix_name, process_title):
+    now = datetime.now()
+    fecha_str = now.strftime("%Y%m%d_%H%M")
+    display_user = st.session_state.get("display_name", "").strip() or "Sin usuario"
+
+    nombre_copia = f"SESION - {display_user} - {prefix_name} - {fecha_str}"
+    copy_url = (
+        f"https://docs.google.com/spreadsheets/d/{template_id}/copy"
+        f"?copyDestination={FOLDER_ID}"
+        f"&title={urllib.parse.quote(nombre_copia)}"
+    )
+
+    st.session_state["confirm_state"] = "step1"
+    st.session_state["session_type"] = session_type
+    st.session_state["nombre_copia"] = nombre_copia
+    st.session_state["copy_url"] = copy_url
+    st.session_state["process_title"] = process_title
+    st.rerun()
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CSS
@@ -107,7 +132,6 @@ section[data-testid="stSidebar"] {
     display:none !important;
 }
 
-/* SUBIR TODO Y CENTRAR */
 .block-container,
 section.stMain .block-container,
 .stMainBlockContainer,
@@ -128,18 +152,15 @@ section.stMain .block-container,
     justify-content:center;
     padding:0.2rem 1rem 1rem;
 }
-
 .login-shell {
     width:100%;
     max-width:390px;
     margin:0 auto;
 }
-
 .login-head {
     text-align:center;
     margin-bottom:0.55rem;
 }
-
 .login-logo {
     height:56px;
     width:auto;
@@ -150,19 +171,16 @@ section.stMain .block-container,
     border-radius:0 !important;
     box-shadow:none !important;
 }
-
 .login-title {
     font-size:1.08rem;
     font-weight:700;
     color:#1F2937;
 }
-
 .login-subtitle {
     font-size:0.78rem;
     color:#7C869D;
     margin-top:0.28rem;
 }
-
 .login-form-box {
     background:transparent !important;
     border:none !important;
@@ -170,15 +188,12 @@ section.stMain .block-container,
     box-shadow:none !important;
     padding:0 !important;
 }
-
 .login-note {
     margin-top:0.65rem;
     text-align:center;
     font-size:0.72rem;
     color:#8A93A5;
 }
-
-/* QUITAR BORDE DEL FORM */
 [data-testid="stForm"] {
     border:0 !important;
     padding:0 !important;
@@ -191,7 +206,6 @@ div[data-testid="stTextInput"] label {
     font-size:0.78rem !important;
     font-weight:500 !important;
 }
-
 div[data-testid="stTextInput"] input {
     background:#F8FAFC !important;
     border:1px solid #E5EAF2 !important;
@@ -203,7 +217,6 @@ div[data-testid="stTextInput"] input {
 div.stButton {
     width:fit-content !important;
 }
-
 div.stButton > button,
 div[data-testid="stFormSubmitButton"] > button,
 .logout-btn > div > button {
@@ -218,7 +231,6 @@ div[data-testid="stFormSubmitButton"] > button,
     box-shadow:none !important;
     width:auto !important;
 }
-
 div.stButton > button:hover,
 div[data-testid="stFormSubmitButton"] > button:hover,
 .logout-btn > div > button:hover {
@@ -227,7 +239,7 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     color:#183F7A !important;
 }
 
-/* HEADER SIN CAJA */
+/* HEADER */
 .portal-header {
     background:transparent !important;
     border:none !important;
@@ -240,13 +252,11 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     gap:1rem;
     margin-bottom:0.55rem;
 }
-
 .portal-header-left {
     display:flex;
     align-items:center;
     gap:0.9rem;
 }
-
 .portal-logo {
     height:42px;
     width:auto;
@@ -257,20 +267,17 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     border-radius:0 !important;
     box-shadow:none !important;
 }
-
 .portal-title {
     font-size:0.96rem;
     font-weight:600;
     color:#1F2937;
     line-height:1.15;
 }
-
 .portal-subtitle {
     font-size:0.72rem;
     color:#7C869D;
     margin-top:0.08rem;
 }
-
 .user-top {
     font-size:0.72rem;
     color:#566079;
@@ -285,7 +292,6 @@ div[data-testid="stFormSubmitButton"] > button:hover,
 .main-content {
     padding:0;
 }
-
 .section-eyebrow {
     display:inline-flex;
     align-items:center;
@@ -300,7 +306,6 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     text-transform:uppercase;
     margin-bottom:0.75rem;
 }
-
 .user-pill {
     display:inline-flex;
     align-items:center;
@@ -316,7 +321,7 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     word-break:break-word;
 }
 
-/* ACCIÓN */
+/* TARJETAS */
 .action-box {
     width:100%;
     max-width:520px;
@@ -325,18 +330,16 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     border-radius:0 !important;
     box-shadow:none !important;
     padding:0 !important;
-    margin-bottom:0.65rem;
+    margin-bottom:1rem;
     display:flex;
     flex-direction:column;
     gap:0.8rem;
 }
-
 .action-top {
     display:flex;
     align-items:flex-start;
     gap:0.7rem;
 }
-
 .action-icon {
     width:36px;
     height:36px;
@@ -349,27 +352,23 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     font-size:1rem;
     flex-shrink:0;
 }
-
 .action-text {
     display:flex;
     flex-direction:column;
     gap:0.15rem;
     min-width:0;
 }
-
 .action-title {
     font-size:0.94rem;
     font-weight:600;
     color:#1F2937;
     line-height:1.1;
 }
-
 .action-desc {
     font-size:0.72rem;
     color:#7A808E;
     line-height:1.26;
 }
-
 .action-button-wrap {
     display:flex !important;
     justify-content:center !important;
@@ -377,13 +376,11 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     width:100% !important;
     margin-top:0.15rem;
 }
-
 .action-button-wrap div.stButton {
     width:auto !important;
     display:flex !important;
     justify-content:center !important;
 }
-
 .action-button-wrap div.stButton > button {
     width:auto !important;
     background:#D9E9FF !important;
@@ -406,23 +403,19 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     display:flex;
     flex-direction:column;
 }
-
 .progress-title {
     font-size:0.83rem;
     font-weight:600;
     color:#1F2937;
     margin-bottom:0.35rem;
 }
-
 .step {
     display:flex;
     align-items:flex-start;
     gap:0.65rem;
     margin-bottom:0.6rem;
 }
-
 .step:last-child { margin-bottom:0; }
-
 .step-dot {
     width:18px;
     height:18px;
@@ -435,40 +428,33 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     font-size:0.55rem;
     font-weight:700;
 }
-
 .sd-done {
     background:#EEF7F1;
     border:1px solid #D8ECDF;
     color:#2E7D58;
 }
-
 .sd-active {
     background:#F2F4F9;
     border:1px solid #DDE2EC;
     color:#6E778B;
 }
-
 .sd-wait {
     background:#F8F9FC;
     border:1px solid #E6E9F0;
     color:#B1B8C9;
 }
-
 .step-content {
     display:flex;
     flex-direction:column;
     min-width:0;
     flex:1;
 }
-
 .st-done, .st-active, .st-wait {
     font-size:0.76rem;
 }
-
 .st-done { color:#394255; }
 .st-active { color:#1F2937; font-weight:600; }
 .st-wait { color:#A2ABBD; }
-
 .step-detail {
     font-size:0.7rem;
     color:#8790A4;
@@ -477,7 +463,6 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     overflow-wrap:break-word !important;
     white-space:normal !important;
 }
-
 .done-box {
     margin-top:0.8rem;
     padding:0 !important;
@@ -486,20 +471,17 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     border-radius:0 !important;
     box-shadow:none !important;
 }
-
 .done-title {
     font-size:0.76rem;
     color:#1F2937;
     font-weight:600;
 }
-
 .done-text {
     font-size:0.71rem;
     color:#657087;
     margin-top:0.15rem;
     line-height:1.3;
 }
-
 .done-link {
     display:inline-flex;
     align-items:center;
@@ -529,7 +511,6 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     max-width:520px;
     box-shadow:none !important;
 }
-
 .history-num {
     width:22px;
     height:22px;
@@ -544,7 +525,6 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     color:#5D6880;
     flex-shrink:0;
 }
-
 .history-name {
     font-size:0.75rem;
     color:#394255;
@@ -553,13 +533,11 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     overflow-wrap:break-word;
     white-space:normal;
 }
-
 .history-time {
     font-size:0.68rem;
     color:#A2ABBD;
     white-space:nowrap;
 }
-
 .history-link {
     font-size:0.71rem;
     color:#5D6880;
@@ -568,7 +546,7 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     white-space:nowrap;
 }
 
-/* FOOTER SIN CAJA */
+/* FOOTER */
 .portal-footer {
     margin-top:1rem;
     padding:0.5rem 0 0 0;
@@ -582,13 +560,11 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     gap:0.8rem;
     flex-wrap:wrap;
 }
-
 .footer-text {
     font-size:0.71rem;
     color:#A2ABBD;
 }
 
-/* RESPONSIVE */
 @media (max-width: 700px) {
     .portal-header {
         flex-direction:column;
@@ -680,18 +656,9 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-now = datetime.now()
-fecha_str = now.strftime("%Y%m%d_%H%M")
-nombre_copia = f"SESION - {DISPLAY_USER} - MASTER - {fecha_str}"
-
-copy_url = (
-    f"https://docs.google.com/spreadsheets/d/{TEMPLATE_ID}/copy"
-    f"?copyDestination={FOLDER_ID}"
-    f"&title={urllib.parse.quote(nombre_copia)}"
-)
-
 confirm_state = st.session_state.get("confirm_state", "idle")
 
+# TARJETA 1 - ES
 st.markdown(f"""
 <div class="action-box">
     <div class="action-top">
@@ -705,22 +672,51 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 if confirm_state in ("idle", "done"):
-    if st.button("Crear Sesión", key="btn_crear"):
-        st.session_state["confirm_state"] = "step1"
-        st.session_state["nombre_copia"] = nombre_copia
-        st.session_state["copy_url"] = copy_url
-        st.rerun()
+    if st.button("Crear Sesión ES", key="btn_crear_es"):
+        iniciar_proceso(
+            session_type="es",
+            template_id=TEMPLATE_ID_ES,
+            prefix_name="MASTER",
+            process_title="Estado del Proceso: Crear Sesión MASTER_CONFIRMATION"
+        )
 else:
-    st.button("Crear Sesión", key="btn_crear_dis", disabled=True)
+    st.button("Crear Sesión ES", key="btn_crear_es_dis", disabled=True)
 
 st.markdown('</div></div>', unsafe_allow_html=True)
 
-saved_name = st.session_state.get("nombre_copia", nombre_copia)
-saved_url = st.session_state.get("copy_url", copy_url)
+# TARJETA 2 - GRUPOS
+st.markdown(f"""
+<div class="action-box">
+    <div class="action-top">
+        <div class="action-icon">👥</div>
+        <div class="action-text">
+            <div class="action-title">Nueva Confirmación GRUPOS</div>
+            <div class="action-desc">Crear sesión MASTER GRUPOS de trabajo para {DISPLAY_USER}</div>
+        </div>
+    </div>
+    <div class="action-button-wrap">
+""", unsafe_allow_html=True)
+
+if confirm_state in ("idle", "done"):
+    if st.button("Crear Sesión GRUPOS", key="btn_crear_grupos"):
+        iniciar_proceso(
+            session_type="grupos",
+            template_id=TEMPLATE_ID_GRUPOS,
+            prefix_name="MASTER GRUPOS",
+            process_title="Estado del Proceso: Crear Sesión MASTER_GRUPOS"
+        )
+else:
+    st.button("Crear Sesión GRUPOS", key="btn_crear_grupos_dis", disabled=True)
+
+st.markdown('</div></div>', unsafe_allow_html=True)
+
+saved_name = st.session_state.get("nombre_copia", "")
+saved_url = st.session_state.get("copy_url", "")
+process_title = st.session_state.get("process_title", "Estado del Proceso")
 
 if confirm_state in ("step1", "step2", "step3", "done"):
     st.markdown('<div class="progress-panel">', unsafe_allow_html=True)
-    st.markdown('<div class="progress-title">Estado del Proceso: Crear Sesión MASTER_CONFIRMATION</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="progress-title">{process_title}</div>', unsafe_allow_html=True)
 
     if confirm_state == "step1":
         render_step("Progreso", "Preparando plantilla...", "active")
@@ -760,7 +756,7 @@ if confirm_state in ("step1", "step2", "step3", "done"):
         time.sleep(0.7)
         st.session_state["confirm_state"] = "done"
         existing = [h["nombre"] for h in st.session_state["historial"]]
-        if saved_name not in existing:
+        if saved_name and saved_name not in existing:
             st.session_state["historial"].insert(0, {
                 "nombre": saved_name,
                 "hora": datetime.now().strftime("%H:%M:%S"),
@@ -768,7 +764,7 @@ if confirm_state in ("step1", "step2", "step3", "done"):
             })
         st.rerun()
 
-    if confirm_state == "done" and not st.session_state.get("opened_" + saved_name):
+    if confirm_state == "done" and saved_name and not st.session_state.get("opened_" + saved_name):
         st.session_state["opened_" + saved_name] = True
         st.markdown(
             f'<script>setTimeout(()=>window.open("{saved_url}","_blank"),300);</script>',
