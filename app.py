@@ -66,26 +66,20 @@ def do_logout():
         del st.session_state["copy_url"]
     st.rerun()
 
-def nueva_accion():
-    st.session_state["confirm_state"] = "idle"
-    if "nombre_copia" in st.session_state:
-        del st.session_state["nombre_copia"]
-    if "copy_url" in st.session_state:
-        del st.session_state["copy_url"]
-    st.rerun()
+def render_step(label, detail, state):
+    dot_class = {"done": "sd-done", "active": "sd-active", "wait": "sd-wait"}[state]
+    text_class = {"done": "st-done", "active": "st-active", "wait": "st-wait"}[state]
+    symbol = {"done": "✓", "active": "•", "wait": "•"}[state]
 
-def get_status_meta(state):
-    if state == "idle":
-        return "En espera", "wait", "wait", "wait", "Sin iniciar"
-    if state == "step1":
-        return "Preparando", "active", "wait", "wait", "Preparando plantilla"
-    if state == "step2":
-        return "Copiando", "done", "active", "wait", "Generando copia"
-    if state == "step3":
-        return "Abriendo", "done", "done", "active", "Preparando apertura"
-    if state == "done":
-        return "Lista", "done", "done", "done", "Sesión preparada"
-    return "En espera", "wait", "wait", "wait", "Sin iniciar"
+    st.markdown(f"""
+    <div class="step">
+        <div class="step-dot {dot_class}">{symbol}</div>
+        <div class="step-content">
+            <div class="{text_class}">{label}</div>
+            <div class="step-detail">{detail}</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CSS
@@ -109,7 +103,7 @@ section[data-testid="stSidebar"] { display:none !important; }
     max-width:100% !important;
 }
 
-/* HEADER */
+/* HEADER APP */
 .portal-header {
     background:#FFFFFF;
     border-bottom:1px solid #E7EAF0;
@@ -183,41 +177,41 @@ section[data-testid="stSidebar"] { display:none !important; }
 
 /* LOGIN */
 .login-page {
-    min-height:100vh;
+    min-height:auto;
     display:flex;
-    align-items:center;
+    align-items:flex-start;
     justify-content:center;
-    padding:1rem 1rem;
+    padding:0.3rem 1.2rem 1.1rem;
 }
 .login-shell {
     width:100%;
-    max-width:430px;
+    max-width:540px;
 }
 .login-head {
     width:100%;
     background:#FFFFFF;
     border:1px solid #E6E9F0;
     border-radius:22px;
-    padding:1rem 1.25rem 0.9rem;
+    padding:1rem 1.35rem 0.9rem;
     box-shadow:0 10px 30px rgba(17,24,39,0.03);
-    margin-bottom:0.6rem;
+    margin-bottom:0.55rem;
     text-align:left;
 }
 .login-logo {
     height:74px;
     width:auto;
     display:block;
-    margin:0 auto 0.5rem auto;
+    margin:0 auto 0.55rem auto;
     object-fit:contain;
 }
 .login-title {
-    font-size:1rem;
+    font-size:1.02rem;
     font-weight:600;
     color:#1F2937;
-    margin-bottom:0.1rem;
+    margin-bottom:0.12rem;
 }
 .login-subtitle {
-    font-size:0.78rem;
+    font-size:0.79rem;
     color:#7C869D;
     line-height:1.35;
 }
@@ -226,19 +220,19 @@ section[data-testid="stSidebar"] { display:none !important; }
     background:#FFFFFF;
     border:1px solid #DCE2EB;
     border-radius:16px;
-    padding:0.55rem 0.7rem 0.4rem;
+    padding:0.65rem 0.75rem 0.45rem;
 }
 .login-note {
-    font-size:0.7rem;
+    font-size:0.71rem;
     color:#8A93A8;
-    margin-top:0.6rem;
-    line-height:1.28;
+    margin-top:0.65rem;
+    line-height:1.3;
 }
 
 /* INPUTS */
 div[data-testid="stTextInput"] label {
     color:#4D576D !important;
-    font-size:0.77rem !important;
+    font-size:0.78rem !important;
     font-weight:500 !important;
 }
 div[data-testid="stTextInput"] input {
@@ -251,9 +245,13 @@ div[data-testid="stTextInput"] input::placeholder {
     color:#A0A8B9 !important;
 }
 
-/* BUTTONS */
+/* BOTONES GENERALES */
+div.stButton {
+    width:fit-content !important;
+}
 div.stButton > button,
-div[data-testid="stFormSubmitButton"] > button {
+div[data-testid="stFormSubmitButton"] > button,
+.logout-btn > div > button {
     background:#D9E9FF !important;
     color:#214D92 !important;
     border:1px solid #BDD6FF !important;
@@ -263,208 +261,215 @@ div[data-testid="stFormSubmitButton"] > button {
     font-size:0.77rem !important;
     font-weight:600 !important;
     box-shadow:none !important;
+    width:auto !important;
 }
 div.stButton > button:hover,
-div[data-testid="stFormSubmitButton"] > button:hover {
+div[data-testid="stFormSubmitButton"] > button:hover,
+.logout-btn > div > button:hover {
     background:#D0E3FF !important;
     border-color:#AFCBFF !important;
     color:#183F7A !important;
 }
-div.stButton > button:disabled {
-    color:#8AA2C7 !important;
-    background:#EEF4FF !important;
-    border-color:#D8E6FF !important;
-}
 
-/* ACTION CARD */
-.action-card-wrap {
-    max-width:560px;
-    margin-bottom:0.8rem;
-}
-.action-card {
-    background:#F5F2EC;
-    border:1px solid #E5DED3;
-    border-radius:22px;
-    padding:0.95rem;
-    box-shadow:0 6px 18px rgba(17,24,39,0.025);
+/* ACCIÓN EN RECUADRO - Ancho forzado exacto */
+.action-box {
+    width: 420px !important;
+    max-width: 420px !important;
+    background:#F7F6F3;
+    border:1px solid #E5E2DC;
+    border-radius:16px;
+    padding:1rem;
+    margin-bottom:0.65rem;
+    box-shadow:0 4px 12px rgba(17,24,39,0.02);
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
 }
 .action-top {
     display:flex;
     align-items:flex-start;
-    gap:0.78rem;
-    margin-bottom:0.8rem;
+    gap:0.7rem;
 }
 .action-icon {
-    width:38px;
-    height:38px;
-    border-radius:12px;
-    background:#EEE8DE;
-    border:1px solid #E0D7C7;
+    width:36px;
+    height:36px;
+    border-radius:10px;
+    background:#EFEDE8;
+    border:1px solid #E2DED7;
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:1.05rem;
+    font-size:1rem;
     flex-shrink:0;
 }
 .action-text {
     display:flex;
     flex-direction:column;
-    gap:0.12rem;
+    gap:0.15rem;
     min-width:0;
 }
 .action-title {
-    font-size:1.02rem;
+    font-size:0.96rem;
     font-weight:600;
     color:#1F2937;
-    line-height:1.08;
-}
-.action-desc {
-    font-size:0.74rem;
-    color:#7A808E;
-    line-height:1.28;
-}
-.action-btn-wrap div.stButton {
-    width:100% !important;
-}
-.action-btn-wrap div.stButton > button {
-    width:100% !important;
-    border-radius:14px !important;
-    min-height:42px !important;
-    font-size:0.79rem !important;
-    justify-content:center !important;
-}
-
-/* PROCESS CARD */
-.process-card {
-    max-width:560px;
-    background:#F8F9FC;
-    border:1px solid #E3E7F0;
-    border-radius:22px;
-    padding:1rem 1rem 0.95rem;
-    margin-top:0.2rem;
-}
-.process-head {
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:0.8rem;
-    margin-bottom:0.95rem;
-}
-.process-title {
-    font-size:0.92rem;
-    font-weight:700;
-    color:#1F2937;
-}
-.process-badge {
-    font-size:0.68rem;
-    font-weight:700;
-    color:#54627A;
-    background:#EEF2F7;
-    border:1px solid #DCE3EE;
-    border-radius:999px;
-    padding:0.28rem 0.58rem;
-}
-.timeline {
-    display:flex;
-    flex-direction:column;
-    gap:0.9rem;
-}
-.timeline-item {
-    position:relative;
-    display:flex;
-    gap:0.75rem;
-}
-.timeline-item:not(:last-child)::after {
-    content:"";
-    position:absolute;
-    left:8px;
-    top:22px;
-    width:2px;
-    height:calc(100% + 7px);
-    background:#E1E6F0;
-    border-radius:999px;
-}
-.timeline-dot {
-    width:18px;
-    height:18px;
-    border-radius:999px;
-    border:1px solid #D8DFEA;
-    background:#FFFFFF;
-    flex-shrink:0;
-    margin-top:2px;
-}
-.timeline-content {
-    min-width:0;
-}
-.timeline-name {
-    font-size:0.79rem;
-    font-weight:600;
-    color:#354052;
     line-height:1.1;
 }
-.timeline-detail {
-    font-size:0.71rem;
+.action-desc {
+    font-size:0.72rem;
+    color:#7A808E;
+    line-height:1.26;
+}
+
+/* CONTENEDOR DEL BOTÓN */
+.action-button-wrap {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    margin-top: 0.2rem;
+}
+.action-button-wrap div.stButton {
+    width: auto !important;
+    display: flex !important;
+    justify-content: center !important;
+}
+.action-button-wrap div.stButton > button {
+    width: auto !important;
+    background:#D9E9FF !important;
+    color:#214D92 !important;
+    border:1px solid #BDD6FF !important;
+    border-radius:12px !important;
+    min-height:36px !important;
+    padding: 0 1.2rem !important;
+    font-size:0.77rem !important;
+    font-weight:600 !important;
+    box-shadow:none !important;
+}
+
+/* PROCESO - Exactamente del mismo ancho que la tarjeta */
+.progress-panel {
+    width: 420px !important;
+    max-width: 420px !important;
+    background:#FFFFFF;
+    border:1px solid #E4E7EF;
+    border-radius:16px;
+    padding:1rem;
+    margin-top:0.6rem;
+    display: flex;
+    flex-direction: column;
+}
+.progress-title {
+    font-size:0.84rem;
+    font-weight:600;
+    color:#1F2937;
+    margin-bottom:0.3rem;
+}
+.progress-note {
+    font-size:0.73rem;
     color:#7C869D;
-    margin-top:0.16rem;
+    margin-bottom:0.8rem;
     line-height:1.3;
 }
-.timeline-item.done .timeline-dot {
-    background:#DDF5E7;
-    border-color:#BFE4CE;
+.step {
+    display:flex;
+    align-items:flex-start;
+    gap:0.65rem;
+    margin-bottom:0.6rem;
 }
-.timeline-item.active .timeline-dot {
-    background:#D9E9FF;
-    border-color:#BDD6FF;
-    box-shadow:0 0 0 4px rgba(189,214,255,0.35);
+.step:last-child { margin-bottom:0; }
+.step-dot {
+    width:18px;
+    height:18px;
+    border-radius:50%;
+    flex-shrink:0;
+    margin-top:0.05rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:0.55rem;
+    font-weight:700;
 }
-.timeline-item.wait .timeline-dot {
-    background:#FFFFFF;
-    border-color:#DCE3EE;
+.sd-done {
+    background:#EEF7F1;
+    border:1px solid #D8ECDF;
+    color:#2E7D58;
 }
-.process-result {
-    margin-top:0.95rem;
-    padding:0.85rem 0.9rem;
-    background:#FFFFFF;
-    border:1px solid #E3E7F0;
-    border-radius:16px;
+.sd-active {
+    background:#F2F4F9;
+    border:1px solid #DDE2EC;
+    color:#6E778B;
 }
-.process-result-title {
-    font-size:0.77rem;
+.sd-wait {
+    background:#F8F9FC;
+    border:1px solid #E6E9F0;
+    color:#B1B8C9;
+}
+.step-content {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+.st-done, .st-active, .st-wait {
+    font-size:0.76rem;
+}
+.st-done { color:#394255; }
+.st-active { color:#1F2937; font-weight:600; }
+.st-wait { color:#A2ABBD; }
+
+.step-detail {
+    font-size:0.7rem;
+    color:#8790A4;
+    margin-top:0.08rem;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+}
+.done-box {
+    margin-top:0.8rem;
+    padding:0.75rem 0.85rem;
+    background:#F6F8FC;
+    border:1px solid #E1E6F0;
+    border-radius:12px;
+}
+.done-title {
+    font-size:0.76rem;
     color:#1F2937;
     font-weight:600;
 }
-.process-result-text {
+.done-text {
     font-size:0.71rem;
     color:#657087;
-    margin-top:0.16rem;
-    line-height:1.34;
+    margin-top:0.15rem;
+    line-height:1.3;
 }
-.process-link {
+.done-link {
     display:inline-flex;
     align-items:center;
     gap:0.35rem;
-    margin-top:0.68rem;
+    margin-top:0.65rem;
     background:#D9E9FF;
     color:#214D92 !important;
     border:1px solid #BDD6FF;
-    border-radius:12px;
-    padding:0.42rem 0.82rem;
-    font-size:0.72rem;
+    border-radius:10px;
+    padding:0.4rem 0.8rem;
+    font-size:0.71rem;
     font-weight:600;
     text-decoration:none;
 }
 
-/* HISTORY */
+/* HISTORIAL */
 .history-row {
     display:flex;
     align-items:center;
-    gap:0.78rem;
-    padding:0.7rem 0.95rem;
+    gap:0.75rem;
+    padding:0.65rem 0.85rem;
     border-radius:16px;
     background:#FFFFFF;
     border:1px solid #E4E7EF;
-    margin-bottom:0.42rem;
-    max-width:560px;
+    margin-bottom:0.4rem;
+    width: 420px !important;
+    max-width: 420px !important;
 }
 .history-num {
     width:22px;
@@ -481,9 +486,12 @@ div.stButton > button:disabled {
     flex-shrink:0;
 }
 .history-name {
-    font-size:0.76rem;
+    font-size:0.75rem;
     color:#394255;
     flex:1;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
 }
 .history-time {
     font-size:0.68rem;
@@ -508,53 +516,6 @@ div.stButton > button:disabled {
 .footer-text {
     font-size:0.71rem;
     color:#A2ABBD;
-}
-
-/* MOBILE */
-@media (max-width: 768px) {
-    .portal-header,
-    .portal-footer,
-    .main-content {
-        padding-left:1rem;
-        padding-right:1rem;
-    }
-
-    .login-page {
-        padding:0.8rem 0.8rem;
-        align-items:flex-start;
-    }
-
-    .login-shell {
-        max-width:100%;
-    }
-
-    .login-head {
-        padding:0.95rem 1rem 0.85rem;
-        margin-bottom:0.45rem;
-    }
-
-    .login-logo {
-        height:64px;
-        margin-bottom:0.5rem;
-    }
-
-    .login-form-box {
-        padding:0.55rem 0.65rem 0.35rem;
-    }
-
-    .action-card,
-    .process-card {
-        padding:0.82rem;
-        border-radius:18px;
-    }
-
-    .action-title {
-        font-size:0.95rem;
-    }
-
-    .action-desc {
-        font-size:0.72rem;
-    }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -646,10 +607,9 @@ copy_url = (
 
 confirm_state = st.session_state.get("confirm_state", "idle")
 
-# ── TARJETA DE ACCIÓN
-st.markdown('<div class="action-card-wrap">', unsafe_allow_html=True)
+# TARJETA COMPACTA DE ACCIÓN
 st.markdown(f"""
-<div class="action-card">
+<div class="action-box">
     <div class="action-top">
         <div class="action-icon">📋</div>
         <div class="action-text">
@@ -657,117 +617,98 @@ st.markdown(f"""
             <div class="action-desc">Crear sesión MASTER de trabajo para {DISPLAY_USER}</div>
         </div>
     </div>
-</div>
+    <div class="action-button-wrap">
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="action-btn-wrap">', unsafe_allow_html=True)
-button_disabled = confirm_state in ("step1", "step2", "step3")
+if confirm_state == "idle":
+    if st.button("Crear Sesión", key="btn_crear"):
+        st.session_state["confirm_state"] = "step1"
+        st.session_state["nombre_copia"] = nombre_copia
+        st.session_state["copy_url"] = copy_url
+        st.rerun()
+else:
+    st.button("Crear Sesión", key="btn_crear_dis", disabled=True)
 
-if st.button("Crear", key="btn_crear", disabled=button_disabled, use_container_width=True):
-    st.session_state["confirm_state"] = "step1"
-    st.session_state["nombre_copia"] = nombre_copia
-    st.session_state["copy_url"] = copy_url
-    st.rerun()
+st.markdown('</div></div>', unsafe_allow_html=True)
 
-st.markdown('</div>', unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
+saved_name = st.session_state.get("nombre_copia", nombre_copia)
+saved_url = st.session_state.get("copy_url", copy_url)
 
-saved_name = st.session_state.get("nombre_copia", "Pendiente")
-saved_url = st.session_state.get("copy_url", "")
-status_label, cls1, cls2, cls3, substatus = get_status_meta(confirm_state)
+if confirm_state in ("step1", "step2", "step3", "done"):
+    st.markdown('<div class="progress-panel">', unsafe_allow_html=True)
+    st.markdown('<div class="progress-title">Proceso</div>', unsafe_allow_html=True)
 
-open_text = "Pendiente"
-if confirm_state == "step3":
-    open_text = "Preparando apertura"
-elif confirm_state == "done":
-    open_text = "Lista"
+    if confirm_state == "step1":
+        st.markdown('<div class="progress-note">Preparando la plantilla.</div>', unsafe_allow_html=True)
+        render_step("Preparación", "Plantilla MASTER", "active")
+        render_step("Copia", "Pendiente", "wait")
+        render_step("Apertura", "Pendiente", "wait")
 
-# ── PROCESO SIEMPRE VISIBLE
-st.markdown(f"""
-<div class="process-card">
-    <div class="process-head">
-        <div class="process-title">Proceso</div>
-        <div class="process-badge">{status_label}</div>
-    </div>
+    elif confirm_state == "step2":
+        st.markdown('<div class="progress-note">Generando copia en Drive.</div>', unsafe_allow_html=True)
+        render_step("Preparación", "Correcto", "done")
+        render_step("Copia", saved_name, "active")
+        render_step("Apertura", "Pendiente", "wait")
 
-    <div class="timeline">
-        <div class="timeline-item {cls1}">
-            <div class="timeline-dot"></div>
-            <div class="timeline-content">
-                <div class="timeline-name">Preparación</div>
-                <div class="timeline-detail">Plantilla MASTER</div>
+    elif confirm_state == "step3":
+        st.markdown('<div class="progress-note">Preparando la apertura.</div>', unsafe_allow_html=True)
+        render_step("Preparación", "Correcto", "done")
+        render_step("Copia", saved_name, "done")
+        render_step("Apertura", "Listando acceso", "active")
+
+    elif confirm_state == "done":
+        st.markdown('<div class="progress-note">La sesión está preparada.</div>', unsafe_allow_html=True)
+        render_step("Preparación", "Correcto", "done")
+        render_step("Copia", saved_name, "done")
+        render_step("Apertura", "Lista", "done")
+
+        st.markdown(f"""
+        <div class="done-box">
+            <div class="done-title">Sesión creada</div>
+            <div class="done-text">
+                Si Drive no se abre automáticamente, usa este acceso.
             </div>
+            <a class="done-link" href="{saved_url}" target="_blank">Abrir sesión ↗</a>
         </div>
+        """, unsafe_allow_html=True)
 
-        <div class="timeline-item {cls2}">
-            <div class="timeline-dot"></div>
-            <div class="timeline-content">
-                <div class="timeline-name">Copia</div>
-                <div class="timeline-detail">{saved_name if confirm_state != "idle" else "Pendiente"}</div>
-            </div>
-        </div>
+    st.markdown('</div>', unsafe_allow_html=True)
 
-        <div class="timeline-item {cls3}">
-            <div class="timeline-dot"></div>
-            <div class="timeline-content">
-                <div class="timeline-name">Apertura</div>
-                <div class="timeline-detail">{open_text}</div>
-            </div>
-        </div>
-    </div>
-""", unsafe_allow_html=True)
+    if confirm_state == "step1":
+        time.sleep(0.7)
+        st.session_state["confirm_state"] = "step2"
+        st.rerun()
 
-if confirm_state == "done" and saved_url:
-    st.markdown(f"""
-    <div class="process-result">
-        <div class="process-result-title">Sesión creada</div>
-        <div class="process-result-text">
-            La última sesión ya está preparada y puedes abrirla cuando quieras.
-        </div>
-        <a class="process-link" href="{saved_url}" target="_blank">Abrir sesión ↗</a>
-    </div>
-    """, unsafe_allow_html=True)
+    elif confirm_state == "step2":
+        time.sleep(0.7)
+        st.session_state["confirm_state"] = "step3"
+        st.rerun()
 
-st.markdown("</div>", unsafe_allow_html=True)
+    elif confirm_state == "step3":
+        time.sleep(0.7)
+        st.session_state["confirm_state"] = "done"
+        existing = [h["nombre"] for h in st.session_state["historial"]]
+        if saved_name not in existing:
+            st.session_state["historial"].insert(0, {
+                "nombre": saved_name,
+                "hora": datetime.now().strftime("%H:%M:%S"),
+                "url": saved_url,
+            })
+        st.rerun()
 
-# ── AVANCE AUTOMÁTICO
-if confirm_state == "step1":
-    time.sleep(0.6)
-    st.session_state["confirm_state"] = "step2"
-    st.rerun()
+    if confirm_state == "done" and not st.session_state.get("opened_" + saved_name):
+        st.session_state["opened_" + saved_name] = True
+        st.markdown(
+            f'<script>setTimeout(()=>window.open("{saved_url}","_blank"),300);</script>',
+            unsafe_allow_html=True
+        )
 
-elif confirm_state == "step2":
-    time.sleep(0.6)
-    st.session_state["confirm_state"] = "step3"
-    st.rerun()
-
-elif confirm_state == "step3":
-    time.sleep(0.6)
-    st.session_state["confirm_state"] = "done"
-
-    existing = [h["nombre"] for h in st.session_state["historial"]]
-    if saved_name not in existing:
-        st.session_state["historial"].insert(0, {
-            "nombre": st.session_state["nombre_copia"],
-            "hora": datetime.now().strftime("%H:%M:%S"),
-            "url": st.session_state["copy_url"],
-        })
-
-    st.rerun()
-
-# ── BOTONES INFERIORES
 st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
-col_new, col_logout = st.columns([1, 1])
+st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
+if st.button("Cerrar sesión", key="btn_logout"):
+    do_logout()
+st.markdown('</div>', unsafe_allow_html=True)
 
-with col_new:
-    if st.button("Nueva acción", key="btn_nueva_accion"):
-        nueva_accion()
-
-with col_logout:
-    if st.button("Cerrar sesión", key="btn_logout"):
-        do_logout()
-
-# ── HISTORIAL
 if st.session_state.get("historial"):
     st.markdown("<div style='height:1.2rem'></div>", unsafe_allow_html=True)
     st.markdown('<div class="section-eyebrow">ESTA SESIÓN</div>', unsafe_allow_html=True)
@@ -786,7 +727,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · v3.5.0</span>
+    <span class="footer-text">Panel de Control · v3.3.0</span>
     <span class="footer-text">Carpeta: {FOLDER_ID}</span>
 </div>
 """, unsafe_allow_html=True)
