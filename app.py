@@ -828,74 +828,18 @@ with col3:
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-# FORMULARIO NUEVO DE SALIDA
+# ──────────────────────────────────────────────────────────────────────────────
+# DEBUG DE LA TARJETA IR A SALIDA
+# ──────────────────────────────────────────────────────────────────────────────
 if st.session_state.get("open_salida_form"):
     st.markdown('<div class="selector-box">', unsafe_allow_html=True)
     st.markdown("#### Seleccionar salida")
 
     try:
         years = get_years()
-
-        selected_year = st.selectbox(
-            "AÑO",
-            options=[""] + years,
-            index=([""] + years).index(st.session_state["salida_year"]) if st.session_state["salida_year"] in years else 0,
-            key="salida_year_select"
-        )
-        st.session_state["salida_year"] = selected_year
-
-        boats = get_boats(selected_year) if selected_year else []
-        if st.session_state["salida_boat"] not in boats:
-            st.session_state["salida_boat"] = ""
-
-        selected_boat = st.selectbox(
-            "BARCO",
-            options=[""] + boats,
-            index=([""] + boats).index(st.session_state["salida_boat"]) if st.session_state["salida_boat"] in boats else 0,
-            key="salida_boat_select"
-        )
-        st.session_state["salida_boat"] = selected_boat
-
-        departures = get_departures(selected_year, selected_boat) if selected_year and selected_boat else []
-        departure_names = [d["nombre"] for d in departures]
-
-        if st.session_state["salida_name"] not in departure_names:
-            st.session_state["salida_name"] = ""
-
-        selected_departure = st.selectbox(
-            "SALIDA",
-            options=[""] + departure_names,
-            index=([""] + departure_names).index(st.session_state["salida_name"]) if st.session_state["salida_name"] in departure_names else 0,
-            key="salida_name_select"
-        )
-        st.session_state["salida_name"] = selected_departure
-
-        selected_departure_obj = next((d for d in departures if d["nombre"] == selected_departure), None)
-
-        c1, c2 = st.columns([1, 1])
-        with c1:
-            if st.button("Abrir Salida", key="btn_open_salida", disabled=not bool(selected_departure_obj)):
-                if selected_departure_obj:
-                    salida_url = selected_departure_obj["url"]
-                    st.markdown(
-                        f'<script>setTimeout(()=>window.open("{salida_url}","_blank"),150);</script>',
-                        unsafe_allow_html=True
-                    )
-                    st.success("Abriendo salida...")
-        with c2:
-            if st.button("Cerrar selector", key="btn_close_salida"):
-                st.session_state["open_salida_form"] = False
-                st.session_state["salida_year"] = ""
-                st.session_state["salida_boat"] = ""
-                st.session_state["salida_name"] = ""
-                st.rerun()
-
+        st.write("Años encontrados:", years)
     except Exception as e:
-        st.error(
-            "No se pudo conectar con Google Drive. "
-            "Revisa las credenciales de la service account y que tenga acceso a la carpeta raíz."
-        )
-        st.caption(str(e))
+        st.exception(e)
 
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -978,7 +922,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · v3.4.0</span>
+    <span class="footer-text">Panel de Control · v3.4.1 DEBUG</span>
     <span class="footer-text">Carpeta: {FOLDER_ID}</span>
 </div>
 """, unsafe_allow_html=True)
