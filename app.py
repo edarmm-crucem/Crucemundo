@@ -465,7 +465,7 @@ if not st.session_state["authenticated"]:
         <img class="login-logo" src="{LOGO_URL}" alt="Logo">
         <div class="login-title">Acceso</div>
         <div class="login-subtitle">
-            Entra con tu mail y la contraseña común.
+            Introduce tu mail y la contraseña.
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -474,7 +474,7 @@ if not st.session_state["authenticated"]:
 
     with st.form("login_form", clear_on_submit=False):
         email = st.text_input("Mail", placeholder="support@crucemundo.com")
-        password = st.text_input("Contraseña", type="password", placeholder="••••••••")
+        password = st.text_input("Contraseña/Password", type="password", placeholder="••••••••")
         submitted = st.form_submit_button("Entrar")
 
         if submitted:
