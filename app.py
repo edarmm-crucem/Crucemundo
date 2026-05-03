@@ -18,14 +18,32 @@ LOGO_URL    = f"https://lh3.googleusercontent.com/d/{LOGO_ID}"
 TEMPLATE_ID = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
 FOLDER_ID   = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
 
-# Asegurar clave de usuario en sesión
-if "google_user" not in st.session_state:
-    st.session_state["google_user"] = ""
+VALID_USERS = {
+    "support@crucemundo.com",
+    "sales@crucemundo.com",
+    "cruise@crucemundo.com",
+    "tania@crucemundo.com",
+    "incoming@crucemundo.com",
+    "operations@crucemundo.com",
+    "edarmm@gmail.com",
+}
 
-USER_NAME = st.session_state.get("google_user", "").strip()
+VALID_PASSWORD = "Crucemundo26!"
 
-# Solo para depurar si el nombre no entra
-DISPLAY_USER = USER_NAME if USER_NAME else "Sin usuario"
+# ──────────────────────────────────────────────────────────────────────────────
+# SESSION STATE
+# ──────────────────────────────────────────────────────────────────────────────
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+
+if "app_user" not in st.session_state:
+    st.session_state["app_user"] = ""
+
+if "confirm_state" not in st.session_state:
+    st.session_state["confirm_state"] = "idle"
+
+if "historial" not in st.session_state:
+    st.session_state["historial"] = []
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CSS
@@ -48,6 +66,12 @@ section[data-testid="stSidebar"] { display:none !important; }
     padding:1rem 3rem;
     display:flex;
     align-items:center;
+    justify-content:space-between;
+    gap:1rem;
+}
+.portal-header-left {
+    display:flex;
+    align-items:center;
     gap:1rem;
 }
 .portal-logo {
@@ -67,7 +91,17 @@ section[data-testid="stSidebar"] { display:none !important; }
     color:#8C93A8;
     margin-top:0.05rem;
 }
+.user-top {
+    font-family:'DM Sans',sans-serif;
+    font-size:0.72rem;
+    color:#5B6785;
+    background:#F7F8FC;
+    border:1px solid #E4E7EF;
+    border-radius:999px;
+    padding:0.45rem 0.8rem;
+}
 
+/* MAIN */
 .main-content {
     padding:1.8rem 3rem 3rem;
 }
@@ -88,7 +122,50 @@ section[data-testid="stSidebar"] { display:none !important; }
     margin-bottom:0.9rem;
 }
 
-/* TARJETA MÁS CORTA */
+/* LOGIN */
+.login-wrap {
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:2rem;
+}
+.login-card {
+    width:100%;
+    max-width:420px;
+    background:#fff;
+    border:1px solid #E4E7EF;
+    border-radius:16px;
+    padding:1.4rem 1.4rem 1.2rem;
+    box-shadow:0 10px 30px rgba(16,24,40,0.05);
+}
+.login-logo {
+    height:48px;
+    width:auto;
+    margin-bottom:1rem;
+}
+.login-title {
+    font-family:'Sora',sans-serif;
+    font-size:1.05rem;
+    font-weight:600;
+    color:#1A1F36;
+    margin-bottom:0.25rem;
+}
+.login-subtitle {
+    font-family:'DM Sans',sans-serif;
+    font-size:0.78rem;
+    color:#8C93A8;
+    margin-bottom:1rem;
+    line-height:1.35;
+}
+.login-note {
+    font-family:'DM Sans',sans-serif;
+    font-size:0.7rem;
+    color:#8C93A8;
+    margin-top:0.8rem;
+}
+
+/* TARJETA CORTA */
 .card-row-wrap {
     max-width:255px;
     margin-bottom:0.6rem;
@@ -167,7 +244,7 @@ section[data-testid="stSidebar"] { display:none !important; }
     border:1px solid #DDE0EA;
 }
 
-/* BOTÓN */
+/* BUTTONS */
 .compact-btn > div > button {
     background:#FFFFFF !important;
     color:#2B3147 !important;
@@ -183,7 +260,10 @@ section[data-testid="stSidebar"] { display:none !important; }
     box-shadow:none !important;
     white-space:nowrap !important;
 }
-.compact-btn > div > button:hover {
+.compact-btn > div > button:hover,
+.clean-btn > div > button:hover,
+.logout-btn > div > button:hover,
+div[data-testid="stFormSubmitButton"] > button:hover {
     background:#F7F8FC !important;
     border-color:#C9D0E3 !important;
 }
@@ -193,7 +273,22 @@ section[data-testid="stSidebar"] { display:none !important; }
     border-color:#E1E5EF !important;
 }
 
-/* INFO USUARIO */
+.clean-btn > div > button,
+.logout-btn > div > button,
+div[data-testid="stFormSubmitButton"] > button {
+    background:#fff !important;
+    color:#2B3147 !important;
+    border:1.5px solid #D9DDEA !important;
+    border-radius:10px !important;
+    font-family:'DM Sans',sans-serif !important;
+    font-size:0.76rem !important;
+    font-weight:500 !important;
+    min-height:40px !important;
+    padding:0 1rem !important;
+    box-shadow:none !important;
+}
+
+/* USER PILL */
 .user-pill {
     display:inline-flex;
     align-items:center;
@@ -208,7 +303,7 @@ section[data-testid="stSidebar"] { display:none !important; }
     color:#5B6785;
 }
 
-/* PANEL PROCESO */
+/* PROCESS */
 .progress-panel {
     max-width:560px;
     background:#fff;
@@ -237,9 +332,7 @@ section[data-testid="stSidebar"] { display:none !important; }
     gap:0.66rem;
     margin-bottom:0.58rem;
 }
-.step:last-child {
-    margin-bottom:0;
-}
+.step:last-child { margin-bottom:0; }
 .step-dot {
     width:19px;
     height:19px;
@@ -326,25 +419,7 @@ section[data-testid="stSidebar"] { display:none !important; }
     text-decoration:none;
 }
 
-/* BOTÓN RESET */
-.clean-btn > div > button {
-    background:#fff !important;
-    color:#2B3147 !important;
-    border:1.5px solid #D9DDEA !important;
-    border-radius:10px !important;
-    font-family:'DM Sans',sans-serif !important;
-    font-size:0.75rem !important;
-    font-weight:500 !important;
-    min-height:38px !important;
-    padding:0 0.95rem !important;
-    box-shadow:none !important;
-}
-.clean-btn > div > button:hover {
-    background:#F7F8FC !important;
-    border-color:#C9D0E3 !important;
-}
-
-/* HISTORIAL */
+/* HISTORY */
 .history-row {
     display:flex;
     align-items:center;
@@ -408,24 +483,12 @@ section[data-testid="stSidebar"] { display:none !important; }
 """, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────────────
-# FUNCIONES
+# HELPERS
 # ──────────────────────────────────────────────────────────────────────────────
 def render_step(label, detail, state):
-    dot_class = {
-        "done": "sd-done",
-        "active": "sd-active",
-        "wait": "sd-wait"
-    }[state]
-    text_class = {
-        "done": "st-done",
-        "active": "st-active",
-        "wait": "st-wait"
-    }[state]
-    symbol = {
-        "done": "✓",
-        "active": "→",
-        "wait": "•"
-    }[state]
+    dot_class = {"done": "sd-done", "active": "sd-active", "wait": "sd-wait"}[state]
+    text_class = {"done": "st-done", "active": "st-active", "wait": "st-wait"}[state]
+    symbol = {"done": "✓", "active": "→", "wait": "•"}[state]
 
     st.markdown(f"""
     <div class="step">
@@ -437,36 +500,85 @@ def render_step(label, detail, state):
     </div>
     """, unsafe_allow_html=True)
 
+def do_logout():
+    st.session_state["authenticated"] = False
+    st.session_state["app_user"] = ""
+    st.session_state["confirm_state"] = "idle"
+    st.rerun()
+
 # ──────────────────────────────────────────────────────────────────────────────
-# HEADER
+# LOGIN SCREEN
 # ──────────────────────────────────────────────────────────────────────────────
+if not st.session_state["authenticated"]:
+    c1, c2, c3 = st.columns([1.2, 1, 1.2])
+
+    with c2:
+        st.markdown('<div class="login-wrap">', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="login-card">
+            <img class="login-logo" src="{LOGO_URL}" alt="Logo">
+            <div class="login-title">Acceso</div>
+            <div class="login-subtitle">
+                Introduce tu email y la contraseña común para entrar al panel.
+            </div>
+        """, unsafe_allow_html=True)
+
+        with st.form("login_form", clear_on_submit=False):
+            email = st.text_input("Usuario", placeholder="tuemail@crucemundo.com")
+            password = st.text_input("Contraseña", type="password", placeholder="••••••••")
+            submitted = st.form_submit_button("Entrar")
+
+            if submitted:
+                email_clean = email.strip().lower()
+                if not email_clean or not password:
+                    st.error("Debes introducir usuario y contraseña.")
+                elif email_clean not in VALID_USERS:
+                    st.error("Usuario no autorizado.")
+                elif password != VALID_PASSWORD:
+                    st.error("Contraseña incorrecta.")
+                else:
+                    st.session_state["authenticated"] = True
+                    st.session_state["app_user"] = email_clean
+                    st.rerun()
+
+        st.markdown("""
+            <div class="login-note">
+                Acceso interno. El usuario autenticado se usará para nombrar la sesión creada.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.stop()
+
+# ──────────────────────────────────────────────────────────────────────────────
+# APP
+# ──────────────────────────────────────────────────────────────────────────────
+USER_NAME = st.session_state.get("app_user", "").strip()
+DISPLAY_USER = USER_NAME if USER_NAME else "Sin usuario"
+
 st.markdown(f"""
 <div class="portal-header">
-    <img class="portal-logo" src="{LOGO_URL}" alt="Logo">
-    <div>
-        <div class="portal-title">Panel de Control</div>
-        <div class="portal-subtitle">Herramientas y automatizaciones · Backend Google Drive</div>
+    <div class="portal-header-left">
+        <img class="portal-logo" src="{LOGO_URL}" alt="Logo">
+        <div>
+            <div class="portal-title">Panel de Control</div>
+            <div class="portal-subtitle">Herramientas y automatizaciones · Backend Google Drive</div>
+        </div>
     </div>
+    <div class="user-top">👤 {DISPLAY_USER}</div>
 </div>
 """, unsafe_allow_html=True)
 
-# ──────────────────────────────────────────────────────────────────────────────
-# MAIN
-# ──────────────────────────────────────────────────────────────────────────────
 st.markdown('<div class="main-content">', unsafe_allow_html=True)
 st.markdown('<div class="section-eyebrow">⚡ Acciones rápidas</div>', unsafe_allow_html=True)
 st.markdown('<div class="section-heading">Herramientas disponibles</div>', unsafe_allow_html=True)
-
 st.markdown(f'<div class="user-pill">👤 Usuario actual: {DISPLAY_USER}</div>', unsafe_allow_html=True)
 
-# Nombre del archivo
 now = datetime.now()
 fecha_str = now.strftime("%Y%m%d_%H%M")
-
-if USER_NAME:
-    nombre_copia = f"SESION - {USER_NAME} - MASTER - {fecha_str}"
-else:
-    nombre_copia = f"SESION - MASTER - {fecha_str}"
+nombre_copia = f"SESION - {USER_NAME} - MASTER - {fecha_str}"
 
 copy_url = (
     f"https://docs.google.com/spreadsheets/d/{TEMPLATE_ID}/copy"
@@ -478,8 +590,8 @@ TOOLS = [
     {
         "id": "confirmacion_es",
         "icon": "📋",
-        "name": "Crear nueva confirmación ES",
-        "desc": "Crea tu sesion de trabajo",
+        "name": "Nueva sesión",
+        "desc": "Crea tu sesión",
         "active": True
     },
     {
@@ -500,11 +612,10 @@ TOOLS = [
 
 confirm_state = st.session_state.get("confirm_state", "idle")
 
-# TARJETAS
 for tool in TOOLS:
     if tool["active"]:
         st.markdown('<div class="card-row-wrap">', unsafe_allow_html=True)
-        col_card, col_btn = st.columns([4.3, 1.0], gap="small")
+        col_card, col_btn = st.columns([4.2, 1.0], gap="small")
 
         with col_card:
             st.markdown(f"""
@@ -544,7 +655,6 @@ for tool in TOOLS:
         </div>
         """, unsafe_allow_html=True)
 
-# PROCESO
 saved_name = st.session_state.get("nombre_copia", nombre_copia)
 saved_url  = st.session_state.get("copy_url", copy_url)
 
@@ -592,7 +702,7 @@ if confirm_state in ("step1", "step2", "step3", "done"):
         <div class="done-box">
             <div class="done-title">Sesión creada</div>
             <div class="done-text">
-                Google Drive puede mostrar una pantalla propia de confirmación de copia.
+                Google Drive mostrará su pantalla propia de confirmación de copia.
                 Si no se abre sola, pulsa el botón para abrir la sesión.
             </div>
             <a class="done-link" href="{saved_url}" target="_blank">Abrir sesión ↗</a>
@@ -602,25 +712,22 @@ if confirm_state in ("step1", "step2", "step3", "done"):
     st.markdown('</div>', unsafe_allow_html=True)
 
     if confirm_state == "step1":
-        time.sleep(0.9)
+        time.sleep(0.8)
         st.session_state["confirm_state"] = "step2"
         st.rerun()
 
     elif confirm_state == "step2":
-        time.sleep(0.9)
+        time.sleep(0.8)
         st.session_state["confirm_state"] = "step3"
         st.rerun()
 
     elif confirm_state == "step3":
-        time.sleep(0.9)
+        time.sleep(0.8)
         st.session_state["confirm_state"] = "done"
 
-        if "historial" not in st.session_state:
-            st.session_state.historial = []
-
-        existing = [h["nombre"] for h in st.session_state.historial]
+        existing = [h["nombre"] for h in st.session_state["historial"]]
         if saved_name not in existing:
-            st.session_state.historial.insert(0, {
+            st.session_state["historial"].insert(0, {
                 "nombre": saved_name,
                 "hora": datetime.now().strftime("%H:%M:%S"),
                 "url": saved_url,
@@ -635,21 +742,35 @@ if confirm_state in ("step1", "step2", "step3", "done"):
             unsafe_allow_html=True
         )
 
-    if confirm_state == "done":
-        st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
+    c_reset, c_logout = st.columns([1, 1])
+
+    with c_reset:
         st.markdown('<div class="clean-btn">', unsafe_allow_html=True)
         if st.button("↩ Nueva sesión", key="btn_reset"):
             st.session_state["confirm_state"] = "idle"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-# HISTORIAL
+    with c_logout:
+        st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
+        if st.button("Salir", key="btn_logout"):
+            do_logout()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+else:
+    st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+    st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
+    if st.button("Salir", key="btn_logout_idle"):
+        do_logout()
+    st.markdown('</div>', unsafe_allow_html=True)
+
 if st.session_state.get("historial"):
     st.markdown("<div style='height:1.2rem'></div>", unsafe_allow_html=True)
     st.markdown('<div class="section-eyebrow">🕐 Esta sesión</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-heading">Archivos creados</div>', unsafe_allow_html=True)
 
-    for i, entry in enumerate(st.session_state.historial, 1):
+    for i, entry in enumerate(st.session_state["historial"], 1):
         st.markdown(f"""
         <div class="history-row">
             <div class="history-num">{i}</div>
@@ -661,10 +782,9 @@ if st.session_state.get("historial"):
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# FOOTER
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · v1.8.0</span>
+    <span class="footer-text">Panel de Control · v2.0.0</span>
     <span class="footer-text">Carpeta: {FOLDER_ID}</span>
 </div>
 """, unsafe_allow_html=True)
