@@ -53,8 +53,7 @@ def get_saludo():
         return "Buenos días"
     elif 14 <= hora < 21:
         return "Buenas tardes"
-    else:
-        return "Buenas noches"
+    return "Buenas noches"
 
 def do_logout():
     st.session_state["authenticated"] = False
@@ -103,7 +102,7 @@ html, body, [class*="css"] {
     font-family: 'DM Sans', sans-serif;
 }
 
-[data-testid="stAppViewContainer"] { background:#F4F5F8; }
+[data-testid="stAppViewContainer"] { background:#F3F4F7; }
 [data-testid="stHeader"] { background:transparent !important; }
 section[data-testid="stSidebar"] { display:none !important; }
 
@@ -112,7 +111,7 @@ section[data-testid="stSidebar"] { display:none !important; }
     max-width:100% !important;
 }
 
-/* HEADER */
+/* HEADER APP */
 .portal-header {
     background:#FFFFFF;
     border-bottom:1px solid #E6E8EF;
@@ -128,7 +127,7 @@ section[data-testid="stSidebar"] { display:none !important; }
     gap:0.9rem;
 }
 .portal-logo {
-    height:42px;
+    height:46px;
     width:auto;
     object-fit:contain;
     display:block;
@@ -179,46 +178,108 @@ section[data-testid="stSidebar"] { display:none !important; }
 }
 
 /* LOGIN */
-.login-wrap {
+.login-page {
+    min-height:100vh;
     display:flex;
-    align-items:flex-start;
+    align-items:center;
     justify-content:center;
-    padding:1.4rem 2rem 2rem;
+    padding:2.5rem 1.25rem;
 }
-.login-card {
+.login-shell {
     width:100%;
-    max-width:430px;
-    background:#fff;
+    max-width:560px;
+}
+.login-head {
+    width:100%;
+    background:#FFFFFF;
     border:1px solid #E5E8F0;
-    border-radius:16px;
-    padding:1.45rem 1.45rem 1.2rem;
-    box-shadow:0 12px 30px rgba(17,24,39,0.04);
+    border-radius:18px;
+    padding:1.6rem 1.6rem 1.35rem;
+    box-shadow:0 10px 30px rgba(17,24,39,0.03);
+    margin-bottom:0.8rem;
+    text-align:left;
 }
 .login-logo {
-    height:46px;
+    height:70px;
     width:auto;
-    margin:0 auto 0.95rem auto;
     display:block;
+    margin:0 auto 1rem auto;
+    object-fit:contain;
 }
 .login-title {
-    font-size:1.02rem;
+    font-size:1.1rem;
     font-weight:600;
     color:#1D2433;
     margin-bottom:0.18rem;
 }
 .login-subtitle {
-    font-size:0.79rem;
+    font-size:0.82rem;
     color:#7C869D;
-    margin-bottom:1rem;
-    line-height:1.35;
+    line-height:1.4;
+}
+.login-form-box {
+    width:100%;
+    background:#FFFFFF;
+    border:1px solid #D9DEE8;
+    border-radius:10px;
+    padding:0.9rem 0.9rem 0.7rem;
 }
 .login-note {
     font-size:0.72rem;
     color:#8A93A8;
-    margin-top:0.8rem;
+    margin-top:0.95rem;
+    line-height:1.35;
 }
 
-/* PILL */
+/* INPUTS */
+div[data-testid="stTextInput"] label {
+    color:#4D576D !important;
+    font-size:0.78rem !important;
+    font-weight:500 !important;
+}
+div[data-testid="stTextInput"] input {
+    background:#F7F8FB !important;
+    border:1px solid #E4E8F0 !important;
+    border-radius:10px !important;
+    color:#1D2433 !important;
+}
+div[data-testid="stTextInput"] input::placeholder {
+    color:#A0A8B9 !important;
+}
+
+/* BOTONES */
+div.stButton {
+    width:fit-content !important;
+}
+div.stButton > button,
+div[data-testid="stFormSubmitButton"] > button,
+.clean-btn > div > button,
+.logout-btn > div > button {
+    background:#FFFFFF !important;
+    color:#394255 !important;
+    border:1px solid #DCE1EB !important;
+    border-radius:10px !important;
+    min-height:38px !important;
+    padding:0 1rem !important;
+    font-size:0.76rem !important;
+    font-weight:500 !important;
+    box-shadow:none !important;
+    width:auto !important;
+}
+div.stButton > button:hover,
+div[data-testid="stFormSubmitButton"] > button:hover,
+.clean-btn > div > button:hover,
+.logout-btn > div > button:hover {
+    background:#F7F8FB !important;
+    border-color:#CDD4E2 !important;
+}
+div.stButton > button:disabled {
+    color:#AAB2C4 !important;
+    background:#F7F8FB !important;
+    border-color:#E3E7EF !important;
+}
+
+/* USER PILL */
 .user-pill {
     display:inline-flex;
     align-items:center;
@@ -232,14 +293,13 @@ section[data-testid="stSidebar"] { display:none !important; }
     color:#5D6880;
 }
 
-/* FILA DE ACCIÓN */
-.action-row {
-    max-width: 470px;
-    background:#FFFFFF;
-    border:1px solid #E3E6EE;
-    border-radius:12px;
-    padding:0.65rem 0.8rem;
-    margin-bottom:0.55rem;
+/* ACCIÓN SIMPLE */
+.action-inline {
+    max-width:420px;
+    display:flex;
+    align-items:center;
+    gap:0.55rem;
+    margin-bottom:0.4rem;
 }
 .action-icon {
     width:30px;
@@ -251,6 +311,12 @@ section[data-testid="stSidebar"] { display:none !important; }
     align-items:center;
     justify-content:center;
     font-size:0.95rem;
+    flex-shrink:0;
+}
+.action-text {
+    display:flex;
+    flex-direction:column;
+    gap:0.08rem;
 }
 .action-title {
     font-size:0.82rem;
@@ -261,49 +327,7 @@ section[data-testid="stSidebar"] { display:none !important; }
 .action-desc {
     font-size:0.69rem;
     color:#7C869D;
-    margin-top:0.12rem;
     line-height:1.2;
-}
-
-/* BOTONES */
-.action-btn > div > button {
-    background:#FFFFFF !important;
-    color:#394255 !important;
-    border:1px solid #DCE1EB !important;
-    border-radius:10px !important;
-    min-height:36px !important;
-    height:36px !important;
-    min-width:82px !important;
-    padding:0 0.7rem !important;
-    font-size:0.74rem !important;
-    font-weight:500 !important;
-    box-shadow:none !important;
-    white-space:nowrap !important;
-}
-.action-btn > div > button:hover,
-.clean-btn > div > button:hover,
-.logout-btn > div > button:hover,
-div[data-testid="stFormSubmitButton"] > button:hover {
-    background:#F7F8FB !important;
-    border-color:#CDD4E2 !important;
-}
-.action-btn > div > button:disabled {
-    color:#AAB2C4 !important;
-    background:#F7F8FB !important;
-    border-color:#E3E7EF !important;
-}
-.clean-btn > div > button,
-.logout-btn > div > button,
-div[data-testid="stFormSubmitButton"] > button {
-    background:#FFFFFF !important;
-    color:#394255 !important;
-    border:1px solid #DCE1EB !important;
-    border-radius:10px !important;
-    font-size:0.76rem !important;
-    font-weight:500 !important;
-    min-height:40px !important;
-    padding:0 1rem !important;
-    box-shadow:none !important;
 }
 
 /* PROCESO */
@@ -313,7 +337,7 @@ div[data-testid="stFormSubmitButton"] > button {
     border:1px solid #E4E7EF;
     border-radius:14px;
     padding:1rem 1.05rem;
-    margin-top:0.45rem;
+    margin-top:0.55rem;
 }
 .progress-title {
     font-size:0.84rem;
@@ -460,6 +484,29 @@ div[data-testid="stFormSubmitButton"] > button {
     font-size:0.71rem;
     color:#A2ABBD;
 }
+
+/* MÓVIL */
+@media (max-width: 768px) {
+    .portal-header,
+    .portal-footer,
+    .main-content {
+        padding-left:1rem;
+        padding-right:1rem;
+    }
+
+    .login-page {
+        padding:1.25rem 0.9rem;
+        align-items:flex-start;
+    }
+
+    .login-head {
+        padding:1.2rem 1.1rem 1rem;
+    }
+
+    .login-logo {
+        height:60px;
+    }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -467,47 +514,48 @@ div[data-testid="stFormSubmitButton"] > button {
 # LOGIN
 # ──────────────────────────────────────────────────────────────────────────────
 if not st.session_state["authenticated"]:
-    left, center, right = st.columns([1.15, 1, 1.15])
+    st.markdown('<div class="login-page"><div class="login-shell">', unsafe_allow_html=True)
 
-    with center:
-        st.markdown('<div class="login-wrap">', unsafe_allow_html=True)
-        st.markdown(f"""
-        <div class="login-card">
-            <img class="login-logo" src="{LOGO_URL}" alt="Logo">
-            <div class="login-title">Acceso</div>
-            <div class="login-subtitle">
-                Entra con tu mail y la contraseña común.
-            </div>
-        """, unsafe_allow_html=True)
-
-        with st.form("login_form", clear_on_submit=False):
-            email = st.text_input("Mail", placeholder="support@crucemundo.com")
-            password = st.text_input("Contraseña", type="password", placeholder="••••••••")
-            submitted = st.form_submit_button("Entrar")
-
-            if submitted:
-                email_clean = email.strip().lower()
-
-                if not email_clean or not password:
-                    st.error("Debes introducir mail y contraseña.")
-                elif email_clean not in VALID_USERS:
-                    st.error("Usuario no autorizado.")
-                elif password != VALID_PASSWORD:
-                    st.error("Contraseña incorrecta.")
-                else:
-                    st.session_state["authenticated"] = True
-                    st.session_state["user_email"] = email_clean
-                    st.session_state["display_name"] = VALID_USERS[email_clean]
-                    st.rerun()
-
-        st.markdown("""
-            <div class="login-note">
-                El mail valida el acceso y el alias se usará para nombrar la sesión.
-            </div>
+    st.markdown(f"""
+    <div class="login-head">
+        <img class="login-logo" src="{LOGO_URL}" alt="Logo">
+        <div class="login-title">Acceso</div>
+        <div class="login-subtitle">
+            Entra con tu mail y la contraseña común.
         </div>
-        """, unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
 
+    st.markdown('<div class="login-form-box">', unsafe_allow_html=True)
+
+    with st.form("login_form", clear_on_submit=False):
+        email = st.text_input("Mail", placeholder="support@crucemundo.com")
+        password = st.text_input("Contraseña", type="password", placeholder="••••••••")
+        submitted = st.form_submit_button("Entrar")
+
+        if submitted:
+            email_clean = email.strip().lower()
+
+            if not email_clean or not password:
+                st.error("Debes introducir mail y contraseña.")
+            elif email_clean not in VALID_USERS:
+                st.error("Usuario no autorizado.")
+            elif password != VALID_PASSWORD:
+                st.error("Contraseña incorrecta.")
+            else:
+                st.session_state["authenticated"] = True
+                st.session_state["user_email"] = email_clean
+                st.session_state["display_name"] = VALID_USERS[email_clean]
+                st.rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("""
+        <div class="login-note">
+            El mail valida el acceso y el alias se usará para nombrar la sesión.
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown('</div></div>', unsafe_allow_html=True)
     st.stop()
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -550,31 +598,24 @@ copy_url = (
 
 confirm_state = st.session_state.get("confirm_state", "idle")
 
-st.markdown('<div class="action-row">', unsafe_allow_html=True)
-col_icon, col_text, col_btn = st.columns([0.6, 3.6, 1.1], gap="small")
+st.markdown("""
+<div class="action-inline">
+    <div class="action-icon">📋</div>
+    <div class="action-text">
+        <div class="action-title">Nueva sesión</div>
+        <div class="action-desc">Crear copia MASTER</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-with col_icon:
-    st.markdown('<div class="action-icon">📋</div>', unsafe_allow_html=True)
-
-with col_text:
-    st.markdown("""
-    <div class="action-title">Nueva sesión</div>
-    <div class="action-desc">Crear copia MASTER</div>
-    """, unsafe_allow_html=True)
-
-with col_btn:
-    st.markdown('<div class="action-btn">', unsafe_allow_html=True)
-    if confirm_state == "idle":
-        if st.button("Crear", key="btn_crear"):
-            st.session_state["confirm_state"] = "step1"
-            st.session_state["nombre_copia"] = nombre_copia
-            st.session_state["copy_url"] = copy_url
-            st.rerun()
-    else:
-        st.button("Crear", key="btn_crear_dis", disabled=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-st.markdown('</div>', unsafe_allow_html=True)
+if confirm_state == "idle":
+    if st.button("Crear", key="btn_crear"):
+        st.session_state["confirm_state"] = "step1"
+        st.session_state["nombre_copia"] = nombre_copia
+        st.session_state["copy_url"] = copy_url
+        st.rerun()
+else:
+    st.button("Crear", key="btn_crear_dis", disabled=True)
 
 saved_name = st.session_state.get("nombre_copia", nombre_copia)
 saved_url = st.session_state.get("copy_url", copy_url)
@@ -632,7 +673,6 @@ if confirm_state in ("step1", "step2", "step3", "done"):
     elif confirm_state == "step3":
         time.sleep(0.7)
         st.session_state["confirm_state"] = "done"
-
         existing = [h["nombre"] for h in st.session_state["historial"]]
         if saved_name not in existing:
             st.session_state["historial"].insert(0, {
@@ -683,7 +723,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · v3.0.0</span>
+    <span class="footer-text">Panel de Control · v3.1.0</span>
     <span class="footer-text">Carpeta: {FOLDER_ID}</span>
 </div>
 """, unsafe_allow_html=True)
