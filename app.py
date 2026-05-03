@@ -92,17 +92,37 @@ st.markdown("""
 
 html, body, [class*="css"] {
     font-family: 'DM Sans', sans-serif;
+    background: #FFFFFF !important;
 }
 
-[data-testid="stAppViewContainer"] { background:#F3F4F7; }
-[data-testid="stHeader"] { background:transparent !important; }
-section[data-testid="stSidebar"] { display:none !important; }
+[data-testid="stAppViewContainer"] {
+    background:#FFFFFF !important;
+}
 
-/* CONTENEDOR PRINCIPAL MÁS PEQUEÑO Y CENTRADO */
+[data-testid="stHeader"] {
+    background:transparent !important;
+}
+
+section[data-testid="stSidebar"] {
+    display:none !important;
+}
+
+/* SUBIR TODO MÁS ARRIBA */
 .block-container {
-    padding: 1.2rem 1rem 1.5rem !important;
+    padding-top: 0.35rem !important;
+    padding-right: 1rem !important;
+    padding-left: 1rem !important;
+    padding-bottom: 1.2rem !important;
     max-width: 760px !important;
     margin: 0 auto !important;
+}
+
+.stMainBlockContainer {
+    padding-top: 0.35rem !important;
+}
+
+div[data-testid="stMain"] {
+    padding-top: 0 !important;
 }
 
 /* HEADER APP */
@@ -110,12 +130,12 @@ section[data-testid="stSidebar"] { display:none !important; }
     background:#FFFFFF;
     border:1px solid #E7EAF0;
     border-radius:18px;
-    padding:0.9rem 1.1rem;
+    padding:0.85rem 1rem;
     display:flex;
     align-items:center;
     justify-content:space-between;
     gap:1rem;
-    margin-bottom:1rem;
+    margin-bottom:0.8rem;
 }
 .portal-header-left {
     display:flex;
@@ -127,6 +147,8 @@ section[data-testid="stSidebar"] { display:none !important; }
     width:auto;
     object-fit:contain;
     display:block;
+    background:#FFFFFF;
+    border-radius:8px;
 }
 .portal-title {
     font-size:0.96rem;
@@ -184,46 +206,48 @@ section[data-testid="stSidebar"] { display:none !important; }
 
 /* LOGIN */
 .login-page {
-    min-height:100vh;
+    min-height:92vh;
     display:flex;
-    align-items:center;
+    align-items:flex-start;
     justify-content:center;
-    padding:1rem;
+    padding:1.2rem 1rem 1rem;
 }
 .login-shell {
     width:100%;
-    max-width:420px;
+    max-width:390px;
     margin:0 auto;
 }
 .login-head {
     text-align:center;
-    margin-bottom:1rem;
+    margin-bottom:0.8rem;
 }
 .login-logo {
-    height:60px;
+    height:56px;
     width:auto;
-    margin:0 auto 0.9rem auto;
+    margin:0 auto 0.7rem auto;
     display:block;
+    background:#FFFFFF;
+    border-radius:8px;
 }
 .login-title {
-    font-size:1.2rem;
+    font-size:1.15rem;
     font-weight:700;
     color:#1F2937;
 }
 .login-subtitle {
-    font-size:0.8rem;
+    font-size:0.79rem;
     color:#7C869D;
-    margin-top:0.35rem;
+    margin-top:0.3rem;
 }
 .login-form-box {
     background:#FFFFFF;
     border:1px solid #E4E7EF;
     border-radius:18px;
-    padding:1rem;
+    padding:0.95rem;
     box-shadow:0 8px 24px rgba(17,24,39,0.04);
 }
 .login-note {
-    margin-top:0.7rem;
+    margin-top:0.65rem;
     text-align:center;
     font-size:0.72rem;
     color:#8A93A5;
@@ -242,7 +266,7 @@ div[data-testid="stTextInput"] input {
     color:#1F2937 !important;
 }
 
-/* BOTONES GENERALES */
+/* BOTONES */
 div.stButton {
     width:fit-content !important;
 }
@@ -316,6 +340,7 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     color:#7A808E;
     line-height:1.26;
 }
+
 .action-button-wrap {
     display:flex !important;
     justify-content:center !important;
@@ -346,7 +371,7 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     width:100%;
     max-width:520px;
     padding:0 0.15rem;
-    margin-top:0.6rem;
+    margin-top:0.45rem;
     display:flex;
     flex-direction:column;
 }
@@ -614,7 +639,6 @@ copy_url = (
 
 confirm_state = st.session_state.get("confirm_state", "idle")
 
-# TARJETA COMPACTA DE ACCIÓN
 st.markdown(f"""
 <div class="action-box">
     <div class="action-top">
