@@ -92,7 +92,7 @@ st.markdown("""
 
 html, body, [class*="css"] {
     font-family: 'DM Sans', sans-serif;
-    background: #FFFFFF !important;
+    background:#FFFFFF !important;
 }
 
 [data-testid="stAppViewContainer"] {
@@ -107,67 +107,177 @@ section[data-testid="stSidebar"] {
     display:none !important;
 }
 
-/* SUBIR TODO MÁS ARRIBA */
-.block-container {
-    padding-top: 0.35rem !important;
-    padding-right: 1rem !important;
-    padding-left: 1rem !important;
-    padding-bottom: 1.2rem !important;
-    max-width: 760px !important;
-    margin: 0 auto !important;
+/* SUBIR TODO Y CENTRAR */
+.block-container,
+section.stMain .block-container,
+.stMainBlockContainer,
+[data-testid="stMainBlockContainer"] {
+    padding-top:0rem !important;
+    padding-bottom:1rem !important;
+    padding-left:1rem !important;
+    padding-right:1rem !important;
+    max-width:760px !important;
+    margin:0 auto !important;
 }
 
-.stMainBlockContainer {
-    padding-top: 0.35rem !important;
+/* LOGIN */
+.login-page {
+    min-height:auto;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:0.2rem 1rem 1rem;
 }
 
-div[data-testid="stMain"] {
-    padding-top: 0 !important;
+.login-shell {
+    width:100%;
+    max-width:390px;
+    margin:0 auto;
 }
 
-/* HEADER APP */
+.login-head {
+    text-align:center;
+    margin-bottom:0.55rem;
+}
+
+.login-logo {
+    height:56px;
+    width:auto;
+    margin:0 auto 0.65rem auto;
+    display:block;
+    background:transparent !important;
+    border:none !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+}
+
+.login-title {
+    font-size:1.08rem;
+    font-weight:700;
+    color:#1F2937;
+}
+
+.login-subtitle {
+    font-size:0.78rem;
+    color:#7C869D;
+    margin-top:0.28rem;
+}
+
+.login-form-box {
+    background:transparent !important;
+    border:none !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+    padding:0 !important;
+}
+
+.login-note {
+    margin-top:0.65rem;
+    text-align:center;
+    font-size:0.72rem;
+    color:#8A93A5;
+}
+
+/* QUITAR BORDE DEL FORM */
+[data-testid="stForm"] {
+    border:0 !important;
+    padding:0 !important;
+    background:transparent !important;
+}
+
+/* INPUTS */
+div[data-testid="stTextInput"] label {
+    color:#4D576D !important;
+    font-size:0.78rem !important;
+    font-weight:500 !important;
+}
+
+div[data-testid="stTextInput"] input {
+    background:#F8FAFC !important;
+    border:1px solid #E5EAF2 !important;
+    border-radius:12px !important;
+    color:#1F2937 !important;
+}
+
+/* BOTONES */
+div.stButton {
+    width:fit-content !important;
+}
+
+div.stButton > button,
+div[data-testid="stFormSubmitButton"] > button,
+.logout-btn > div > button {
+    background:#D9E9FF !important;
+    color:#214D92 !important;
+    border:1px solid #BDD6FF !important;
+    border-radius:12px !important;
+    min-height:40px !important;
+    padding:0 1rem !important;
+    font-size:0.77rem !important;
+    font-weight:600 !important;
+    box-shadow:none !important;
+    width:auto !important;
+}
+
+div.stButton > button:hover,
+div[data-testid="stFormSubmitButton"] > button:hover,
+.logout-btn > div > button:hover {
+    background:#D0E3FF !important;
+    border-color:#AFCBFF !important;
+    color:#183F7A !important;
+}
+
+/* HEADER SIN CAJA */
 .portal-header {
-    background:#FFFFFF;
-    border:1px solid #E7EAF0;
-    border-radius:18px;
-    padding:0.85rem 1rem;
+    background:transparent !important;
+    border:none !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+    padding:0.1rem 0 0.55rem 0;
     display:flex;
     align-items:center;
     justify-content:space-between;
     gap:1rem;
-    margin-bottom:0.8rem;
+    margin-bottom:0.55rem;
 }
+
 .portal-header-left {
     display:flex;
     align-items:center;
     gap:0.9rem;
 }
+
 .portal-logo {
     height:42px;
     width:auto;
     object-fit:contain;
     display:block;
-    background:#FFFFFF;
-    border-radius:8px;
+    background:transparent !important;
+    border:none !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
 }
+
 .portal-title {
     font-size:0.96rem;
     font-weight:600;
     color:#1F2937;
     line-height:1.15;
 }
+
 .portal-subtitle {
     font-size:0.72rem;
     color:#7C869D;
     margin-top:0.08rem;
 }
+
 .user-top {
     font-size:0.72rem;
     color:#566079;
-    background:#F8F9FC;
-    border:1px solid #E4E7EF;
-    border-radius:999px;
-    padding:0.38rem 0.72rem;
+    background:transparent !important;
+    border:none !important;
+    border-radius:0 !important;
+    padding:0 !important;
     white-space:nowrap;
 }
 
@@ -175,6 +285,7 @@ div[data-testid="stMain"] {
 .main-content {
     padding:0;
 }
+
 .section-eyebrow {
     display:inline-flex;
     align-items:center;
@@ -189,6 +300,7 @@ div[data-testid="stMain"] {
     text-transform:uppercase;
     margin-bottom:0.75rem;
 }
+
 .user-pill {
     display:inline-flex;
     align-items:center;
@@ -204,113 +316,27 @@ div[data-testid="stMain"] {
     word-break:break-word;
 }
 
-/* LOGIN */
-.login-page {
-    min-height:92vh;
-    display:flex;
-    align-items:flex-start;
-    justify-content:center;
-    padding:1.2rem 1rem 1rem;
-}
-.login-shell {
-    width:100%;
-    max-width:390px;
-    margin:0 auto;
-}
-.login-head {
-    text-align:center;
-    margin-bottom:0.8rem;
-}
-.login-logo {
-    height:56px;
-    width:auto;
-    margin:0 auto 0.7rem auto;
-    display:block;
-    background:#FFFFFF;
-    border-radius:8px;
-}
-.login-title {
-    font-size:1.15rem;
-    font-weight:700;
-    color:#1F2937;
-}
-.login-subtitle {
-    font-size:0.79rem;
-    color:#7C869D;
-    margin-top:0.3rem;
-}
-.login-form-box {
-    background:#FFFFFF;
-    border:1px solid #E4E7EF;
-    border-radius:18px;
-    padding:0.95rem;
-    box-shadow:0 8px 24px rgba(17,24,39,0.04);
-}
-.login-note {
-    margin-top:0.65rem;
-    text-align:center;
-    font-size:0.72rem;
-    color:#8A93A5;
-}
-
-/* INPUTS */
-div[data-testid="stTextInput"] label {
-    color:#4D576D !important;
-    font-size:0.78rem !important;
-    font-weight:500 !important;
-}
-div[data-testid="stTextInput"] input {
-    background:#F8FAFC !important;
-    border:1px solid #E5EAF2 !important;
-    border-radius:12px !important;
-    color:#1F2937 !important;
-}
-
-/* BOTONES */
-div.stButton {
-    width:fit-content !important;
-}
-div.stButton > button,
-div[data-testid="stFormSubmitButton"] > button,
-.logout-btn > div > button {
-    background:#D9E9FF !important;
-    color:#214D92 !important;
-    border:1px solid #BDD6FF !important;
-    border-radius:12px !important;
-    min-height:40px !important;
-    padding:0 1rem !important;
-    font-size:0.77rem !important;
-    font-weight:600 !important;
-    box-shadow:none !important;
-    width:auto !important;
-}
-div.stButton > button:hover,
-div[data-testid="stFormSubmitButton"] > button:hover,
-.logout-btn > div > button:hover {
-    background:#D0E3FF !important;
-    border-color:#AFCBFF !important;
-    color:#183F7A !important;
-}
-
 /* ACCIÓN */
 .action-box {
     width:100%;
     max-width:520px;
-    background:#F7F6F3;
-    border:1px solid #E5E2DC;
-    border-radius:16px;
-    padding:1rem;
+    background:transparent !important;
+    border:none !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+    padding:0 !important;
     margin-bottom:0.65rem;
-    box-shadow:0 4px 12px rgba(17,24,39,0.02);
     display:flex;
     flex-direction:column;
     gap:0.8rem;
 }
+
 .action-top {
     display:flex;
     align-items:flex-start;
     gap:0.7rem;
 }
+
 .action-icon {
     width:36px;
     height:36px;
@@ -323,18 +349,21 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     font-size:1rem;
     flex-shrink:0;
 }
+
 .action-text {
     display:flex;
     flex-direction:column;
     gap:0.15rem;
     min-width:0;
 }
+
 .action-title {
     font-size:0.94rem;
     font-weight:600;
     color:#1F2937;
     line-height:1.1;
 }
+
 .action-desc {
     font-size:0.72rem;
     color:#7A808E;
@@ -346,13 +375,15 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     justify-content:center !important;
     align-items:center !important;
     width:100% !important;
-    margin-top:0.2rem;
+    margin-top:0.15rem;
 }
+
 .action-button-wrap div.stButton {
     width:auto !important;
     display:flex !important;
     justify-content:center !important;
 }
+
 .action-button-wrap div.stButton > button {
     width:auto !important;
     background:#D9E9FF !important;
@@ -370,24 +401,28 @@ div[data-testid="stFormSubmitButton"] > button:hover,
 .progress-panel {
     width:100%;
     max-width:520px;
-    padding:0 0.15rem;
-    margin-top:0.45rem;
+    padding:0;
+    margin-top:0.35rem;
     display:flex;
     flex-direction:column;
 }
+
 .progress-title {
     font-size:0.83rem;
     font-weight:600;
     color:#1F2937;
     margin-bottom:0.35rem;
 }
+
 .step {
     display:flex;
     align-items:flex-start;
     gap:0.65rem;
     margin-bottom:0.6rem;
 }
+
 .step:last-child { margin-bottom:0; }
+
 .step-dot {
     width:18px;
     height:18px;
@@ -400,30 +435,36 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     font-size:0.55rem;
     font-weight:700;
 }
+
 .sd-done {
     background:#EEF7F1;
     border:1px solid #D8ECDF;
     color:#2E7D58;
 }
+
 .sd-active {
     background:#F2F4F9;
     border:1px solid #DDE2EC;
     color:#6E778B;
 }
+
 .sd-wait {
     background:#F8F9FC;
     border:1px solid #E6E9F0;
     color:#B1B8C9;
 }
+
 .step-content {
     display:flex;
     flex-direction:column;
     min-width:0;
     flex:1;
 }
+
 .st-done, .st-active, .st-wait {
     font-size:0.76rem;
 }
+
 .st-done { color:#394255; }
 .st-active { color:#1F2937; font-weight:600; }
 .st-wait { color:#A2ABBD; }
@@ -436,24 +477,29 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     overflow-wrap:break-word !important;
     white-space:normal !important;
 }
+
 .done-box {
     margin-top:0.8rem;
-    padding:0.75rem 0.85rem;
-    background:#F6F8FC;
-    border:1px solid #E1E6F0;
-    border-radius:12px;
+    padding:0 !important;
+    background:transparent !important;
+    border:none !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
 }
+
 .done-title {
     font-size:0.76rem;
     color:#1F2937;
     font-weight:600;
 }
+
 .done-text {
     font-size:0.71rem;
     color:#657087;
     margin-top:0.15rem;
     line-height:1.3;
 }
+
 .done-link {
     display:inline-flex;
     align-items:center;
@@ -474,14 +520,16 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     display:flex;
     align-items:center;
     gap:0.75rem;
-    padding:0.65rem 0.85rem;
-    border-radius:16px;
-    background:#FFFFFF;
-    border:1px solid #E4E7EF;
-    margin-bottom:0.4rem;
+    padding:0.2rem 0;
+    border-radius:0 !important;
+    background:transparent !important;
+    border:none !important;
+    margin-bottom:0.35rem;
     width:100%;
     max-width:520px;
+    box-shadow:none !important;
 }
+
 .history-num {
     width:22px;
     height:22px;
@@ -496,6 +544,7 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     color:#5D6880;
     flex-shrink:0;
 }
+
 .history-name {
     font-size:0.75rem;
     color:#394255;
@@ -504,11 +553,13 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     overflow-wrap:break-word;
     white-space:normal;
 }
+
 .history-time {
     font-size:0.68rem;
     color:#A2ABBD;
     white-space:nowrap;
 }
+
 .history-link {
     font-size:0.71rem;
     color:#5D6880;
@@ -517,19 +568,21 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     white-space:nowrap;
 }
 
-/* FOOTER */
+/* FOOTER SIN CAJA */
 .portal-footer {
     margin-top:1rem;
-    padding:0.9rem 1rem;
-    border:1px solid #E4E7EF;
-    border-radius:16px;
-    background:#FFFFFF;
+    padding:0.5rem 0 0 0;
+    border:none !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
     display:flex;
     justify-content:space-between;
     align-items:center;
     gap:0.8rem;
     flex-wrap:wrap;
 }
+
 .footer-text {
     font-size:0.71rem;
     color:#A2ABBD;
