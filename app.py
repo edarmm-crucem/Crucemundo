@@ -185,41 +185,41 @@ section[data-testid="stSidebar"] { display:none !important; }
 
 /* LOGIN */
 .login-page {
-    min-height:auto;
+    min-height:100vh;
     display:flex;
-    align-items:flex-start;
+    align-items:center;
     justify-content:center;
-    padding:0.3rem 1.2rem 1.1rem;
+    padding:1rem 1rem;
 }
 .login-shell {
     width:100%;
-    max-width:540px;
+    max-width:430px;
 }
 .login-head {
     width:100%;
     background:#FFFFFF;
     border:1px solid #E6E9F0;
     border-radius:22px;
-    padding:1rem 1.35rem 0.9rem;
+    padding:1rem 1.25rem 0.9rem;
     box-shadow:0 10px 30px rgba(17,24,39,0.03);
-    margin-bottom:0.55rem;
+    margin-bottom:0.6rem;
     text-align:left;
 }
 .login-logo {
     height:74px;
     width:auto;
     display:block;
-    margin:0 auto 0.55rem auto;
+    margin:0 auto 0.5rem auto;
     object-fit:contain;
 }
 .login-title {
-    font-size:1.02rem;
+    font-size:1rem;
     font-weight:600;
     color:#1F2937;
-    margin-bottom:0.12rem;
+    margin-bottom:0.1rem;
 }
 .login-subtitle {
-    font-size:0.79rem;
+    font-size:0.78rem;
     color:#7C869D;
     line-height:1.35;
 }
@@ -228,19 +228,19 @@ section[data-testid="stSidebar"] { display:none !important; }
     background:#FFFFFF;
     border:1px solid #DCE2EB;
     border-radius:16px;
-    padding:0.65rem 0.75rem 0.45rem;
+    padding:0.55rem 0.7rem 0.4rem;
 }
 .login-note {
-    font-size:0.71rem;
+    font-size:0.7rem;
     color:#8A93A8;
-    margin-top:0.65rem;
-    line-height:1.3;
+    margin-top:0.6rem;
+    line-height:1.28;
 }
 
 /* INPUTS */
 div[data-testid="stTextInput"] label {
     color:#4D576D !important;
-    font-size:0.78rem !important;
+    font-size:0.77rem !important;
     font-weight:500 !important;
 }
 div[data-testid="stTextInput"] input {
@@ -253,13 +253,13 @@ div[data-testid="stTextInput"] input::placeholder {
     color:#A0A8B9 !important;
 }
 div[data-testid="stForm"] > div {
-    gap:0.35rem !important;
+    gap:0.28rem !important;
 }
 [data-testid="stVerticalBlock"] {
     gap:0.35rem;
 }
 
-/* BOTONES GENERALES */
+/* BOTONES */
 div.stButton {
     width:fit-content !important;
 }
@@ -292,14 +292,16 @@ div.stButton > button:disabled {
     border-color:#D8E6FF !important;
 }
 
-/* ACCIÓN EN RECUADRO */
-.action-box {
+/* ACCIÓN */
+.action-card-wrap {
     max-width:560px;
+    margin-bottom:0.7rem;
+}
+.action-card {
     background:#F7F6F3;
     border:1px solid #E5E2DC;
     border-radius:20px;
     padding:0.95rem;
-    margin-bottom:0.65rem;
     box-shadow:0 6px 18px rgba(17,24,39,0.025);
 }
 .action-top {
@@ -337,10 +339,10 @@ div.stButton > button:disabled {
     color:#7A808E;
     line-height:1.28;
 }
-.action-button-wrap div.stButton {
+.action-btn-wrap div.stButton {
     width:100% !important;
 }
-.action-button-wrap div.stButton > button {
+.action-btn-wrap div.stButton > button {
     width:100% !important;
     background:#D9E9FF !important;
     color:#214D92 !important;
@@ -352,12 +354,12 @@ div.stButton > button:disabled {
     justify-content:center !important;
     box-shadow:none !important;
 }
-.action-button-wrap div.stButton > button:hover {
+.action-btn-wrap div.stButton > button:hover {
     background:#D0E3FF !important;
     border-color:#AFCBFF !important;
     color:#183F7A !important;
 }
-.action-button-wrap div.stButton > button:disabled {
+.action-btn-wrap div.stButton > button:disabled {
     color:#8AA2C7 !important;
     background:#EEF4FF !important;
     border-color:#D8E6FF !important;
@@ -528,7 +530,8 @@ div.stButton > button:disabled {
     }
 
     .login-page {
-        padding:0.15rem 0.8rem 0.9rem;
+        padding:0.8rem 0.8rem;
+        align-items:flex-start;
     }
 
     .login-shell {
@@ -549,7 +552,7 @@ div.stButton > button:disabled {
         padding:0.55rem 0.65rem 0.35rem;
     }
 
-    .action-box {
+    .action-card {
         padding:0.8rem;
         border-radius:18px;
     }
@@ -652,27 +655,32 @@ copy_url = (
 
 confirm_state = st.session_state.get("confirm_state", "idle")
 
-st.markdown('<div class="action-box">', unsafe_allow_html=True)
-st.markdown(f"""
-<div class="action-top">
-    <div class="action-icon">📋</div>
-    <div class="action-text">
-        <div class="action-title">Nueva Confirmación ES</div>
-        <div class="action-desc">Crear sesión MASTER de trabajo para {DISPLAY_USER}</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+st.markdown('<div class="action-card-wrap">', unsafe_allow_html=True)
+with st.container():
+    st.markdown('<div class="action-card">', unsafe_allow_html=True)
 
-st.markdown('<div class="action-button-wrap">', unsafe_allow_html=True)
-if confirm_state == "idle":
-    if st.button("Crear", key="btn_crear"):
-        st.session_state["confirm_state"] = "step1"
-        st.session_state["nombre_copia"] = nombre_copia
-        st.session_state["copy_url"] = copy_url
-        st.rerun()
-else:
-    st.button("Crear", key="btn_crear_dis", disabled=True)
-st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="action-top">
+        <div class="action-icon">📋</div>
+        <div class="action-text">
+            <div class="action-title">Nueva Confirmación ES</div>
+            <div class="action-desc">Crear sesión MASTER de trabajo para {DISPLAY_USER}</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="action-btn-wrap">', unsafe_allow_html=True)
+    if confirm_state == "idle":
+        if st.button("Crear", key="btn_crear"):
+            st.session_state["confirm_state"] = "step1"
+            st.session_state["nombre_copia"] = nombre_copia
+            st.session_state["copy_url"] = copy_url
+            st.rerun()
+    else:
+        st.button("Crear", key="btn_crear_dis", disabled=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
 saved_name = st.session_state.get("nombre_copia", nombre_copia)
@@ -780,7 +788,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · v3.3.0</span>
+    <span class="footer-text">Panel de Control · v3.4.0</span>
     <span class="footer-text">Carpeta: {FOLDER_ID}</span>
 </div>
 """, unsafe_allow_html=True)
