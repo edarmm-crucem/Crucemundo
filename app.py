@@ -303,7 +303,7 @@ def get_year_folder_id(year_name):
     folder = find_child_folder(DRIVE_ROOT_ID, year_name)
     return folder["id"] if folder else None
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl: 300)
 def get_boats(year_name):
     year_folder_id = get_year_folder_id(year_name)
     if not year_folder_id:
@@ -313,7 +313,7 @@ def get_boats(year_name):
     boats = sorted({f["name"].strip() for f in folders if f["name"].strip()})
     return boats
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl: 300)
 def get_departures(year_name, boat_name):
     year_folder_id = get_year_folder_id(year_name)
     if not year_folder_id:
@@ -364,7 +364,7 @@ def create_crucero_file(barco, fecha_obj):
     descripcion = (
         f"Barco: {barco} | Salida: {fecha_es} | "
         f"Creado: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} | "
-        f"Los archivos de sesión deben borrarse a los 30 días."
+        "Los archivos de sesión deben borrarse a los 30 días."
     )
 
     copia = copy_file_to_folder(
@@ -390,12 +390,6 @@ def create_crucero_file(barco, fecha_obj):
 # ──────────────────────────────────────────────────────────────────────────────
 # CSS
 # ──────────────────────────────────────────────────────────────────────────────
-st.markdown("""
-
-# styling (continúa en el bloque siguiente)
-</style>
-""", unsafe_allow_html=True)
-
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -447,5 +441,4 @@ div.stButton > button,
 div[data-testid="stFormSubmitButton"] > button,
 .logout-btn > div > button {
     background:#D9E9FF !important;
-    color:#214D92 !important;
-    border:1
+    color:#214D92
