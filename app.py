@@ -229,7 +229,7 @@ section[data-testid="stSidebar"] { display:none !important; }
 /* TARJETA */
 /* AQUÍ CAMBIAS EL ANCHO: prueba 190px, 180px, 170px... */
 .card-row-wrap {
-    width:200px;
+    width:100px;
     margin-bottom:0.7rem;
 }
 .tool-card-compact {
