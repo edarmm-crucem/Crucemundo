@@ -82,7 +82,7 @@ section[data-testid="stSidebar"] { display:none !important; }
     margin-bottom:1rem;
 }
 
-/* TARJETA */
+/* TARJETA ESTRECHA */
 .card-row-wrap {
     max-width:315px;
     margin-bottom:0.65rem;
@@ -387,7 +387,7 @@ section[data-testid="stSidebar"] { display:none !important; }
 """, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────────────
-# FUNCIONES DE RENDER
+# FUNCIONES
 # ──────────────────────────────────────────────────────────────────────────────
 def render_step(label, detail, state):
     dot_class = {
@@ -400,7 +400,11 @@ def render_step(label, detail, state):
         "active": "st-active",
         "wait": "st-wait"
     }[state]
-    symbol = {"done": "✓", "active": "→", "wait": "•"}[state]
+    symbol = {
+        "done": "✓",
+        "active": "→",
+        "wait": "•"
+    }[state]
 
     st.markdown(f"""
     <div class="step">
@@ -442,7 +446,7 @@ if USER_NAME:
 else:
     nombre_copia = f"SESION - MASTER - {fecha_str}"
 
-# URL /copy con carpeta destino
+# URL de copia con carpeta destino
 copy_url = (
     f"https://docs.google.com/spreadsheets/d/{TEMPLATE_ID}/copy"
     f"?copyDestination={FOLDER_ID}"
