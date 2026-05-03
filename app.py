@@ -6,7 +6,6 @@ import re
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CONFIG
@@ -106,7 +105,6 @@ def open_panel(panel_name):
     if panel_name == "salida":
         clear_crucero_state()
         st.session_state["open_salida_form"] = True
-
     elif panel_name == "crucero":
         clear_salida_state()
         st.session_state["open_crucero_form"] = True
@@ -208,7 +206,7 @@ def on_crucero_boat_change():
 @st.cache_resource
 def get_drive_service():
     if "gcp_service_account" not in st.secrets:
-        raise Exception('Falta [gcp_service_account] en secrets.')
+        raise Exception("Falta [gcp_service_account] en secrets.")
 
     creds = service_account.Credentials.from_service_account_info(
         st.secrets["gcp_service_account"],
@@ -303,7 +301,7 @@ def get_year_folder_id(year_name):
     folder = find_child_folder(DRIVE_ROOT_ID, year_name)
     return folder["id"] if folder else None
 
-@st.cache_data(ttl: 300)
+@st.cache_data(ttl=300)
 def get_boats(year_name):
     year_folder_id = get_year_folder_id(year_name)
     if not year_folder_id:
@@ -313,7 +311,7 @@ def get_boats(year_name):
     boats = sorted({f["name"].strip() for f in folders if f["name"].strip()})
     return boats
 
-@st.cache_data(ttl: 300)
+@st.cache_data(ttl=300)
 def get_departures(year_name, boat_name):
     year_folder_id = get_year_folder_id(year_name)
     if not year_folder_id:
@@ -343,15 +341,15 @@ def create_crucero_file(barco, fecha_obj):
     if not barco or not fecha_obj:
         raise Exception("Faltan datos de barco o fecha.")
 
-    año = str(fecha_obj.year)
+    anio = str(fecha_obj.year)
     yy = fecha_obj.strftime("%y")
     mm = fecha_obj.strftime("%m")
     dd = fecha_obj.strftime("%d")
     fecha_es = fecha_obj.strftime("%d/%m/%Y")
     nombre_nuevo = f"{barco}_{yy}{mm}{dd}"
 
-    carpeta_año = get_or_create_folder(DRIVE_ROOT_ID, año)
-    carpeta_barco = get_or_create_folder(carpeta_año["id"], barco)
+    carpeta_anio = get_or_create_folder(DRIVE_ROOT_ID, anio)
+    carpeta_barco = get_or_create_folder(carpeta_anio["id"], barco)
 
     duplicado = find_file_by_name(carpeta_barco["id"], nombre_nuevo)
     if duplicado:
@@ -383,11 +381,13 @@ def create_crucero_file(barco, fecha_obj):
         "status": "created",
         "name": nombre_nuevo,
         "url": copia.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{copia['id']}/edit",
-        "year": año,
+        "year": anio,
         "boat": barco
     }
 
-# ──────────────────────────────────────────────────────────────────────────────
+
+
+    # ──────────────────────────────────────────────────────────────────────────────
 # CSS
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -490,9 +490,7 @@ div.st-key-btn_crear_crucero_action button:hover,
     color:#1F2937;
     line-height:1.15;
 }
-.portal-title-en {
-    margin-top:0.12rem;
-}
+.portal-title-en { margin-top:0.12rem; }
 
 .portal-subtitle,
 .portal-subtitle-en {
@@ -589,9 +587,7 @@ div.st-key-btn_crear_crucero_action button:hover,
     color:#1F2937;
     line-height:1.1;
 }
-.action-title-en {
-    margin-top:0.05rem;
-}
+.action-title-en { margin-top:0.05rem; }
 
 .action-desc,
 .action-desc-en {
@@ -756,7 +752,9 @@ if not st.session_state["authenticated"]:
     st.markdown('</div></div>', unsafe_allow_html=True)
     st.stop()
 
-# ──────────────────────────────────────────────────────────────────────────────
+
+
+    # ──────────────────────────────────────────────────────────────────────────────
 # APP
 # ──────────────────────────────────────────────────────────────────────────────
 USER_EMAIL = st.session_state.get("user_email", "").strip()
@@ -874,7 +872,6 @@ with col4:
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-# IR A SALIDA
 if st.session_state.get("open_salida_form"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("#### Seleccionar salida · Select departure")
@@ -942,13 +939,11 @@ if st.session_state.get("open_salida_form"):
                     f'<a class="done-link" href="{selected_obj["url"]}" target="_blank">Abrir salida / Open departure ↗</a>',
                     unsafe_allow_html=True
                 )
-
     except Exception as e:
         st.exception(e)
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# CREAR CRUCERO
 if st.session_state.get("open_crucero_form"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("#### Crear crucero · Create cruise")
@@ -1016,13 +1011,11 @@ if st.session_state.get("open_crucero_form"):
                         f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir crucero / Open cruise ↗</a>',
                         unsafe_allow_html=True
                     )
-
     except Exception as e:
         st.exception(e)
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# PROCESO CREAR SESIÓN
 saved_name = st.session_state.get("nombre_copia", "")
 saved_url = st.session_state.get("copy_url", "")
 process_title = st.session_state.get("process_title", "Estado del Proceso / Process Status")
