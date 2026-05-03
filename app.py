@@ -18,7 +18,7 @@ LOGO_URL    = f"https://lh3.googleusercontent.com/d/{LOGO_ID}"
 TEMPLATE_ID = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
 FOLDER_ID   = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
 
-# Usuario real de sesión, sin genérico "Usuario"
+# Usuario real de sesión
 USER_NAME = st.session_state.get("google_user", "").strip()
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -82,37 +82,37 @@ section[data-testid="stSidebar"] { display:none !important; }
     margin-bottom:1rem;
 }
 
-/* TARJETA COMPACTA */
+/* TARJETA MUCHO MÁS ESTRECHA */
 .card-row-wrap {
-    max-width:430px;
+    max-width:330px;
     margin-bottom:0.65rem;
 }
 .tool-card-compact {
     background:#fff;
     border:1.5px solid #E4E7EF;
     border-radius:12px;
-    padding:0.75rem 0.88rem;
+    padding:0.68rem 0.78rem;
     display:flex;
     align-items:center;
-    gap:0.72rem;
-    min-height:68px;
+    gap:0.65rem;
+    min-height:62px;
 }
 .tool-card-soon {
-    max-width:370px;
+    max-width:290px;
     background:#fff;
     border:1.5px solid #E4E7EF;
     border-radius:12px;
-    padding:0.75rem 0.88rem;
+    padding:0.68rem 0.78rem;
     display:flex;
     align-items:center;
-    gap:0.72rem;
-    min-height:68px;
-    margin-bottom:0.5rem;
+    gap:0.65rem;
+    min-height:62px;
+    margin-bottom:0.45rem;
     opacity:0.45;
 }
 .card-icon-wrap {
-    width:34px;
-    height:34px;
+    width:31px;
+    height:31px;
     flex-shrink:0;
     border-radius:8px;
     background:#EEF0FD;
@@ -120,7 +120,7 @@ section[data-testid="stSidebar"] { display:none !important; }
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:1rem;
+    font-size:0.96rem;
 }
 .card-body {
     flex:1;
@@ -128,23 +128,23 @@ section[data-testid="stSidebar"] { display:none !important; }
 }
 .card-name {
     font-family:'Sora',sans-serif;
-    font-size:0.82rem;
+    font-size:0.77rem;
     font-weight:600;
     color:#1A1F36;
-    line-height:1.2;
+    line-height:1.18;
 }
 .card-desc {
     font-family:'DM Sans',sans-serif;
-    font-size:0.71rem;
+    font-size:0.68rem;
     color:#8C93A8;
     margin-top:0.08rem;
-    line-height:1.3;
+    line-height:1.25;
 }
 .badge-active, .badge-soon {
     font-family:'DM Sans',sans-serif;
-    font-size:0.56rem;
+    font-size:0.52rem;
     font-weight:500;
-    padding:0.12rem 0.42rem;
+    padding:0.10rem 0.36rem;
     border-radius:999px;
     text-transform:uppercase;
     letter-spacing:0.05em;
@@ -161,21 +161,21 @@ section[data-testid="stSidebar"] { display:none !important; }
     border:1px solid #DDE0EA;
 }
 
-/* BOTÓN MUY CERCA DE LA TARJETA */
+/* BOTÓN AL LADO, CERCA */
 .compact-btn {
-    margin-top:1px;
+    margin-top:0;
 }
 .compact-btn > div > button {
     background:#FFFFFF !important;
     color:#2B3147 !important;
     border:1.5px solid #D9DDEA !important;
     border-radius:10px !important;
-    min-height:68px !important;
-    height:68px !important;
-    min-width:84px !important;
-    padding:0 0.78rem !important;
+    min-height:62px !important;
+    height:62px !important;
+    min-width:72px !important;
+    padding:0 0.72rem !important;
     font-family:'DM Sans',sans-serif !important;
-    font-size:0.76rem !important;
+    font-size:0.72rem !important;
     font-weight:500 !important;
     box-shadow:none !important;
     white-space:nowrap !important;
@@ -272,32 +272,18 @@ section[data-testid="stSidebar"] { display:none !important; }
     font-style:italic;
     margin-top:0.05rem;
 }
-.open-btn {
-    display:inline-flex;
-    align-items:center;
-    gap:0.4rem;
-    margin-top:1rem;
-    background:#5B6BF8;
-    color:#fff;
-    border:none;
-    border-radius:8px;
-    padding:0.48rem 1.1rem;
-    font-family:'Sora',sans-serif;
-    font-size:0.78rem;
-    font-weight:500;
-    cursor:pointer;
-    text-decoration:none;
-}
+
+/* CAJA FINAL */
 .done-box {
     margin-top:1rem;
-    padding:0.82rem 0.9rem;
+    padding:0.85rem 0.9rem;
     background:#EEF4FF;
     border:1px solid #D8E4FF;
     border-radius:8px;
 }
 .done-title {
     font-family:'DM Sans',sans-serif;
-    font-size:0.76rem;
+    font-size:0.77rem;
     color:#2B4EA2;
     font-weight:500;
 }
@@ -305,8 +291,23 @@ section[data-testid="stSidebar"] { display:none !important; }
     font-family:'DM Sans',sans-serif;
     font-size:0.72rem;
     color:#5B6785;
-    margin-top:0.16rem;
+    margin-top:0.18rem;
     line-height:1.35;
+}
+.done-link {
+    display:inline-flex;
+    align-items:center;
+    gap:0.4rem;
+    margin-top:0.75rem;
+    background:#5B6BF8;
+    color:#fff !important;
+    border:none;
+    border-radius:8px;
+    padding:0.48rem 1rem;
+    font-family:'DM Sans',sans-serif;
+    font-size:0.75rem;
+    font-weight:500;
+    text-decoration:none;
 }
 
 /* BOTÓN RESET */
@@ -415,9 +416,9 @@ now = datetime.now()
 fecha_str = now.strftime("%Y%m%d_%H%M")
 
 if USER_NAME:
-    nombre_copia = f"SESION - {USER_NAME} - Confirmacion_ES - {fecha_str}"
+    nombre_copia = f"SESION - {USER_NAME} - MASTER - {fecha_str}"
 else:
-    nombre_copia = f"SESION - Confirmacion_ES - {fecha_str}"
+    nombre_copia = f"SESION - MASTER - {fecha_str}"
 
 copy_url = (
     f"https://docs.google.com/spreadsheets/d/{TEMPLATE_ID}/copy"
@@ -430,7 +431,7 @@ TOOLS = [
         "id": "confirmacion_es",
         "icon": "📋",
         "name": "Crear nueva confirmación ES",
-        "desc": "Copia la plantilla a tu carpeta de Drive",
+        "desc": "Crea tu sesion de trabajo",
         "active": True
     },
     {
@@ -457,8 +458,7 @@ confirm_state = st.session_state.get("confirm_state", "idle")
 for tool in TOOLS:
     if tool["active"]:
         st.markdown('<div class="card-row-wrap">', unsafe_allow_html=True)
-
-        col_card, col_btn = st.columns([5.6, 1.15], gap="small")
+        col_card, col_btn = st.columns([4.9, 1.1], gap="small")
 
         with col_card:
             st.markdown(f"""
@@ -522,41 +522,64 @@ if confirm_state in ("step1", "step2", "step3", "done"):
             return "st-active"
         return "st-wait"
 
-    steps = [
-        ("Preparando plantilla", "Accediendo al archivo original en Drive"),
-        ("Generando copia", saved_name),
-        ("Abriendo Google Drive", "Apertura automática en una nueva pestaña"),
-    ]
+    # Textos que cambian de verdad en cada fase
+    if confirm_state == "step1":
+        steps = [
+            ("Preparando sesión", "Iniciando la plantilla MASTER"),
+            ("Creando copia", "Pendiente"),
+            ("Sesión lista", "Pendiente"),
+        ]
+        panel_note = "Estamos creando la sesión de trabajo automáticamente."
+    elif confirm_state == "step2":
+        steps = [
+            ("Preparando sesión", "Plantilla MASTER localizada"),
+            ("Creando copia", saved_name),
+            ("Sesión lista", "Pendiente"),
+        ]
+        panel_note = "La copia se está generando en tu carpeta de trabajo."
+    elif confirm_state == "step3":
+        steps = [
+            ("Preparando sesión", "Plantilla MASTER localizada"),
+            ("Creando copia", saved_name),
+            ("Sesión lista", "Preparando apertura"),
+        ]
+        panel_note = "La sesión ya casi está lista. En breve podrás abrirla."
+    else:
+        steps = [
+            ("Preparando sesión", "Plantilla MASTER localizada"),
+            ("Creando copia", saved_name),
+            ("Sesión lista", "Copia preparada correctamente"),
+        ]
+        panel_note = "La sesión se ha creado correctamente."
 
     html = '<div class="progress-panel">'
-    html += '<div class="progress-title">⚙️ Proceso en curso</div>'
-    html += '<div class="progress-note">Estamos realizando la apertura automáticamente en Google Drive. No cierres esta página mientras finaliza.</div>'
+    html += '<div class="progress-title">⚙️ Proceso</div>'
+    html += f'<div class="progress-note">{panel_note}</div>'
 
     for i, (label, detail) in enumerate(steps):
-        done_mark = " ✓" if i < cur else ""
         html += f'''
         <div class="step">
             {dot(i)}
             <div>
-                <div class="{txt(i)}">{label}{done_mark}</div>
+                <div class="{txt(i)}">{label}</div>
                 <div class="step-detail">{detail}</div>
             </div>
         </div>
         '''
 
     if confirm_state == "done":
-        html += f'<a class="open-btn" href="{saved_url}" target="_blank">📂 Abrir copia en Drive ↗</a>'
-        html += '''
+        html += f'''
         <div class="done-box">
-            <div class="done-title">Apertura preparada correctamente</div>
-            <div class="done-text">Se está abriendo Google Drive automáticamente con la copia generada para este usuario.</div>
+            <div class="done-title">Sesión creada</div>
+            <div class="done-text">La copia está preparada. Si no se abre sola, pulsa para abrir tu sesión de trabajo.</div>
+            <a class="done-link" href="{saved_url}" target="_blank">Abrir sesión ↗</a>
         </div>
         '''
 
     html += '</div>'
     st.markdown(html, unsafe_allow_html=True)
 
-    # Avance automático del flujo
+    # Flujo automático por fases
     if confirm_state == "step1":
         time.sleep(0.9)
         st.session_state["confirm_state"] = "step2"
@@ -584,7 +607,7 @@ if confirm_state in ("step1", "step2", "step3", "done"):
 
         st.rerun()
 
-    # Abrir automáticamente la pestaña al terminar
+    # Intento de apertura automática
     if confirm_state == "done" and not st.session_state.get("opened_" + saved_name):
         st.session_state["opened_" + saved_name] = True
         st.markdown(
@@ -596,7 +619,7 @@ if confirm_state in ("step1", "step2", "step3", "done"):
     if confirm_state == "done":
         st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
         st.markdown('<div class="clean-btn">', unsafe_allow_html=True)
-        if st.button("↩ Nueva confirmación", key="btn_reset"):
+        if st.button("↩ Nueva sesión", key="btn_reset"):
             st.session_state["confirm_state"] = "idle"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
@@ -626,7 +649,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · v1.5.0</span>
+    <span class="footer-text">Panel de Control · v1.6.0</span>
     <span class="footer-text">Carpeta: {FOLDER_ID}</span>
 </div>
 """, unsafe_allow_html=True)
