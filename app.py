@@ -201,18 +201,30 @@ def on_crucero_boat_change():
     st.session_state["crucero_boat"] = st.session_state.get("crucero_boat_widget")
 
 # ──────────────────────────────────────────────────────────────────────────────
-# GOOGLE DRIVE API
+# GOOGLE DRIVE / SHEETS API
 # ──────────────────────────────────────────────────────────────────────────────
 @st.cache_resource
-def get_drive_service():
+def get_google_creds():
     if "gcp_service_account" not in st.secrets:
         raise Exception("Falta [gcp_service_account] en secrets.")
 
-    creds = service_account.Credentials.from_service_account_info(
+    return service_account.Credentials.from_service_account_info(
         st.secrets["gcp_service_account"],
-        scopes=["https://www.googleapis.com/auth/drive"]
+        scopes=[
+            "https://www.googleapis.com/auth/drive",
+            "https://www.googleapis.com/auth/spreadsheets"
+        ]
     )
+
+@st.cache_resource
+def get_drive_service():
+    creds = get_google_creds()
     return build("drive", "v3", credentials=creds)
+
+@st.cache_resource
+def get_sheets_service():
+    creds = get_google_creds()
+    return build("sheets", "v4", credentials=creds)
 
 def list_folder_items(parent_id, folders_only=False):
     service = get_drive_service()
@@ -288,6 +300,45 @@ def copy_file_to_folder(file_id, new_name, parent_folder_id, description=None):
         body=body,
         fields="id, name, webViewLink",
         supportsAllDrives=True
+    ).execute()
+
+def update_crucero_sheet(spreadsheet_id, barco):
+    sheets_service = get_sheets_service()
+
+    spreadsheet = sheets_service.spreadsheets().get(
+        spreadsheetId=spreadsheet_id
+    ).execute()
+
+    sheets = spreadsheet.get("sheets", [])
+    if not sheets:
+        raise Exception("El spreadsheet no contiene hojas.")
+
+    first_sheet = sheets[0]
+    first_sheet_id = first_sheet["properties"]["sheetId"]
+    first_sheet_title = first_sheet["properties"]["title"]
+
+    sheets_service.spreadsheets().values().update(
+        spreadsheetId=spreadsheet_id,
+        range=f"'{first_sheet_title}'!A1",
+        valueInputOption="USER_ENTERED",
+        body={"values": [[barco]]}
+    ).execute()
+
+    sheets_service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={
+            "requests": [
+                {
+                    "updateSheetProperties": {
+                        "properties": {
+                            "sheetId": first_sheet_id,
+                            "title": barco
+                        },
+                        "fields": "title"
+                    }
+                }
+            ]
+        }
     ).execute()
 
 @st.cache_data(ttl=300)
@@ -371,6 +422,9 @@ def create_crucero_file(barco, fecha_obj):
         carpeta_barco["id"],
         descripcion
     )
+
+    spreadsheet_id = copia["id"]
+    update_crucero_sheet(spreadsheet_id, barco)
 
     get_years.clear()
     get_year_folder_id.clear()
