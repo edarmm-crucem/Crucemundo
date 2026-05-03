@@ -47,6 +47,15 @@ for k, v in defaults.items():
 # ──────────────────────────────────────────────────────────────────────────────
 # HELPERS
 # ──────────────────────────────────────────────────────────────────────────────
+def get_saludo():
+    hora = datetime.now().hour
+    if 6 <= hora < 14:
+        return "Buenos días"
+    elif 14 <= hora < 21:
+        return "Buenas tardes"
+    else:
+        return "Buenas noches"
+
 def do_logout():
     st.session_state["authenticated"] = False
     st.session_state["user_email"] = ""
@@ -128,7 +137,7 @@ section[data-testid="stSidebar"] { display:none !important; }
     font-size:1rem;
     font-weight:600;
     color:#1D2433;
-    line-height:1.1;
+    line-height:1.15;
 }
 .portal-subtitle {
     font-size:0.74rem;
@@ -217,9 +226,10 @@ section[data-testid="stSidebar"] { display:none !important; }
     color:#5D6880;
 }
 
-/* TARJETA MÁS CORTA Y LIMPIA */
+/* TARJETA */
+/* AQUÍ CAMBIAS EL ANCHO: prueba 190px, 180px, 170px... */
 .card-row-wrap {
-    width:232px;
+    width:200px;
     margin-bottom:0.7rem;
 }
 .tool-card-compact {
@@ -232,19 +242,6 @@ section[data-testid="stSidebar"] { display:none !important; }
     align-items:center;
     gap:0.62rem;
     min-height:62px;
-}
-.tool-card-soon {
-    width:232px;
-    background:#FFFFFF;
-    border:1px solid #E3E6EE;
-    border-radius:12px;
-    padding:0.7rem 0.78rem;
-    display:flex;
-    align-items:center;
-    gap:0.62rem;
-    min-height:62px;
-    margin-bottom:0.45rem;
-    opacity:0.5;
 }
 .card-icon-wrap {
     width:30px;
@@ -274,25 +271,8 @@ section[data-testid="stSidebar"] { display:none !important; }
     margin-top:0.12rem;
     line-height:1.2;
 }
-.badge-active, .badge-soon {
-    font-size:0.58rem;
-    font-weight:500;
-    padding:0.14rem 0.32rem;
-    border-radius:999px;
-    white-space:nowrap;
-}
-.badge-active {
-    background:#EEF7F1;
-    color:#2E7D58;
-    border:1px solid #D8ECDf;
-}
-.badge-soon {
-    background:#F4F5F8;
-    color:#96A0B4;
-    border:1px solid #E4E7EF;
-}
 
-/* BOTÓN MÁS INTEGRADO */
+/* BOTONES */
 .compact-btn > div > button {
     background:#FFFFFF !important;
     color:#394255 !important;
@@ -542,13 +522,14 @@ if not st.session_state["authenticated"]:
 # ──────────────────────────────────────────────────────────────────────────────
 USER_EMAIL = st.session_state.get("user_email", "").strip()
 DISPLAY_USER = st.session_state.get("display_name", "").strip() or "Sin usuario"
+SALUDO = get_saludo()
 
 st.markdown(f"""
 <div class="portal-header">
     <div class="portal-header-left">
         <img class="portal-logo" src="{LOGO_URL}" alt="Logo">
         <div>
-            <div class="portal-title">Panel de Control</div>
+            <div class="portal-title">{SALUDO}, {DISPLAY_USER}. ¿Qué hacemos hoy?</div>
             <div class="portal-subtitle">Herramientas y automatizaciones · Backend Google Drive</div>
         </div>
     </div>
@@ -577,7 +558,8 @@ copy_url = (
 confirm_state = st.session_state.get("confirm_state", "idle")
 
 st.markdown('<div class="card-row-wrap">', unsafe_allow_html=True)
-col_card, col_btn = st.columns([3.8, 1.15], gap="small")
+
+col_card, col_btn = st.columns([3.0, 1.0], gap="small")
 
 with col_card:
     st.markdown("""
@@ -587,7 +569,6 @@ with col_card:
             <div class="card-name">Nueva sesión</div>
             <div class="card-desc">Crear copia MASTER</div>
         </div>
-        <span class="badge-active">Lista</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -712,7 +693,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · v2.3.0</span>
+    <span class="footer-text">Panel de Control · v2.5.0</span>
     <span class="footer-text">Carpeta: {FOLDER_ID}</span>
 </div>
 """, unsafe_allow_html=True)
