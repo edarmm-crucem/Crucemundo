@@ -289,15 +289,12 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     box-shadow:none !important;
 }
 
-/* PROCESO */
+/* PROCESO - Integrado sin recuadro blanco de fondo */
 .progress-panel {
     width: 420px !important;
     max-width: 420px !important;
-    background:#FFFFFF;
-    border:1px solid #E4E7EF;
-    border-radius:16px;
-    padding:1rem;
-    margin-top:0.6rem;
+    padding: 0 0.2rem;
+    margin-top: 0.6rem;
     display: flex;
     flex-direction: column;
 }
@@ -305,13 +302,7 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     font-size:0.84rem;
     font-weight:600;
     color:#1F2937;
-    margin-bottom:0.3rem;
-}
-.progress-note {
-    font-size:0.73rem;
-    color:#7C869D;
-    margin-bottom:0.8rem;
-    line-height:1.3;
+    margin-bottom:0.35rem;
 }
 .step {
     display:flex;
@@ -563,7 +554,7 @@ st.markdown(f"""
     <div class="action-button-wrap">
 """, unsafe_allow_html=True)
 
-# Lógica del botón corregida: activo en "idle" o "done" para poder repetir
+# Lógica del botón: activo en "idle" o "done" para volver a usarlo
 if confirm_state in ("idle", "done"):
     if st.button("Crear Sesión", key="btn_crear"):
         st.session_state["confirm_state"] = "step1"
@@ -571,7 +562,6 @@ if confirm_state in ("idle", "done"):
         st.session_state["copy_url"] = copy_url
         st.rerun()
 else:
-    # Solo se deshabilita visualmente mientras transcurre el proceso (steps 1, 2, 3)
     st.button("Crear Sesión", key="btn_crear_dis", disabled=True)
 
 st.markdown('</div></div>', unsafe_allow_html=True)
@@ -581,37 +571,25 @@ saved_url = st.session_state.get("copy_url", copy_url)
 
 if confirm_state in ("step1", "step2", "step3", "done"):
     st.markdown('<div class="progress-panel">', unsafe_allow_html=True)
-    st.markdown('<div class="progress-title">Proceso</div>', unsafe_allow_html=True)
+    st.markdown('<div class="progress-title">Estado del Proceso: Crear Sesión MASTER_CONFIRMATION</div>', unsafe_allow_html=True)
 
     if confirm_state == "step1":
-        st.markdown('<div class="progress-note">Preparando la plantilla.</div>', unsafe_allow_html=True)
-        render_step("Preparación", "Plantilla MASTER", "active")
-        render_step("Copia", "Pendiente", "wait")
-        render_step("Apertura", "Pendiente", "wait")
+        render_step("Progreso", "Preparando plantilla...", "active")
 
     elif confirm_state == "step2":
-        st.markdown('<div class="progress-note">Generando copia en Drive.</div>', unsafe_allow_html=True)
-        render_step("Preparación", "Correcto", "done")
-        render_step("Copia", saved_name, "active")
-        render_step("Apertura", "Pendiente", "wait")
+        render_step("Progreso", "Generando copia en Drive...", "active")
 
     elif confirm_state == "step3":
-        st.markdown('<div class="progress-note">Preparando la apertura.</div>', unsafe_allow_html=True)
-        render_step("Preparación", "Correcto", "done")
-        render_step("Copia", saved_name, "done")
-        render_step("Apertura", "Listando acceso", "active")
+        render_step("Progreso", "Abriendo sesión...", "active")
 
     elif confirm_state == "done":
-        st.markdown('<div class="progress-note">La sesión está preparada.</div>', unsafe_allow_html=True)
-        render_step("Preparación", "Correcto", "done")
-        render_step("Copia", saved_name, "done")
-        render_step("Apertura", "Lista", "done")
+        render_step("Progreso", "Completo", "done")
 
         st.markdown(f"""
         <div class="done-box">
             <div class="done-title">Sesión creada</div>
             <div class="done-text">
-                Si Drive no se abre automáticamente, usa este acceso.
+                Puedes abrir tu sesión en el botón de abajo.
             </div>
             <a class="done-link" href="{saved_url}" target="_blank">Abrir sesión ↗</a>
         </div>
