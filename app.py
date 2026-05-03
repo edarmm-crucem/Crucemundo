@@ -66,14 +66,6 @@ def do_logout():
         del st.session_state["copy_url"]
     st.rerun()
 
-def reset_new_session():
-    st.session_state["confirm_state"] = "idle"
-    if "nombre_copia" in st.session_state:
-        del st.session_state["nombre_copia"]
-    if "copy_url" in st.session_state:
-        del st.session_state["copy_url"]
-    st.rerun()
-
 def render_step(label, detail, state):
     dot_class = {"done": "sd-done", "active": "sd-active", "wait": "sd-wait"}[state]
     text_class = {"done": "st-done", "active": "st-active", "wait": "st-wait"}[state]
@@ -265,7 +257,6 @@ div.stButton {
 }
 div.stButton > button,
 div[data-testid="stFormSubmitButton"] > button,
-.clean-btn > div > button,
 .logout-btn > div > button {
     background:#D9E9FF !important;
     color:#214D92 !important;
@@ -280,7 +271,6 @@ div[data-testid="stFormSubmitButton"] > button,
 }
 div.stButton > button:hover,
 div[data-testid="stFormSubmitButton"] > button:hover,
-.clean-btn > div > button:hover,
 .logout-btn > div > button:hover {
     background:#D0E3FF !important;
     border-color:#AFCBFF !important;
@@ -292,52 +282,52 @@ div.stButton > button:disabled {
     border-color:#D8E6FF !important;
 }
 
-/* ACCIÓN EN RECUADRO */
+/* ACCIÓN EN RECUADRO: Más corto y menos ancho */
 .action-box {
-    max-width:560px;
+    max-width:420px;
     background:#F7F6F3;
     border:1px solid #E5E2DC;
-    border-radius:20px;
-    padding:1.2rem;
+    border-radius:16px;
+    padding:0.9rem;
     margin-bottom:0.65rem;
-    box-shadow:0 6px 18px rgba(17,24,39,0.025);
+    box-shadow:0 4px 12px rgba(17,24,39,0.02);
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.75rem;
 }
 .action-top {
     display:flex;
     align-items:flex-start;
-    gap:0.78rem;
+    gap:0.65rem;
 }
 .action-icon {
-    width:38px;
-    height:38px;
-    border-radius:12px;
+    width:34px;
+    height:34px;
+    border-radius:10px;
     background:#EFEDE8;
     border:1px solid #E2DED7;
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:1.05rem;
+    font-size:0.95rem;
     flex-shrink:0;
 }
 .action-text {
     display:flex;
     flex-direction:column;
-    gap:0.12rem;
+    gap:0.1rem;
     min-width:0;
 }
 .action-title {
-    font-size:1.02rem;
+    font-size:0.96rem;
     font-weight:600;
     color:#1F2937;
     line-height:1.08;
 }
 .action-desc {
-    font-size:0.74rem;
+    font-size:0.71rem;
     color:#7A808E;
-    line-height:1.28;
+    line-height:1.24;
 }
 
 /* CONTENEDOR DEL BOTÓN: Centrado absoluto */
@@ -346,23 +336,24 @@ div.stButton > button:disabled {
     justify-content: center !important;
     align-items: center !important;
     width: 100% !important;
-    margin-top: 0.4rem;
+    margin-top: 0.15rem;
 }
 
-/* Forzamos al botón de Streamlit a ser más estrecho y estar centrado */
+/* Forzamos al botón a ocupar el mínimo espacio para su texto */
 .action-button-wrap div.stButton {
-    width:50% !important;
+    width: auto !important;
     display: flex !important;
     justify-content: center !important;
 }
 .action-button-wrap div.stButton > button {
-    width:100% !important;
+    width: auto !important;
     background:#D9E9FF !important;
     color:#214D92 !important;
     border:1px solid #BDD6FF !important;
-    border-radius:14px !important;
-    min-height:40px !important;
-    font-size:0.79rem !important;
+    border-radius:12px !important;
+    min-height:36px !important;
+    padding: 0 1.1rem !important;
+    font-size:0.76rem !important;
     font-weight:600 !important;
     display: flex;
     justify-content:center !important;
@@ -382,30 +373,30 @@ div.stButton > button:disabled {
 
 /* PROCESO */
 .progress-panel {
-    max-width:560px;
+    max-width:420px;
     background:#FFFFFF;
     border:1px solid #E4E7EF;
-    border-radius:18px;
-    padding:1rem 1.05rem;
+    border-radius:16px;
+    padding:0.9rem 1rem;
     margin-top:0.55rem;
 }
 .progress-title {
-    font-size:0.84rem;
+    font-size:0.82rem;
     font-weight:600;
     color:#1F2937;
-    margin-bottom:0.35rem;
+    margin-bottom:0.3rem;
 }
 .progress-note {
-    font-size:0.73rem;
+    font-size:0.72rem;
     color:#7C869D;
-    margin-bottom:0.9rem;
-    line-height:1.35;
+    margin-bottom:0.8rem;
+    line-height:1.32;
 }
 .step {
     display:flex;
     align-items:flex-start;
-    gap:0.68rem;
-    margin-bottom:0.62rem;
+    gap:0.65rem;
+    margin-bottom:0.58rem;
 }
 .step:last-child { margin-bottom:0; }
 .step-dot {
@@ -436,45 +427,45 @@ div.stButton > button:disabled {
     color:#B1B8C9;
 }
 .st-done, .st-active, .st-wait {
-    font-size:0.76rem;
+    font-size:0.74rem;
 }
 .st-done { color:#394255; }
 .st-active { color:#1F2937; font-weight:600; }
 .st-wait { color:#A2ABBD; }
 .step-detail {
-    font-size:0.69rem;
+    font-size:0.68rem;
     color:#8790A4;
     margin-top:0.06rem;
 }
 .done-box {
-    margin-top:0.95rem;
-    padding:0.85rem 0.9rem;
+    margin-top:0.85rem;
+    padding:0.8rem 0.85rem;
     background:#F6F8FC;
     border:1px solid #E1E6F0;
-    border-radius:14px;
+    border-radius:12px;
 }
 .done-title {
-    font-size:0.77rem;
+    font-size:0.75rem;
     color:#1F2937;
     font-weight:600;
 }
 .done-text {
-    font-size:0.71rem;
+    font-size:0.70rem;
     color:#657087;
-    margin-top:0.16rem;
-    line-height:1.34;
+    margin-top:0.14rem;
+    line-height:1.32;
 }
 .done-link {
     display:inline-flex;
     align-items:center;
     gap:0.35rem;
-    margin-top:0.68rem;
+    margin-top:0.62rem;
     background:#D9E9FF;
     color:#214D92 !important;
     border:1px solid #BDD6FF;
-    border-radius:12px;
-    padding:0.42rem 0.82rem;
-    font-size:0.72rem;
+    border-radius:10px;
+    padding:0.38rem 0.78rem;
+    font-size:0.70rem;
     font-weight:600;
     text-decoration:none;
 }
@@ -489,7 +480,7 @@ div.stButton > button:disabled {
     background:#FFFFFF;
     border:1px solid #E4E7EF;
     margin-bottom:0.42rem;
-    max-width:560px;
+    max-width:420px;
 }
 .history-num {
     width:22px;
@@ -669,7 +660,7 @@ copy_url = (
 
 confirm_state = st.session_state.get("confirm_state", "idle")
 
-# TARJETA COMPACTA DE ACCIÓN
+# TARJETA COMPACTA DE ACCIÓN (Más estrecha y corta)
 st.markdown(f"""
 <div class="action-box">
     <div class="action-top">
@@ -683,13 +674,13 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 if confirm_state == "idle":
-    if st.button("Crear", key="btn_crear"):
+    if st.button("Crear Sesión", key="btn_crear"):
         st.session_state["confirm_state"] = "step1"
         st.session_state["nombre_copia"] = nombre_copia
         st.session_state["copy_url"] = copy_url
         st.rerun()
 else:
-    st.button("Crear", key="btn_crear_dis", disabled=True)
+    st.button("Crear Sesión", key="btn_crear_dis", disabled=True)
 
 st.markdown('</div></div>', unsafe_allow_html=True)
 
@@ -765,20 +756,12 @@ if confirm_state in ("step1", "step2", "step3", "done"):
             unsafe_allow_html=True
         )
 
+# Botón inferior (Solo Cerrar sesión)
 st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
-col_reset, col_logout = st.columns([1, 1])
-
-with col_reset:
-    st.markdown('<div class="clean-btn">', unsafe_allow_html=True)
-    if st.button("Nueva sesión", key="btn_reset"):
-        reset_new_session()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with col_logout:
-    st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
-    if st.button("Cerrar sesión", key="btn_logout"):
-        do_logout()
-    st.markdown('</div>', unsafe_allow_html=True)
+st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
+if st.button("Cerrar sesión", key="btn_logout"):
+    do_logout()
+st.markdown('</div>', unsafe_allow_html=True)
 
 if st.session_state.get("historial"):
     st.markdown("<div style='height:1.2rem'></div>", unsafe_allow_html=True)
