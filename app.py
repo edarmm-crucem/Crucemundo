@@ -2,6 +2,10 @@ import streamlit as st
 from datetime import datetime
 import urllib.parse
 import time
+import re
+
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CONFIG
@@ -19,6 +23,8 @@ LOGO_URL = f"https://lh3.googleusercontent.com/d/{LOGO_ID}"
 TEMPLATE_ID_ES = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
 TEMPLATE_ID_GRUPOS = "1Z7ktX3PhVkMibWpzdrDDqAT4aPsmjzSJPf1SgZcL5-w"
 FOLDER_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
+
+DRIVE_ROOT_ID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
 
 VALID_USERS = {
     "support@crucemundo.com": "Albina",
@@ -42,6 +48,10 @@ defaults = {
     "confirm_state": "idle",
     "historial": [],
     "session_type": "",
+    "open_salida_form": False,
+    "salida_year": "",
+    "salida_boat": "",
+    "salida_name": "",
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -64,12 +74,13 @@ def do_logout():
     st.session_state["display_name"] = ""
     st.session_state["confirm_state"] = "idle"
     st.session_state["session_type"] = ""
-    if "nombre_copia" in st.session_state:
-        del st.session_state["nombre_copia"]
-    if "copy_url" in st.session_state:
-        del st.session_state["copy_url"]
-    if "process_title" in st.session_state:
-        del st.session_state["process_title"]
+    st.session_state["open_salida_form"] = False
+    st.session_state["salida_year"] = ""
+    st.session_state["salida_boat"] = ""
+    st.session_state["salida_name"] = ""
+    for key in ["nombre_copia", "copy_url", "process_title"]:
+        if key in st.session_state:
+            del st.session_state[key]
     st.rerun()
 
 def render_step(label, detail, state):
@@ -107,6 +118,104 @@ def iniciar_proceso(session_type, template_id, prefix_name, process_title):
     st.rerun()
 
 # ──────────────────────────────────────────────────────────────────────────────
+# GOOGLE DRIVE API
+# ──────────────────────────────────────────────────────────────────────────────
+@st.cache_resource
+def get_drive_service():
+    creds = service_account.Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=["https://www.googleapis.com/auth/drive.readonly"]
+    )
+    return build("drive", "v3", credentials=creds)
+
+def list_folder_items(parent_id, folders_only=False):
+    service = get_drive_service()
+    q = f"'{parent_id}' in parents and trashed=false"
+    if folders_only:
+        q += " and mimeType='application/vnd.google-apps.folder'"
+
+    results = []
+    page_token = None
+
+    while True:
+        response = service.files().list(
+            q=q,
+            fields="nextPageToken, files(id, name, mimeType, webViewLink)",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
+            corpora="allDrives",
+            pageToken=page_token,
+            pageSize=1000
+        ).execute()
+
+        results.extend(response.get("files", []))
+        page_token = response.get("nextPageToken", None)
+        if not page_token:
+            break
+
+    return results
+
+@st.cache_data(ttl=300)
+def get_years():
+    folders = list_folder_items(DRIVE_ROOT_ID, folders_only=True)
+    years = [f["name"].strip() for f in folders if re.fullmatch(r"\d{4}", f["name"].strip())]
+    return sorted(years, reverse=True)
+
+@st.cache_data(ttl=300)
+def get_year_folder_id(year_name):
+    folders = list_folder_items(DRIVE_ROOT_ID, folders_only=True)
+    for f in folders:
+        if f["name"].strip() == year_name:
+            return f["id"]
+    return None
+
+@st.cache_data(ttl=300)
+def get_boats(year_name):
+    year_folder_id = get_year_folder_id(year_name)
+    if not year_folder_id:
+        return []
+
+    boat_names = set()
+    subfolders = list_folder_items(year_folder_id, folders_only=True)
+
+    for sub in subfolders:
+        files = list_folder_items(sub["id"], folders_only=False)
+        for file in files:
+            name = file["name"].strip()
+            if "_" in name:
+                parts = name.split("_")
+                if len(parts) > 1:
+                    boat = "_".join(parts[:-1]).strip()
+                    if boat:
+                        boat_names.add(boat)
+
+    return sorted(boat_names)
+
+@st.cache_data(ttl=300)
+def get_departures(year_name, boat_name):
+    year_folder_id = get_year_folder_id(year_name)
+    if not year_folder_id:
+        return []
+
+    departures = []
+    subfolders = list_folder_items(year_folder_id, folders_only=True)
+    pattern = re.compile(rf"^{re.escape(boat_name)}_(\d{{6}})$")
+
+    for sub in subfolders:
+        files = list_folder_items(sub["id"], folders_only=False)
+        for file in files:
+            name = file["name"].strip()
+            if pattern.match(name):
+                departures.append({
+                    "nombre": name,
+                    "id": file["id"],
+                    "url": file.get("webViewLink", f"https://docs.google.com/spreadsheets/d/{file['id']}/edit")
+                })
+
+    departures.sort(key=lambda x: x["nombre"])
+    return departures
+
+# ──────────────────────────────────────────────────────────────────────────────
 # CSS
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -120,17 +229,9 @@ html, body, [class*="css"] {
     background:#FFFFFF !important;
 }
 
-[data-testid="stAppViewContainer"] {
-    background:#FFFFFF !important;
-}
-
-[data-testid="stHeader"] {
-    background:transparent !important;
-}
-
-section[data-testid="stSidebar"] {
-    display:none !important;
-}
+[data-testid="stAppViewContainer"] { background:#FFFFFF !important; }
+[data-testid="stHeader"] { background:transparent !important; }
+section[data-testid="stSidebar"] { display:none !important; }
 
 .block-container,
 section.stMain .block-container,
@@ -140,11 +241,10 @@ section.stMain .block-container,
     padding-bottom:1rem !important;
     padding-left:1rem !important;
     padding-right:1rem !important;
-    max-width:980px !important;
+    max-width:1100px !important;
     margin:0 auto !important;
 }
 
-/* LOGIN */
 .login-page {
     min-height:auto;
     display:flex;
@@ -166,10 +266,6 @@ section.stMain .block-container,
     width:auto;
     margin:0 auto 0.65rem auto;
     display:block;
-    background:transparent !important;
-    border:none !important;
-    border-radius:0 !important;
-    box-shadow:none !important;
 }
 .login-title {
     font-size:1.08rem;
@@ -184,8 +280,6 @@ section.stMain .block-container,
 .login-form-box {
     background:transparent !important;
     border:none !important;
-    border-radius:0 !important;
-    box-shadow:none !important;
     padding:0 !important;
 }
 .login-note {
@@ -194,26 +288,21 @@ section.stMain .block-container,
     font-size:0.72rem;
     color:#8A93A5;
 }
-[data-testid="stForm"] {
-    border:0 !important;
-    padding:0 !important;
-    background:transparent !important;
-}
 
-/* INPUTS */
-div[data-testid="stTextInput"] label {
+div[data-testid="stTextInput"] label,
+div[data-testid="stSelectbox"] label {
     color:#4D576D !important;
     font-size:0.78rem !important;
     font-weight:500 !important;
 }
-div[data-testid="stTextInput"] input {
+div[data-testid="stTextInput"] input,
+div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
     background:#F8FAFC !important;
     border:1px solid #E5EAF2 !important;
     border-radius:12px !important;
     color:#1F2937 !important;
 }
 
-/* BOTONES GENERALES */
 div.stButton {
     width:fit-content !important;
 }
@@ -239,9 +328,10 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     color:#183F7A !important;
 }
 
-/* BOTONES PASTILLA ES Y GRUPOS */
 div.st-key-btn_crear_es button,
-div.st-key-btn_crear_grupos button {
+div.st-key-btn_crear_grupos button,
+div.st-key-btn_ir_salida button,
+div.st-key-btn_open_salida button {
     background:#FFFFFF !important;
     color:#214D92 !important;
     border:1px solid rgba(33,77,146,0.14) !important;
@@ -253,11 +343,14 @@ div.st-key-btn_crear_grupos button {
     box-shadow:none !important;
 }
 div.st-key-btn_crear_es button:hover,
-div.st-key-btn_crear_grupos button:hover {
+div.st-key-btn_crear_grupos button:hover,
+div.st-key-btn_ir_salida button:hover,
+div.st-key-btn_open_salida button:hover {
     background:#F8FBFF !important;
     color:#163D78 !important;
     border-color:rgba(33,77,146,0.24) !important;
 }
+
 div.st-key-btn_crear_es_dis button,
 div.st-key-btn_crear_grupos_dis button {
     border-radius:999px !important;
@@ -266,12 +359,7 @@ div.st-key-btn_crear_grupos_dis button {
     border:1px solid #E0E6F0 !important;
 }
 
-/* HEADER */
 .portal-header {
-    background:transparent !important;
-    border:none !important;
-    border-radius:0 !important;
-    box-shadow:none !important;
     padding:0.1rem 0 0.55rem 0;
     display:flex;
     align-items:center;
@@ -289,10 +377,6 @@ div.st-key-btn_crear_grupos_dis button {
     width:auto;
     object-fit:contain;
     display:block;
-    background:transparent !important;
-    border:none !important;
-    border-radius:0 !important;
-    box-shadow:none !important;
 }
 .portal-title {
     font-size:0.96rem;
@@ -308,17 +392,10 @@ div.st-key-btn_crear_grupos_dis button {
 .user-top {
     font-size:0.72rem;
     color:#566079;
-    background:transparent !important;
-    border:none !important;
-    border-radius:0 !important;
-    padding:0 !important;
     white-space:nowrap;
 }
 
-/* MAIN */
-.main-content {
-    padding:0;
-}
+.main-content { padding:0; }
 .section-eyebrow {
     display:inline-flex;
     align-items:center;
@@ -348,10 +425,9 @@ div.st-key-btn_crear_grupos_dis button {
     word-break:break-word;
 }
 
-/* TARJETAS */
 .action-box {
     width:100%;
-    min-height:170px;
+    min-height:176px;
     border-radius:22px;
     padding:1rem;
     margin-bottom:0.1rem;
@@ -368,6 +444,10 @@ div.st-key-btn_crear_grupos_dis button {
 .card-grupos {
     background:#F4FBF6;
     border-color:#D8EEDC;
+}
+.card-salida {
+    background:#FFF8F1;
+    border-color:#F1DFC7;
 }
 .action-top {
     display:flex;
@@ -391,6 +471,10 @@ div.st-key-btn_crear_grupos_dis button {
 .card-grupos .action-icon {
     background:#E7F5EA;
     border:1px solid #D0EAD7;
+}
+.card-salida .action-icon {
+    background:#FFF0DD;
+    border:1px solid #F2DEC0;
 }
 .action-text {
     display:flex;
@@ -416,13 +500,17 @@ div.st-key-btn_crear_grupos_dis button {
     width:100% !important;
     margin-top:0.1rem;
 }
-.action-button-wrap div.stButton {
-    width:auto !important;
-    display:flex !important;
-    justify-content:flex-start !important;
+
+.selector-box {
+    margin-top:1rem;
+    width:100%;
+    max-width:720px;
+    padding:1rem;
+    border-radius:18px;
+    background:#FFFCF7;
+    border:1px solid #F1E7D9;
 }
 
-/* PROCESO */
 .progress-panel {
     width:100%;
     max-width:520px;
@@ -487,17 +575,12 @@ div.st-key-btn_crear_grupos_dis button {
     font-size:0.7rem;
     color:#8790A4;
     margin-top:0.08rem;
-    word-wrap:break-word !important;
-    overflow-wrap:break-word !important;
-    white-space:normal !important;
 }
 .done-box {
     margin-top:0.8rem;
     padding:0 !important;
     background:transparent !important;
     border:none !important;
-    border-radius:0 !important;
-    box-shadow:none !important;
 }
 .done-title {
     font-size:0.76rem;
@@ -525,19 +608,14 @@ div.st-key-btn_crear_grupos_dis button {
     text-decoration:none;
 }
 
-/* HISTORIAL */
 .history-row {
     display:flex;
     align-items:center;
     gap:0.75rem;
     padding:0.28rem 0;
-    border-radius:0 !important;
-    background:transparent !important;
-    border:none !important;
     margin-bottom:0.35rem;
     width:100%;
     max-width:620px;
-    box-shadow:none !important;
 }
 .history-num {
     width:22px;
@@ -574,14 +652,9 @@ div.st-key-btn_crear_grupos_dis button {
     white-space:nowrap;
 }
 
-/* FOOTER */
 .portal-footer {
     margin-top:1rem;
     padding:0.5rem 0 0 0;
-    border:none !important;
-    border-radius:0 !important;
-    background:transparent !important;
-    box-shadow:none !important;
     display:flex;
     justify-content:space-between;
     align-items:center;
@@ -593,7 +666,7 @@ div.st-key-btn_crear_grupos_dis button {
     color:#A2ABBD;
 }
 
-@media (max-width: 840px) {
+@media (max-width: 900px) {
     .portal-header {
         flex-direction:column;
         align-items:flex-start;
@@ -601,9 +674,6 @@ div.st-key-btn_crear_grupos_dis button {
     .portal-footer {
         flex-direction:column;
         align-items:flex-start;
-    }
-    .history-row {
-        flex-wrap:wrap;
     }
 }
 </style>
@@ -663,6 +733,7 @@ if not st.session_state["authenticated"]:
 USER_EMAIL = st.session_state.get("user_email", "").strip()
 DISPLAY_USER = st.session_state.get("display_name", "").strip() or "Sin usuario"
 SALUDO = get_saludo()
+confirm_state = st.session_state.get("confirm_state", "idle")
 
 st.markdown(f"""
 <div class="portal-header">
@@ -684,9 +755,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-confirm_state = st.session_state.get("confirm_state", "idle")
-
-col1, col2 = st.columns(2, gap="medium")
+col1, col2, col3 = st.columns(3, gap="medium")
 
 with col1:
     st.markdown(f"""
@@ -740,6 +809,96 @@ with col2:
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
+with col3:
+    st.markdown("""
+    <div class="action-box card-salida">
+        <div class="action-top">
+            <div class="action-icon">🧭</div>
+            <div class="action-text">
+                <div class="action-title">Ir a Salida</div>
+                <div class="action-desc">Buscar una salida existente por año, barco y código de salida</div>
+            </div>
+        </div>
+        <div class="action-button-wrap">
+    """, unsafe_allow_html=True)
+
+    if st.button("Buscar Salida", key="btn_ir_salida"):
+        st.session_state["open_salida_form"] = not st.session_state["open_salida_form"]
+        st.rerun()
+
+    st.markdown('</div></div>', unsafe_allow_html=True)
+
+# FORMULARIO NUEVO DE SALIDA
+if st.session_state.get("open_salida_form"):
+    st.markdown('<div class="selector-box">', unsafe_allow_html=True)
+    st.markdown("#### Seleccionar salida")
+
+    try:
+        years = get_years()
+
+        selected_year = st.selectbox(
+            "AÑO",
+            options=[""] + years,
+            index=([""] + years).index(st.session_state["salida_year"]) if st.session_state["salida_year"] in years else 0,
+            key="salida_year_select"
+        )
+        st.session_state["salida_year"] = selected_year
+
+        boats = get_boats(selected_year) if selected_year else []
+        if st.session_state["salida_boat"] not in boats:
+            st.session_state["salida_boat"] = ""
+
+        selected_boat = st.selectbox(
+            "BARCO",
+            options=[""] + boats,
+            index=([""] + boats).index(st.session_state["salida_boat"]) if st.session_state["salida_boat"] in boats else 0,
+            key="salida_boat_select"
+        )
+        st.session_state["salida_boat"] = selected_boat
+
+        departures = get_departures(selected_year, selected_boat) if selected_year and selected_boat else []
+        departure_names = [d["nombre"] for d in departures]
+
+        if st.session_state["salida_name"] not in departure_names:
+            st.session_state["salida_name"] = ""
+
+        selected_departure = st.selectbox(
+            "SALIDA",
+            options=[""] + departure_names,
+            index=([""] + departure_names).index(st.session_state["salida_name"]) if st.session_state["salida_name"] in departure_names else 0,
+            key="salida_name_select"
+        )
+        st.session_state["salida_name"] = selected_departure
+
+        selected_departure_obj = next((d for d in departures if d["nombre"] == selected_departure), None)
+
+        c1, c2 = st.columns([1, 1])
+        with c1:
+            if st.button("Abrir Salida", key="btn_open_salida", disabled=not bool(selected_departure_obj)):
+                if selected_departure_obj:
+                    salida_url = selected_departure_obj["url"]
+                    st.markdown(
+                        f'<script>setTimeout(()=>window.open("{salida_url}","_blank"),150);</script>',
+                        unsafe_allow_html=True
+                    )
+                    st.success("Abriendo salida...")
+        with c2:
+            if st.button("Cerrar selector", key="btn_close_salida"):
+                st.session_state["open_salida_form"] = False
+                st.session_state["salida_year"] = ""
+                st.session_state["salida_boat"] = ""
+                st.session_state["salida_name"] = ""
+                st.rerun()
+
+    except Exception as e:
+        st.error(
+            "No se pudo conectar con Google Drive. "
+            "Revisa las credenciales de la service account y que tenga acceso a la carpeta raíz."
+        )
+        st.caption(str(e))
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
 saved_name = st.session_state.get("nombre_copia", "")
 saved_url = st.session_state.get("copy_url", "")
 process_title = st.session_state.get("process_title", "Estado del Proceso")
@@ -750,16 +909,12 @@ if confirm_state in ("step1", "step2", "step3", "done"):
 
     if confirm_state == "step1":
         render_step("Progreso", "Preparando plantilla...", "active")
-
     elif confirm_state == "step2":
         render_step("Progreso", "Generando copia en Drive...", "active")
-
     elif confirm_state == "step3":
         render_step("Progreso", "Abriendo sesión...", "active")
-
     elif confirm_state == "done":
         render_step("Progreso", "Completo", "done")
-
         st.markdown(f"""
         <div class="done-box">
             <div class="done-title">Sesión creada</div>
@@ -776,12 +931,10 @@ if confirm_state in ("step1", "step2", "step3", "done"):
         time.sleep(0.7)
         st.session_state["confirm_state"] = "step2"
         st.rerun()
-
     elif confirm_state == "step2":
         time.sleep(0.7)
         st.session_state["confirm_state"] = "step3"
         st.rerun()
-
     elif confirm_state == "step3":
         time.sleep(0.7)
         st.session_state["confirm_state"] = "done"
@@ -825,7 +978,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · v3.3.0</span>
+    <span class="footer-text">Panel de Control · v3.4.0</span>
     <span class="footer-text">Carpeta: {FOLDER_ID}</span>
 </div>
 """, unsafe_allow_html=True)
