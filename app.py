@@ -175,60 +175,6 @@ section[data-testid="stSidebar"] { display:none !important; }
     color:#5D6880;
 }
 
-/* LOGIN */
-.login-page {
-    min-height:auto;
-    display:flex;
-    align-items:flex-start;
-    justify-content:center;
-    padding:0.3rem 1.2rem 1.1rem;
-}
-.login-shell {
-    width:100%;
-    max-width:540px;
-}
-.login-head {
-    width:100%;
-    background:#FFFFFF;
-    border:1px solid #E6E9F0;
-    border-radius:22px;
-    padding:1rem 1.35rem 0.9rem;
-    box-shadow:0 10px 30px rgba(17,24,39,0.03);
-    margin-bottom:0.55rem;
-    text-align:left;
-}
-.login-logo {
-    height:74px;
-    width:auto;
-    display:block;
-    margin:0 auto 0.55rem auto;
-    object-fit:contain;
-}
-.login-title {
-    font-size:1.02rem;
-    font-weight:600;
-    color:#1F2937;
-    margin-bottom:0.12rem;
-}
-.login-subtitle {
-    font-size:0.79rem;
-    color:#7C869D;
-    line-height:1.35;
-}
-.login-form-box {
-    width:100%;
-    background:#FFFFFF;
-    border:1px solid #DCE2EB;
-    border-radius:16px;
-    padding:0.65rem 0.75rem 0.45rem;
-}
-.login-note {
-    font-size:0.71rem;
-    color:#8A93A8;
-    margin-top:0.65rem;
-    line-height:1.3;
-}
-
 /* INPUTS */
 div[data-testid="stTextInput"] label {
     color:#4D576D !important;
@@ -240,9 +186,6 @@ div[data-testid="stTextInput"] input {
     border:1px solid #E5EAF2 !important;
     border-radius:12px !important;
     color:#1F2937 !important;
-}
-div[data-testid="stTextInput"] input::placeholder {
-    color:#A0A8B9 !important;
 }
 
 /* BOTONES GENERALES */
@@ -346,7 +289,7 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     box-shadow:none !important;
 }
 
-/* PROCESO - Exactamente del mismo ancho que la tarjeta */
+/* PROCESO */
 .progress-panel {
     width: 420px !important;
     max-width: 420px !important;
@@ -620,13 +563,15 @@ st.markdown(f"""
     <div class="action-button-wrap">
 """, unsafe_allow_html=True)
 
-if confirm_state == "idle":
+# Lógica del botón corregida: activo en "idle" o "done" para poder repetir
+if confirm_state in ("idle", "done"):
     if st.button("Crear Sesión", key="btn_crear"):
         st.session_state["confirm_state"] = "step1"
         st.session_state["nombre_copia"] = nombre_copia
         st.session_state["copy_url"] = copy_url
         st.rerun()
 else:
+    # Solo se deshabilita visualmente mientras transcurre el proceso (steps 1, 2, 3)
     st.button("Crear Sesión", key="btn_crear_dis", disabled=True)
 
 st.markdown('</div></div>', unsafe_allow_html=True)
