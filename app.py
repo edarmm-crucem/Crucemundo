@@ -158,12 +158,18 @@ section[data-testid="stSidebar"] { display:none !important; }
     padding:1.7rem 3rem 3rem;
 }
 .section-eyebrow {
+    display:inline-flex;
+    align-items:center;
+    padding:0.28rem 0.62rem;
+    border-radius:999px;
+    background:#E8F0FF;
+    border:1px solid #CFE0FF;
+    color:#2F63BF;
     font-size:0.66rem;
-    font-weight:600;
+    font-weight:700;
     letter-spacing:0.08em;
     text-transform:uppercase;
-    color:#5D6B85;
-    margin-bottom:0.22rem;
+    margin-bottom:0.5rem;
 }
 .section-heading {
     font-size:1rem;
@@ -226,13 +232,12 @@ section[data-testid="stSidebar"] { display:none !important; }
     color:#5D6880;
 }
 
-/* BLOQUE TARJETA + BOTÓN */
-.session-row {
-    max-width: 320px;
+/* FILA TARJETA + BOTÓN */
+.session-wrap {
+    width: 255px;   /* ancho total del bloque */
 }
 .session-card {
     width: 100%;
-    max-width: 185px;  /* aquí cambias el ancho de la tarjeta */
     background:#FFFFFF;
     border:1px solid #E3E6EE;
     border-radius:12px;
@@ -271,9 +276,9 @@ section[data-testid="stSidebar"] { display:none !important; }
     line-height:1.15;
 }
 
-/* BOTÓN CREAR */
+/* BOTÓN */
 .compact-btn {
-    padding-top: 6px;
+    padding-top:6px;
 }
 .compact-btn > div > button {
     background:#FFFFFF !important;
@@ -282,8 +287,8 @@ section[data-testid="stSidebar"] { display:none !important; }
     border-radius:10px !important;
     min-height:36px !important;
     height:36px !important;
-    min-width:72px !important;
-    padding:0 0.7rem !important;
+    min-width:70px !important;
+    padding:0 0.65rem !important;
     font-size:0.74rem !important;
     font-weight:500 !important;
     box-shadow:none !important;
@@ -540,7 +545,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="main-content">', unsafe_allow_html=True)
-st.markdown('<div class="section-eyebrow">Acciones</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-eyebrow">ACCIONES</div>', unsafe_allow_html=True)
 st.markdown('<div class="section-heading">Sesión de trabajo</div>', unsafe_allow_html=True)
 st.markdown(
     f'<div class="user-pill">👤 {DISPLAY_USER} · {USER_EMAIL}</div>',
@@ -559,8 +564,8 @@ copy_url = (
 
 confirm_state = st.session_state.get("confirm_state", "idle")
 
-st.markdown('<div class="session-row">', unsafe_allow_html=True)
-col_card, col_btn = st.columns([2.4, 1], gap="small")
+st.markdown('<div class="session-wrap">', unsafe_allow_html=True)
+col_card, col_btn = st.columns([5.2, 1.7], gap="small")
 
 with col_card:
     st.markdown("""
@@ -677,7 +682,7 @@ with col_logout:
 
 if st.session_state.get("historial"):
     st.markdown("<div style='height:1.2rem'></div>", unsafe_allow_html=True)
-    st.markdown('<div class="section-eyebrow">Esta sesión</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-eyebrow">ESTA SESIÓN</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-heading">Archivos creados</div>', unsafe_allow_html=True)
 
     for i, entry in enumerate(st.session_state["historial"], 1):
@@ -694,7 +699,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · v2.7.0</span>
+    <span class="footer-text">Panel de Control · v2.8.0</span>
     <span class="footer-text">Carpeta: {FOLDER_ID}</span>
 </div>
 """, unsafe_allow_html=True)
