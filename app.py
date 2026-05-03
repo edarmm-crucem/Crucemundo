@@ -98,20 +98,24 @@ html, body, [class*="css"] {
 [data-testid="stHeader"] { background:transparent !important; }
 section[data-testid="stSidebar"] { display:none !important; }
 
+/* CONTENEDOR PRINCIPAL MÁS PEQUEÑO Y CENTRADO */
 .block-container {
-    padding:0 !important;
-    max-width:100% !important;
+    padding: 1.2rem 1rem 1.5rem !important;
+    max-width: 760px !important;
+    margin: 0 auto !important;
 }
 
 /* HEADER APP */
 .portal-header {
     background:#FFFFFF;
-    border-bottom:1px solid #E7EAF0;
-    padding:1rem 3rem;
+    border:1px solid #E7EAF0;
+    border-radius:18px;
+    padding:0.9rem 1.1rem;
     display:flex;
     align-items:center;
     justify-content:space-between;
     gap:1rem;
+    margin-bottom:1rem;
 }
 .portal-header-left {
     display:flex;
@@ -119,34 +123,35 @@ section[data-testid="stSidebar"] { display:none !important; }
     gap:0.9rem;
 }
 .portal-logo {
-    height:46px;
+    height:42px;
     width:auto;
     object-fit:contain;
     display:block;
 }
 .portal-title {
-    font-size:1rem;
+    font-size:0.96rem;
     font-weight:600;
     color:#1F2937;
     line-height:1.15;
 }
 .portal-subtitle {
-    font-size:0.74rem;
+    font-size:0.72rem;
     color:#7C869D;
     margin-top:0.08rem;
 }
 .user-top {
-    font-size:0.74rem;
+    font-size:0.72rem;
     color:#566079;
     background:#F8F9FC;
     border:1px solid #E4E7EF;
     border-radius:999px;
-    padding:0.42rem 0.78rem;
+    padding:0.38rem 0.72rem;
+    white-space:nowrap;
 }
 
 /* MAIN */
 .main-content {
-    padding:1.3rem 3rem 3rem;
+    padding:0;
 }
 .section-eyebrow {
     display:inline-flex;
@@ -156,23 +161,72 @@ section[data-testid="stSidebar"] { display:none !important; }
     background:#EAF1FF;
     border:1px solid #D6E3FF;
     color:#2E5FB8;
-    font-size:0.67rem;
+    font-size:0.66rem;
     font-weight:700;
     letter-spacing:0.08em;
     text-transform:uppercase;
-    margin-bottom:0.85rem;
+    margin-bottom:0.75rem;
 }
 .user-pill {
     display:inline-flex;
     align-items:center;
     gap:0.4rem;
-    margin:0.02rem 0 1rem;
+    margin:0.02rem 0 0.95rem;
     padding:0.38rem 0.68rem;
     border-radius:999px;
     background:#fff;
     border:1px solid #E4E7EF;
-    font-size:0.73rem;
+    font-size:0.72rem;
     color:#5D6880;
+    max-width:100%;
+    word-break:break-word;
+}
+
+/* LOGIN */
+.login-page {
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:1rem;
+}
+.login-shell {
+    width:100%;
+    max-width:420px;
+    margin:0 auto;
+}
+.login-head {
+    text-align:center;
+    margin-bottom:1rem;
+}
+.login-logo {
+    height:60px;
+    width:auto;
+    margin:0 auto 0.9rem auto;
+    display:block;
+}
+.login-title {
+    font-size:1.2rem;
+    font-weight:700;
+    color:#1F2937;
+}
+.login-subtitle {
+    font-size:0.8rem;
+    color:#7C869D;
+    margin-top:0.35rem;
+}
+.login-form-box {
+    background:#FFFFFF;
+    border:1px solid #E4E7EF;
+    border-radius:18px;
+    padding:1rem;
+    box-shadow:0 8px 24px rgba(17,24,39,0.04);
+}
+.login-note {
+    margin-top:0.7rem;
+    text-align:center;
+    font-size:0.72rem;
+    color:#8A93A5;
 }
 
 /* INPUTS */
@@ -214,19 +268,19 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     color:#183F7A !important;
 }
 
-/* ACCIÓN EN RECUADRO - Ancho forzado exacto */
+/* ACCIÓN */
 .action-box {
-    width: 420px !important;
-    max-width: 420px !important;
+    width:100%;
+    max-width:520px;
     background:#F7F6F3;
     border:1px solid #E5E2DC;
     border-radius:16px;
     padding:1rem;
     margin-bottom:0.65rem;
     box-shadow:0 4px 12px rgba(17,24,39,0.02);
-    display: flex;
-    flex-direction: column;
-    gap: 0.8rem;
+    display:flex;
+    flex-direction:column;
+    gap:0.8rem;
 }
 .action-top {
     display:flex;
@@ -252,7 +306,7 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     min-width:0;
 }
 .action-title {
-    font-size:0.96rem;
+    font-size:0.94rem;
     font-weight:600;
     color:#1F2937;
     line-height:1.1;
@@ -262,44 +316,42 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     color:#7A808E;
     line-height:1.26;
 }
-
-/* CONTENEDOR DEL BOTÓN */
 .action-button-wrap {
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    width: 100% !important;
-    margin-top: 0.2rem;
+    display:flex !important;
+    justify-content:center !important;
+    align-items:center !important;
+    width:100% !important;
+    margin-top:0.2rem;
 }
 .action-button-wrap div.stButton {
-    width: auto !important;
-    display: flex !important;
-    justify-content: center !important;
+    width:auto !important;
+    display:flex !important;
+    justify-content:center !important;
 }
 .action-button-wrap div.stButton > button {
-    width: auto !important;
+    width:auto !important;
     background:#D9E9FF !important;
     color:#214D92 !important;
     border:1px solid #BDD6FF !important;
     border-radius:12px !important;
     min-height:36px !important;
-    padding: 0 1.2rem !important;
+    padding:0 1.2rem !important;
     font-size:0.77rem !important;
     font-weight:600 !important;
     box-shadow:none !important;
 }
 
-/* PROCESO - Integrado sin recuadro blanco de fondo */
+/* PROCESO */
 .progress-panel {
-    width: 420px !important;
-    max-width: 420px !important;
-    padding: 0 0.2rem;
-    margin-top: 0.6rem;
-    display: flex;
-    flex-direction: column;
+    width:100%;
+    max-width:520px;
+    padding:0 0.15rem;
+    margin-top:0.6rem;
+    display:flex;
+    flex-direction:column;
 }
 .progress-title {
-    font-size:0.84rem;
+    font-size:0.83rem;
     font-weight:600;
     color:#1F2937;
     margin-bottom:0.35rem;
@@ -339,10 +391,10 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     color:#B1B8C9;
 }
 .step-content {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    flex: 1;
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+    flex:1;
 }
 .st-done, .st-active, .st-wait {
     font-size:0.76rem;
@@ -355,9 +407,9 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     font-size:0.7rem;
     color:#8790A4;
     margin-top:0.08rem;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
-    white-space: normal !important;
+    word-wrap:break-word !important;
+    overflow-wrap:break-word !important;
+    white-space:normal !important;
 }
 .done-box {
     margin-top:0.8rem;
@@ -402,8 +454,8 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     background:#FFFFFF;
     border:1px solid #E4E7EF;
     margin-bottom:0.4rem;
-    width: 420px !important;
-    max-width: 420px !important;
+    width:100%;
+    max-width:520px;
 }
 .history-num {
     width:22px;
@@ -423,33 +475,54 @@ div[data-testid="stFormSubmitButton"] > button:hover,
     font-size:0.75rem;
     color:#394255;
     flex:1;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    white-space: normal;
+    word-wrap:break-word;
+    overflow-wrap:break-word;
+    white-space:normal;
 }
 .history-time {
     font-size:0.68rem;
     color:#A2ABBD;
+    white-space:nowrap;
 }
 .history-link {
     font-size:0.71rem;
     color:#5D6880;
     text-decoration:none;
     font-weight:500;
+    white-space:nowrap;
 }
 
 /* FOOTER */
 .portal-footer {
-    padding:1rem 3rem;
-    border-top:1px solid #E4E7EF;
+    margin-top:1rem;
+    padding:0.9rem 1rem;
+    border:1px solid #E4E7EF;
+    border-radius:16px;
     background:#FFFFFF;
     display:flex;
     justify-content:space-between;
     align-items:center;
+    gap:0.8rem;
+    flex-wrap:wrap;
 }
 .footer-text {
     font-size:0.71rem;
     color:#A2ABBD;
+}
+
+/* RESPONSIVE */
+@media (max-width: 700px) {
+    .portal-header {
+        flex-direction:column;
+        align-items:flex-start;
+    }
+    .portal-footer {
+        flex-direction:column;
+        align-items:flex-start;
+    }
+    .history-row {
+        flex-wrap:wrap;
+    }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -554,7 +627,6 @@ st.markdown(f"""
     <div class="action-button-wrap">
 """, unsafe_allow_html=True)
 
-# Lógica del botón: activo en "idle" o "done" para volver a usarlo
 if confirm_state in ("idle", "done"):
     if st.button("Crear Sesión", key="btn_crear"):
         st.session_state["confirm_state"] = "step1"
