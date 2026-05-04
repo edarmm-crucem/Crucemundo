@@ -41,7 +41,7 @@ VALID_USERS = {
     "edarmm@gmail.com": "Esteban",
 }
 
-VALID_PASSWORD = "Crucemundo26!"
+VALID_PASSWORD = st.secrets["app_password"]
 
 AGENCY_FIELDS = [
     "Nombre",
