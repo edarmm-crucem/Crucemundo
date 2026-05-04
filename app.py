@@ -11,7 +11,7 @@ from googleapiclient.discovery import build
 # CONFIG
 # ──────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Crucemundo Team",
+    page_title="Crucemundo Hub",
     page_icon="🛳️",
     layout="wide",
     initial_sidebar_state="collapsed"
