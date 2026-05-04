@@ -757,7 +757,7 @@ div.st-key-btn_ejecutar_busqueda_agencia button:hover,
     min-height:210px;
     border-radius:22px;
     padding:1rem;
-    margin-bottom:0.1rem;
+    margin-bottom:0.85rem;
     display:flex;
     flex-direction:column;
     justify-content:space-between;
@@ -1030,9 +1030,10 @@ st.markdown('<div class="main-content">', unsafe_allow_html=True)
 st.markdown('<div class="section-eyebrow">ACCIONES RÁPIDAS · QUICK ACTIONS</div>', unsafe_allow_html=True)
 st.markdown(f'<div class="user-pill">👤 {DISPLAY_USER} · {USER_EMAIL}</div>', unsafe_allow_html=True)
 
-col1, col2, col3, col4, col5, col6, col7 = st.columns(7, gap="medium")
+# FILA 1: 5 tarjetas
+row1_col1, row1_col2, row1_col3, row1_col4, row1_col5 = st.columns(5, gap="medium")
 
-with col1:
+with row1_col1:
     st.markdown(f"""
     <div class="action-box card-es">
         <div class="action-top">
@@ -1055,7 +1056,7 @@ with col1:
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-with col2:
+with row1_col2:
     st.markdown(f"""
     <div class="action-box card-grupos">
         <div class="action-top">
@@ -1078,7 +1079,7 @@ with col2:
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-with col3:
+with row1_col3:
     st.markdown("""
     <div class="action-box card-salida">
         <div class="action-top">
@@ -1099,7 +1100,7 @@ with col3:
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-with col4:
+with row1_col4:
     st.markdown("""
     <div class="action-box card-crucero">
         <div class="action-top">
@@ -1120,7 +1121,7 @@ with col4:
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-with col5:
+with row1_col5:
     st.markdown("""
     <div class="action-box card-excursiones">
         <div class="action-top">
@@ -1142,7 +1143,10 @@ with col5:
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-with col6:
+# FILA 2: 2 tarjetas
+row2_col1, row2_col2, row2_col3, row2_col4, row2_col5 = st.columns(5, gap="medium")
+
+with row2_col1:
     st.markdown("""
     <div class="action-box card-nueva-agencia">
         <div class="action-top">
@@ -1163,7 +1167,7 @@ with col6:
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-with col7:
+with row2_col2:
     st.markdown("""
     <div class="action-box card-buscar-agencia">
         <div class="action-top">
@@ -1183,6 +1187,13 @@ with col7:
         st.rerun()
 
     st.markdown('</div></div>', unsafe_allow_html=True)
+
+with row2_col3:
+    st.empty()
+with row2_col4:
+    st.empty()
+with row2_col5:
+    st.empty()
 
 if st.session_state.get("open_salida_form"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
@@ -1333,20 +1344,17 @@ if st.session_state.get("open_nueva_agencia_form"):
     st.markdown("#### Nueva Agencia · New Agency")
 
     with st.form("form_nueva_agencia", clear_on_submit=False):
-        c1, c2 = st.columns(2)
-        with c1:
-            ag_nombre = st.text_input("Nombre", key="ag_nombre")
-            ag_codigo = st.text_input("CODIGO", key="ag_codigo")
-            ag_grupo_gest = st.text_input("Grupo Gest", key="ag_grupo_gest")
-            ag_telefono = st.text_input("Telefono", key="ag_telefono")
-            ag_email = st.text_input("Email", key="ag_email")
-            ag_direccion = st.text_input("Direccion", key="ag_direccion")
-        with c2:
-            ag_comision = st.text_input("COMISION AGENCIA", key="ag_comision")
-            ag_comision_oferta = st.text_input("COMISION AGENCIA ( CON OFERTA )", key="ag_comision_oferta")
-            ag_comision_2x1 = st.text_input("COMISION AGENCIA ( OFERTA 2X1 )", key="ag_comision_2x1")
-            ag_iva = st.text_input("IVA", key="ag_iva")
-            ag_iva_servicio_opcional = st.text_input("IVA SERVICIO OPCIONAL", key="ag_iva_servicio_opcional")
+        ag_nombre = st.text_input("Nombre", key="ag_nombre")
+        ag_codigo = st.text_input("CODIGO", key="ag_codigo")
+        ag_grupo_gest = st.text_input("Grupo Gest", key="ag_grupo_gest")
+        ag_telefono = st.text_input("Telefono", key="ag_telefono")
+        ag_email = st.text_input("Email", key="ag_email")
+        ag_direccion = st.text_input("Direccion", key="ag_direccion")
+        ag_comision = st.text_input("COMISION AGENCIA", key="ag_comision")
+        ag_comision_oferta = st.text_input("COMISION AGENCIA ( CON OFERTA )", key="ag_comision_oferta")
+        ag_comision_2x1 = st.text_input("COMISION AGENCIA ( OFERTA 2X1 )", key="ag_comision_2x1")
+        ag_iva = st.text_input("IVA", key="ag_iva")
+        ag_iva_servicio_opcional = st.text_input("IVA SERVICIO OPCIONAL", key="ag_iva_servicio_opcional")
 
         guardar_agencia = st.form_submit_button("Guardar Agencia")
 
@@ -1524,7 +1532,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · Control Panel · v3.9.0</span>
+    <span class="footer-text">Panel de Control · Control Panel · v4.0.0</span>
     <span class="footer-text">Raíz Drive / Drive Root: {DRIVE_ROOT_ID}</span>
 </div>
 """, unsafe_allow_html=True)
