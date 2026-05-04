@@ -1074,13 +1074,13 @@ st.markdown("""
         Ir a Crucemundo
     </a>
     <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">
-        Ir a Crucemundo
+        pte uso
     </a>
     <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">
-        Ir a Crucemundo
+        pte uso
     </a>
     <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">
-        Ir a Crucemundo
+        pte uso
     </a>
 </div>
 """, unsafe_allow_html=True)
