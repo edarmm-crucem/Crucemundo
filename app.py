@@ -733,8 +733,8 @@ div.st-key-btn_ejecutar_busqueda_agencia button:hover,
 .section-head-row{
     display:flex;
     align-items:center;
-    justify-content:space-between;
-    gap:0.75rem;
+    justify-content:flex-start;
+    gap:0.55rem;
     margin-bottom:0.75rem;
     flex-wrap:wrap;
 }
@@ -751,7 +751,7 @@ div.st-key-btn_ejecutar_busqueda_agencia button:hover,
     font-weight:700;
     letter-spacing:0.08em;
     text-transform:uppercase;
-    margin-bottom:0;
+    margin-bottom:0 !important;
 }
 
 .web-chip{
@@ -760,9 +760,9 @@ div.st-key-btn_ejecutar_busqueda_agencia button:hover,
     justify-content:center;
     padding:0.34rem 0.74rem;
     border-radius:999px;
-    background:#FFFFFF;
-    border:1px solid #D6E3FF;
-    color:#214D92 !important;
+    background:#FFF3BF;
+    border:1px solid #F4D35E;
+    color:#7A5900 !important;
     font-size:0.70rem;
     font-weight:700;
     line-height:1;
@@ -771,9 +771,9 @@ div.st-key-btn_ejecutar_busqueda_agencia button:hover,
 }
 
 .web-chip:hover{
-    background:#EEF4FF;
-    border-color:#BDD6FF;
-    color:#163D78 !important;
+    background:#FFE58F;
+    border-color:#E9C046;
+    color:#5F4500 !important;
 }
 
 .user-pill {
@@ -1071,7 +1071,7 @@ st.markdown("""
 <div class="section-head-row">
     <div class="section-eyebrow">ACCIONES RÁPIDAS · QUICK ACTIONS</div>
     <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">
-        www.crucemundo.es
+        Ir a Crucemundo
     </a>
 </div>
 """, unsafe_allow_html=True)
@@ -1185,7 +1185,7 @@ with row1_col5:
     """, unsafe_allow_html=True)
 
     st.markdown(
-        f'<a class="done-link" href="{excursiones_url}" target="_blank" rel="noopener noreferrer">Abrir Excursiones ↗</a>',
+        f'<a class="done-link" href="{excursiones_url}" target="_blank">Abrir Excursiones ↗</a>',
         unsafe_allow_html=True
     )
 
@@ -1307,7 +1307,7 @@ if st.session_state.get("open_salida_form"):
             selected_obj = next((d for d in departures if d["nombre"] == selected_departure), None)
             if selected_obj:
                 st.markdown(
-                    f'<a class="done-link" href="{selected_obj["url"]}" target="_blank" rel="noopener noreferrer">Abrir salida / Open departure ↗</a>',
+                    f'<a class="done-link" href="{selected_obj["url"]}" target="_blank">Abrir salida / Open departure ↗</a>',
                     unsafe_allow_html=True
                 )
     except Exception as e:
@@ -1373,13 +1373,13 @@ if st.session_state.get("open_crucero_form"):
                 if result["status"] == "duplicate":
                     st.warning(f'Ya existe / Already exists: "{result["name"]}".')
                     st.markdown(
-                        f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir archivo existente / Open existing file ↗</a>',
+                        f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir archivo existente / Open existing file ↗</a>',
                         unsafe_allow_html=True
                     )
                 else:
                     st.success(f'Archivo creado / File created: "{result["name"]}".')
                     st.markdown(
-                        f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir crucero / Open cruise ↗</a>',
+                        f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir crucero / Open cruise ↗</a>',
                         unsafe_allow_html=True
                     )
     except Exception as e:
@@ -1585,7 +1585,7 @@ if confirm_state in ("step1", "step2", "step3", "done"):
             <div style="font-size:0.71rem;color:#657087;margin-top:0.15rem;line-height:1.3;">
                 Puedes abrir tu sesión en el botón de abajo · You can open your session with the button below.
             </div>
-            <a class="done-link" href="{saved_url}" target="_blank" rel="noopener noreferrer">Abrir sesión / Open session ↗</a>
+            <a class="done-link" href="{saved_url}" target="_blank">Abrir sesión / Open session ↗</a>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1634,7 +1634,7 @@ if st.session_state.get("historial"):
             <div class="history-num">{i}</div>
             <div class="history-name">{entry['nombre']}</div>
             <div class="history-time">{entry['hora']}</div>
-            <a class="history-link" href="{entry['url']}" target="_blank" rel="noopener noreferrer">Abrir / Open ↗</a>
+            <a class="history-link" href="{entry['url']}" target="_blank">Abrir / Open ↗</a>
         </div>
         """, unsafe_allow_html=True)
 
