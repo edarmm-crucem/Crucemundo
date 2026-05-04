@@ -25,6 +25,9 @@ TEMPLATE_ID_GRUPOS = "1Z7ktX3PhVkMibWpzdrDDqAT4aPsmjzSJPf1SgZcL5-w"
 TEMPLATE_ID_CRUCERO = "1zSJPi6St_Z5Jw1c6eieVnKI4NyEdP7E9n3WTZ9yy3C0"
 EXCURSIONES_SHEET_ID = "1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg"
 
+AGENCY_SHEET_ID = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
+AGENCY_SHEET_NAME = "Datos"
+
 FOLDER_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
 DRIVE_ROOT_ID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
 
@@ -40,6 +43,20 @@ VALID_USERS = {
 
 VALID_PASSWORD = "Crucemundo26!"
 
+AGENCY_FIELDS = [
+    "Nombre",
+    "CODIGO",
+    "Grupo Gest",
+    "Telefono",
+    "Email",
+    "Direccion",
+    "COMISION AGENCIA",
+    "COMISION AGENCIA ( CON OFERTA )",
+    "COMISION AGENCIA ( OFERTA 2X1 )",
+    "IVA",
+    "IVA SERVICIO OPCIONAL",
+]
+
 # ──────────────────────────────────────────────────────────────────────────────
 # STATE
 # ──────────────────────────────────────────────────────────────────────────────
@@ -53,11 +70,15 @@ defaults = {
     "active_panel": None,
     "open_salida_form": False,
     "open_crucero_form": False,
+    "open_nueva_agencia_form": False,
+    "open_buscar_agencia_form": False,
     "salida_year": None,
     "salida_boat": None,
     "salida_name": None,
     "crucero_year": None,
     "crucero_boat": None,
+    "agency_matches": [],
+    "agency_selected_idx": None,
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -96,25 +117,49 @@ def clear_crucero_state():
     ]:
         st.session_state.pop(k, None)
 
+def clear_agencia_state():
+    for k in [
+        "agency_matches", "agency_selected_idx", "agency_search_query",
+        "ag_nombre", "ag_codigo", "ag_grupo_gest", "ag_telefono", "ag_email",
+        "ag_direccion", "ag_comision", "ag_comision_oferta", "ag_comision_2x1",
+        "ag_iva", "ag_iva_servicio_opcional"
+    ]:
+        st.session_state.pop(k, None)
+
 def close_all_panels():
     st.session_state["open_salida_form"] = False
     st.session_state["open_crucero_form"] = False
+    st.session_state["open_nueva_agencia_form"] = False
+    st.session_state["open_buscar_agencia_form"] = False
 
 def open_panel(panel_name):
     close_all_panels()
 
     if panel_name == "salida":
         clear_crucero_state()
+        clear_agencia_state()
         st.session_state["open_salida_form"] = True
     elif panel_name == "crucero":
         clear_salida_state()
+        clear_agencia_state()
         st.session_state["open_crucero_form"] = True
+    elif panel_name == "nueva_agencia":
+        clear_salida_state()
+        clear_crucero_state()
+        clear_agencia_state()
+        st.session_state["open_nueva_agencia_form"] = True
+    elif panel_name == "buscar_agencia":
+        clear_salida_state()
+        clear_crucero_state()
+        clear_agencia_state()
+        st.session_state["open_buscar_agencia_form"] = True
 
     st.session_state["active_panel"] = panel_name
 
 def clear_all_selectors():
     clear_salida_state()
     clear_crucero_state()
+    clear_agencia_state()
     close_all_panels()
     st.session_state["active_panel"] = None
 
@@ -122,11 +167,16 @@ def do_logout():
     keys_to_delete = [
         "authenticated", "user_email", "display_name", "confirm_state",
         "session_type", "active_panel", "open_salida_form", "open_crucero_form",
+        "open_nueva_agencia_form", "open_buscar_agencia_form",
         "salida_year", "salida_boat", "salida_name",
         "crucero_year", "crucero_boat",
         "salida_year_widget", "salida_boat_widget", "salida_name_widget",
         "crucero_year_widget", "crucero_boat_widget",
-        "nombre_copia", "copy_url", "process_title"
+        "nombre_copia", "copy_url", "process_title",
+        "agency_matches", "agency_selected_idx", "agency_search_query",
+        "ag_nombre", "ag_codigo", "ag_grupo_gest", "ag_telefono", "ag_email",
+        "ag_direccion", "ag_comision", "ag_comision_oferta", "ag_comision_2x1",
+        "ag_iva", "ag_iva_servicio_opcional"
     ]
     for k in keys_to_delete:
         st.session_state.pop(k, None)
@@ -200,6 +250,16 @@ def on_crucero_year_change():
 
 def on_crucero_boat_change():
     st.session_state["crucero_boat"] = st.session_state.get("crucero_boat_widget")
+
+def normalize_text(value):
+    if value is None:
+        return ""
+    return str(value).strip().lower()
+
+def normalize_phone(value):
+    if value is None:
+        return ""
+    return re.sub(r"\D+", "", str(value))
 
 # ──────────────────────────────────────────────────────────────────────────────
 # GOOGLE DRIVE / SHEETS API
@@ -342,6 +402,92 @@ def update_crucero_sheet(spreadsheet_id, barco):
         }
     ).execute()
 
+def append_agency_row(agency_data):
+    sheets_service = get_sheets_service()
+
+    values = [[
+        agency_data.get("Nombre", ""),
+        agency_data.get("CODIGO", ""),
+        agency_data.get("Grupo Gest", ""),
+        agency_data.get("Telefono", ""),
+        agency_data.get("Email", ""),
+        agency_data.get("Direccion", ""),
+        agency_data.get("COMISION AGENCIA", ""),
+        agency_data.get("COMISION AGENCIA ( CON OFERTA )", ""),
+        agency_data.get("COMISION AGENCIA ( OFERTA 2X1 )", ""),
+        agency_data.get("IVA", ""),
+        agency_data.get("IVA SERVICIO OPCIONAL", ""),
+    ]]
+
+    sheets_service.spreadsheets().values().append(
+        spreadsheetId=AGENCY_SHEET_ID,
+        range=f"{AGENCY_SHEET_NAME}!A:K",
+        valueInputOption="USER_ENTERED",
+        insertDataOption="INSERT_ROWS",
+        body={"values": values}
+    ).execute()
+
+def get_agencies():
+    sheets_service = get_sheets_service()
+
+    response = sheets_service.spreadsheets().values().get(
+        spreadsheetId=AGENCY_SHEET_ID,
+        range=f"{AGENCY_SHEET_NAME}!A:K"
+    ).execute()
+
+    rows = response.get("values", [])
+    agencies = []
+
+    for idx, row in enumerate(rows, start=1):
+        row = row + [""] * (11 - len(row))
+        data = {
+            "row_number": idx,
+            "Nombre": row[0],
+            "CODIGO": row[1],
+            "Grupo Gest": row[2],
+            "Telefono": row[3],
+            "Email": row[4],
+            "Direccion": row[5],
+            "COMISION AGENCIA": row[6],
+            "COMISION AGENCIA ( CON OFERTA )": row[7],
+            "COMISION AGENCIA ( OFERTA 2X1 )": row[8],
+            "IVA": row[9],
+            "IVA SERVICIO OPCIONAL": row[10],
+        }
+
+        joined = " | ".join([
+            normalize_text(data["Nombre"]),
+            normalize_text(data["CODIGO"]),
+            normalize_text(data["Grupo Gest"]),
+            normalize_text(data["Telefono"]),
+            normalize_text(data["Email"]),
+            normalize_text(data["Direccion"]),
+        ])
+
+        data["_search_blob"] = joined
+        data["_phone_norm"] = normalize_phone(data["Telefono"])
+        agencies.append(data)
+
+    return agencies
+
+def search_agencies(query):
+    agencies = get_agencies()
+    q = normalize_text(query)
+    q_phone = normalize_phone(query)
+
+    if not q and not q_phone:
+        return []
+
+    matches = []
+    for ag in agencies:
+        if q and q in ag["_search_blob"]:
+            matches.append(ag)
+            continue
+        if q_phone and q_phone in ag["_phone_norm"]:
+            matches.append(ag)
+
+    return matches
+
 @st.cache_data(ttl=300)
 def get_years():
     folders = list_folder_items(DRIVE_ROOT_ID, folders_only=True)
@@ -460,7 +606,7 @@ section.stMain .block-container,
     padding-bottom:1rem !important;
     padding-left:1rem !important;
     padding-right:1rem !important;
-    max-width:1500px !important;
+    max-width:1700px !important;
     margin:0 auto !important;
 }
 
@@ -509,8 +655,10 @@ div.st-key-btn_ir_salida button { background:#FFF3E4 !important; }
 div.st-key-btn_crear_crucero_open button,
 div.st-key-btn_crear_crucero_action button { background:#F1EBFF !important; }
 div.st-key-btn_excursiones button { background:#E9F7FB !important; }
-div.st-key-btn_nueva_agencia button { background:#EEF4FF !important; }
-div.st-key-btn_buscar_agencia button { background:#ECF8EF !important; }
+div.st-key-btn_nueva_agencia button,
+div.st-key-btn_guardar_agencia button { background:#EAF8F0 !important; }
+div.st-key-btn_buscar_agencia button,
+div.st-key-btn_ejecutar_busqueda_agencia button { background:#FFF4EA !important; }
 
 div.st-key-btn_crear_es button:hover { background:#E5EEFF !important; }
 div.st-key-btn_crear_grupos button:hover { background:#E3F3E7 !important; }
@@ -518,8 +666,10 @@ div.st-key-btn_ir_salida button:hover { background:#FFEBCF !important; }
 div.st-key-btn_crear_crucero_open button:hover,
 div.st-key-btn_crear_crucero_action button:hover { background:#E8DFFF !important; }
 div.st-key-btn_excursiones button:hover { background:#DEF2F8 !important; }
-div.st-key-btn_nueva_agencia button:hover { background:#E5EEFF !important; }
-div.st-key-btn_buscar_agencia button:hover { background:#E3F3E7 !important; }
+div.st-key-btn_nueva_agencia button:hover,
+div.st-key-btn_guardar_agencia button:hover { background:#DDF3E7 !important; }
+div.st-key-btn_buscar_agencia button:hover,
+div.st-key-btn_ejecutar_busqueda_agencia button:hover { background:#FFE9D7 !important; }
 
 div.st-key-btn_crear_es button:hover,
 div.st-key-btn_crear_grupos button:hover,
@@ -528,7 +678,9 @@ div.st-key-btn_crear_crucero_open button:hover,
 div.st-key-btn_crear_crucero_action button:hover,
 div.st-key-btn_excursiones button:hover,
 div.st-key-btn_nueva_agencia button:hover,
+div.st-key-btn_guardar_agencia button:hover,
 div.st-key-btn_buscar_agencia button:hover,
+div.st-key-btn_ejecutar_busqueda_agencia button:hover,
 .logout-btn > div > button:hover {
     color:#163D78 !important;
     border-color:rgba(33,77,146,0.24) !important;
@@ -618,6 +770,8 @@ div.st-key-btn_buscar_agencia button:hover,
 .card-salida { background:#FFF8F1; border-color:#F1DFC7; }
 .card-crucero { background:#F7F4FF; border-color:#E4DDF9; }
 .card-excursiones { background:#EEF8FB; border-color:#D5EAF1; }
+.card-nueva-agencia { background:#F1FAF4; border-color:#D7EEDC; }
+.card-buscar-agencia { background:#FFF7EF; border-color:#F4E1CA; }
 
 .action-top { display:flex; align-items:flex-start; gap:0.75rem; }
 
@@ -636,6 +790,8 @@ div.st-key-btn_buscar_agencia button:hover,
 .card-salida .action-icon { background:#FFF0DD; border:1px solid #F2DEC0; }
 .card-crucero .action-icon { background:#EEE8FF; border:1px solid #DDD2FF; }
 .card-excursiones .action-icon { background:#E2F2F7; border:1px solid #CFE6EE; }
+.card-nueva-agencia .action-icon { background:#E2F4E7; border:1px solid #CFE5D6; }
+.card-buscar-agencia .action-icon { background:#FDEBD9; border:1px solid #F2D9B9; }
 
 .action-text {
     display:flex;
@@ -674,7 +830,7 @@ div.st-key-btn_buscar_agencia button:hover,
     margin-top:1rem;
     padding-top:0.2rem;
     width:100%;
-    max-width:760px;
+    max-width:980px;
 }
 
 .done-link {
@@ -723,6 +879,32 @@ div.st-key-btn_buscar_agencia button:hover,
     white-space:normal !important;
 }
 
+.agency-card {
+    background:#FBFCFF;
+    border:1px solid #E6EBF3;
+    border-radius:18px;
+    padding:1rem;
+    margin-top:0.75rem;
+}
+.agency-grid {
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:0.85rem 1rem;
+}
+.agency-item-label {
+    font-size:0.68rem;
+    color:#7E889D;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    margin-bottom:0.16rem;
+}
+.agency-item-value {
+    font-size:0.8rem;
+    color:#1F2937;
+    line-height:1.35;
+    word-break:break-word;
+}
+
 .history-row {
     display:flex;
     align-items:center;
@@ -768,6 +950,9 @@ div.st-key-btn_buscar_agencia button:hover,
 }
 .footer-text { font-size:0.71rem; color:#A2ABBD; }
 
+@media (max-width: 1400px) {
+    .agency-grid { grid-template-columns:1fr; }
+}
 @media (max-width: 1300px) {
     .portal-header { flex-direction:column; align-items:flex-start; }
     .portal-footer { flex-direction:column; align-items:flex-start; }
@@ -845,8 +1030,7 @@ st.markdown('<div class="main-content">', unsafe_allow_html=True)
 st.markdown('<div class="section-eyebrow">ACCIONES RÁPIDAS · QUICK ACTIONS</div>', unsafe_allow_html=True)
 st.markdown(f'<div class="user-pill">👤 {DISPLAY_USER} · {USER_EMAIL}</div>', unsafe_allow_html=True)
 
-# FILA 1
-col1, col2, col3, col4, col5 = st.columns(5, gap="medium")
+col1, col2, col3, col4, col5, col6, col7 = st.columns(7, gap="medium")
 
 with col1:
     st.markdown(f"""
@@ -958,48 +1142,45 @@ with col5:
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-st.markdown("<div style='height:0.9rem'></div>", unsafe_allow_html=True)
-
-# FILA 2
-col6, col7, spacer1, spacer2, spacer3 = st.columns(5, gap="medium")
-
 with col6:
     st.markdown("""
-    <div class="action-box card-es">
+    <div class="action-box card-nueva-agencia">
         <div class="action-top">
             <div class="action-icon">🏢</div>
             <div class="action-text">
                 <div class="action-title">Nueva Agencia</div>
                 <div class="action-title-en">New Agency</div>
-                <div class="action-desc">Crear una nueva ficha o sesión de agencia</div>
-                <div class="action-desc-en">Create a new agency file or working session</div>
+                <div class="action-desc">Crear una agencia y guardarla en la hoja Datos</div>
+                <div class="action-desc-en">Create an agency and save it in Datos sheet</div>
             </div>
         </div>
         <div class="action-button-wrap">
     """, unsafe_allow_html=True)
 
     if st.button("Nueva Agencia", key="btn_nueva_agencia"):
-        st.info("Pendiente de conectar / To be connected")
+        open_panel("nueva_agencia")
+        st.rerun()
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
 with col7:
     st.markdown("""
-    <div class="action-box card-grupos">
+    <div class="action-box card-buscar-agencia">
         <div class="action-top">
             <div class="action-icon">🔎</div>
             <div class="action-text">
                 <div class="action-title">Buscar Agencia</div>
                 <div class="action-title-en">Find Agency</div>
-                <div class="action-desc">Buscar una agencia existente</div>
-                <div class="action-desc-en">Search for an existing agency</div>
+                <div class="action-desc">Buscar por cualquier dato y mostrar la ficha completa</div>
+                <div class="action-desc-en">Search by any known value and show the full record</div>
             </div>
         </div>
         <div class="action-button-wrap">
     """, unsafe_allow_html=True)
 
     if st.button("Buscar Agencia", key="btn_buscar_agencia"):
-        st.info("Pendiente de conectar / To be connected")
+        open_panel("buscar_agencia")
+        st.rerun()
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
@@ -1147,6 +1328,123 @@ if st.session_state.get("open_crucero_form"):
 
     st.markdown('</div>', unsafe_allow_html=True)
 
+if st.session_state.get("open_nueva_agencia_form"):
+    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
+    st.markdown("#### Nueva Agencia · New Agency")
+
+    with st.form("form_nueva_agencia", clear_on_submit=False):
+        c1, c2 = st.columns(2)
+        with c1:
+            ag_nombre = st.text_input("Nombre", key="ag_nombre")
+            ag_codigo = st.text_input("CODIGO", key="ag_codigo")
+            ag_grupo_gest = st.text_input("Grupo Gest", key="ag_grupo_gest")
+            ag_telefono = st.text_input("Telefono", key="ag_telefono")
+            ag_email = st.text_input("Email", key="ag_email")
+            ag_direccion = st.text_input("Direccion", key="ag_direccion")
+        with c2:
+            ag_comision = st.text_input("COMISION AGENCIA", key="ag_comision")
+            ag_comision_oferta = st.text_input("COMISION AGENCIA ( CON OFERTA )", key="ag_comision_oferta")
+            ag_comision_2x1 = st.text_input("COMISION AGENCIA ( OFERTA 2X1 )", key="ag_comision_2x1")
+            ag_iva = st.text_input("IVA", key="ag_iva")
+            ag_iva_servicio_opcional = st.text_input("IVA SERVICIO OPCIONAL", key="ag_iva_servicio_opcional")
+
+        guardar_agencia = st.form_submit_button("Guardar Agencia")
+
+        if guardar_agencia:
+            if not ag_nombre.strip():
+                st.error("El campo Nombre es obligatorio.")
+            elif not ag_codigo.strip():
+                st.error("El campo CODIGO es obligatorio.")
+            else:
+                agency_data = {
+                    "Nombre": ag_nombre.strip(),
+                    "CODIGO": ag_codigo.strip(),
+                    "Grupo Gest": ag_grupo_gest.strip(),
+                    "Telefono": ag_telefono.strip(),
+                    "Email": ag_email.strip(),
+                    "Direccion": ag_direccion.strip(),
+                    "COMISION AGENCIA": ag_comision.strip(),
+                    "COMISION AGENCIA ( CON OFERTA )": ag_comision_oferta.strip(),
+                    "COMISION AGENCIA ( OFERTA 2X1 )": ag_comision_2x1.strip(),
+                    "IVA": ag_iva.strip(),
+                    "IVA SERVICIO OPCIONAL": ag_iva_servicio_opcional.strip(),
+                }
+
+                try:
+                    append_agency_row(agency_data)
+                    st.success(f'Agencia guardada correctamente: {agency_data["Nombre"]}')
+                except Exception as e:
+                    st.exception(e)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+if st.session_state.get("open_buscar_agencia_form"):
+    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
+    st.markdown("#### Buscar Agencia · Find Agency")
+
+    search_query = st.text_input(
+        "Introduce lo que sepas: nombre, código, grupo, teléfono, email o dirección",
+        key="agency_search_query",
+        placeholder="Ej: viajes pepe / AG123 / 912345678 / info@..."
+    )
+
+    if st.button("Buscar coincidencias", key="btn_ejecutar_busqueda_agencia"):
+        try:
+            matches = search_agencies(search_query)
+            st.session_state["agency_matches"] = matches
+            st.session_state["agency_selected_idx"] = None
+        except Exception as e:
+            st.exception(e)
+
+    matches = st.session_state.get("agency_matches", [])
+
+    if search_query and matches == []:
+        st.info("No hay coincidencias.")
+
+    if len(matches) == 1:
+        st.success("Se ha encontrado 1 coincidencia.")
+        selected_agency = matches[0]
+
+        st.markdown('<div class="agency-card"><div class="agency-grid">', unsafe_allow_html=True)
+        for field in AGENCY_FIELDS:
+            st.markdown(f"""
+            <div>
+                <div class="agency-item-label">{field}</div>
+                <div class="agency-item-value">{selected_agency.get(field, "") or "—"}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        st.markdown('</div></div>', unsafe_allow_html=True)
+
+    elif len(matches) > 1:
+        st.warning(f"Hay {len(matches)} coincidencias. Selecciona la correcta.")
+        options = [
+            f'{i+1}. {ag["Nombre"]} | {ag["CODIGO"]} | {ag["Telefono"]} | {ag["Email"]}'
+            for i, ag in enumerate(matches)
+        ]
+
+        selected_label = st.selectbox(
+            "Elige la agencia correcta",
+            options=options,
+            index=None,
+            placeholder="Selecciona una coincidencia"
+        )
+
+        if selected_label:
+            selected_idx = options.index(selected_label)
+            selected_agency = matches[selected_idx]
+
+            st.markdown('<div class="agency-card"><div class="agency-grid">', unsafe_allow_html=True)
+            for field in AGENCY_FIELDS:
+                st.markdown(f"""
+                <div>
+                    <div class="agency-item-label">{field}</div>
+                    <div class="agency-item-value">{selected_agency.get(field, "") or "—"}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            st.markdown('</div></div>', unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
 saved_name = st.session_state.get("nombre_copia", "")
 saved_url = st.session_state.get("copy_url", "")
 process_title = st.session_state.get("process_title", "Estado del Proceso / Process Status")
@@ -1226,7 +1524,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · Control Panel · v3.8.0</span>
+    <span class="footer-text">Panel de Control · Control Panel · v3.9.0</span>
     <span class="footer-text">Raíz Drive / Drive Root: {DRIVE_ROOT_ID}</span>
 </div>
 """, unsafe_allow_html=True)
