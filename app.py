@@ -261,6 +261,11 @@ def normalize_phone(value):
         return ""
     return re.sub(r"\D+", "", str(value))
 
+def number_to_sheet_string(value):
+    if value is None:
+        return ""
+    return f"{float(value):.2f}"
+
 # ──────────────────────────────────────────────────────────────────────────────
 # GOOGLE DRIVE / SHEETS API
 # ──────────────────────────────────────────────────────────────────────────────
@@ -621,14 +626,16 @@ section.stMain .block-container,
 
 div[data-testid="stTextInput"] label,
 div[data-testid="stSelectbox"] label,
-div[data-testid="stDateInput"] label {
+div[data-testid="stDateInput"] label,
+div[data-testid="stNumberInput"] label {
     color:#4D576D !important;
     font-size:0.78rem !important;
     font-weight:500 !important;
 }
 div[data-testid="stTextInput"] input,
 div[data-testid="stSelectbox"] div[data-baseweb="select"] > div,
-div[data-testid="stDateInput"] input {
+div[data-testid="stDateInput"] input,
+div[data-testid="stNumberInput"] input {
     background:#F8FAFC !important;
     border:1px solid #E5EAF2 !important;
     border-radius:12px !important;
@@ -830,7 +837,7 @@ div.st-key-btn_ejecutar_busqueda_agencia button:hover,
     margin-top:1rem;
     padding-top:0.2rem;
     width:100%;
-    max-width:980px;
+    max-width:1040px;
 }
 
 .done-link {
@@ -1030,7 +1037,7 @@ st.markdown('<div class="main-content">', unsafe_allow_html=True)
 st.markdown('<div class="section-eyebrow">ACCIONES RÁPIDAS · QUICK ACTIONS</div>', unsafe_allow_html=True)
 st.markdown(f'<div class="user-pill">👤 {DISPLAY_USER} · {USER_EMAIL}</div>', unsafe_allow_html=True)
 
-# FILA 1: 5 tarjetas
+# FILA 1
 row1_col1, row1_col2, row1_col3, row1_col4, row1_col5 = st.columns(5, gap="medium")
 
 with row1_col1:
@@ -1143,7 +1150,7 @@ with row1_col5:
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-# FILA 2: 2 tarjetas
+# FILA 2
 row2_col1, row2_col2, row2_col3, row2_col4, row2_col5 = st.columns(5, gap="medium")
 
 with row2_col1:
@@ -1344,17 +1351,79 @@ if st.session_state.get("open_nueva_agencia_form"):
     st.markdown("#### Nueva Agencia · New Agency")
 
     with st.form("form_nueva_agencia", clear_on_submit=False):
-        ag_nombre = st.text_input("Nombre", key="ag_nombre")
-        ag_codigo = st.text_input("CODIGO", key="ag_codigo")
-        ag_grupo_gest = st.text_input("Grupo Gest", key="ag_grupo_gest")
-        ag_telefono = st.text_input("Telefono", key="ag_telefono")
-        ag_email = st.text_input("Email", key="ag_email")
-        ag_direccion = st.text_input("Direccion", key="ag_direccion")
-        ag_comision = st.text_input("COMISION AGENCIA", key="ag_comision")
-        ag_comision_oferta = st.text_input("COMISION AGENCIA ( CON OFERTA )", key="ag_comision_oferta")
-        ag_comision_2x1 = st.text_input("COMISION AGENCIA ( OFERTA 2X1 )", key="ag_comision_2x1")
-        ag_iva = st.text_input("IVA", key="ag_iva")
-        ag_iva_servicio_opcional = st.text_input("IVA SERVICIO OPCIONAL", key="ag_iva_servicio_opcional")
+        row_a1, row_a2 = st.columns(2, gap="medium")
+        with row_a1:
+            ag_nombre = st.text_input("Nombre", key="ag_nombre")
+        with row_a2:
+            ag_codigo = st.text_input("CODIGO", key="ag_codigo")
+
+        row_b1, row_b2 = st.columns(2, gap="medium")
+        with row_b1:
+            ag_grupo_gest = st.text_input("Grupo Gest", key="ag_grupo_gest")
+        with row_b2:
+            ag_telefono = st.text_input("Telefono", key="ag_telefono")
+
+        row_c1, row_c2 = st.columns(2, gap="medium")
+        with row_c1:
+            ag_email = st.text_input("Email", key="ag_email")
+        with row_c2:
+            ag_direccion = st.text_input("Direccion", key="ag_direccion")
+
+        st.markdown("##### Comisiones e IVA")
+
+        row_d1, row_d2, row_d3 = st.columns(3, gap="medium")
+        with row_d1:
+            ag_comision = st.number_input(
+                "COMISION AGENCIA",
+                min_value=0.0,
+                max_value=100.0,
+                value=0.0,
+                step=0.5,
+                format="%0.2f",
+                key="ag_comision"
+            )
+        with row_d2:
+            ag_comision_oferta = st.number_input(
+                "COMISION AGENCIA ( CON OFERTA )",
+                min_value=0.0,
+                max_value=100.0,
+                value=0.0,
+                step=0.5,
+                format="%0.2f",
+                key="ag_comision_oferta"
+            )
+        with row_d3:
+            ag_comision_2x1 = st.number_input(
+                "COMISION AGENCIA ( OFERTA 2X1 )",
+                min_value=0.0,
+                max_value=100.0,
+                value=0.0,
+                step=0.5,
+                format="%0.2f",
+                key="ag_comision_2x1"
+            )
+
+        row_e1, row_e2 = st.columns(2, gap="medium")
+        with row_e1:
+            ag_iva = st.number_input(
+                "IVA",
+                min_value=0.0,
+                max_value=100.0,
+                value=21.0,
+                step=0.5,
+                format="%0.2f",
+                key="ag_iva"
+            )
+        with row_e2:
+            ag_iva_servicio_opcional = st.number_input(
+                "IVA SERVICIO OPCIONAL",
+                min_value=0.0,
+                max_value=100.0,
+                value=21.0,
+                step=0.5,
+                format="%0.2f",
+                key="ag_iva_servicio_opcional"
+            )
 
         guardar_agencia = st.form_submit_button("Guardar Agencia")
 
@@ -1371,11 +1440,11 @@ if st.session_state.get("open_nueva_agencia_form"):
                     "Telefono": ag_telefono.strip(),
                     "Email": ag_email.strip(),
                     "Direccion": ag_direccion.strip(),
-                    "COMISION AGENCIA": ag_comision.strip(),
-                    "COMISION AGENCIA ( CON OFERTA )": ag_comision_oferta.strip(),
-                    "COMISION AGENCIA ( OFERTA 2X1 )": ag_comision_2x1.strip(),
-                    "IVA": ag_iva.strip(),
-                    "IVA SERVICIO OPCIONAL": ag_iva_servicio_opcional.strip(),
+                    "COMISION AGENCIA": number_to_sheet_string(ag_comision),
+                    "COMISION AGENCIA ( CON OFERTA )": number_to_sheet_string(ag_comision_oferta),
+                    "COMISION AGENCIA ( OFERTA 2X1 )": number_to_sheet_string(ag_comision_2x1),
+                    "IVA": number_to_sheet_string(ag_iva),
+                    "IVA SERVICIO OPCIONAL": number_to_sheet_string(ag_iva_servicio_opcional),
                 }
 
                 try:
@@ -1532,7 +1601,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · Control Panel · v4.0.0</span>
+    <span class="footer-text">Panel de Control · Control Panel · v4.1.0</span>
     <span class="footer-text">Raíz Drive / Drive Root: {DRIVE_ROOT_ID}</span>
 </div>
 """, unsafe_allow_html=True)
