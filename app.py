@@ -1046,8 +1046,8 @@ with row1_col1:
         <div class="action-top">
             <div class="action-icon">📋</div>
             <div class="action-text">
-                <div class="action-title">Nueva Confirmación ES</div>
-                <div class="action-title-en">New ES Confirmation</div>
+                <div class="action-title">Nueva Confirmación</div>
+                <div class="action-title-en">New Confirmation</div>
                 <div class="action-desc">Crear sesión MASTER de trabajo para {DISPLAY_USER}</div>
                 <div class="action-desc-en">Create MASTER working session for {DISPLAY_USER}</div>
             </div>
