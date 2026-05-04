@@ -25,6 +25,9 @@ TEMPLATE_ID_GRUPOS = "1Z7ktX3PhVkMibWpzdrDDqAT4aPsmjzSJPf1SgZcL5-w"
 TEMPLATE_ID_CRUCERO = "1zSJPi6St_Z5Jw1c6eieVnKI4NyEdP7E9n3WTZ9yy3C0"
 EXCURSIONES_SHEET_ID = "1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg"
 
+AGENCY_SPREADSHEET_ID = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
+AGENCY_SHEET_NAME = "Datos"
+
 FOLDER_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
 DRIVE_ROOT_ID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
 
@@ -53,11 +56,14 @@ defaults = {
     "active_panel": None,
     "open_salida_form": False,
     "open_crucero_form": False,
+    "open_agencia_form": False,
     "salida_year": None,
     "salida_boat": None,
     "salida_name": None,
     "crucero_year": None,
     "crucero_boat": None,
+    "agencia_last_saved_name": None,
+    "agencia_last_saved_row": None,
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -82,6 +88,14 @@ def get_saludo_en():
         return "Good afternoon"
     return "Good evening"
 
+def normalize_text(value):
+    return str(value).strip() if value is not None else ""
+
+def format_decimal(value, decimals=2):
+    if value is None:
+        return ""
+    return f"{float(value):.{decimals}f}"
+
 def clear_salida_state():
     for k in [
         "salida_year", "salida_boat", "salida_name",
@@ -96,37 +110,67 @@ def clear_crucero_state():
     ]:
         st.session_state.pop(k, None)
 
+def clear_agencia_state():
+    for k in [
+        "agencia_nombre_widget",
+        "agencia_codigo_widget",
+        "agencia_grupo_gestion_widget",
+        "agencia_telefono_widget",
+        "agencia_email_widget",
+        "agencia_direccion_widget",
+        "agencia_comision_widget",
+        "agencia_comision_oferta_widget",
+        "agencia_comision_2x1_widget",
+        "agencia_iva_widget",
+        "agencia_iva_servicio_opcional_widget",
+    ]:
+        st.session_state.pop(k, None)
+
 def close_all_panels():
     st.session_state["open_salida_form"] = False
     st.session_state["open_crucero_form"] = False
+    st.session_state["open_agencia_form"] = False
 
 def open_panel(panel_name):
     close_all_panels()
 
     if panel_name == "salida":
         clear_crucero_state()
+        clear_agencia_state()
         st.session_state["open_salida_form"] = True
     elif panel_name == "crucero":
         clear_salida_state()
+        clear_agencia_state()
         st.session_state["open_crucero_form"] = True
+    elif panel_name == "agencia":
+        clear_salida_state()
+        clear_crucero_state()
+        st.session_state["open_agencia_form"] = True
 
     st.session_state["active_panel"] = panel_name
 
 def clear_all_selectors():
     clear_salida_state()
     clear_crucero_state()
+    clear_agencia_state()
     close_all_panels()
     st.session_state["active_panel"] = None
 
 def do_logout():
     keys_to_delete = [
         "authenticated", "user_email", "display_name", "confirm_state",
-        "session_type", "active_panel", "open_salida_form", "open_crucero_form",
+        "session_type", "active_panel", "open_salida_form", "open_crucero_form", "open_agencia_form",
         "salida_year", "salida_boat", "salida_name",
         "crucero_year", "crucero_boat",
         "salida_year_widget", "salida_boat_widget", "salida_name_widget",
         "crucero_year_widget", "crucero_boat_widget",
-        "nombre_copia", "copy_url", "process_title"
+        "nombre_copia", "copy_url", "process_title",
+        "agencia_last_saved_name", "agencia_last_saved_row",
+        "agencia_nombre_widget", "agencia_codigo_widget", "agencia_grupo_gestion_widget",
+        "agencia_telefono_widget", "agencia_email_widget", "agencia_direccion_widget",
+        "agencia_comision_widget", "agencia_comision_oferta_widget",
+        "agencia_comision_2x1_widget", "agencia_iva_widget",
+        "agencia_iva_servicio_opcional_widget"
     ]
     for k in keys_to_delete:
         st.session_state.pop(k, None)
@@ -342,6 +386,51 @@ def update_crucero_sheet(spreadsheet_id, barco):
         }
     ).execute()
 
+def append_agencia(
+    nombre,
+    codigo,
+    grupo_gestion,
+    telefono,
+    email,
+    direccion,
+    comision_agencia,
+    comision_agencia_oferta,
+    comision_agencia_2x1,
+    iva,
+    iva_servicio_opcional
+):
+    sheets_service = get_sheets_service()
+
+    values = [[
+        normalize_text(nombre),
+        normalize_text(codigo),
+        normalize_text(grupo_gestion),
+        normalize_text(telefono),
+        normalize_text(email),
+        normalize_text(direccion),
+        format_decimal(comision_agencia, 2),
+        format_decimal(comision_agencia_oferta, 2),
+        format_decimal(comision_agencia_2x1, 2),
+        format_decimal(iva, 2),
+        format_decimal(iva_servicio_opcional, 2),
+    ]]
+
+    result = sheets_service.spreadsheets().values().append(
+        spreadsheetId=AGENCY_SPREADSHEET_ID,
+        range=f"'{AGENCY_SHEET_NAME}'!A:K",
+        valueInputOption="USER_ENTERED",
+        insertDataOption="INSERT_ROWS",
+        includeValuesInResponse=True,
+        body={"values": values}
+    ).execute()
+
+    updates = result.get("updates", {})
+    return {
+        "updated_range": updates.get("updatedRange", ""),
+        "updated_rows": updates.get("updatedRows", 0),
+        "updated_cells": updates.get("updatedCells", 0)
+    }
+
 @st.cache_data(ttl=300)
 def get_years():
     folders = list_folder_items(DRIVE_ROOT_ID, folders_only=True)
@@ -460,7 +549,7 @@ section.stMain .block-container,
     padding-bottom:1rem !important;
     padding-left:1rem !important;
     padding-right:1rem !important;
-    max-width:1500px !important;
+    max-width:1720px !important;
     margin:0 auto !important;
 }
 
@@ -475,14 +564,17 @@ section.stMain .block-container,
 
 div[data-testid="stTextInput"] label,
 div[data-testid="stSelectbox"] label,
-div[data-testid="stDateInput"] label {
+div[data-testid="stDateInput"] label,
+div[data-testid="stNumberInput"] label {
     color:#4D576D !important;
     font-size:0.78rem !important;
     font-weight:500 !important;
 }
 div[data-testid="stTextInput"] input,
 div[data-testid="stSelectbox"] div[data-baseweb="select"] > div,
-div[data-testid="stDateInput"] input {
+div[data-testid="stDateInput"] input,
+div[data-testid="stNumberInput"] input,
+div[data-testid="stTextArea"] textarea {
     background:#F8FAFC !important;
     border:1px solid #E5EAF2 !important;
     border-radius:12px !important;
@@ -509,6 +601,8 @@ div.st-key-btn_ir_salida button { background:#FFF3E4 !important; }
 div.st-key-btn_crear_crucero_open button,
 div.st-key-btn_crear_crucero_action button { background:#F1EBFF !important; }
 div.st-key-btn_excursiones button { background:#E9F7FB !important; }
+div.st-key-btn_nueva_agencia_open button,
+div.st-key-btn_guardar_agencia button { background:#FFF1F5 !important; }
 
 div.st-key-btn_crear_es button:hover { background:#E5EEFF !important; }
 div.st-key-btn_crear_grupos button:hover { background:#E3F3E7 !important; }
@@ -516,6 +610,8 @@ div.st-key-btn_ir_salida button:hover { background:#FFEBCF !important; }
 div.st-key-btn_crear_crucero_open button:hover,
 div.st-key-btn_crear_crucero_action button:hover { background:#E8DFFF !important; }
 div.st-key-btn_excursiones button:hover { background:#DEF2F8 !important; }
+div.st-key-btn_nueva_agencia_open button:hover,
+div.st-key-btn_guardar_agencia button:hover { background:#FFE4EE !important; }
 
 div.st-key-btn_crear_es button:hover,
 div.st-key-btn_crear_grupos button:hover,
@@ -523,6 +619,8 @@ div.st-key-btn_ir_salida button:hover,
 div.st-key-btn_crear_crucero_open button:hover,
 div.st-key-btn_crear_crucero_action button:hover,
 div.st-key-btn_excursiones button:hover,
+div.st-key-btn_nueva_agencia_open button:hover,
+div.st-key-btn_guardar_agencia button:hover,
 .logout-btn > div > button:hover {
     color:#163D78 !important;
     border-color:rgba(33,77,146,0.24) !important;
@@ -612,6 +710,7 @@ div.st-key-btn_excursiones button:hover,
 .card-salida { background:#FFF8F1; border-color:#F1DFC7; }
 .card-crucero { background:#F7F4FF; border-color:#E4DDF9; }
 .card-excursiones { background:#EEF8FB; border-color:#D5EAF1; }
+.card-agencia { background:#FFF5F8; border-color:#F3D8E4; }
 
 .action-top { display:flex; align-items:flex-start; gap:0.75rem; }
 
@@ -630,6 +729,7 @@ div.st-key-btn_excursiones button:hover,
 .card-salida .action-icon { background:#FFF0DD; border:1px solid #F2DEC0; }
 .card-crucero .action-icon { background:#EEE8FF; border:1px solid #DDD2FF; }
 .card-excursiones .action-icon { background:#E2F2F7; border:1px solid #CFE6EE; }
+.card-agencia .action-icon { background:#FDEAF1; border:1px solid #F2D4E1; }
 
 .action-text {
     display:flex;
@@ -668,7 +768,7 @@ div.st-key-btn_excursiones button:hover,
     margin-top:1rem;
     padding-top:0.2rem;
     width:100%;
-    max-width:760px;
+    max-width:1080px;
 }
 
 .done-link {
@@ -762,7 +862,7 @@ div.st-key-btn_excursiones button:hover,
 }
 .footer-text { font-size:0.71rem; color:#A2ABBD; }
 
-@media (max-width: 1300px) {
+@media (max-width: 1450px) {
     .portal-header { flex-direction:column; align-items:flex-start; }
     .portal-footer { flex-direction:column; align-items:flex-start; }
 }
@@ -839,7 +939,7 @@ st.markdown('<div class="main-content">', unsafe_allow_html=True)
 st.markdown('<div class="section-eyebrow">ACCIONES RÁPIDAS · QUICK ACTIONS</div>', unsafe_allow_html=True)
 st.markdown(f'<div class="user-pill">👤 {DISPLAY_USER} · {USER_EMAIL}</div>', unsafe_allow_html=True)
 
-col1, col2, col3, col4, col5 = st.columns(5, gap="medium")
+col1, col2, col3, col4, col5, col6 = st.columns(6, gap="medium")
 
 with col1:
     st.markdown(f"""
@@ -948,6 +1048,29 @@ with col5:
         f'<a class="done-link" href="{excursiones_url}" target="_blank">Abrir Excursiones ↗</a>',
         unsafe_allow_html=True
     )
+
+    st.markdown('</div></div>', unsafe_allow_html=True)
+
+with col6:
+    st.markdown("""
+    <div class="action-box card-agencia">
+        <div class="action-top">
+            <div class="action-icon">🏢</div>
+            <div class="action-text">
+                <div class="action-title">Nueva Agencia</div>
+                <div class="action-title-en">New Agency</div>
+                <div class="action-desc">Crear una agencia nueva y añadirla a la tabla de agencias</div>
+                <div class="action-desc-en">Create a new agency and append it to the agencies table</div>
+            </div>
+        </div>
+        <div class="action-button-wrap">
+    """, unsafe_allow_html=True)
+
+    if st.button("Nueva Agencia", key="btn_nueva_agencia_open"):
+        open_panel("agencia")
+        st.session_state["agencia_last_saved_name"] = None
+        st.session_state["agencia_last_saved_row"] = None
+        st.rerun()
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
@@ -1095,6 +1218,119 @@ if st.session_state.get("open_crucero_form"):
 
     st.markdown('</div>', unsafe_allow_html=True)
 
+if st.session_state.get("open_agencia_form"):
+    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
+    st.markdown("#### Nueva Agencia · New Agency")
+
+    try:
+        with st.form("agencia_form", clear_on_submit=False):
+            a1, a2, a3 = st.columns(3)
+            with a1:
+                agencia_nombre = st.text_input("Nombre", key="agencia_nombre_widget", placeholder="Nombre agencia")
+            with a2:
+                agencia_codigo = st.text_input("CODIGO", key="agencia_codigo_widget", placeholder="Código")
+            with a3:
+                agencia_grupo = st.text_input("Grupo de Gestion", key="agencia_grupo_gestion_widget", placeholder="Grupo de gestión")
+
+            b1, b2 = st.columns(2)
+            with b1:
+                agencia_telefono = st.text_input("Telefono", key="agencia_telefono_widget", placeholder="Teléfono")
+            with b2:
+                agencia_email = st.text_input("Email", key="agencia_email_widget", placeholder="Email")
+
+            agencia_direccion = st.text_area("Direccion", key="agencia_direccion_widget", placeholder="Dirección", height=90)
+
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                agencia_comision = st.number_input(
+                    "COMISION AGENCIA",
+                    min_value=0.0,
+                    step=0.01,
+                    format="%.2f",
+                    key="agencia_comision_widget"
+                )
+            with c2:
+                agencia_comision_oferta = st.number_input(
+                    "COMISION AGENCIA ( CON OFERTA )",
+                    min_value=0.0,
+                    step=0.01,
+                    format="%.2f",
+                    key="agencia_comision_oferta_widget"
+                )
+            with c3:
+                agencia_comision_2x1 = st.number_input(
+                    "COMISION AGENCIA ( OFERTA 2X1 )",
+                    min_value=0.0,
+                    step=0.01,
+                    format="%.2f",
+                    key="agencia_comision_2x1_widget"
+                )
+
+            d1, d2 = st.columns(2)
+            with d1:
+                agencia_iva = st.number_input(
+                    "IVA",
+                    min_value=0.0,
+                    step=0.01,
+                    format="%.2f",
+                    key="agencia_iva_widget"
+                )
+            with d2:
+                agencia_iva_servicio = st.number_input(
+                    "IVA SERVICIO OPCIONAL",
+                    min_value=0.0,
+                    step=0.01,
+                    format="%.2f",
+                    key="agencia_iva_servicio_opcional_widget"
+                )
+
+            guardar_agencia = st.form_submit_button("Guardar Agencia", use_container_width=False)
+
+            if guardar_agencia:
+                if not normalize_text(agencia_nombre):
+                    st.error("El campo Nombre es obligatorio.")
+                elif not normalize_text(agencia_codigo):
+                    st.error("El campo CODIGO es obligatorio.")
+                else:
+                    result = append_agencia(
+                        nombre=agencia_nombre,
+                        codigo=agencia_codigo,
+                        grupo_gestion=agencia_grupo,
+                        telefono=agencia_telefono,
+                        email=agencia_email,
+                        direccion=agencia_direccion,
+                        comision_agencia=agencia_comision,
+                        comision_agencia_oferta=agencia_comision_oferta,
+                        comision_agencia_2x1=agencia_comision_2x1,
+                        iva=agencia_iva,
+                        iva_servicio_opcional=agencia_iva_servicio
+                    )
+
+                    st.session_state["agencia_last_saved_name"] = agencia_nombre
+                    st.session_state["agencia_last_saved_row"] = result.get("updated_range", "")
+
+                    st.success(f'Agencia guardada correctamente: "{agencia_nombre}".')
+                    if result.get("updated_range"):
+                        st.caption(f'Rango actualizado: {result["updated_range"]}')
+
+        if st.session_state.get("agencia_last_saved_name"):
+            st.markdown(
+                f"""
+                <div style="margin-top:0.8rem;">
+                    <div style="font-size:0.76rem;color:#1F2937;font-weight:600;">Agencia creada / Agency created</div>
+                    <div style="font-size:0.71rem;color:#657087;margin-top:0.15rem;line-height:1.3;">
+                        {st.session_state.get("agencia_last_saved_name")} · {st.session_state.get("agencia_last_saved_row", "")}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+    except Exception as e:
+        st.exception(e)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
 saved_name = st.session_state.get("nombre_copia", "")
 saved_url = st.session_state.get("copy_url", "")
 process_title = st.session_state.get("process_title", "Estado del Proceso / Process Status")
@@ -1174,7 +1410,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · Control Panel · v3.8.0</span>
+    <span class="footer-text">Panel de Control · Control Panel · v3.9.0</span>
     <span class="footer-text">Raíz Drive / Drive Root: {DRIVE_ROOT_ID}</span>
 </div>
 """, unsafe_allow_html=True)
