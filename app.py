@@ -509,6 +509,8 @@ div.st-key-btn_ir_salida button { background:#FFF3E4 !important; }
 div.st-key-btn_crear_crucero_open button,
 div.st-key-btn_crear_crucero_action button { background:#F1EBFF !important; }
 div.st-key-btn_excursiones button { background:#E9F7FB !important; }
+div.st-key-btn_nueva_agencia button { background:#EEF4FF !important; }
+div.st-key-btn_buscar_agencia button { background:#ECF8EF !important; }
 
 div.st-key-btn_crear_es button:hover { background:#E5EEFF !important; }
 div.st-key-btn_crear_grupos button:hover { background:#E3F3E7 !important; }
@@ -516,6 +518,8 @@ div.st-key-btn_ir_salida button:hover { background:#FFEBCF !important; }
 div.st-key-btn_crear_crucero_open button:hover,
 div.st-key-btn_crear_crucero_action button:hover { background:#E8DFFF !important; }
 div.st-key-btn_excursiones button:hover { background:#DEF2F8 !important; }
+div.st-key-btn_nueva_agencia button:hover { background:#E5EEFF !important; }
+div.st-key-btn_buscar_agencia button:hover { background:#E3F3E7 !important; }
 
 div.st-key-btn_crear_es button:hover,
 div.st-key-btn_crear_grupos button:hover,
@@ -523,6 +527,8 @@ div.st-key-btn_ir_salida button:hover,
 div.st-key-btn_crear_crucero_open button:hover,
 div.st-key-btn_crear_crucero_action button:hover,
 div.st-key-btn_excursiones button:hover,
+div.st-key-btn_nueva_agencia button:hover,
+div.st-key-btn_buscar_agencia button:hover,
 .logout-btn > div > button:hover {
     color:#163D78 !important;
     border-color:rgba(33,77,146,0.24) !important;
@@ -839,6 +845,7 @@ st.markdown('<div class="main-content">', unsafe_allow_html=True)
 st.markdown('<div class="section-eyebrow">ACCIONES RÁPIDAS · QUICK ACTIONS</div>', unsafe_allow_html=True)
 st.markdown(f'<div class="user-pill">👤 {DISPLAY_USER} · {USER_EMAIL}</div>', unsafe_allow_html=True)
 
+# FILA 1
 col1, col2, col3, col4, col5 = st.columns(5, gap="medium")
 
 with col1:
@@ -948,6 +955,51 @@ with col5:
         f'<a class="done-link" href="{excursiones_url}" target="_blank">Abrir Excursiones ↗</a>',
         unsafe_allow_html=True
     )
+
+    st.markdown('</div></div>', unsafe_allow_html=True)
+
+st.markdown("<div style='height:0.9rem'></div>", unsafe_allow_html=True)
+
+# FILA 2
+col6, col7, spacer1, spacer2, spacer3 = st.columns(5, gap="medium")
+
+with col6:
+    st.markdown("""
+    <div class="action-box card-es">
+        <div class="action-top">
+            <div class="action-icon">🏢</div>
+            <div class="action-text">
+                <div class="action-title">Nueva Agencia</div>
+                <div class="action-title-en">New Agency</div>
+                <div class="action-desc">Crear una nueva ficha o sesión de agencia</div>
+                <div class="action-desc-en">Create a new agency file or working session</div>
+            </div>
+        </div>
+        <div class="action-button-wrap">
+    """, unsafe_allow_html=True)
+
+    if st.button("Nueva Agencia", key="btn_nueva_agencia"):
+        st.info("Pendiente de conectar / To be connected")
+
+    st.markdown('</div></div>', unsafe_allow_html=True)
+
+with col7:
+    st.markdown("""
+    <div class="action-box card-grupos">
+        <div class="action-top">
+            <div class="action-icon">🔎</div>
+            <div class="action-text">
+                <div class="action-title">Buscar Agencia</div>
+                <div class="action-title-en">Find Agency</div>
+                <div class="action-desc">Buscar una agencia existente</div>
+                <div class="action-desc-en">Search for an existing agency</div>
+            </div>
+        </div>
+        <div class="action-button-wrap">
+    """, unsafe_allow_html=True)
+
+    if st.button("Buscar Agencia", key="btn_buscar_agencia"):
+        st.info("Pendiente de conectar / To be connected")
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
