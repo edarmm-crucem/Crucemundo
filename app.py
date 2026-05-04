@@ -23,6 +23,7 @@ LOGO_URL = f"https://lh3.googleusercontent.com/d/{LOGO_ID}"
 TEMPLATE_ID_ES = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
 TEMPLATE_ID_GRUPOS = "1Z7ktX3PhVkMibWpzdrDDqAT4aPsmjzSJPf1SgZcL5-w"
 TEMPLATE_ID_CRUCERO = "1zSJPi6St_Z5Jw1c6eieVnKI4NyEdP7E9n3WTZ9yy3C0"
+EXCURSIONES_SHEET_ID = "1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg"
 
 FOLDER_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
 DRIVE_ROOT_ID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
@@ -439,9 +440,7 @@ def create_crucero_file(barco, fecha_obj):
         "boat": barco
     }
 
-
-
-    # ──────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────────
 # CSS
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -461,7 +460,7 @@ section.stMain .block-container,
     padding-bottom:1rem !important;
     padding-left:1rem !important;
     padding-right:1rem !important;
-    max-width:1250px !important;
+    max-width:1500px !important;
     margin:0 auto !important;
 }
 
@@ -509,18 +508,21 @@ div.st-key-btn_crear_grupos button { background:#ECF8EF !important; }
 div.st-key-btn_ir_salida button { background:#FFF3E4 !important; }
 div.st-key-btn_crear_crucero_open button,
 div.st-key-btn_crear_crucero_action button { background:#F1EBFF !important; }
+div.st-key-btn_excursiones button { background:#E9F7FB !important; }
 
 div.st-key-btn_crear_es button:hover { background:#E5EEFF !important; }
 div.st-key-btn_crear_grupos button:hover { background:#E3F3E7 !important; }
 div.st-key-btn_ir_salida button:hover { background:#FFEBCF !important; }
 div.st-key-btn_crear_crucero_open button:hover,
 div.st-key-btn_crear_crucero_action button:hover { background:#E8DFFF !important; }
+div.st-key-btn_excursiones button:hover { background:#DEF2F8 !important; }
 
 div.st-key-btn_crear_es button:hover,
 div.st-key-btn_crear_grupos button:hover,
 div.st-key-btn_ir_salida button:hover,
 div.st-key-btn_crear_crucero_open button:hover,
 div.st-key-btn_crear_crucero_action button:hover,
+div.st-key-btn_excursiones button:hover,
 .logout-btn > div > button:hover {
     color:#163D78 !important;
     border-color:rgba(33,77,146,0.24) !important;
@@ -609,6 +611,7 @@ div.st-key-btn_crear_crucero_action button:hover,
 .card-grupos { background:#F4FBF6; border-color:#D8EEDC; }
 .card-salida { background:#FFF8F1; border-color:#F1DFC7; }
 .card-crucero { background:#F7F4FF; border-color:#E4DDF9; }
+.card-excursiones { background:#EEF8FB; border-color:#D5EAF1; }
 
 .action-top { display:flex; align-items:flex-start; gap:0.75rem; }
 
@@ -626,6 +629,7 @@ div.st-key-btn_crear_crucero_action button:hover,
 .card-grupos .action-icon { background:#E7F5EA; border:1px solid #D0EAD7; }
 .card-salida .action-icon { background:#FFF0DD; border:1px solid #F2DEC0; }
 .card-crucero .action-icon { background:#EEE8FF; border:1px solid #DDD2FF; }
+.card-excursiones .action-icon { background:#E2F2F7; border:1px solid #CFE6EE; }
 
 .action-text {
     display:flex;
@@ -758,7 +762,7 @@ div.st-key-btn_crear_crucero_action button:hover,
 }
 .footer-text { font-size:0.71rem; color:#A2ABBD; }
 
-@media (max-width: 1100px) {
+@media (max-width: 1300px) {
     .portal-header { flex-direction:column; align-items:flex-start; }
     .portal-footer { flex-direction:column; align-items:flex-start; }
 }
@@ -806,9 +810,7 @@ if not st.session_state["authenticated"]:
     st.markdown('</div></div>', unsafe_allow_html=True)
     st.stop()
 
-
-
-    # ──────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────────
 # APP
 # ──────────────────────────────────────────────────────────────────────────────
 USER_EMAIL = st.session_state.get("user_email", "").strip()
@@ -816,6 +818,7 @@ DISPLAY_USER = st.session_state.get("display_name", "").strip() or "Sin usuario"
 SALUDO = get_saludo()
 SALUDO_EN = get_saludo_en()
 confirm_state = st.session_state.get("confirm_state", "idle")
+excursiones_url = f"https://docs.google.com/spreadsheets/d/{EXCURSIONES_SHEET_ID}/edit"
 
 st.markdown(f"""
 <div class="portal-header">
@@ -836,7 +839,7 @@ st.markdown('<div class="main-content">', unsafe_allow_html=True)
 st.markdown('<div class="section-eyebrow">ACCIONES RÁPIDAS · QUICK ACTIONS</div>', unsafe_allow_html=True)
 st.markdown(f'<div class="user-pill">👤 {DISPLAY_USER} · {USER_EMAIL}</div>', unsafe_allow_html=True)
 
-col1, col2, col3, col4 = st.columns(4, gap="medium")
+col1, col2, col3, col4, col5 = st.columns(5, gap="medium")
 
 with col1:
     st.markdown(f"""
@@ -923,6 +926,28 @@ with col4:
     if st.button("Nuevo Crucero", key="btn_crear_crucero_open"):
         open_panel("crucero")
         st.rerun()
+
+    st.markdown('</div></div>', unsafe_allow_html=True)
+
+with col5:
+    st.markdown("""
+    <div class="action-box card-excursiones">
+        <div class="action-top">
+            <div class="action-icon">🏝️</div>
+            <div class="action-text">
+                <div class="action-title">Excursiones</div>
+                <div class="action-title-en">Excursions</div>
+                <div class="action-desc">Abrir la hoja de Excursiones</div>
+                <div class="action-desc-en">Open the Excursions sheet</div>
+            </div>
+        </div>
+        <div class="action-button-wrap">
+    """, unsafe_allow_html=True)
+
+    st.markdown(
+        f'<a class="done-link" href="{excursiones_url}" target="_blank">Abrir Excursiones ↗</a>',
+        unsafe_allow_html=True
+    )
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
