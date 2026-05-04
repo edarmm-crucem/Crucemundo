@@ -261,10 +261,10 @@ def normalize_phone(value):
         return ""
     return re.sub(r"\D+", "", str(value))
 
-def number_to_sheet_string(value):
+def percent_to_sheet_decimal(value):
     if value is None:
         return ""
-    return f"{float(value):.2f}"
+    return round(float(value) / 100, 4)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # GOOGLE DRIVE / SHEETS API
@@ -1374,7 +1374,7 @@ if st.session_state.get("open_nueva_agencia_form"):
         row_d1, row_d2, row_d3 = st.columns(3, gap="medium")
         with row_d1:
             ag_comision = st.number_input(
-                "COMISION AGENCIA",
+                "COMISION AGENCIA (%)",
                 min_value=0.0,
                 max_value=100.0,
                 value=0.0,
@@ -1384,7 +1384,7 @@ if st.session_state.get("open_nueva_agencia_form"):
             )
         with row_d2:
             ag_comision_oferta = st.number_input(
-                "COMISION AGENCIA ( CON OFERTA )",
+                "COMISION AGENCIA ( CON OFERTA ) (%)",
                 min_value=0.0,
                 max_value=100.0,
                 value=0.0,
@@ -1394,7 +1394,7 @@ if st.session_state.get("open_nueva_agencia_form"):
             )
         with row_d3:
             ag_comision_2x1 = st.number_input(
-                "COMISION AGENCIA ( OFERTA 2X1 )",
+                "COMISION AGENCIA ( OFERTA 2X1 ) (%)",
                 min_value=0.0,
                 max_value=100.0,
                 value=0.0,
@@ -1406,7 +1406,7 @@ if st.session_state.get("open_nueva_agencia_form"):
         row_e1, row_e2 = st.columns(2, gap="medium")
         with row_e1:
             ag_iva = st.number_input(
-                "IVA",
+                "IVA (%)",
                 min_value=0.0,
                 max_value=100.0,
                 value=21.0,
@@ -1416,7 +1416,7 @@ if st.session_state.get("open_nueva_agencia_form"):
             )
         with row_e2:
             ag_iva_servicio_opcional = st.number_input(
-                "IVA SERVICIO OPCIONAL",
+                "IVA SERVICIO OPCIONAL (%)",
                 min_value=0.0,
                 max_value=100.0,
                 value=21.0,
@@ -1440,11 +1440,11 @@ if st.session_state.get("open_nueva_agencia_form"):
                     "Telefono": ag_telefono.strip(),
                     "Email": ag_email.strip(),
                     "Direccion": ag_direccion.strip(),
-                    "COMISION AGENCIA": number_to_sheet_string(ag_comision),
-                    "COMISION AGENCIA ( CON OFERTA )": number_to_sheet_string(ag_comision_oferta),
-                    "COMISION AGENCIA ( OFERTA 2X1 )": number_to_sheet_string(ag_comision_2x1),
-                    "IVA": number_to_sheet_string(ag_iva),
-                    "IVA SERVICIO OPCIONAL": number_to_sheet_string(ag_iva_servicio_opcional),
+                    "COMISION AGENCIA": percent_to_sheet_decimal(ag_comision),
+                    "COMISION AGENCIA ( CON OFERTA )": percent_to_sheet_decimal(ag_comision_oferta),
+                    "COMISION AGENCIA ( OFERTA 2X1 )": percent_to_sheet_decimal(ag_comision_2x1),
+                    "IVA": percent_to_sheet_decimal(ag_iva),
+                    "IVA SERVICIO OPCIONAL": percent_to_sheet_decimal(ag_iva_servicio_opcional),
                 }
 
                 try:
@@ -1601,7 +1601,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · Control Panel · v4.1.0</span>
+    <span class="footer-text">Panel de Control · Control Panel · v4.2.0</span>
     <span class="footer-text">Raíz Drive / Drive Root: {DRIVE_ROOT_ID}</span>
 </div>
 """, unsafe_allow_html=True)
