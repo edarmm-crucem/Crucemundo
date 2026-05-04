@@ -1073,15 +1073,9 @@ st.markdown("""
     <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">
         Ir a Crucemundo
     </a>
-    <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">
-        pte uso
-    </a>
-    <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">
-        pte uso
-    </a>
-    <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">
-        pte uso
-    </a>
+    <a class="web-chip" href="https://www.gmail.es" target="_blank" rel="noopener noreferrer">
+        Gmail
+
 </div>
 """, unsafe_allow_html=True)
 
