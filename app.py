@@ -61,7 +61,7 @@ AGENCY_FIELDS = [
 BARCOS_MAP = {
     "ALB": "MS_ALBERTINA",
     "ARN": "MS_ARENA",
-    "CV": "MS-CRUCEVITA",
+    "CV": "MS_CRUCEVITA",
     "DC": "MS_DOURO_CRUISER",
     "FID": "MS_FIDELIO",
     "LEO": "MS_LEONORA",
@@ -560,7 +560,7 @@ def get_departures(yearname, boatname):
     if not boatfolder:
         return []
     files = list_folder_items(boatfolder["id"], folders_only=False)
-    pattern = re.compile(rf"^{re.escape(boatname)}\d{{6}}$")
+    pattern = re.compile(rf"^{re.escape(boatname)}_\d{{6}}$")
     departures = []
     for file in files:
         name = file["name"].strip()
