@@ -1,0 +1,54 @@
+import streamlit as st
+
+LOGO_ID = "1N7eaCKP1Jeg8KuDXRjJ8tZLhnKStMZ8"
+LOGO_URL = f"https://lh3.googleusercontent.com/d/{LOGO_ID}"
+
+TEMPLATE_ID_ES = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
+TEMPLATE_ID_GRUPOS = "1Z7ktX3PhVkMibWpzdrDDqAT4aPsmjzSJPf1SgZcL5-w"
+TEMPLATE_ID_CRUCERO = "1zSJPi6St_Z5Jw1c6eieVnKI4NyEdP7E9n3WTZ9yy3C0"
+
+EXCURSIONES_SHEET_ID = "1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg"
+AGENCY_SHEET_ID = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
+AGENCY_SHEET_NAME = "Datos"
+FOLDER_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8FCsO"
+DRIVE_ROOT_ID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
+
+VALID_USERS = {
+    "support@crucemundo.com": "Albina",
+    "sales@crucemundo.com": "Sales",
+    "cruise@crucemundo.com": "Cruise",
+    "tania@crucemundo.com": "Tania",
+    "incoming@crucemundo.com": "Incoming",
+    "operations@crucemundo.com": "Operations",
+    "edarmm@gmail.com": "Esteban",
+}
+VALID_PASSWORD = st.secrets["app_password"]
+
+AGENCY_FIELDS = [
+    "Nombre",
+    "CODIGO",
+    "Grupo Gest",
+    "Telefono",
+    "Email",
+    "Direccion",
+    "COMISION AGENCIA",
+    "COMISION AGENCIA CON OFERTA ",
+    "COMISION AGENCIA OFERTA 2X1 ",
+    "IVA",
+    "IVA SERVICIO OPCIONAL",
+]
+
+BARCOS_MAP = {
+    "ALB": "MS_ALBERTINA",
+    "ARN": "MS_ARENA",
+    "CV": "MS_CRUCEVITA",
+    "DC": "MS_DOURO_CRUISER",
+    "FID": "MS_FIDELIO",
+    "LEO": "MS_LEONORA",
+    "RDA": "MS_RIVER_DIAMOND",
+    "RSA": "MS_RIVER_SAPPHIRE",
+    "SPL": "MS_SWISS_SPLENDOR",
+    "VGR": "MS_VISTA_GRACIA",
+    "VMI": "MS_VISTAMILLA",
+    "VRI": "MS_VISTAR_IO",
+}
