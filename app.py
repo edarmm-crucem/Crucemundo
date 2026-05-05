@@ -4,7 +4,7 @@ import urllib.parse
 import time
 import re
 import io
-from google.oauth2 import service_account
+from google.oauth2 import serviceaccount
 from googleapiclient.discovery import build
 from docx import Document
 from docx.shared import Pt, Inches
@@ -59,18 +59,18 @@ AGENCY_FIELDS = [
 ]
 
 BARCOS_MAP = {
-    "ALB": "MS_ALBERTINA",
-    "ARN": "MS_ARENA",
-    "CV": "MS_CRUCEVITA",
-    "DC": "MS_DOURO_CRUISER",
-    "FID": "MS_FIDELIO",
-    "LEO": "MS_LEONORA",
-    "RDA": "MS_RIVER_DIAMOND",
-    "RSA": "MS_RIVER_SAPPHIRE",
-    "SPL": "MS_SWISS_SPLENDOR",
-    "VGR": "MS_VISTA_GRACIA",
-    "VMI": "MS_VISTAMILLA",
-    "VRI": "MS_VISTA_RIO",
+    "ALB": "MSALBERTINA",
+    "ARN": "MSARENA",
+    "CV": "MSCRUCEVITA",
+    "DC": "MSDOUROCRUISER",
+    "FID": "MSFIDELIO",
+    "LEO": "MSLEONORA",
+    "RDA": "MSRIVERDIAMOND",
+    "RSA": "MSRIVERSAPPHIRE",
+    "SPL": "MSSWISSSPLENDOR",
+    "VGR": "MSVISTAGRACIA",
+    "VMI": "MSVISTAMILLA",
+    "VRI": "MSVISTARIO",
 }
 
 defaults = {
@@ -319,7 +319,7 @@ def percent_to_sheet_decimal(value):
 def get_google_creds():
     if "gcp_service_account" not in st.secrets:
         raise Exception("Falta gcp_service_account en secrets.")
-    return service_account.Credentials.from_service_account_info(
+    return serviceaccount.Credentials.from_service_account_info(
         st.secrets["gcp_service_account"],
         scopes=[
             "https://www.googleapis.com/auth/drive",
@@ -583,7 +583,7 @@ def create_crucero_file(barco, fechaobj):
     mm = fechaobj.strftime("%m")
     dd = fechaobj.strftime("%d")
     fechaes = fechaobj.strftime("%d/%m/%Y")
-    nombrenuevo = f"{barco}_{yy}{mm}{dd}"
+    nombrenuevo = f"{barco}{yy}{mm}{dd}"
 
     carpetaanio = get_or_create_folder(DRIVE_ROOT_ID, anio)
     carpetabarco = get_or_create_folder(carpetaanio["id"], barco)
@@ -626,21 +626,24 @@ def extract_first_number(value):
     return int(m.group(1)) if m else 0
 
 
-def split_nombre_apellidos(fullname):
-    if not fullname:
-        return "", ""
-    parts = str(fullname).strip().split()
-    if len(parts) <= 1:
-        return fullname.strip(), ""
-    nombre = parts[0]
-    apellidos = " ".join(parts[1:])
-    return nombre, apellidos
-
-
 def safe_filename(text):
-    text = re.sub(r"[\\/:*?\"<>|]", "", str(text))
+    text = re.sub(r'[\\/:*?"<>|]', "", str(text))
     text = re.sub(r"\s+", " ", text).strip()
     return text
+
+
+def first_line(value):
+    if value is None:
+        return ""
+    return str(value).splitlines()[0].strip()
+
+
+def parse_nombre_apellidos_from_g24(g24_value):
+    raw = first_line(g24_value)
+    if "/" in raw:
+        nombre, apellidos = raw.split("/", 1)
+        return nombre.strip(), apellidos.strip()
+    return raw.strip(), ""
 
 
 def parse_locator(locator):
@@ -652,7 +655,7 @@ def parse_locator(locator):
     if code not in BARCOS_MAP:
         raise Exception(f"Código de barco no reconocido: {code}")
     full_boat = BARCOS_MAP[code]
-    departure_name = f"{full_boat}_{yy}{mm}{dd}"
+    departure_name = f"{full_boat}{yy}{mm}{dd}"
     year_4 = f"20{yy}"
     fecha_salida = datetime.strptime(f"{year_4}-{mm}-{dd}", "%Y-%m-%d").date()
     return {
@@ -734,13 +737,6 @@ def underline_paragraph(paragraph):
     pPr.append(pBdr)
 
 
-def add_paragraph_text(doc, text, bold=False):
-    p = doc.add_paragraph()
-    run = p.add_run(text)
-    run.bold = bold
-    return p
-
-
 def build_cvc_fit_doc(data):
     doc = Document()
 
@@ -754,42 +750,66 @@ def build_cvc_fit_doc(data):
     style.font.name = "Arial"
     style.font.size = Pt(10)
 
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    p.add_run(f"Lugar y fecha: ____________________, {datetime.now().strftime('%d/%m/%Y')}")
+    def add_line(text="", bold=False, align=None, size=None):
+        p = doc.add_paragraph()
+        if align is not None:
+            p.alignment = align
+        r = p.add_run(text)
+        r.bold = bold
+        if size:
+            r.font.size = Pt(size)
+        return p
 
-    title = doc.add_paragraph()
-    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = title.add_run("Contrato de Viaje Combinado")
-    run.bold = True
-    run.underline = True
-    run.font.size = Pt(14)
+    def add_section_title(text):
+        p = doc.add_paragraph()
+        r = p.add_run(text)
+        r.bold = True
+        r.font.size = Pt(11)
+        return p
+
+    def add_blank_line():
+        doc.add_paragraph()
+
+    add_line("Lugar y fecha: ________________________________", align=WD_ALIGN_PARAGRAPH.RIGHT)
+
+    title = add_line("CONTRATO DE VIAJE COMBINADO", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=14)
     underline_paragraph(title)
+    add_blank_line()
 
-    add_paragraph_text(doc, "Datos de la agencia de viajes organizadora y minorista", bold=True)
-    add_paragraph_text(doc, "Nombre: CRUCEMUNDO S.L")
-    add_paragraph_text(doc, "Domicilio: Av. Europa, 86, building 2A, suite 25, cp. 08850 Gavà, Spain")
-    add_paragraph_text(doc, "NIF: B64955172")
-    add_paragraph_text(doc, "Teléfono: 934542041")
-    add_paragraph_text(doc, "E-mail: info@crucemundo.es")
+    add_section_title("DATOS DE LA AGENCIA DE VIAJES ORGANIZADORA Y MINORISTA")
+    add_line("Nombre: CRUCEMUNDO S.L")
+    add_line("Domicilio: Av. Europa, 86, building 2A, suite 25, cp. 08850 Gavà, Spain")
+    add_line("NIF: B64955172")
+    add_line("Teléfono: 934542041")
+    add_line("E-mail: info@crucemundo.es")
+    add_blank_line()
 
-    add_paragraph_text(doc, "Datos del viajero", bold=True)
-    add_paragraph_text(doc, f"Nombre: {data['nombre']}")
-    add_paragraph_text(doc, f"Apellidos: {data['apellidos']}")
-    add_paragraph_text(doc, f"DNI / Pasaporte: {data['dni']}")
-    add_paragraph_text(doc, "Dirección:")
-    add_paragraph_text(doc, "Población:")
-    add_paragraph_text(doc, "C. Postal:")
-    add_paragraph_text(doc, "E-mail:")
-    add_paragraph_text(doc, "Teléfono particular:")
-    add_paragraph_text(doc, f"Nº Personas: {data['personas']}")
-    add_paragraph_text(doc, f"Nº Habitaciones: {data['habitaciones']}")
+    add_section_title("DATOS DEL VIAJERO")
+    add_line(f"Nombre: {data['nombre']}")
+    add_line(f"Apellidos: {data['apellidos']}")
+    add_line(f"DNI / Pasaporte: {data['dni']}")
+    add_line("Dirección:")
+    add_line("Población:")
+    add_line("C. Postal:")
+    add_line("E-mail:")
+    add_line("Teléfono particular:")
+    add_line(f"Nº Personas: {data['personas']}")
+    add_line(f"Nº Habitaciones: {data['habitaciones']}")
+    add_blank_line()
 
-    paragraphs = [
+    add_section_title("CONDICIONES DEL VIAJE")
+    bloques = [
         "El viajero manifiesta que, antes de quedar obligado por el presente contrato de viaje combinado y oferta correspondiente, ha recibido la información precontractual establecida en el artículo 153.1 del Real Decreto Legislativo 1/2007, de 16 de noviembre, compuesta por el formulario con la información normalizada relativa al viaje combinado ANEXO I y la información aplicable al viaje combinado.",
         "Nombre y datos contacto entidades garantes en caso de insolvencia y del cumplimiento de la ejecución del contrato de viaje combinado de la agencia de viajes: en documento resumen que figura en el ANEXO II.",
         "Condiciones generales: el viajero manifiesta aceptar las Condiciones Generales del contrato de viaje combinado que se acompañan en el ANEXO III y que obran en su poder.",
         "Condiciones particulares: en base a la descripción de los servicios de viaje que figuran en el ANEXO IV.",
+    ]
+    for t in bloques:
+        add_line(t)
+    add_blank_line()
+
+    add_section_title("DATOS DEL VIAJE")
+    viaje = [
         "Destinos: Según ANEXO IV.",
         "Itinerario: Según ANEXO IV.",
         "Periodos estancia y sus fechas: Según ANEXO IV.",
@@ -808,12 +828,26 @@ def build_cvc_fit_doc(data):
         "Indicación de si es viaje en grupo y, si se puede, tamaño aprox. grupo: Según ANEXO IV.",
         "Idioma prestación servicios: Según ANEXO IV.",
         "Necesidades especiales del viajero aceptadas por el organizador:",
-        "Precio y Forma de pago:",
-        data["dinero_text"] if data["dinero_text"] else "(Sin detalle extraído del rango G33:R53)",
-        f"Total: {data['total']}",
-        f"Fecha límite y/o calendario de pago del importe pendiente: {data['fecha_limite_pago_str']}",
-        "Modalidades de pago: Transferencia bancaria.",
-        f"Revisión de los precios: Estos precios han sido calculados en fecha {datetime.now().strftime('%d/%m/%Y')} en base a los tipos de cambio de divisa, al precio de transporte derivado coste combustible o de otras fuentes de energía y al nivel de impuestos y tasas sobre los servicios de viaje incluidos en el contrato vigentes en dicha fecha. Hasta 20 días antes de la salida, los precios podrán incrementarse de acuerdo con lo establecido en el apartado 11 de las Condiciones Generales ANEXO III. De igual modo el viajero tendrá derecho a reducción de precio por variación a su favor de dichos conceptos, pudiendo la agencia de viajes en tal caso deducir del reembolso los gastos administrativos reales de su tramitación.",
+    ]
+    for t in viaje:
+        add_line(t)
+    add_blank_line()
+
+    add_section_title("PRECIO Y FORMA DE PAGO")
+    add_line("Precio y Forma de pago:")
+    if data["dinero_text"]:
+        for linea in data["dinero_text"].splitlines():
+            add_line(linea)
+    else:
+        add_line("(Sin detalle extraído del rango G33:R53)")
+    add_line(f"Total: {data['total']}")
+    add_line(f"Fecha límite y/o calendario de pago del importe pendiente: {data['fecha_limite_pago_str']}")
+    add_line("Modalidades de pago: Transferencia bancaria.")
+    add_blank_line()
+
+    add_section_title("INFORMACIÓN ADICIONAL")
+    adicionales = [
+        "Revisión de los precios: Estos precios han sido calculados en fecha ____________________ en base a los tipos de cambio de divisa, al precio de transporte derivado coste combustible o de otras fuentes de energía y al nivel de impuestos y tasas sobre los servicios de viaje incluidos en el contrato vigentes en dicha fecha. Hasta 20 días antes de la salida, los precios podrán incrementarse de acuerdo con lo establecido en el apartado 11 de las Condiciones Generales ANEXO III. De igual modo el viajero tendrá derecho a reducción de precio por variación a su favor de dichos conceptos, pudiendo la agencia de viajes en tal caso deducir del reembolso los gastos administrativos reales de su tramitación.",
         "El viaje es apto para personas de movilidad reducida (persona cuya movilidad para participar en el viaje se halle reducida por motivos de discapacidad física, sensorial o locomotriz, permanente o temporal, discapacidad o deficiencia intelectual o cualquier otra causa de discapacidad, o por la edad, y cuya situación requiera una atención adecuada y la adaptación a sus necesidades particulares del servicio puesto a disposición de los demás participantes): SI / NO.",
         "Mínimo de personas: La realización del presente viaje requiere la participación de un mínimo de 70 personas. De no llegarse a este mínimo, la agencia tiene derecho a anular el viaje hasta 20 días antes de la fecha de salida. La realización del presente viaje no requiere la participación de un número mínimo de personas.",
         "Requisitos entrada para turistas de los que fue informado el viajero en el momento de efectuar la reserva: DNI / Pasaporte / Visados / Vacunas / Tiempo aproximado obtención visados.",
@@ -828,20 +862,21 @@ def build_cvc_fit_doc(data):
         "Responsabilidad: La agencia de viajes es responsable de la correcta ejecución de todos los servicios de viaje incluidos en el contrato, de conformidad con el artículo 161 del Real Decreto Legislativo 1/2007 y está obligada a prestar asistencia si el viajero se halla en dificultades de conformidad con el artículo 163.2 de dicha norma y de acuerdo con lo establecido en las condiciones generales del contrato ANEXO III.",
         "Deberá dirigirse directamente a la compañía aseguradora AXA Seguros Generales, S.A. de Seguros y Reaseguros a través de: 1) Teléfonos 902 013 345 / 91 111 95 44. 2) Email del Depto. de Siniestros: aperturas.empresas@axa.es. 3) Presentando su reclamación en alguna de las oficinas AXA.",
         "Real Decreto 933/2021: Conforme a lo dispuesto en el Real Decreto 933/2021, de 26 de octubre, por el que se establecen las obligaciones de registro documental e información de las personas físicas o jurídicas que contratan actividades de hospedaje y alquiler de vehículos a motor, los datos que se recojan en aplicación de dicha normativa podrán ser accesibles a la policía y las autoridades públicas en el desempeño de sus respectivas competencias en el ámbito de prevención, detección e investigación del delito que tengan asignadas. No se procederá a la comunicación a terceros de los datos personales recogidos en virtud de la citada norma, excepto por obligación legal o requerimiento judicial.",
-        "El presente contrato de viaje combinado se firma por duplicado en el lugar y fecha arriba indicado y a un único efecto, entregándose en este mismo momento un ejemplar al viajero.",
-        "Firma viajero: ____________________",
-        "Firma agencia de viajes: ____________________",
     ]
-    for txt in paragraphs:
-        add_paragraph_text(doc, txt)
+    for t in adicionales:
+        add_line(t)
+    add_blank_line()
+
+    add_section_title("FIRMAS")
+    add_line("El presente contrato de viaje combinado se firma por duplicado en el lugar y fecha arriba indicado y a un único efecto, entregándose en este mismo momento un ejemplar al viajero.")
+    add_line("Firma viajero: ____________________")
+    add_line("Firma agencia de viajes: ____________________")
 
     doc.add_page_break()
 
-    title2 = doc.add_paragraph()
-    title2.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r2 = title2.add_run("ANEXO I\nCERTIFICADO DE SEGURO DE CAUCIÓN AG. VIAJES")
-    r2.bold = True
-    r2.font.size = Pt(13)
+    add_line("ANEXO I", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=13)
+    add_line("CERTIFICADO DE SEGURO DE CAUCIÓN AG. VIAJES", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=12)
+    add_blank_line()
 
     annex_paragraphs = [
         "El presente certificado se emite al amparo de lo establecido en el artículo 155.2.c del Real Decreto Legislativo 1/2007, de 16 de noviembre, por el que se aprueba el texto refundido de la Ley General para la Defensa de los Consumidores y Usuarios y otras leyes complementarias.",
@@ -854,7 +889,7 @@ def build_cvc_fit_doc(data):
         "Comunicación y transferencia de datos: La Agencia le informa que, dependiendo de la modalidad de pago de los servicios, se procederá a la comunicación de los datos incluidos en dicho fichero (Nombre, CIF/NIF, Nº-Cuenta) a las Entidades Financieras (Bancos y Cajas) con las que trabaja la Agencia, a los solos efectos de gestionar las transferencias, cobros y pagos a que dé lugar la relación comercial y el uso de nuestros servicios.",
     ]
     for txt in annex_paragraphs:
-        add_paragraph_text(doc, txt)
+        add_line(txt)
 
     bio = io.BytesIO()
     doc.save(bio)
@@ -876,27 +911,27 @@ def build_cvc_fit_from_locator(locator):
     g24 = get_single_cell(spreadsheet_id, sheet_title, "G24")
     p24 = get_single_cell(spreadsheet_id, sheet_title, "P24")
 
-    values_people = [
-        get_single_cell(spreadsheet_id, sheet_title, "G20"),
-        get_single_cell(spreadsheet_id, sheet_title, "K20"),
-        get_single_cell(spreadsheet_id, sheet_title, "N20"),
-        get_single_cell(spreadsheet_id, sheet_title, "P20"),
-    ]
-    personas = sum(extract_first_number(v) for v in values_people)
+    nombre, apellidos = parse_nombre_apellidos_from_g24(g24)
+    dni = first_line(p24)
 
-    values_rooms = [
+    values_people = [
         get_single_cell(spreadsheet_id, sheet_title, "G22"),
         get_single_cell(spreadsheet_id, sheet_title, "K22"),
         get_single_cell(spreadsheet_id, sheet_title, "N22"),
         get_single_cell(spreadsheet_id, sheet_title, "P22"),
     ]
+    personas = sum(extract_first_number(v) for v in values_people)
+
+    values_rooms = [
+        get_single_cell(spreadsheet_id, sheet_title, "G20"),
+        get_single_cell(spreadsheet_id, sheet_title, "K20"),
+        get_single_cell(spreadsheet_id, sheet_title, "N20"),
+        get_single_cell(spreadsheet_id, sheet_title, "P20"),
+    ]
     habitaciones = sum(extract_first_number(v) for v in values_rooms)
 
     dinero = get_range(spreadsheet_id, sheet_title, "G33:R53")
     total = get_single_cell(spreadsheet_id, sheet_title, "Q55")
-
-    nombre, apellidos = split_nombre_apellidos(str(g24).split("/")[0].strip())
-    dni = str(p24).split(".")[0].strip()
 
     fecha_salida = locator_info["fecha_salida"]
     fecha_limite_pago = locator_info["fecha_limite_pago"]
@@ -1835,7 +1870,7 @@ if st.session_state.get("historial"):
 st.markdown(
     f"""
     <div class="portal-footer">
-        <span class="footer-text">Panel de Control · Control Panel · v4.3.0</span>
+        <span class="footer-text">Panel de Control · Control Panel · v4.3.1</span>
         <span class="footer-text">Raíz Drive · Drive Root · {DRIVE_ROOT_ID}</span>
     </div>
     """,
