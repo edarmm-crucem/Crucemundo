@@ -1128,40 +1128,71 @@ with c1:
 if st.session_state.get("open_cvc_fit_form"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("#### CVC Fit · Generar contrato")
-    locator = st.text_input("Localizador", key="cvc_locator", placeholder="ALB260101-001")
+
+    locator = st.text_input(
+        "Localizador",
+        key="cvc_locator",
+        placeholder="ALB260101-001"
+    )
 
     if st.button("Generar DOC", key="btn_generar_cvc_fit"):
+
         try:
             file_name, docx_bytes, data, source_url, source_name = create_cvc_fit(locator)
+
+            # 🔒 FORZAR LIMPIEZA Y FIJAR DATOS
             st.session_state["cvc_result"] = {
                 "file_name": file_name,
                 "data": data,
                 "source_url": source_url,
                 "source_name": source_name,
             }
+
             st.session_state["cvc_download_name"] = file_name
-            st.session_state["cvc_download_bytes"] = docx_bytes
+
+            # 🔧 IMPORTANTE: asegurar bytes correctos
+            if isinstance(docx_bytes, bytes):
+                st.session_state["cvc_download_bytes"] = docx_bytes
+            else:
+                st.session_state["cvc_download_bytes"] = bytes(docx_bytes)
+
         except Exception as e:
             st.error(str(e))
 
+    # ─────────────────────────────────────────────
+    # RESULTADO
+    # ─────────────────────────────────────────────
     if st.session_state.get("cvc_result"):
-        r = st.session_state["cvc_result"]
-        st.success("Documento preparado correctamente.")
-        st.write(f"Archivo origen: {r['source_name']}")
-        st.write(f"Nombre fichero: {r['file_name']}")
-        st.write(f"Viajero: {r['data']['nombre']} {r['data']['apellidos']}")
-        st.write(f"DNI: {r['data']['dni']}")
-        st.write(f"Personas: {r['data']['personas']}")
-        st.write(f"Habitaciones: {r['data']['habitaciones']}")
-        st.write(f"Total: {r['data']['total']}")
-        st.download_button(
-            "Descargar DOCX",
-            data=st.session_state["cvc_download_bytes"],
-            file_name=st.session_state["cvc_download_name"],
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
-    st.markdown('</div>', unsafe_allow_html=True)
 
+        r = st.session_state["cvc_result"]
+
+        st.success("Documento preparado correctamente.")
+
+        st.write(f"📁 Archivo origen: {r['source_name']}")
+        st.write(f"📄 Nombre fichero: {r['file_name']}")
+        st.write(f"👤 Viajero: {r['data']['nombre']} {r['data']['apellidos']}")
+        st.write(f"🆔 DNI: {r['data']['dni']}")
+        st.write(f"👥 Personas: {r['data']['personas']}")
+        st.write(f"🛏 Habitaciones: {r['data']['habitaciones']}")
+        st.write(f"💰 Total: {r['data']['total']}")
+
+        file_bytes = st.session_state.get("cvc_download_bytes")
+        file_name = st.session_state.get("cvc_download_name", "documento.docx")
+
+        # 🧪 DEBUG (puedes quitarlo luego)
+        st.write("DEBUG filename:", file_name)
+
+        if file_bytes:
+            st.download_button(
+                "⬇️ Descargar DOCX",
+                data=file_bytes,
+                file_name=file_name,
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+        else:
+            st.error("Error: no hay archivo para descargar")
+
+    st.markdown('</div>', unsafe_allow_html=True)
 # PANEL SALIDA
 if st.session_state.get("open_salida_form"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
