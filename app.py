@@ -1,6 +1,3 @@
-CODIDG OK 
-
-
 
 import streamlit as st
 from datetime import datetime, date, timedelta
