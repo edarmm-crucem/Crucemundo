@@ -1075,16 +1075,16 @@ st.markdown("""
     </a>
     <a class="web-chip" href="https://mail.google.com/" target="_blank" rel="noopener noreferrer">
         Gmail
-
+    </a>
 </div>
 """, unsafe_allow_html=True)
 
 st.markdown(f'<div class="user-pill">👤 {DISPLAY_USER} · {USER_EMAIL}</div>', unsafe_allow_html=True)
 
-# FILA 1
-row1_col1, row1_col2, row1_col3, row1_col4, row1_col5 = st.columns(5, gap="medium")
+# FILA ÚNICA CON 7 TARJETAS
+col1, col2, col3, col4, col5, col6, col7 = st.columns(7, gap="medium")
 
-with row1_col1:
+with col1:
     st.markdown(f"""
     <div class="action-box card-es">
         <div class="action-top">
@@ -1107,7 +1107,7 @@ with row1_col1:
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-with row1_col2:
+with col2:
     st.markdown(f"""
     <div class="action-box card-grupos">
         <div class="action-top">
@@ -1130,7 +1130,7 @@ with row1_col2:
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-with row1_col3:
+with col3:
     st.markdown("""
     <div class="action-box card-salida">
         <div class="action-top">
@@ -1151,7 +1151,7 @@ with row1_col3:
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-with row1_col4:
+with col4:
     st.markdown("""
     <div class="action-box card-crucero">
         <div class="action-top">
@@ -1172,7 +1172,7 @@ with row1_col4:
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-with row1_col5:
+with col5:
     st.markdown("""
     <div class="action-box card-excursiones">
         <div class="action-top">
@@ -1194,10 +1194,7 @@ with row1_col5:
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-# FILA 2
-row2_col1, row2_col2, row2_col3, row2_col4, row2_col5 = st.columns(5, gap="medium")
-
-with row2_col1:
+with col6:
     st.markdown("""
     <div class="action-box card-nueva-agencia">
         <div class="action-top">
@@ -1218,7 +1215,7 @@ with row2_col1:
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-with row2_col2:
+with col7:
     st.markdown("""
     <div class="action-box card-buscar-agencia">
         <div class="action-top">
@@ -1238,13 +1235,6 @@ with row2_col2:
         st.rerun()
 
     st.markdown('</div></div>', unsafe_allow_html=True)
-
-with row2_col3:
-    st.empty()
-with row2_col4:
-    st.empty()
-with row2_col5:
-    st.empty()
 
 if st.session_state.get("open_salida_form"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
