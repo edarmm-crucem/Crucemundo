@@ -4,7 +4,7 @@ import urllib.parse
 import time
 import re
 import io
-from google.oauth2 import serviceaccount
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from docx import Document
 from docx.shared import Pt, Inches
