@@ -1567,22 +1567,19 @@ if confirm_state in ("step1", "step2", "step3", "done"):
     if confirm_state == "step1":
         render_step("Progreso / Progress", "Preparando plantilla / Preparing template...", "active")
     elif confirm_state == "step2":
-        render_step("Progreso / Progdiv>
-                """, unsafe_allow_html=True)
-            st.markdown('</div></div>', unsafe_allow_html=True)
-
-    st.markdownreso / Progress", "Abriendo sesión / Opening session...", "active")
+        render_step("Progreso / Progress", "Generando copia en Drive / Creating Drive copy...", "active")
+    elif confirm_state == "step3":
+        render_step("Progreso / Progress", "Abriendo sesión / Opening session...", "active")
     elif confirm_state == "done":
         render_step("Progreso / Progress", "Completo / Complete", "done")
         st.markdown(f"""
         <div style="margin-top:0.8rem;">
             <div style="font-size:0.76rem;color:#1F2937;font-weight:600;">Sesión creada / Session created</div>
             <div style="font-size:0.71rem;color:#657087;margin-top:0.15rem;line-height:1.3;">
-                Puedes abrir tu sesión en el botón de abajo · You can open your session with the button bediv>
-                """, unsafe_allow_html=True)
-            st.markdown('</div></div>', unsafe_allow_html=True)
-
-    st.markdown    </div>
+                Puedes abrir tu sesión en el botón de abajo · You can open your session with the button below.
+            </div>
+            <a class="done-link" href="{saved_url}" target="_blank">Abrir sesión / Open session ↗</a>
+        </div>
         """, unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
@@ -1613,7 +1610,6 @@ if confirm_state in ("step1", "step2", "step3", "done"):
             f'<script>setTimeout(()=>window.open("{saved_url}","_blank"),300);</script>',
             unsafe_allow_html=True
         )
-
 st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
 st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
 if st.button("Cerrar sesión / Logout", key="btn_logout"):
