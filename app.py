@@ -652,7 +652,7 @@ def parse_locator(locator):
     if code not in BARCOS_MAP:
         raise Exception(f"Código de barco no reconocido: {code}")
     full_boat = BARCOS_MAP[code]
-    departure_name = f"{full_boat}{yy}{mm}{dd}"
+    departure_name = f"{full_boat}_{yy}{mm}{dd}"
     year_4 = f"20{yy}"
     fecha_salida = datetime.strptime(f"{year_4}-{mm}-{dd}", "%Y-%m-%d").date()
     return {
