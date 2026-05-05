@@ -351,7 +351,7 @@ def get_source_spreadsheet_for_locator(ship_code, yymmdd):
     boat_folder = find_child_folder(year_folder["id"], barco)
     if not boat_folder:
         raise FileNotFoundError(f"No existe la carpeta del barco {barco}")
-    source_name = f"{barco}{yymmdd}"
+    source_name = f"{barco}_{yymmdd}"
     source_file = find_file_by_name(boat_folder["id"], source_name)
     if not source_file:
         raise FileNotFoundError(f"No existe el archivo {source_name}")
