@@ -59,18 +59,18 @@ AGENCY_FIELDS = [
 ]
 
 BARCOS_MAP = {
-    "ALB": "MSALBERTINA",
-    "ARN": "MSARENA",
-    "CV": "MSCRUCEVITA",
-    "DC": "MSDOUROCRUISER",
-    "FID": "MSFIDELIO",
-    "LEO": "MSLEONORA",
-    "RDA": "MSRIVERDIAMOND",
-    "RSA": "MSRIVERSAPPHIRE",
-    "SPL": "MSSWISSSPLENDOR",
-    "VGR": "MSVISTAGRACIA",
-    "VMI": "MSVISTAMILLA",
-    "VRI": "MSVISTARIO",
+    "ALB": "MS_ALBERTINA",
+    "ARN": "MS_ARENA",
+    "CV": "MS-CRUCEVITA",
+    "DC": "MS_DOURO_CRUISER",
+    "FID": "MS_FIDELIO",
+    "LEO": "MS_LEONORA",
+    "RDA": "MS_RIVER_DIAMOND",
+    "RSA": "MS_RIVER_SAPPHIRE",
+    "SPL": "MS_SWISS_SPLENDOR",
+    "VGR": "MS_VISTA_GRACIA",
+    "VMI": "MS_VISTAMILLA",
+    "VRI": "MS_VISTAR_IO",
 }
 
 defaults = {
