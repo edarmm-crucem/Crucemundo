@@ -1081,7 +1081,7 @@ st.markdown("""
 
 st.markdown(f'<div class="user-pill">👤 {DISPLAY_USER} · {USER_EMAIL}</div>', unsafe_allow_html=True)
 
-# FILA ÚNICA CON 7 TARJETAS
+# 7 TARJETAS EN UNA FILA
 col1, col2, col3, col4, col5, col6, col7 = st.columns(7, gap="medium")
 
 with col1:
@@ -1499,7 +1499,9 @@ if st.session_state.get("open_buscar_agencia_form"):
         placeholder="Ej: viajes pepe / AG123 / 912345678 / info@..."
     )
 
-    if st.button("Buscar coincidencias", key="btn_ejecutar_busqueda_agencia"):
+    search_clicked = st.button("Buscar coincidencias", key="btn_ejecutar_busqueda_agencia")
+
+    if search_clicked:
         try:
             matches = search_agencies(search_query)
             st.session_state["agency_matches"] = matches
@@ -1509,7 +1511,7 @@ if st.session_state.get("open_buscar_agencia_form"):
 
     matches = st.session_state.get("agency_matches", [])
 
-    if search_query and matches == []:
+    if search_clicked and search_query and matches == []:
         st.info("No hay coincidencias.")
 
     if len(matches) == 1:
