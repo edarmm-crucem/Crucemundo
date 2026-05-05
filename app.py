@@ -1448,7 +1448,9 @@ with col7:
         st.rerun()
     st.markdown("</div></div>", unsafe_allow_html=True)
 
-with col8:
+row2col1, row2col2, row2col3, row2col4, row2col5, row2col6, row2col7 = st.columns(7, gap="medium")
+
+with row2col1:
     st.markdown(
         """
         <div class="action-box card-cvcfit">
