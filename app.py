@@ -38,7 +38,7 @@ VALID_USERS = {
     "tania@crucemundo.com": "Tania",
     "incoming@crucemundo.com": "Incoming",
     "operations@crucemundo.com": "Operations",
-    "edarmm@.com": "Esteban",
+    "edarmm@gmail.com": "Esteban",
 }
 
 VALID_PASSWORD = st.secrets["app_password"]
