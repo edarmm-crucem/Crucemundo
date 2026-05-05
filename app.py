@@ -252,10 +252,22 @@ def percent_to_sheet_decimal(value):
     return "" if value is None else round(float(value) / 100, 4)
 
 def parse_locator(locator):
-    m = re.fullmatch(r"([A-Z]{3})(\d{6})-(\d{3})", locator.strip().upper())
+    locator = locator.strip().upper()
+
+    # Permite códigos de barco de 2 o 3 letras (según tu BARCOS_MAP)
+    m = re.fullmatch(r"([A-Z]{2,3})(\d{6})-(\d{3})", locator)
     if not m:
-        raise ValueError("Formato inválido. Debe ser BARCOAAMMDD-XXX. Ejemplo: ALB260101-001")
-    return m.group(1), m.group(2), m.group(3)
+        raise ValueError(
+            "Formato inválido. Debe ser BARCOAAMMDD-XXX. Ejemplo: ALB260101-001"
+        )
+
+    ship_code, yymmdd, seq = m.group(1), m.group(2), m.group(3)
+
+    # Validación REAL contra tu mapping
+    if ship_code not in BARCOS_INV:
+        raise ValueError(f"Código de barco no reconocido: {ship_code}")
+
+    return ship_code, yymmdd, seq
 
 def first_number(value):
     m = re.search(r"\d+", str(value or ""))
