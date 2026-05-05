@@ -1635,4 +1635,8 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
+    <span class="footer-text">Panel de Control · Control Panel · v4.2.0</span>
+    <span class="footer-text">Raíz Drive / Drive Root: {DRIVE_ROOT_ID}</span>
+</div>
+""", unsafe_allow_html=True)
    
