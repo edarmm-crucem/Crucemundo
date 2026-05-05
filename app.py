@@ -319,14 +319,13 @@ def percent_to_sheet_decimal(value):
 def get_google_creds():
     if "gcp_service_account" not in st.secrets:
         raise Exception("Falta gcp_service_account en secrets.")
-    return serviceaccount.Credentials.from_service_account_info(
+    return service_account.Credentials.from_service_account_info(
         st.secrets["gcp_service_account"],
         scopes=[
             "https://www.googleapis.com/auth/drive",
             "https://www.googleapis.com/auth/spreadsheets",
         ],
     )
-
 
 @st.cache_resource
 def get_drive_service():
