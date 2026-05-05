@@ -583,7 +583,7 @@ def create_crucero_file(barco, fechaobj):
     mm = fechaobj.strftime("%m")
     dd = fechaobj.strftime("%d")
     fechaes = fechaobj.strftime("%d/%m/%Y")
-    nombrenuevo = f"{barco}{yy}{mm}{dd}"
+    nombrenuevo = f"{barco}_{yy}{mm}{dd}"
 
     carpetaanio = get_or_create_folder(DRIVE_ROOT_ID, anio)
     carpetabarco = get_or_create_folder(carpetaanio["id"], barco)
