@@ -38,7 +38,7 @@ VALID_USERS = {
     "tania@crucemundo.com": "Tania",
     "incoming@crucemundo.com": "Incoming",
     "operations@crucemundo.com": "Operations",
-    "edarmm@gmail.com": "Esteban",
+    "edarmm@.com": "Esteban",
 }
 
 VALID_PASSWORD = st.secrets["app_password"]
@@ -1073,7 +1073,7 @@ st.markdown("""
     <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">
         Ir a Crucemundo
     </a>
-    <a class="web-chip" href="https://www.gmail.com" target="_blank" rel="noopener noreferrer">
+    <a class="web-chip" href="https://mail.google.com/" target="_blank" rel="noopener noreferrer">
         Gmail
 
 </div>
