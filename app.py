@@ -1,3 +1,4 @@
+
 import streamlit as st
 from datetime import datetime, date, timedelta
 import urllib.parse
@@ -15,7 +16,7 @@ from docx.oxml.ns import qn
 
 st.set_page_config(
     page_title="Crucemundo Hub",
-    page_icon="🛳️",
+    page_icon="ðŸ›³ï¸",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -104,7 +105,7 @@ for k, v in defaults.items():
 def get_saludo():
     hora = datetime.now().hour
     if 6 <= hora < 14:
-        return "Buenos días"
+        return "Buenos dÃ­as"
     elif 14 <= hora < 21:
         return "Buenas tardes"
     return "Buenas noches"
@@ -223,7 +224,7 @@ def do_logout():
 def render_step(label, detail, state):
     dot_class = {"done": "sd-done", "active": "sd-active", "wait": "sd-wait"}[state]
     text_class = {"done": "st-done", "active": "st-active", "wait": "st-wait"}[state]
-    symbol = {"done": "✓", "active": "•", "wait": "•"}[state]
+    symbol = {"done": "âœ“", "active": "â€¢", "wait": "â€¢"}[state]
     st.markdown(
         f"""
         <div class="step">
@@ -598,7 +599,7 @@ def create_crucero_file(barco, fechaobj):
     descripcion = (
         f"Barco: {barco} | Salida: {fechaes} | "
         f"Creado: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} | "
-        f"Los archivos de sesión deben borrarse a los 30 días."
+        f"Los archivos de sesiÃ³n deben borrarse a los 30 dÃ­as."
     )
     copia = copy_file_to_folder(TEMPLATE_ID_CRUCERO, nombrenuevo, carpetabarco["id"], descripcion)
     spreadsheetid = copia["id"]
@@ -652,7 +653,7 @@ def parse_locator(locator):
         raise Exception("El localizador debe tener formato BARCOAAMMDD-XXX, por ejemplo ALB260101-001.")
     code, yy, mm, dd, seq = m.groups()
     if code not in BARCOS_MAP:
-        raise Exception(f"Código de barco no reconocido: {code}")
+        raise Exception(f"CÃ³digo de barco no reconocido: {code}")
     full_boat = BARCOS_MAP[code]
     departure_name = f"{full_boat}_{yy}{mm}{dd}"
     year_4 = f"20{yy}"
@@ -675,7 +676,7 @@ def parse_locator(locator):
 def find_drive_file_for_locator(locator_info):
     year_folder = find_child_folder(DRIVE_ROOT_ID, locator_info["year_folder"])
     if not year_folder:
-        raise Exception(f"No existe la carpeta del año {locator_info['year_folder']}.")
+        raise Exception(f"No existe la carpeta del aÃ±o {locator_info['year_folder']}.")
     boat_folder = find_child_folder(year_folder["id"], locator_info["boat_name"])
     if not boat_folder:
         raise Exception(f"No existe la carpeta del barco {locator_info['boat_name']} en {locator_info['year_folder']}.")
@@ -777,9 +778,9 @@ def build_cvc_fit_doc(data):
 
     add_section_title("DATOS DE LA AGENCIA DE VIAJES ORGANIZADORA Y MINORISTA")
     add_line("Nombre: CRUCEMUNDO S.L")
-    add_line("Domicilio: Av. Europa, 86, building 2A, suite 25, cp. 08850 Gavà, Spain")
+    add_line("Domicilio: Av. Europa, 86, building 2A, suite 25, cp. 08850 GavÃ , Spain")
     add_line("NIF: B64955172")
-    add_line("Teléfono: 934542041")
+    add_line("TelÃ©fono: 934542041")
     add_line("E-mail: info@crucemundo.es")
     add_blank_line()
 
@@ -787,21 +788,21 @@ def build_cvc_fit_doc(data):
     add_line(f"Nombre: {data['nombre']}")
     add_line(f"Apellidos: {data['apellidos']}")
     add_line(f"DNI / Pasaporte: {data['dni']}")
-    add_line("Dirección:")
-    add_line("Población:")
+    add_line("DirecciÃ³n:")
+    add_line("PoblaciÃ³n:")
     add_line("C. Postal:")
     add_line("E-mail:")
-    add_line("Teléfono particular:")
-    add_line(f"Nº Personas: {data['personas']}")
-    add_line(f"Nº Habitaciones: {data['habitaciones']}")
+    add_line("TelÃ©fono particular:")
+    add_line(f"NÂº Personas: {data['personas']}")
+    add_line(f"NÂº Habitaciones: {data['habitaciones']}")
     add_blank_line()
 
     add_section_title("CONDICIONES DEL VIAJE")
     bloques = [
-        "El viajero manifiesta que, antes de quedar obligado por el presente contrato de viaje combinado y oferta correspondiente, ha recibido la información precontractual establecida en el artículo 153.1 del Real Decreto Legislativo 1/2007, de 16 de noviembre, compuesta por el formulario con la información normalizada relativa al viaje combinado ANEXO I y la información aplicable al viaje combinado.",
-        "Nombre y datos contacto entidades garantes en caso de insolvencia y del cumplimiento de la ejecución del contrato de viaje combinado de la agencia de viajes: en documento resumen que figura en el ANEXO II.",
-        "Condiciones generales: el viajero manifiesta aceptar las Condiciones Generales del contrato de viaje combinado que se acompañan en el ANEXO III y que obran en su poder.",
-        "Condiciones particulares: en base a la descripción de los servicios de viaje que figuran en el ANEXO IV.",
+        "El viajero manifiesta que, antes de quedar obligado por el presente contrato de viaje combinado y oferta correspondiente, ha recibido la informaciÃ³n precontractual establecida en el artÃ­culo 153.1 del Real Decreto Legislativo 1/2007, de 16 de noviembre, compuesta por el formulario con la informaciÃ³n normalizada relativa al viaje combinado ANEXO I y la informaciÃ³n aplicable al viaje combinado.",
+        "Nombre y datos contacto entidades garantes en caso de insolvencia y del cumplimiento de la ejecuciÃ³n del contrato de viaje combinado de la agencia de viajes: en documento resumen que figura en el ANEXO II.",
+        "Condiciones generales: el viajero manifiesta aceptar las Condiciones Generales del contrato de viaje combinado que se acompaÃ±an en el ANEXO III y que obran en su poder.",
+        "Condiciones particulares: en base a la descripciÃ³n de los servicios de viaje que figuran en el ANEXO IV.",
     ]
     for t in bloques:
         add_line(t)
@@ -809,23 +810,23 @@ def build_cvc_fit_doc(data):
 
     add_section_title("DATOS DEL VIAJE")
     viaje = [
-        "Destinos: Según ANEXO IV.",
-        "Itinerario: Según ANEXO IV.",
-        "Periodos estancia y sus fechas: Según ANEXO IV.",
-        "Nº de pernoctaciones incluidas: Según ANEXO IV.",
-        "Medio de transporte, características, categoría y duración: Según ANEXO IV.",
+        "Destinos: SegÃºn ANEXO IV.",
+        "Itinerario: SegÃºn ANEXO IV.",
+        "Periodos estancia y sus fechas: SegÃºn ANEXO IV.",
+        "NÂº de pernoctaciones incluidas: SegÃºn ANEXO IV.",
+        "Medio de transporte, caracterÃ­sticas, categorÃ­a y duraciÃ³n: SegÃºn ANEXO IV.",
         f"Fecha de salida: {data['fecha_salida_str']}.",
-        "Hora salida: Según PVP sujeto a cambios / Según ANEXO IV.",
-        "Lugar de salida: Según ANEXO IV.",
-        "Fecha de regreso: Según ANEXO IV.",
-        "Lugar de regreso: Según ANEXO IV.",
-        "Hora regreso: Según PVP sujeto a cambios / Según ANEXO IV.",
-        "Paradas intermedias y conexiones: Según ANEXO IV.",
-        "Ubicación, principales características y categoría del alojamiento: Según ANEXO IV.",
-        "Comidas previstas: Según ANEXO IV.",
-        "Visitas, excursiones u otros servicios incluidos en viaje: Según ANEXO IV.",
-        "Indicación de si es viaje en grupo y, si se puede, tamaño aprox. grupo: Según ANEXO IV.",
-        "Idioma prestación servicios: Según ANEXO IV.",
+        "Hora salida: SegÃºn PVP sujeto a cambios / SegÃºn ANEXO IV.",
+        "Lugar de salida: SegÃºn ANEXO IV.",
+        "Fecha de regreso: SegÃºn ANEXO IV.",
+        "Lugar de regreso: SegÃºn ANEXO IV.",
+        "Hora regreso: SegÃºn PVP sujeto a cambios / SegÃºn ANEXO IV.",
+        "Paradas intermedias y conexiones: SegÃºn ANEXO IV.",
+        "UbicaciÃ³n, principales caracterÃ­sticas y categorÃ­a del alojamiento: SegÃºn ANEXO IV.",
+        "Comidas previstas: SegÃºn ANEXO IV.",
+        "Visitas, excursiones u otros servicios incluidos en viaje: SegÃºn ANEXO IV.",
+        "IndicaciÃ³n de si es viaje en grupo y, si se puede, tamaÃ±o aprox. grupo: SegÃºn ANEXO IV.",
+        "Idioma prestaciÃ³n servicios: SegÃºn ANEXO IV.",
         "Necesidades especiales del viajero aceptadas por el organizador:",
     ]
     for t in viaje:
@@ -838,54 +839,54 @@ def build_cvc_fit_doc(data):
         for linea in data["dinero_text"].splitlines():
             add_line(linea)
     else:
-        add_line("(Sin detalle extraído del rango G33:R53)")
+        add_line("(Sin detalle extraÃ­do del rango G33:R53)")
     add_line(f"Total: {data['total']}")
-    add_line(f"Fecha límite y/o calendario de pago del importe pendiente: {data['fecha_limite_pago_str']}")
+    add_line(f"Fecha lÃ­mite y/o calendario de pago del importe pendiente: {data['fecha_limite_pago_str']}")
     add_line("Modalidades de pago: Transferencia bancaria.")
     add_blank_line()
 
-    add_section_title("INFORMACIÓN ADICIONAL")
+    add_section_title("INFORMACIÃ“N ADICIONAL")
     adicionales = [
-        "Revisión de los precios: Estos precios han sido calculados en fecha ____________________ en base a los tipos de cambio de divisa, al precio de transporte derivado coste combustible o de otras fuentes de energía y al nivel de impuestos y tasas sobre los servicios de viaje incluidos en el contrato vigentes en dicha fecha. Hasta 20 días antes de la salida, los precios podrán incrementarse de acuerdo con lo establecido en el apartado 11 de las Condiciones Generales ANEXO III. De igual modo el viajero tendrá derecho a reducción de precio por variación a su favor de dichos conceptos, pudiendo la agencia de viajes en tal caso deducir del reembolso los gastos administrativos reales de su tramitación.",
-        "El viaje es apto para personas de movilidad reducida (persona cuya movilidad para participar en el viaje se halle reducida por motivos de discapacidad física, sensorial o locomotriz, permanente o temporal, discapacidad o deficiencia intelectual o cualquier otra causa de discapacidad, o por la edad, y cuya situación requiera una atención adecuada y la adaptación a sus necesidades particulares del servicio puesto a disposición de los demás participantes): SI / NO.",
-        "Mínimo de personas: La realización del presente viaje requiere la participación de un mínimo de 70 personas. De no llegarse a este mínimo, la agencia tiene derecho a anular el viaje hasta 20 días antes de la fecha de salida. La realización del presente viaje no requiere la participación de un número mínimo de personas.",
-        "Requisitos entrada para turistas de los que fue informado el viajero en el momento de efectuar la reserva: DNI / Pasaporte / Visados / Vacunas / Tiempo aproximado obtención visados.",
-        "El viajero manifiesta que ha sido informado de la situación y requisitos del país o países objeto de su viaje de acuerdo con la información publicada en la página web del Ministerio de Asuntos Exteriores y Cooperación (www.exteriores.gob.es) y que conoce, por lo tanto, las características y posibles riesgos de toda índole del país o países de destino.",
-        "Resolución voluntaria del viaje por el viajero antes de la salida: el viajero, en cualquier momento antes del inicio del viaje, puede resolver el contrato debiendo abonar una penalización de: con más de 42 días antes de la salida, 20%; entre 42 y 28 días antes, 40%; entre 27 y 15 días antes, 60%; entre 14 y 7 días antes, 75%; menos de 7 días antes de la salida, 100%.",
-        "Seguro facultativo de asistencia en viaje: El viajero declara haber sido informado de la posibilidad de contratar un seguro de asistencia en viaje de la compañía aseguradora, póliza número ____, así como de las coberturas, exclusiones, condiciones generales y particulares de este seguro. Su voluntad es: No contratar / Contratar.",
-        "Seguro facultativo de gastos de anulación por fuerza mayor: El viajero declara haber sido informado de la posibilidad de contratar un seguro de gastos de anulación de la compañía aseguradora, póliza número ____, así como de las coberturas, exclusiones, condiciones generales y particulares de este seguro. Su voluntad es: No contratar / Contratar.",
-        "Cesión del viaje: Conforme a lo establecido en el apartado 12 de las Condiciones Generales ANEXO III, el viajero podrá ceder su reserva a una persona que reúna todas las condiciones requeridas.",
-        "Datos de contacto en caso de asistencia y falta de conformidad: Representante local, si hay: Nombre / Dirección / Teléfono / e-mail. Otros puntos de contacto o servicio de asistencia de la agencia de viajes: Teléfono +34 934542041, e-mail info@crucemundo.es. Para cualquier aspecto relacionado con asistencia sanitaria, si el viajero ha contratado un seguro de asistencia en viaje, deberá contactar también con el teléfono de la compañía aseguradora.",
-        "Contacto información menores no acompañados: En caso de menores no acompañados por un familiar u otro adulto autorizado, pueden establecer contacto directo con el menor o con la persona responsable durante la estancia a través de ____.",
-        "Falta de conformidad: El viajero durante el viaje deberá informar toda falta de conformidad en la prestación de los servicios, todo ello de acuerdo con lo establecido en el apartado 16 de las Condiciones Generales ANEXO III.",
-        "Responsabilidad: La agencia de viajes es responsable de la correcta ejecución de todos los servicios de viaje incluidos en el contrato, de conformidad con el artículo 161 del Real Decreto Legislativo 1/2007 y está obligada a prestar asistencia si el viajero se halla en dificultades de conformidad con el artículo 163.2 de dicha norma y de acuerdo con lo establecido en las condiciones generales del contrato ANEXO III.",
-        "Deberá dirigirse directamente a la compañía aseguradora AXA Seguros Generales, S.A. de Seguros y Reaseguros a través de: 1) Teléfonos 902 013 345 / 91 111 95 44. 2) Email del Depto. de Siniestros: aperturas.empresas@axa.es. 3) Presentando su reclamación en alguna de las oficinas AXA.",
-        "Real Decreto 933/2021: Conforme a lo dispuesto en el Real Decreto 933/2021, de 26 de octubre, por el que se establecen las obligaciones de registro documental e información de las personas físicas o jurídicas que contratan actividades de hospedaje y alquiler de vehículos a motor, los datos que se recojan en aplicación de dicha normativa podrán ser accesibles a la policía y las autoridades públicas en el desempeño de sus respectivas competencias en el ámbito de prevención, detección e investigación del delito que tengan asignadas. No se procederá a la comunicación a terceros de los datos personales recogidos en virtud de la citada norma, excepto por obligación legal o requerimiento judicial.",
+        "RevisiÃ³n de los precios: Estos precios han sido calculados en fecha ____________________ en base a los tipos de cambio de divisa, al precio de transporte derivado coste combustible o de otras fuentes de energÃ­a y al nivel de impuestos y tasas sobre los servicios de viaje incluidos en el contrato vigentes en dicha fecha. Hasta 20 dÃ­as antes de la salida, los precios podrÃ¡n incrementarse de acuerdo con lo establecido en el apartado 11 de las Condiciones Generales ANEXO III. De igual modo el viajero tendrÃ¡ derecho a reducciÃ³n de precio por variaciÃ³n a su favor de dichos conceptos, pudiendo la agencia de viajes en tal caso deducir del reembolso los gastos administrativos reales de su tramitaciÃ³n.",
+        "El viaje es apto para personas de movilidad reducida (persona cuya movilidad para participar en el viaje se halle reducida por motivos de discapacidad fÃ­sica, sensorial o locomotriz, permanente o temporal, discapacidad o deficiencia intelectual o cualquier otra causa de discapacidad, o por la edad, y cuya situaciÃ³n requiera una atenciÃ³n adecuada y la adaptaciÃ³n a sus necesidades particulares del servicio puesto a disposiciÃ³n de los demÃ¡s participantes): SI / NO.",
+        "MÃ­nimo de personas: La realizaciÃ³n del presente viaje requiere la participaciÃ³n de un mÃ­nimo de 70 personas. De no llegarse a este mÃ­nimo, la agencia tiene derecho a anular el viaje hasta 20 dÃ­as antes de la fecha de salida. La realizaciÃ³n del presente viaje no requiere la participaciÃ³n de un nÃºmero mÃ­nimo de personas.",
+        "Requisitos entrada para turistas de los que fue informado el viajero en el momento de efectuar la reserva: DNI / Pasaporte / Visados / Vacunas / Tiempo aproximado obtenciÃ³n visados.",
+        "El viajero manifiesta que ha sido informado de la situaciÃ³n y requisitos del paÃ­s o paÃ­ses objeto de su viaje de acuerdo con la informaciÃ³n publicada en la pÃ¡gina web del Ministerio de Asuntos Exteriores y CooperaciÃ³n (www.exteriores.gob.es) y que conoce, por lo tanto, las caracterÃ­sticas y posibles riesgos de toda Ã­ndole del paÃ­s o paÃ­ses de destino.",
+        "ResoluciÃ³n voluntaria del viaje por el viajero antes de la salida: el viajero, en cualquier momento antes del inicio del viaje, puede resolver el contrato debiendo abonar una penalizaciÃ³n de: con mÃ¡s de 42 dÃ­as antes de la salida, 20%; entre 42 y 28 dÃ­as antes, 40%; entre 27 y 15 dÃ­as antes, 60%; entre 14 y 7 dÃ­as antes, 75%; menos de 7 dÃ­as antes de la salida, 100%.",
+        "Seguro facultativo de asistencia en viaje: El viajero declara haber sido informado de la posibilidad de contratar un seguro de asistencia en viaje de la compaÃ±Ã­a aseguradora, pÃ³liza nÃºmero ____, asÃ­ como de las coberturas, exclusiones, condiciones generales y particulares de este seguro. Su voluntad es: No contratar / Contratar.",
+        "Seguro facultativo de gastos de anulaciÃ³n por fuerza mayor: El viajero declara haber sido informado de la posibilidad de contratar un seguro de gastos de anulaciÃ³n de la compaÃ±Ã­a aseguradora, pÃ³liza nÃºmero ____, asÃ­ como de las coberturas, exclusiones, condiciones generales y particulares de este seguro. Su voluntad es: No contratar / Contratar.",
+        "CesiÃ³n del viaje: Conforme a lo establecido en el apartado 12 de las Condiciones Generales ANEXO III, el viajero podrÃ¡ ceder su reserva a una persona que reÃºna todas las condiciones requeridas.",
+        "Datos de contacto en caso de asistencia y falta de conformidad: Representante local, si hay: Nombre / DirecciÃ³n / TelÃ©fono / e-mail. Otros puntos de contacto o servicio de asistencia de la agencia de viajes: TelÃ©fono +34 934542041, e-mail info@crucemundo.es. Para cualquier aspecto relacionado con asistencia sanitaria, si el viajero ha contratado un seguro de asistencia en viaje, deberÃ¡ contactar tambiÃ©n con el telÃ©fono de la compaÃ±Ã­a aseguradora.",
+        "Contacto informaciÃ³n menores no acompaÃ±ados: En caso de menores no acompaÃ±ados por un familiar u otro adulto autorizado, pueden establecer contacto directo con el menor o con la persona responsable durante la estancia a travÃ©s de ____.",
+        "Falta de conformidad: El viajero durante el viaje deberÃ¡ informar toda falta de conformidad en la prestaciÃ³n de los servicios, todo ello de acuerdo con lo establecido en el apartado 16 de las Condiciones Generales ANEXO III.",
+        "Responsabilidad: La agencia de viajes es responsable de la correcta ejecuciÃ³n de todos los servicios de viaje incluidos en el contrato, de conformidad con el artÃ­culo 161 del Real Decreto Legislativo 1/2007 y estÃ¡ obligada a prestar asistencia si el viajero se halla en dificultades de conformidad con el artÃ­culo 163.2 de dicha norma y de acuerdo con lo establecido en las condiciones generales del contrato ANEXO III.",
+        "DeberÃ¡ dirigirse directamente a la compaÃ±Ã­a aseguradora AXA Seguros Generales, S.A. de Seguros y Reaseguros a travÃ©s de: 1) TelÃ©fonos 902 013 345 / 91 111 95 44. 2) Email del Depto. de Siniestros: aperturas.empresas@axa.es. 3) Presentando su reclamaciÃ³n en alguna de las oficinas AXA.",
+        "Real Decreto 933/2021: Conforme a lo dispuesto en el Real Decreto 933/2021, de 26 de octubre, por el que se establecen las obligaciones de registro documental e informaciÃ³n de las personas fÃ­sicas o jurÃ­dicas que contratan actividades de hospedaje y alquiler de vehÃ­culos a motor, los datos que se recojan en aplicaciÃ³n de dicha normativa podrÃ¡n ser accesibles a la policÃ­a y las autoridades pÃºblicas en el desempeÃ±o de sus respectivas competencias en el Ã¡mbito de prevenciÃ³n, detecciÃ³n e investigaciÃ³n del delito que tengan asignadas. No se procederÃ¡ a la comunicaciÃ³n a terceros de los datos personales recogidos en virtud de la citada norma, excepto por obligaciÃ³n legal o requerimiento judicial.",
     ]
     for t in adicionales:
         add_line(t)
     add_blank_line()
 
     add_section_title("FIRMAS")
-    add_line("El presente contrato de viaje combinado se firma por duplicado en el lugar y fecha arriba indicado y a un único efecto, entregándose en este mismo momento un ejemplar al viajero.")
+    add_line("El presente contrato de viaje combinado se firma por duplicado en el lugar y fecha arriba indicado y a un Ãºnico efecto, entregÃ¡ndose en este mismo momento un ejemplar al viajero.")
     add_line("Firma viajero: ____________________")
     add_line("Firma agencia de viajes: ____________________")
 
     doc.add_page_break()
 
     add_line("ANEXO I", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=13)
-    add_line("CERTIFICADO DE SEGURO DE CAUCIÓN AG. VIAJES", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=12)
+    add_line("CERTIFICADO DE SEGURO DE CAUCIÃ“N AG. VIAJES", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=12)
     add_blank_line()
 
     annex_paragraphs = [
-        "El presente certificado se emite al amparo de lo establecido en el artículo 155.2.c del Real Decreto Legislativo 1/2007, de 16 de noviembre, por el que se aprueba el texto refundido de la Ley General para la Defensa de los Consumidores y Usuarios y otras leyes complementarias.",
-        "Crucemundo S.L. dispone de la garantía por insolvencia establecida para los viajes combinados en el Art. 252-10 de la Ley 22/2010, de 20 de julio, del Código de Consumo de Cataluña, formalizada a través de la póliza de caución número 72974394 con la compañía aseguradora AXA Seguros Generales, S.A. de Seguros y Reaseguros, domiciliada en la calle Monseñor Palmer, 1, 07014 Palma de Mallorca. Dicha garantía está plenamente vigente.",
-        "Procedimiento en caso de que, dándose la situación de insolvencia de la agencia de viajes cubierta por la garantía, el consumidor precise activarla.",
-        "Para la gestión y cumplimiento del objeto del contrato, puede resultar necesario y obligatorio para la prestación del servicio, que sus datos, incluida información sobre alergias, intolerancias alimentarias, minusvalías, etc., tengan que ser comunicados a proveedores tales como compañías aéreas, navieras, hoteles y otros proveedores de servicios, los cuales estarán obligados a utilizar los datos, única y exclusivamente, para dar cumplimiento al objeto del contrato. Estos proveedores, dependiendo del país de destino de su viaje, podrán estar ubicados en países para los que sea necesario realizar una transferencia internacional de datos incluyendo, si fuera el caso, aquellos que no ofrezcan un nivel de protección equiparable a la exigida por la UE, considerándose por tanto una transferencia internacional de datos autorizada expresamente por el interesado.",
-        "Conservación de los datos: Mantendremos su información personal mientras exista una relación contractual y/o comercial con usted, o mientras usted no ejerza su derecho de supresión, cancelación y/o limitación del tratamiento de sus datos. También mantendremos sus datos únicamente al efecto de cumplimiento legal un máximo de 10 años desde la finalización del contrato, si por las características del viaje estuviera afectado por la Ley 10/2010, de 28 de abril, de prevención del blanqueo de capitales y la financiación del terrorismo. Los datos accesorios que Ud. nos informa, p.e. preferencias alimentarias, posibles intolerancias, etc., serán eliminados de nuestros sistemas una vez concluido el servicio o viaje.",
-        "Reclamaciones tras el viaje: El viajero podrá dirigir sus reclamaciones a la dirección postal que consta en el encabezamiento y a la siguiente dirección de correo electrónico: info@crucemundo.es.",
-        "Tratamiento de datos personales: De acuerdo con Reglamento (UE) 2016/679 del Parlamento Europeo y del Consejo, de 27 de abril de 2016 (RGPD) y la Ley Orgánica 3/2018, de 5 de diciembre, de Protección de Datos Personales y Garantía de los Derechos Digitales, el cliente acepta que los datos personales que informa en este documento así como los que puedan ser facilitados en el futuro para el mismo fin, sean recogidos y tratados por la agencia. Dichos datos han sido recogidos por la agencia con la finalidad de gestionar y desarrollar el conjunto de servicios estipulados en este contrato con el cliente, siendo necesarios para cumplir dichos propósitos. El afectado podrá ejercitar los derechos reconocidos en el RGPD y, en particular, los de acceso, limitación, rectificación, supresión, oposición y olvido, a través de un escrito que podrá dirigir a la sede social de la Agencia en la dirección indicada, con la referencia Protección de Datos.",
-        "Comunicación y transferencia de datos: La Agencia le informa que, dependiendo de la modalidad de pago de los servicios, se procederá a la comunicación de los datos incluidos en dicho fichero (Nombre, CIF/NIF, Nº-Cuenta) a las Entidades Financieras (Bancos y Cajas) con las que trabaja la Agencia, a los solos efectos de gestionar las transferencias, cobros y pagos a que dé lugar la relación comercial y el uso de nuestros servicios.",
+        "El presente certificado se emite al amparo de lo establecido en el artÃ­culo 155.2.c del Real Decreto Legislativo 1/2007, de 16 de noviembre, por el que se aprueba el texto refundido de la Ley General para la Defensa de los Consumidores y Usuarios y otras leyes complementarias.",
+        "Crucemundo S.L. dispone de la garantÃ­a por insolvencia establecida para los viajes combinados en el Art. 252-10 de la Ley 22/2010, de 20 de julio, del CÃ³digo de Consumo de CataluÃ±a, formalizada a travÃ©s de la pÃ³liza de cauciÃ³n nÃºmero 72974394 con la compaÃ±Ã­a aseguradora AXA Seguros Generales, S.A. de Seguros y Reaseguros, domiciliada en la calle MonseÃ±or Palmer, 1, 07014 Palma de Mallorca. Dicha garantÃ­a estÃ¡ plenamente vigente.",
+        "Procedimiento en caso de que, dÃ¡ndose la situaciÃ³n de insolvencia de la agencia de viajes cubierta por la garantÃ­a, el consumidor precise activarla.",
+        "Para la gestiÃ³n y cumplimiento del objeto del contrato, puede resultar necesario y obligatorio para la prestaciÃ³n del servicio, que sus datos, incluida informaciÃ³n sobre alergias, intolerancias alimentarias, minusvalÃ­as, etc., tengan que ser comunicados a proveedores tales como compaÃ±Ã­as aÃ©reas, navieras, hoteles y otros proveedores de servicios, los cuales estarÃ¡n obligados a utilizar los datos, Ãºnica y exclusivamente, para dar cumplimiento al objeto del contrato. Estos proveedores, dependiendo del paÃ­s de destino de su viaje, podrÃ¡n estar ubicados en paÃ­ses para los que sea necesario realizar una transferencia internacional de datos incluyendo, si fuera el caso, aquellos que no ofrezcan un nivel de protecciÃ³n equiparable a la exigida por la UE, considerÃ¡ndose por tanto una transferencia internacional de datos autorizada expresamente por el interesado.",
+        "ConservaciÃ³n de los datos: Mantendremos su informaciÃ³n personal mientras exista una relaciÃ³n contractual y/o comercial con usted, o mientras usted no ejerza su derecho de supresiÃ³n, cancelaciÃ³n y/o limitaciÃ³n del tratamiento de sus datos. TambiÃ©n mantendremos sus datos Ãºnicamente al efecto de cumplimiento legal un mÃ¡ximo de 10 aÃ±os desde la finalizaciÃ³n del contrato, si por las caracterÃ­sticas del viaje estuviera afectado por la Ley 10/2010, de 28 de abril, de prevenciÃ³n del blanqueo de capitales y la financiaciÃ³n del terrorismo. Los datos accesorios que Ud. nos informa, p.e. preferencias alimentarias, posibles intolerancias, etc., serÃ¡n eliminados de nuestros sistemas una vez concluido el servicio o viaje.",
+        "Reclamaciones tras el viaje: El viajero podrÃ¡ dirigir sus reclamaciones a la direcciÃ³n postal que consta en el encabezamiento y a la siguiente direcciÃ³n de correo electrÃ³nico: info@crucemundo.es.",
+        "Tratamiento de datos personales: De acuerdo con Reglamento (UE) 2016/679 del Parlamento Europeo y del Consejo, de 27 de abril de 2016 (RGPD) y la Ley OrgÃ¡nica 3/2018, de 5 de diciembre, de ProtecciÃ³n de Datos Personales y GarantÃ­a de los Derechos Digitales, el cliente acepta que los datos personales que informa en este documento asÃ­ como los que puedan ser facilitados en el futuro para el mismo fin, sean recogidos y tratados por la agencia. Dichos datos han sido recogidos por la agencia con la finalidad de gestionar y desarrollar el conjunto de servicios estipulados en este contrato con el cliente, siendo necesarios para cumplir dichos propÃ³sitos. El afectado podrÃ¡ ejercitar los derechos reconocidos en el RGPD y, en particular, los de acceso, limitaciÃ³n, rectificaciÃ³n, supresiÃ³n, oposiciÃ³n y olvido, a travÃ©s de un escrito que podrÃ¡ dirigir a la sede social de la Agencia en la direcciÃ³n indicada, con la referencia ProtecciÃ³n de Datos.",
+        "ComunicaciÃ³n y transferencia de datos: La Agencia le informa que, dependiendo de la modalidad de pago de los servicios, se procederÃ¡ a la comunicaciÃ³n de los datos incluidos en dicho fichero (Nombre, CIF/NIF, NÂº-Cuenta) a las Entidades Financieras (Bancos y Cajas) con las que trabaja la Agencia, a los solos efectos de gestionar las transferencias, cobros y pagos a que dÃ© lugar la relaciÃ³n comercial y el uso de nuestros servicios.",
     ]
     for txt in annex_paragraphs:
         add_line(txt)
@@ -903,7 +904,7 @@ def build_cvc_fit_from_locator(locator):
 
     sheet_titles = get_sheet_titles(spreadsheet_id)
     if locator_info["locator"] not in sheet_titles:
-        raise Exception(f"No existe una pestaña con nombre {locator_info['locator']} dentro del spreadsheet.")
+        raise Exception(f"No existe una pestaÃ±a con nombre {locator_info['locator']} dentro del spreadsheet.")
 
     sheet_title = locator_info["locator"]
 
@@ -1209,6 +1210,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+
 if not st.session_state["authenticated"]:
     st.markdown('<div class="login-page"><div class="login-shell">', unsafe_allow_html=True)
     st.markdown(
@@ -1224,16 +1226,16 @@ if not st.session_state["authenticated"]:
     st.markdown('<div class="login-form-box">', unsafe_allow_html=True)
     with st.form("loginform", clear_on_submit=False):
         email = st.text_input("Mail / Email", placeholder="support@crucemundo.com")
-        password = st.text_input("Contraseña / Password", type="password", placeholder="••••••••")
+        password = st.text_input("ContraseÃ±a / Password", type="password", placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢")
         submitted = st.form_submit_button("Entrar / Login")
         if submitted:
             emailclean = email.strip().lower()
             if not emailclean or not password:
-                st.error("Debes introducir mail y contraseña / Please enter email and password.")
+                st.error("Debes introducir mail y contraseÃ±a / Please enter email and password.")
             elif emailclean not in VALID_USERS:
                 st.error("Usuario no autorizado / Unauthorized user.")
             elif password != VALID_PASSWORD:
-                st.error("Contraseña incorrecta / Incorrect password.")
+                st.error("ContraseÃ±a incorrecta / Incorrect password.")
             else:
                 st.session_state["authenticated"] = True
                 st.session_state["useremail"] = emailclean
@@ -1241,11 +1243,12 @@ if not st.session_state["authenticated"]:
                 st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown(
-        '<div class="login-note">El mail valida el acceso y el alias se usará para nombrar la sesión / Email validates access and the alias will be used to name the session.</div>',
+        '<div class="login-note">El mail valida el acceso y el alias se usarÃ¡ para nombrar la sesiÃ³n / Email validates access and the alias will be used to name the session.</div>',
         unsafe_allow_html=True,
     )
     st.markdown("</div></div>", unsafe_allow_html=True)
     st.stop()
+
 
 USEREMAIL = st.session_state.get("useremail", "").strip()
 DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Sin usuario"
@@ -1260,10 +1263,10 @@ st.markdown(
         <div class="portal-header-left">
             <img class="portal-logo" src="{LOGO_URL}" alt="Logo">
             <div>
-                <div class="portal-title">{SALUDO}, {DISPLAYUSER}. ¿Qué hacemos hoy?</div>
+                <div class="portal-title">{SALUDO}, {DISPLAYUSER}. Â¿QuÃ© hacemos hoy?</div>
                 <div class="portal-title-en">{SALUDOEN}, {DISPLAYUSER}. What are we doing today?</div>
-                <div class="portal-subtitle">Herramientas y automatizaciones · Backend Google Drive</div>
-                <div class="portal-subtitle-en">Tools and automations · Google Drive backend</div>
+                <div class="portal-subtitle">Herramientas y automatizaciones Â· Backend Google Drive</div>
+                <div class="portal-subtitle-en">Tools and automations Â· Google Drive backend</div>
             </div>
         </div>
         <div class="user-top">{DISPLAYUSER}</div>
@@ -1276,27 +1279,27 @@ st.markdown('<div class="main-content">', unsafe_allow_html=True)
 st.markdown(
     """
     <div class="section-head-row">
-        <div class="section-eyebrow">ACCIONES RÁPIDAS · QUICK ACTIONS</div>
+        <div class="section-eyebrow">ACCIONES RÃPIDAS Â· QUICK ACTIONS</div>
         <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">Ir a Crucemundo</a>
         <a class="web-chip" href="https://mail.google.com" target="_blank" rel="noopener noreferrer">Gmail</a>
     </div>
     """,
     unsafe_allow_html=True,
 )
-st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="user-pill">{DISPLAYUSER} Â· {USEREMAIL}</div>', unsafe_allow_html=True)
 
-col1, col2, col3, col4, col5, col6, col7 = st.columns(7, gap="medium")
+col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8, gap="medium")
 
 with col1:
     st.markdown(
         f"""
         <div class="action-box card-es">
             <div class="action-top">
-                <div class="action-icon">📄</div>
+                <div class="action-icon">ðŸ“„</div>
                 <div class="action-text">
-                    <div class="action-title">Nueva Confirmación</div>
+                    <div class="action-title">Nueva ConfirmaciÃ³n</div>
                     <div class="action-title-en">New Confirmation</div>
-                    <div class="action-desc">Crear sesión MASTER de trabajo para {DISPLAYUSER}</div>
+                    <div class="action-desc">Crear sesiÃ³n MASTER de trabajo para {DISPLAYUSER}</div>
                     <div class="action-desc-en">Create MASTER working session for {DISPLAYUSER}</div>
                 </div>
             </div>
@@ -1305,10 +1308,10 @@ with col1:
         unsafe_allow_html=True,
     )
     if confirmstate in ["idle", "done"]:
-        if st.button("Crear Sesión ES", key="btncreares"):
-            iniciar_proceso("es", TEMPLATE_ID_ES, "MASTER", "Estado del Proceso · Process Status · Crear Sesión MASTER/CONFIRMATION")
+        if st.button("Crear SesiÃ³n ES", key="btncreares"):
+            iniciar_proceso("es", TEMPLATE_ID_ES, "MASTER", "Estado del Proceso Â· Process Status Â· Crear SesiÃ³n MASTER/CONFIRMATION")
     else:
-        st.button("Crear Sesión ES", key="btncrearesdis", disabled=True)
+        st.button("Crear SesiÃ³n ES", key="btncrearesdis", disabled=True)
     st.markdown("</div></div>", unsafe_allow_html=True)
 
 with col2:
@@ -1316,11 +1319,11 @@ with col2:
         f"""
         <div class="action-box card-grupos">
             <div class="action-top">
-                <div class="action-icon">👥</div>
+                <div class="action-icon">ðŸ‘¥</div>
                 <div class="action-text">
-                    <div class="action-title">Nueva Confirmación GRUPOS</div>
+                    <div class="action-title">Nueva ConfirmaciÃ³n GRUPOS</div>
                     <div class="action-title-en">New GROUPS Confirmation</div>
-                    <div class="action-desc">Crear sesión MASTER GRUPOS de trabajo para {DISPLAYUSER}</div>
+                    <div class="action-desc">Crear sesiÃ³n MASTER GRUPOS de trabajo para {DISPLAYUSER}</div>
                     <div class="action-desc-en">Create MASTER GROUPS working session for {DISPLAYUSER}</div>
                 </div>
             </div>
@@ -1329,10 +1332,10 @@ with col2:
         unsafe_allow_html=True,
     )
     if confirmstate in ["idle", "done"]:
-        if st.button("Crear Sesión GRUPOS", key="btncreargrupos"):
-            iniciar_proceso("grupos", TEMPLATE_ID_GRUPOS, "MASTER GRUPOS", "Estado del Proceso · Process Status · Crear Sesión MASTER/GRUPOS")
+        if st.button("Crear SesiÃ³n GRUPOS", key="btncreargrupos"):
+            iniciar_proceso("grupos", TEMPLATE_ID_GRUPOS, "MASTER GRUPOS", "Estado del Proceso Â· Process Status Â· Crear SesiÃ³n MASTER/GRUPOS")
     else:
-        st.button("Crear Sesión GRUPOS", key="btncreargruposdis", disabled=True)
+        st.button("Crear SesiÃ³n GRUPOS", key="btncreargruposdis", disabled=True)
     st.markdown("</div></div>", unsafe_allow_html=True)
 
 with col3:
@@ -1340,11 +1343,11 @@ with col3:
         """
         <div class="action-box card-salida">
             <div class="action-top">
-                <div class="action-icon">🔎</div>
+                <div class="action-icon">ðŸ”Ž</div>
                 <div class="action-text">
                     <div class="action-title">Ir a Salida</div>
                     <div class="action-title-en">Go to Departure</div>
-                    <div class="action-desc">Buscar una salida existente por año, barco y código de salida</div>
+                    <div class="action-desc">Buscar una salida existente por aÃ±o, barco y cÃ³digo de salida</div>
                     <div class="action-desc-en">Find an existing departure by year, ship and departure code</div>
                 </div>
             </div>
@@ -1362,11 +1365,11 @@ with col4:
         """
         <div class="action-box card-crucero">
             <div class="action-top">
-                <div class="action-icon">🛳️</div>
+                <div class="action-icon">ðŸ›³ï¸</div>
                 <div class="action-text">
                     <div class="action-title">Crear crucero</div>
                     <div class="action-title-en">Create Cruise</div>
-                    <div class="action-desc">Crear salida nueva desde plantilla y guardarla en año/barco</div>
+                    <div class="action-desc">Crear salida nueva desde plantilla y guardarla en aÃ±o/barco</div>
                     <div class="action-desc-en">Create a new departure from template and save it in year/ship</div>
                 </div>
             </div>
@@ -1384,7 +1387,7 @@ with col5:
         """
         <div class="action-box card-excursiones">
             <div class="action-top">
-                <div class="action-icon">🧭</div>
+                <div class="action-icon">ðŸ§­</div>
                 <div class="action-text">
                     <div class="action-title">Excursiones</div>
                     <div class="action-title-en">Excursions</div>
@@ -1407,7 +1410,7 @@ with col6:
         """
         <div class="action-box card-nueva-agencia">
             <div class="action-top">
-                <div class="action-icon">🏢</div>
+                <div class="action-icon">ðŸ¢</div>
                 <div class="action-text">
                     <div class="action-title">Nueva Agencia</div>
                     <div class="action-title-en">New Agency</div>
@@ -1429,7 +1432,7 @@ with col7:
         """
         <div class="action-box card-buscar-agencia">
             <div class="action-top">
-                <div class="action-icon">📇</div>
+                <div class="action-icon">ðŸ“‡</div>
                 <div class="action-text">
                     <div class="action-title">Buscar Agencia</div>
                     <div class="action-title-en">Find Agency</div>
@@ -1446,14 +1449,12 @@ with col7:
         st.rerun()
     st.markdown("</div></div>", unsafe_allow_html=True)
 
-row2col1, row2col2, row2col3, row2col4, row2col5, row2col6, row2col7 = st.columns(7, gap="medium")
-
-with row2col1:
+with col8:
     st.markdown(
         """
         <div class="action-box card-cvcfit">
             <div class="action-top">
-                <div class="action-icon">🧾</div>
+                <div class="action-icon">ðŸ§¾</div>
                 <div class="action-text">
                     <div class="action-title">CVC Fit</div>
                     <div class="action-title-en">CVC Fit</div>
@@ -1473,17 +1474,17 @@ with row2col1:
 
 if st.session_state.get("opensalidaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    st.markdown("### Seleccionar salida · Select departure")
+    st.markdown("### Seleccionar salida Â· Select departure")
     try:
         years = get_years()
         currentyear = st.session_state.get("salidayear")
         if currentyear not in years:
             currentyear = None
         selectedyear = st.selectbox(
-            "AÑO / YEAR",
+            "AÃ‘O / YEAR",
             options=years,
             index=years.index(currentyear) if currentyear in years else None,
-            placeholder="Selecciona un año / Select a year",
+            placeholder="Selecciona un aÃ±o / Select a year",
             key="salidayearwidget",
             on_change=on_year_change,
         )
@@ -1527,7 +1528,7 @@ if st.session_state.get("opensalidaform"):
             selectedobj = next((d for d in departures if d["nombre"] == selecteddeparture), None)
             if selectedobj:
                 st.markdown(
-                    f'<a class="done-link" href="{selectedobj["url"]}" target="_blank">Abrir salida · Open departure</a>',
+                    f'<a class="done-link" href="{selectedobj["url"]}" target="_blank">Abrir salida Â· Open departure</a>',
                     unsafe_allow_html=True,
                 )
     except Exception as e:
@@ -1537,17 +1538,17 @@ if st.session_state.get("opensalidaform"):
 
 if st.session_state.get("opencruceroform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    st.markdown("### Crear crucero · Create cruise")
+    st.markdown("### Crear crucero Â· Create cruise")
     try:
         years = get_years()
         currentcyear = st.session_state.get("cruceroyear")
         if currentcyear not in years:
             currentcyear = None
         cruceroyear = st.selectbox(
-            "AÑO DESTINO / TARGET YEAR",
+            "AÃ‘O DESTINO / TARGET YEAR",
             options=years,
             index=years.index(currentcyear) if currentcyear in years else None,
-            placeholder="Selecciona un año / Select a year",
+            placeholder="Selecciona un aÃ±o / Select a year",
             key="cruceroyearwidget",
             on_change=on_crucero_year_change,
         )
@@ -1577,19 +1578,19 @@ if st.session_state.get("opencruceroform"):
 
         if st.button("Crear Crucero", key="btncrearcruceroaction", disabled=not (cruceroyear and cruceroboat and fechasalida)):
             if int(cruceroyear) != fechasalida.year:
-                st.error("El año seleccionado no coincide con el año de la fecha / Selected year does not match the date year.")
+                st.error("El aÃ±o seleccionado no coincide con el aÃ±o de la fecha / Selected year does not match the date year.")
             else:
                 result = create_crucero_file(cruceroboat, fechasalida)
                 if result["status"] == "duplicate":
                     st.warning(f"Ya existe / Already exists: {result['name']}")
                     st.markdown(
-                        f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir archivo existente · Open existing file</a>',
+                        f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir archivo existente Â· Open existing file</a>',
                         unsafe_allow_html=True,
                     )
                 else:
                     st.success(f"Archivo creado / File created: {result['name']}")
                     st.markdown(
-                        f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir crucero · Open cruise</a>',
+                        f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir crucero Â· Open cruise</a>',
                         unsafe_allow_html=True,
                     )
     except Exception as e:
@@ -1599,7 +1600,7 @@ if st.session_state.get("opencruceroform"):
 
 if st.session_state.get("opennuevaagenciaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    st.markdown("### Nueva Agencia · New Agency")
+    st.markdown("### Nueva Agencia Â· New Agency")
     with st.form("formnuevaagencia", clear_on_submit=False):
         rowa1, rowa2 = st.columns(2, gap="medium")
         with rowa1:
@@ -1664,9 +1665,9 @@ if st.session_state.get("opennuevaagenciaform"):
 
 if st.session_state.get("openbuscaragenciaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    st.markdown("### Buscar Agencia · Find Agency")
+    st.markdown("### Buscar Agencia Â· Find Agency")
     searchquery = st.text_input(
-        "Introduce lo que sepas (nombre, código, grupo, teléfono, email o dirección)",
+        "Introduce lo que sepas (nombre, cÃ³digo, grupo, telÃ©fono, email o direcciÃ³n)",
         key="agencysearchquery",
         placeholder="Ej: Viajes Pepe / AG123 / 912345678 / info@...",
     )
@@ -1699,7 +1700,7 @@ if st.session_state.get("openbuscaragenciaform"):
         st.markdown("</div></div>", unsafe_allow_html=True)
     elif len(matches) > 1:
         st.warning(f"Hay {len(matches)} coincidencias. Selecciona la correcta.")
-        options = [f"{i+1}. {ag['Nombre']} · {ag['CODIGO']} · {ag['Telefono']} · {ag['Email']}" for i, ag in enumerate(matches)]
+        options = [f"{i+1}. {ag['Nombre']} Â· {ag['CODIGO']} Â· {ag['Telefono']} Â· {ag['Email']}" for i, ag in enumerate(matches)]
         selectedlabel = st.selectbox(
             "Elige la agencia correcta",
             options=options,
@@ -1751,14 +1752,14 @@ if st.session_state.get("opencvcfitform"):
             ("Localizador", result["locator"]),
             ("Barco", result["boat_name"]),
             ("Salida", result["fecha_salida_str"]),
-            ("Límite pago", result["fecha_limite_pago_str"]),
+            ("LÃ­mite pago", result["fecha_limite_pago_str"]),
             ("Nombre", result["nombre"]),
             ("Apellidos", result["apellidos"]),
             ("DNI", result["dni"]),
             ("Personas", result["personas"]),
             ("Habitaciones", result["habitaciones"]),
             ("Total", result["total"]),
-            ("Pestaña", result["sheet_title"]),
+            ("PestaÃ±a", result["sheet_title"]),
             ("Archivo Drive", result["filename"]),
         ]
         for label, value in fields:
@@ -1786,3 +1787,93 @@ if st.session_state.get("opencvcfitform"):
             key="btncvcfitdownload",
         )
     st.markdown("</div>", unsafe_allow_html=True)
+
+
+savedname = st.session_state.get("nombrecopia")
+savedurl = st.session_state.get("copyurl")
+processtitle = st.session_state.get("processtitle", "Estado del Proceso Â· Process Status")
+
+if confirmstate in ["step1", "step2", "step3", "done"]:
+    st.markdown('<div class="panel-inline" style="max-width:520px;">', unsafe_allow_html=True)
+    st.markdown(f"### {processtitle}")
+    if confirmstate == "step1":
+        render_step("Progreso Â· Progress", "Preparando plantilla Â· Preparing template...", "active")
+    elif confirmstate == "step2":
+        render_step("Progreso Â· Progress", "Generando copia en Drive Â· Creating Drive copy...", "active")
+    elif confirmstate == "step3":
+        render_step("Progreso Â· Progress", "Abriendo sesiÃ³n Â· Opening session...", "active")
+    elif confirmstate == "done":
+        render_step("Progreso Â· Progress", "Completo Â· Complete", "done")
+        st.markdown(
+            f"""
+            <div style="margin-top:0.8rem;">
+                <div style="font-size:0.76rem;color:#1F2937;font-weight:600;">SesiÃ³n creada Â· Session created</div>
+                <div style="font-size:0.71rem;color:#657087;margin-top:0.15rem;line-height:1.3;">
+                    Puedes abrir tu sesiÃ³n en el botÃ³n de abajo Â· You can open your session with the button below.
+                </div>
+                <a class="done-link" href="{savedurl}" target="_blank">Abrir sesiÃ³n Â· Open session</a>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    if confirmstate == "step1":
+        time.sleep(0.7)
+        st.session_state["confirmstate"] = "step2"
+        st.rerun()
+    elif confirmstate == "step2":
+        time.sleep(0.7)
+        st.session_state["confirmstate"] = "step3"
+        st.rerun()
+    elif confirmstate == "step3":
+        time.sleep(0.7)
+        st.session_state["confirmstate"] = "done"
+        existing = [h["nombre"] for h in st.session_state["historial"]]
+        if savedname and savedname not in existing:
+            st.session_state["historial"].insert(0, {
+                "nombre": savedname,
+                "hora": datetime.now().strftime("%H:%M:%S"),
+                "url": savedurl,
+            })
+        st.rerun()
+
+if confirmstate == "done" and savedname and not st.session_state.get(f"opened_{savedname}"):
+    st.session_state[f"opened_{savedname}"] = True
+    st.markdown(
+        f"<script>setTimeout(()=>window.open('{savedurl}','_blank'),300);</script>",
+        unsafe_allow_html=True,
+    )
+
+st.markdown('<div style="height:1rem;"></div>', unsafe_allow_html=True)
+st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
+if st.button("Cerrar sesiÃ³n / Logout", key="btnlogout"):
+    do_logout()
+st.markdown("</div>", unsafe_allow_html=True)
+
+if st.session_state.get("historial"):
+    st.markdown('<div style="height:1.2rem;"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-eyebrow">ESTA SESIÃ“N Â· THIS SESSION</div>', unsafe_allow_html=True)
+    for i, entry in enumerate(st.session_state["historial"], 1):
+        st.markdown(
+            f"""
+            <div class="history-row">
+                <div class="history-num">{i}</div>
+                <div class="history-name">{entry["nombre"]}</div>
+                <div class="history-time">{entry["hora"]}</div>
+                <a class="history-link" href="{entry["url"]}" target="_blank">Abrir Â· Open</a>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+st.markdown(
+    f"""
+    <div class="portal-footer">
+        <span class="footer-text">Panel de Control Â· Control Panel Â· v4.3.1</span>
+        <span class="footer-text">RaÃ­z Drive Â· Drive Root Â· {DRIVE_ROOT_ID}</span>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+st.markdown("</div>", unsafe_allow_html=True)
