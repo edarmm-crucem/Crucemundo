@@ -1081,7 +1081,7 @@ st.markdown("""
 
 st.markdown(f'<div class="user-pill">👤 {DISPLAY_USER} · {USER_EMAIL}</div>', unsafe_allow_html=True)
 
-# 7 TARJETAS POR FILA
+# 7 TARJETAS EN UNA SOLA FILA
 col1, col2, col3, col4, col5, col6, col7 = st.columns(7, gap="medium")
 
 with col1:
@@ -1610,6 +1610,7 @@ if confirm_state in ("step1", "step2", "step3", "done"):
             f'<script>setTimeout(()=>window.open("{saved_url}","_blank"),300);</script>',
             unsafe_allow_html=True
         )
+
 st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
 st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
 if st.button("Cerrar sesión / Logout", key="btn_logout"):
@@ -1634,7 +1635,4 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="portal-footer">
-    <span class="footer-text">Panel de Control · Control Panel · v4.2.0</span>
-    <span class="footer-text">Raíz Drive / Drive Root: {DRIVE_ROOT_ID}</span>
-</div>
-""", unsafe_allow_html=True)
+   
