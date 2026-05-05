@@ -1081,7 +1081,7 @@ st.markdown("""
 
 st.markdown(f'<div class="user-pill">👤 {DISPLAY_USER} · {USER_EMAIL}</div>', unsafe_allow_html=True)
 
-# 7 TARJETAS EN UNA FILA
+# 7 TARJETAS POR FILA
 col1, col2, col3, col4, col5, col6, col7 = st.columns(7, gap="medium")
 
 with col1:
@@ -1499,9 +1499,7 @@ if st.session_state.get("open_buscar_agencia_form"):
         placeholder="Ej: viajes pepe / AG123 / 912345678 / info@..."
     )
 
-    search_clicked = st.button("Buscar coincidencias", key="btn_ejecutar_busqueda_agencia")
-
-    if search_clicked:
+    if st.button("Buscar coincidencias", key="btn_ejecutar_busqueda_agencia"):
         try:
             matches = search_agencies(search_query)
             st.session_state["agency_matches"] = matches
@@ -1511,7 +1509,7 @@ if st.session_state.get("open_buscar_agencia_form"):
 
     matches = st.session_state.get("agency_matches", [])
 
-    if search_clicked and search_query and matches == []:
+    if search_query and matches == []:
         st.info("No hay coincidencias.")
 
     if len(matches) == 1:
@@ -1569,19 +1567,22 @@ if confirm_state in ("step1", "step2", "step3", "done"):
     if confirm_state == "step1":
         render_step("Progreso / Progress", "Preparando plantilla / Preparing template...", "active")
     elif confirm_state == "step2":
-        render_step("Progreso / Progress", "Generando copia en Drive / Creating Drive copy...", "active")
-    elif confirm_state == "step3":
-        render_step("Progreso / Progress", "Abriendo sesión / Opening session...", "active")
+        render_step("Progreso / Progdiv>
+                """, unsafe_allow_html=True)
+            st.markdown('</div></div>', unsafe_allow_html=True)
+
+    st.markdownreso / Progress", "Abriendo sesión / Opening session...", "active")
     elif confirm_state == "done":
         render_step("Progreso / Progress", "Completo / Complete", "done")
         st.markdown(f"""
         <div style="margin-top:0.8rem;">
             <div style="font-size:0.76rem;color:#1F2937;font-weight:600;">Sesión creada / Session created</div>
             <div style="font-size:0.71rem;color:#657087;margin-top:0.15rem;line-height:1.3;">
-                Puedes abrir tu sesión en el botón de abajo · You can open your session with the button below.
-            </div>
-            <a class="done-link" href="{saved_url}" target="_blank">Abrir sesión / Open session ↗</a>
-        </div>
+                Puedes abrir tu sesión en el botón de abajo · You can open your session with the button bediv>
+                """, unsafe_allow_html=True)
+            st.markdown('</div></div>', unsafe_allow_html=True)
+
+    st.markdown    </div>
         """, unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
