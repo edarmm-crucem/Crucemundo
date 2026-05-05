@@ -2,7 +2,7 @@ import time
 from datetime import datetime
 import streamlit as st
 
-from config import 11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm
+from config import DRIVE_ROOT_ID
 from state import init_state, do_logout
 from styles import inject_styles
 from auth import render_login
