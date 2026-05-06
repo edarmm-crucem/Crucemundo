@@ -1,4 +1,5 @@
 import re
+import urllib.parse
 from datetime import date, datetime
 
 import requests
@@ -185,19 +186,29 @@ def close_all_panels():
         st.session_state[flag] = False
 
 
-def clear_all_selectors():
-    for group_name in ["salida", "crucero", "agencia", "cvcfit", "cvcagencias"]:
+def clear_transient_ui():
+    for group_name in STATE_GROUPS.keys():
         clear_state_group(group_name)
+
     close_all_panels()
+
     st.session_state["activepanel"] = None
+    st.session_state["confirmstate"] = "idle"
+    st.session_state["sessiontype"] = ""
+    st.session_state["processresult"] = None
 
 
 def open_panel(panel_name):
-    clear_all_selectors()
+    clear_transient_ui()
     flag = PANEL_FLAGS.get(panel_name)
     if flag:
         st.session_state[flag] = True
         st.session_state["activepanel"] = panel_name
+
+
+def close_current_panel():
+    clear_transient_ui()
+    st.rerun()
 
 
 def do_logout():
@@ -262,13 +273,32 @@ def render_key_value_grid(css_prefix, fields):
     st.markdown("</div></div>", unsafe_allow_html=True)
 
 
-def reset_process_state():
-    st.session_state["confirmstate"] = "idle"
-    st.session_state["sessiontype"] = ""
-    st.session_state["nombrecopia"] = ""
-    st.session_state["copyurl"] = ""
-    st.session_state["processtitle"] = ""
-    st.session_state["processresult"] = None
+def panel_header(title, close_key):
+    head_col1, head_col2 = st.columns([12, 1])
+    with head_col1:
+        st.markdown(f"### {title}")
+    with head_col2:
+        if st.button("✕", key=close_key):
+            close_current_panel()
+
+
+def iniciar_proceso(sessiontype, templateid, prefixname, processtitle):
+    clear_transient_ui()
+    fechastr = datetime.now().strftime("%Y%m%d-%H%M")
+    displayuser = st.session_state.get("displayname", "").strip() or "Sin usuario"
+    nombrecopia = f"SESION - {displayuser} - {prefixname} - {fechastr}"
+    copyurl = (
+        f"https://docs.google.com/spreadsheets/d/{templateid}/copy"
+        f"?copyDestination={FOLDER_ID}"
+        f"&title={urllib.parse.quote(nombrecopia)}"
+    )
+    st.session_state["confirmstate"] = "step1"
+    st.session_state["sessiontype"] = sessiontype
+    st.session_state["nombrecopia"] = nombrecopia
+    st.session_state["copyurl"] = copyurl
+    st.session_state["processtitle"] = processtitle
+    st.session_state["activepanel"] = "process"
+    st.rerun()
 
 
 # ============================================================
@@ -395,61 +425,6 @@ def copy_file_to_folder(fileid, newname, parentfolderid, description=None):
         fields="id, name, webViewLink",
         supportsAllDrives=True,
     ).execute()
-
-
-def create_work_session(templateid, prefixname, sessiontype):
-    displayuser = st.session_state.get("displayname", "").strip() or "Sin usuario"
-    fechastr = datetime.now().strftime("%Y%m%d-%H%M")
-    nombrecopia = f"SESION - {displayuser} - {prefixname} - {fechastr}"
-    descripcion = (
-        f"Tipo: {sessiontype} | Usuario: {displayuser} | "
-        f"Creado: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} | "
-        f"Sesión generada automáticamente desde Crucemundo Hub."
-    )
-
-    progress_bar = st.progress(0.0, text="Iniciando...")
-    status_box = st.empty()
-
-    try:
-        progress_bar.progress(0.15, text="Preparando sesión...")
-        status_box.info("Preparando datos de la nueva sesión...")
-
-        clear_all_selectors()
-        reset_process_state()
-
-        progress_bar.progress(0.45, text="Copiando plantilla en Drive...")
-        status_box.info("Copiando plantilla en Drive...")
-
-        copia = copy_file_to_folder(templateid, nombrecopia, FOLDER_ID, descripcion)
-
-        progress_bar.progress(0.8, text="Finalizando...")
-        status_box.info("Finalizando proceso...")
-
-        result = {
-            "status": "ok",
-            "name": copia["name"],
-            "url": copia.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{copia['id']}/edit",
-            "id": copia["id"],
-            "sessiontype": sessiontype,
-        }
-
-        st.session_state["confirmstate"] = "done"
-        st.session_state["sessiontype"] = sessiontype
-        st.session_state["nombrecopia"] = result["name"]
-        st.session_state["copyurl"] = result["url"]
-        st.session_state["processtitle"] = "Estado del Proceso"
-        st.session_state["processresult"] = result
-
-        progress_bar.progress(1.0, text="Ok")
-        status_box.success("Ok")
-        return result
-
-    except Exception as exc:
-        progress_bar.empty()
-        status_box.empty()
-        st.session_state["confirmstate"] = "error"
-        st.session_state["processresult"] = None
-        raise exc
 
 
 def update_crucero_sheet(spreadsheetid, barco):
@@ -847,15 +822,9 @@ st.markdown(
     .web-chip-green { background: #E9F8EE; border: 1px solid #BEE3C8; color: #1E6B3A !important; }
     .user-pill { display: inline-flex; align-items: center; gap: 0.4rem; margin: 0.02rem 0 1rem; padding: 0.38rem 0.68rem; border-radius: 999px; background: #fff; border: 1px solid #E4E7EF; font-size: 0.72rem; color: #5D6880; max-width: 100%; word-break: break-word; }
     .action-box { width: 100%; min-height: 210px; border-radius: 22px; padding: 1rem; margin-bottom: 0.85rem; display: flex; flex-direction: column; justify-content: space-between; gap: 0.9rem; border: 1px solid transparent; }
-    .card-es { background: #F3F7FF; border-color: #D9E5FF; }
-    .card-grupos { background: #F4FBF6; border-color: #D8EEDC; }
-    .card-salida { background: #FFF8F1; border-color: #F1DFC7; }
-    .card-crucero { background: #F7F4FF; border-color: #E4DDF9; }
-    .card-excursiones { background: #EEF8FB; border-color: #D5EAF1; }
-    .card-nueva-agencia { background: #F1FAF4; border-color: #D7EEDC; }
-    .card-buscar-agencia { background: #FFF7EF; border-color: #F4E1CA; }
-    .card-cvcfit { background: #FFF2F7; border-color: #F4D7E3; }
-    .card-cvcagencias { background: #EEF9F1; border-color: #D5EEDB; }
+    .card-es { background: #F3F7FF; border-color: #D9E5FF; } .card-grupos { background: #F4FBF6; border-color: #D8EEDC; } .card-salida { background: #FFF8F1; border-color: #F1DFC7; }
+    .card-crucero { background: #F7F4FF; border-color: #E4DDF9; } .card-excursiones { background: #EEF8FB; border-color: #D5EAF1; } .card-nueva-agencia { background: #F1FAF4; border-color: #D7EEDC; }
+    .card-buscar-agencia { background: #FFF7EF; border-color: #F4E1CA; } .card-cvcfit { background: #FFF2F7; border-color: #F4D7E3; } .card-cvcagencias { background: #EEF9F1; border-color: #D5EEDB; }
     .card-nextcard { background: #F6F7FB; border-color: #E1E5EF; }
     .action-top { display: flex; align-items: flex-start; gap: 0.75rem; }
     .action-icon { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
@@ -863,29 +832,18 @@ st.markdown(
     .action-title, .action-title-en { font-size: 0.95rem; font-weight: 700; color: #1F2937; line-height: 1.1; }
     .action-title-en { margin-top: 0.05rem; }
     .action-desc, .action-desc-en { font-size: 0.73rem; color: #6F7B91; line-height: 1.28; }
-    .action-desc { margin-top: 0.18rem; }
-    .action-desc-en { margin-top: 0.04rem; }
+    .action-desc { margin-top: 0.18rem; } .action-desc-en { margin-top: 0.04rem; }
     .action-button-wrap { display: flex !important; justify-content: flex-start !important; align-items: center !important; width: 100% !important; margin-top: 0.1rem; }
     .panel-inline { margin-top: 1rem; padding-top: 0.2rem; width: 100%; max-width: 1100px; }
     .done-link { display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 0.65rem; background: #D9E9FF; color: #214D92 !important; border: 1px solid #BDD6FF; border-radius: 999px; padding: 0.42rem 0.88rem; font-size: 0.71rem; font-weight: 600; text-decoration: none; }
-    .agency-card, .cvcfit-card, .cvcfit-status-card, .cvcagencias-card, .cvcagencias-status-card, .process-card {
-        background: #FBFCFF; border: 1px solid #E6EBF3; border-radius: 18px; padding: 1rem; margin-top: 0.75rem;
-    }
-    .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid {
-        display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem 1rem;
-    }
-    .agency-item-label, .cvcfit-item-label, .cvcagencias-item-label, .process-item-label {
-        font-size: 0.68rem; color: #7E889D; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.16rem;
-    }
-    .agency-item-value, .cvcfit-item-value, .cvcagencias-item-value, .process-item-value {
-        font-size: 0.8rem; color: #1F2937; line-height: 1.35; word-break: break-word;
-    }
-    .cvcfit-log-line, .cvcagencias-log-line {
-        font-size: 0.74rem; color: #465066; line-height: 1.45; margin-bottom: 0.35rem; word-break: break-word;
-    }
+    .agency-card, .cvcfit-card, .cvcfit-status-card, .cvcagencias-card, .cvcagencias-status-card { background: #FBFCFF; border: 1px solid #E6EBF3; border-radius: 18px; padding: 1rem; margin-top: 0.75rem; }
+    .agency-grid, .cvcfit-grid, .cvcagencias-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem 1rem; }
+    .agency-item-label, .cvcfit-item-label, .cvcagencias-item-label { font-size: 0.68rem; color: #7E889D; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.16rem; }
+    .agency-item-value, .cvcfit-item-value, .cvcagencias-item-value { font-size: 0.8rem; color: #1F2937; line-height: 1.35; word-break: break-word; }
+    .cvcfit-log-line, .cvcagencias-log-line { font-size: 0.74rem; color: #465066; line-height: 1.45; margin-bottom: 0.35rem; word-break: break-word; }
     .portal-footer { margin-top: 1rem; padding: 0.5rem 0 0 0; display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
     .footer-text { font-size: 0.71rem; color: #A2ABBD; }
-    @media (max-width: 1600px) { .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 1600px) { .agency-grid, .cvcfit-grid, .cvcagencias-grid { grid-template-columns: 1fr; } }
     @media (max-width: 1300px) { .portal-header, .portal-footer { flex-direction: column; align-items: flex-start; } }
     </style>
     """,
@@ -1025,6 +983,7 @@ def render_action_card(col, config):
         else:
             disabled = config.get("disabled", False)
             if not disabled and st.button(config["button_label"], key=config["key"]):
+                clear_transient_ui()
                 action = config.get("action")
                 if action:
                     action()
@@ -1044,11 +1003,7 @@ cards = [
         "desc_en": f"Create MASTER working session for {DISPLAYUSER}",
         "button_label": "Crear Sesión ES",
         "key": "btncreares",
-        "action": lambda: create_work_session(
-            TEMPLATE_ID_ES,
-            "MASTER",
-            "es",
-        ),
+        "action": lambda: iniciar_proceso("es", TEMPLATE_ID_ES, "MASTER", "Estado del Proceso · Process Status · Crear Sesión MASTER/CONFIRMATION"),
         "disabled": False,
     },
     {
@@ -1060,11 +1015,7 @@ cards = [
         "desc_en": f"Create MASTER GROUPS working session for {DISPLAYUSER}",
         "button_label": "Crear Sesión GRUPOS",
         "key": "btncreargrupos",
-        "action": lambda: create_work_session(
-            TEMPLATE_ID_GRUPOS,
-            "MASTER GRUPOS",
-            "grupos",
-        ),
+        "action": lambda: iniciar_proceso("grupos", TEMPLATE_ID_GRUPOS, "MASTER GRUPOS", "Estado del Proceso · Process Status · Crear Sesión MASTER/GRUPOS"),
         "disabled": False,
     },
     {
@@ -1168,26 +1119,34 @@ render_action_card(
 
 
 # ============================================================
-# PANEL ESTADO PROCESO SESIÓN
+# PANEL CREAR SESIÓN
 # ============================================================
-if st.session_state.get("confirmstate") == "done" and st.session_state.get("processresult"):
-    result = st.session_state["processresult"]
+if st.session_state.get("confirmstate") == "step1":
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    st.markdown("### Estado del proceso")
-    st.success("Ok")
-    render_key_value_grid(
-        "process",
-        [
-            ("Tipo de sesión", result.get("sessiontype", "")),
-            ("Nombre del archivo", result.get("name", "")),
-            ("ID", result.get("id", "")),
-            ("Estado", "Ok"),
-        ],
-    )
+    panel_header("Crear sesión", "closeprocesspanel")
+
     st.markdown(
-        f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir sesión creada</a>',
+        f'<a class="done-link" href="{st.session_state["copyurl"]}" target="_blank">'
+        '👉 Crear copia en Drive'
+        '</a>',
         unsafe_allow_html=True,
     )
+
+    if st.button("Ya he creado la copia", key="btnconfirmcopydone"):
+        st.session_state["confirmstate"] = "done"
+        st.success("Sesión creada correctamente")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+elif st.session_state.get("confirmstate") == "done":
+    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
+    panel_header("Crear sesión", "closeprocesspaneldone")
+    st.success("Ok")
+    if st.session_state.get("copyurl"):
+        st.markdown(
+            f'<a class="done-link" href="{st.session_state["copyurl"]}" target="_blank">Abrir sesión creada</a>',
+            unsafe_allow_html=True,
+        )
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -1196,7 +1155,7 @@ if st.session_state.get("confirmstate") == "done" and st.session_state.get("proc
 # ============================================================
 if st.session_state.get("opensalidaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    st.markdown("### Seleccionar salida · Select departure")
+    panel_header("Seleccionar salida · Select departure", "closesalidapanel")
     try:
         years = get_years()
         currentyear = st.session_state.get("salidayear")
@@ -1263,7 +1222,7 @@ if st.session_state.get("opensalidaform"):
 # ============================================================
 if st.session_state.get("opencruceroform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    st.markdown("### Crear crucero · Create cruise")
+    panel_header("Crear crucero · Create cruise", "closecruceropanel")
     try:
         years = get_years()
         currentcyear = st.session_state.get("cruceroyear")
@@ -1328,7 +1287,7 @@ if st.session_state.get("opencruceroform"):
 # ============================================================
 if st.session_state.get("opennuevaagenciaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    st.markdown("### Nueva Agencia · New Agency")
+    panel_header("Nueva Agencia · New Agency", "closenuevaagenciapanel")
     with st.form("formnuevaagencia", clear_on_submit=False):
         rowa1, rowa2 = st.columns(2, gap="medium")
         with rowa1:
@@ -1396,7 +1355,7 @@ if st.session_state.get("opennuevaagenciaform"):
 # ============================================================
 if st.session_state.get("openbuscaragenciaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    st.markdown("### Buscar Agencia · Find Agency")
+    panel_header("Buscar Agencia · Find Agency", "closebuscaragenciapanel")
     searchquery = st.text_input(
         "Introduce lo que sepas (nombre, código, grupo, teléfono, email o dirección)",
         key="agencysearchquery",
@@ -1439,7 +1398,7 @@ if st.session_state.get("openbuscaragenciaform"):
 # ============================================================
 if st.session_state.get("opencvcfitform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    st.markdown("### CVC Fit")
+    panel_header("CVC Fit", "closecvcfitpanel")
     locator = st.text_input(
         "Localizador",
         key="cvcfitlocatorwidget",
@@ -1489,7 +1448,7 @@ if st.session_state.get("opencvcfitform"):
 # ============================================================
 if st.session_state.get("opencvcagenciasform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    st.markdown("### CVC Agencias")
+    panel_header("CVC Agencias", "closecvcagenciaspanel")
     locator = st.text_input(
         "Localizador",
         key="cvcagenciaslocatorwidget",
