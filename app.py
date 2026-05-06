@@ -984,8 +984,8 @@ st.markdown(
     f"""
     <div class="section-head-row-green">
         <a class="web-chip-green" href="{drive_root_url}" target="_blank" rel="noopener noreferrer">Abre Drive Root</a>
-        <a class="web-chip-green" href="{cvcfit_folder_url}" target="_blank" rel="noopener noreferrer">Abre Folder CVC Fit</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre Cabinas</a>
+        <a class="web-chip-green" href="{cvcfit_folder_url}" target="_blank" rel="noopener noreferrer">Abre Folder Sesiones</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER_CABINAS</a>
     </div>
     """,
     unsafe_allow_html=True,
@@ -1041,7 +1041,7 @@ cards = [
         "title_en": "New Confirmation",
         "desc_es": f"Crear sesión MASTER CONFIRMATION para {DISPLAYUSER}",
         "desc_en": f"Create MASTER CONFIRMATION session for {DISPLAYUSER}",
-        "button_label": "Crear Sesión ES",
+        "button_label": "Crear Sesión",
         "key": "btncreares",
         "action": lambda: create_master_session(
             "es",
@@ -1128,8 +1128,8 @@ cards = [
         "icon": "🧾",
         "title_es": "CVC Fit",
         "title_en": "CVC Fit",
-        "desc_es": "Buscar localizador en Booking ES!G11 y descargar PDF de la hoja CVC Fit",
-        "desc_en": "Find locator in Booking ES!G11 and download the CVC Fit sheet as PDF",
+        "desc_es": "Buscar por localizador y descargar PDF CVC Fit",
+        "desc_en": "Find locator and download the CVC Fit sheet as PDF",
         "button_label": "Abrir CVC Fit",
         "key": "btncvcfitopen",
         "action": lambda: (open_panel("cvcfit"), st.rerun()),
@@ -1139,8 +1139,8 @@ cards = [
         "icon": "🏷️",
         "title_es": "CVC Agencias",
         "title_en": "CVC Agencies",
-        "desc_es": "Buscar localizador en Booking ES!G11 y descargar PDF de la hoja CVC Agencias",
-        "desc_en": "Find locator in Booking ES!G11 and download the CVC Agencias sheet as PDF",
+        "desc_es": "Buscar por localizador descargar PDF CVC Agencias",
+        "desc_en": "Find locator and download the CVC Agencias sheet as PDF",
         "button_label": "Abrir CVC Agencias",
         "key": "btncvcagenciasopen",
         "action": lambda: (open_panel("cvcagencias"), st.rerun()),
