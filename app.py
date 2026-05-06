@@ -1256,6 +1256,8 @@ st.markdown(
 
 st.markdown('<div class="main-content">', unsafe_allow_html=True)
 
+
+
 st.markdown(f"""
 <div class="quick-actions-wrap">
   <div class="section-head-row">
@@ -1277,6 +1279,7 @@ st.markdown(f"""
   </div>
 </div>
 """, unsafe_allow_html=True)
+
 
 st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
