@@ -1169,8 +1169,8 @@ st.markdown(
 st.markdown(
     f"""
     <div class="section-head-row-green">
-        <a class="web-chip-green" href="{drive_root_url}" target="_blank" rel="noopener noreferrer">Abrir Drive Root</a>
-        <a class="web-chip-green" href="{cvcfit_folder_url}" target="_blank" rel="noopener noreferrer">Abrir folder CVC Fit</a>
+        <a class="web-chip-green" href="{drive_root_url}" target="_blank" rel="noopener noreferrer">Abre Drive Root</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre Cabinas</a>
     </div>
     """,
     unsafe_allow_html=True,
