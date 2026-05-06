@@ -978,6 +978,29 @@ st.markdown(
         border: 1px solid #F4D35E; color: #7A5900 !important; font-size: 0.70rem;
         font-weight: 700; line-height: 1; text-decoration: none; white-space: nowrap;
     }
+
+.drive-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.34rem 0.74rem;
+  border-radius: 999px;
+  background: #EAF8F0;
+  border: 1px solid #BFE3CB;
+  color: #216746 !important;
+  font-size: 0.70rem;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.drive-chip:hover {
+  background: #DDF2E6;
+  border-color: #A9D7B8;
+  color: #19563A !important;
+}
+
     .user-pill {
         display: inline-flex; align-items: center; gap: 0.4rem; margin: 0.02rem 0 1rem;
         padding: 0.38rem 0.68rem; border-radius: 999px; background: #fff;
@@ -1192,15 +1215,23 @@ st.markdown(
 )
 
 st.markdown('<div class="main-content">', unsafe_allow_html=True)
-st.markdown(
-    """
-    <div class="section-head-row">
-        <div class="section-eyebrow">ACCIONES RÁPIDAS · QUICK ACTIONS</div>
-        <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">Ir a Crucemundo</a>
-        <a class="web-chip" href="https://mail.google.com" target="_blank" rel="noopener noreferrer">Gmail</a>
-    </div>
-    """,
-    unsafe_allow_html=True,
+st.markdown(f"""
+<div class="section-head-row">
+  <div class="section-eyebrow">ACCIONES RÁPIDAS QUICK ACTIONS</div>
+
+  <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">
+    Ir a Crucemundo
+  </a>
+
+  <a class="web-chip" href="https://mail.google.com" target="_blank" rel="noopener noreferrer">
+    Gmail
+  </a>
+
+  <a class="drive-chip" href="https://drive.google.com/drive/folders/{DRIVE_ROOT_ID}" target="_blank" rel="noopener noreferrer">
+    Drive raíz
+  </a>
+</div>
+""", unsafe_allow_html=True)
 )
 st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
