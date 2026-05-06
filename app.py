@@ -748,59 +748,63 @@ def export_sheet_pdf_bytes(spreadsheet_id, gid):
 
 
 def build_cvc_fit_pdf_from_locator(locator):
+    """
+    Generador. Hace yield de dicts de progreso mientras busca, y al final
+    hace yield del resultado final con 'done': True y los bytes del PDF.
+    """
     locator_clean = str(locator).strip()
     if not locator_clean:
         raise Exception("Debes introducir un localizador.")
 
-    st.session_state["cvcfit_status_lines"] = []
-    st.session_state["cvcfit_last_checked"] = ""
-    st.session_state["cvcfit_total_files"] = 0
-    st.session_state["cvcfit_current_index"] = 0
-
-    add_cvcfit_status("Iniciando búsqueda del localizador.")
+    yield {"type": "status", "msg": "🔍 Listando spreadsheets en el folder CVC Fit..."}
     spreadsheets = list_spreadsheets_in_folder_recent_first(FOLDER_ID)
 
     if not spreadsheets:
-        add_cvcfit_status("No se han encontrado Google Sheets en el folder indicado.")
         raise Exception("No se han encontrado Google Sheets en el folder indicado.")
 
-    st.session_state["cvcfit_total_files"] = len(spreadsheets)
-    add_cvcfit_status(f"Encontrados {len(spreadsheets)} spreadsheets en el folder CVC Fit.")
+    total = len(spreadsheets)
+    yield {"type": "status", "msg": f"📁 Encontrados **{total}** spreadsheets. Iniciando búsqueda del localizador `{locator_clean}`..."}
 
     for idx, file in enumerate(spreadsheets, start=1):
         spreadsheet_id = file["id"]
         spreadsheet_name = file["name"]
-        st.session_state["cvcfit_current_index"] = idx
-        st.session_state["cvcfit_last_checked"] = spreadsheet_name
-        add_cvcfit_status(f"Revisando {idx}/{len(spreadsheets)} · {spreadsheet_name}")
+
+        yield {
+            "type": "progress",
+            "current": idx,
+            "total": total,
+            "file": spreadsheet_name,
+            "msg": f"Revisando **{idx}/{total}** · `{spreadsheet_name}`",
+        }
 
         try:
             sheet_map = get_sheet_titles_with_ids(spreadsheet_id)
             titles = {s["title"]: s["sheetId"] for s in sheet_map}
 
             if "BOOKING ES" not in titles:
-                add_cvcfit_status(f"Saltado {spreadsheet_name}: no existe hoja BOOKING ES.")
+                yield {"type": "skip", "msg": f"⤼ Sin hoja *BOOKING ES* → `{spreadsheet_name}`"}
                 continue
 
             if "CVC Fit" not in titles:
-                add_cvcfit_status(f"Saltado {spreadsheet_name}: no existe hoja CVC Fit.")
+                yield {"type": "skip", "msg": f"⤼ Sin hoja *CVC Fit* → `{spreadsheet_name}`"}
                 continue
 
             g11_value = first_line(get_single_cell(spreadsheet_id, "BOOKING ES", "G11"))
             if str(g11_value).strip() != locator_clean:
-                add_cvcfit_status(f"Sin coincidencia en {spreadsheet_name}: G11='{g11_value}'.")
+                yield {"type": "skip", "msg": f"⤼ G11=`{g11_value}` → no coincide en `{spreadsheet_name}`"}
                 continue
 
-            add_cvcfit_status(f"Coincidencia encontrada en {spreadsheet_name}. Leyendo nombre del pasajero.")
+            yield {"type": "status", "msg": f"✅ **¡Coincidencia encontrada!** en `{spreadsheet_name}` — Leyendo nombre del pasajero..."}
+
             nombre = first_line(get_single_cell(spreadsheet_id, "BOOKING ES", "G24"))
             nombre_safe = safe_filename(nombre if nombre else "Sin nombre")
             pdf_name = safe_filename(f"CVC Fit {nombre_safe} {locator_clean}.pdf")
 
-            add_cvcfit_status(f"Generando PDF de la hoja CVC Fit para {spreadsheet_name}.")
+            yield {"type": "status", "msg": f"📄 Generando PDF de la hoja **CVC Fit**..."}
             pdf_bytes = export_sheet_pdf_bytes(spreadsheet_id, titles["CVC Fit"])
-            add_cvcfit_status(f"PDF generado correctamente: {pdf_name}")
 
-            return {
+            yield {
+                "type": "done",
                 "locator": locator_clean,
                 "spreadsheet_id": spreadsheet_id,
                 "spreadsheet_name": spreadsheet_name,
@@ -809,12 +813,14 @@ def build_cvc_fit_pdf_from_locator(locator):
                 "filename": pdf_name,
                 "pdf_bytes": pdf_bytes,
             }
+            return
 
+        except StopIteration:
+            raise
         except Exception as e:
-            add_cvcfit_status(f"Error en {spreadsheet_name}: {str(e)}")
+            yield {"type": "error", "msg": f"⚠️ Error en `{spreadsheet_name}`: {str(e)}"}
             continue
 
-    add_cvcfit_status("Búsqueda finalizada sin coincidencias.")
     raise Exception("No se ha encontrado el localizador en BOOKING ES!G11 de ningún Sheet del folder.")
 
 
@@ -1628,6 +1634,7 @@ if st.session_state.get("openbuscaragenciaform"):
 if st.session_state.get("opencvcfitform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### CVC Fit")
+
     locator = st.text_input(
         "Localizador",
         key="cvcfitlocatorwidget",
@@ -1635,41 +1642,100 @@ if st.session_state.get("opencvcfitform"):
     )
 
     if st.button("Generar PDF CVC Fit", key="btncvcfitaction", disabled=not locator):
+        # Limpia resultado previo
+        st.session_state["cvcfit_result"] = None
+        st.session_state["cvcfit_log"] = []
+
+        # Zona de progreso en tiempo real
+        progress_bar = st.progress(0.0, text="Iniciando...")
+        status_box = st.empty()
+        log_box = st.empty()
+
+        log_lines = []
+
         try:
-            st.session_state["cvcfit_result"] = None
-            result = build_cvc_fit_pdf_from_locator(locator)
-            st.session_state["cvcfit_result"] = result
-            st.success("PDF localizado y generado correctamente.")
+            gen = build_cvc_fit_pdf_from_locator(locator)
+            result = None
+
+            for event in gen:
+                etype = event.get("type")
+
+                if etype == "progress":
+                    pct = event["current"] / event["total"]
+                    progress_bar.progress(
+                        pct,
+                        text=f"Revisando {event['current']}/{event['total']} · {event['file']}"
+                    )
+                    status_box.markdown(
+                        f"<div class='cvcfit-log-line'>{event['msg']}</div>",
+                        unsafe_allow_html=True,
+                    )
+
+                elif etype == "status":
+                    log_lines.append(event["msg"])
+                    log_box.markdown(
+                        "<br>".join(
+                            f"<div class='cvcfit-log-line'>{l}</div>" for l in log_lines[-12:]
+                        ),
+                        unsafe_allow_html=True,
+                    )
+
+                elif etype == "skip":
+                    log_lines.append(event["msg"])
+                    log_box.markdown(
+                        "<br>".join(
+                            f"<div class='cvcfit-log-line' style='color:#9BA5B7;'>{l}</div>"
+                            for l in log_lines[-12:]
+                        ),
+                        unsafe_allow_html=True,
+                    )
+
+                elif etype == "error":
+                    log_lines.append(f"<span style='color:#D97706;'>{event['msg']}</span>")
+                    log_box.markdown(
+                        "<br>".join(
+                            f"<div class='cvcfit-log-line'>{l}</div>" for l in log_lines[-12:]
+                        ),
+                        unsafe_allow_html=True,
+                    )
+
+                elif etype == "done":
+                    result = event
+                    progress_bar.progress(1.0, text="✅ PDF generado correctamente")
+                    status_box.empty()
+
+            if result:
+                st.session_state["cvcfit_result"] = result
+                st.session_state["cvcfit_log"] = log_lines
+            else:
+                st.error("Búsqueda finalizada sin coincidencias.")
+
         except Exception as e:
+            progress_bar.empty()
+            status_box.empty()
+            st.error(f"Error: {e}")
             st.session_state["cvcfit_result"] = None
-            st.exception(e)
 
-    total_files = st.session_state.get("cvcfit_total_files", 0)
-    current_index = st.session_state.get("cvcfit_current_index", 0)
-    last_checked = st.session_state.get("cvcfit_last_checked", "")
-    status_lines = st.session_state.get("cvcfit_status_lines", [])
-
-    if status_lines:
-        st.markdown('<div class="cvcfit-status-card">', unsafe_allow_html=True)
-        st.markdown("#### Estado del proceso")
-        if total_files > 0:
-            progreso = current_index / total_files
-            st.progress(progreso if progreso <= 1 else 1)
-            st.caption(f"Revisados {current_index} de {total_files} spreadsheets")
-        if last_checked:
-            st.caption(f"Último archivo revisado: {last_checked}")
-        for line in status_lines:
-            st.markdown(f'<div class="cvcfit-log-line">{line}</div>', unsafe_allow_html=True)
+    # --- Mostrar log acumulado de la última búsqueda (persiste tras el rerun de descarga) ---
+    log_lines_saved = st.session_state.get("cvcfit_log", [])
+    if log_lines_saved:
+        st.markdown('<div class="cvcfit-status-card" style="margin-top:0.75rem;">', unsafe_allow_html=True)
+        st.markdown("**Log de la búsqueda:**")
+        st.markdown(
+            "<br>".join(f"<div class='cvcfit-log-line'>{l}</div>" for l in log_lines_saved),
+            unsafe_allow_html=True,
+        )
         st.markdown("</div>", unsafe_allow_html=True)
 
+    # --- Resultado + descarga ---
     result = st.session_state.get("cvcfit_result")
     if result:
-        st.markdown('<div class="cvcfit-card"><div class="cvcfit-grid">', unsafe_allow_html=True)
+        st.markdown('<div class="cvcfit-card" style="margin-top:1rem;"><div class="cvcfit-grid">', unsafe_allow_html=True)
         fields = [
             ("Localizador", result["locator"]),
-            ("Nombre", result["nombre"]),
-            ("Spreadsheet", result["spreadsheet_name"]),
-            ("Archivo PDF", result["filename"]),
+            ("Nombre pasajero", result["nombre"]),
+            ("Spreadsheet origen", result["spreadsheet_name"]),
+            ("Nombre del PDF", result["filename"]),
         ]
         for label, value in fields:
             st.markdown(
@@ -1683,18 +1749,22 @@ if st.session_state.get("opencvcfitform"):
             )
         st.markdown("</div></div>", unsafe_allow_html=True)
 
-        st.markdown(
-            f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank">Abrir hoja origen</a>',
-            unsafe_allow_html=True,
-        )
+        cola, colb = st.columns([1, 3], gap="small")
+        with cola:
+            st.download_button(
+                label="⬇ Descargar PDF",
+                data=result["pdf_bytes"],
+                file_name=result["filename"],
+                mime="application/pdf",
+                key="btncvcfitdownload",
+                type="primary",
+            )
+        with colb:
+            st.markdown(
+                f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank">📊 Abrir hoja origen en Drive</a>',
+                unsafe_allow_html=True,
+            )
 
-        st.download_button(
-            "Descargar PDF",
-            data=result["pdf_bytes"],
-            file_name=result["filename"],
-            mime="application/pdf",
-            key="btncvcfitdownload",
-        )
     st.markdown("</div>", unsafe_allow_html=True)
 
 
