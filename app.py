@@ -986,6 +986,7 @@ st.markdown(
         <a class="web-chip-green" href="{drive_root_url}" target="_blank" rel="noopener noreferrer">Abre Drive Root</a>
         <a class="web-chip-green" href="{cvcfit_folder_url}" target="_blank" rel="noopener noreferrer">Abre Folder Sesiones</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER_CABINAS</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre EXCURSIONES</a>
     </div>
     """,
     unsafe_allow_html=True,
