@@ -669,6 +669,40 @@ def create_crucero_file(barco, fechaobj):
 # ************************************************************
 # *************** 8. CVC FIT NUEVO ***************************
 # ************************************************************
+from google.auth.transport.requests import Request
+import requests
+
+
+def normalize_locator(value):
+    return str(value or "").strip().upper()
+
+
+def list_spreadsheets_in_folder_recent_first(folder_id):
+    service = get_drive_service()
+    q = (
+        f"'{folder_id}' in parents and trashed=false "
+        "and mimeType='application/vnd.google-apps.spreadsheet'"
+    )
+    results = []
+    pagetoken = None
+    while True:
+        response = service.files().list(
+            q=q,
+            fields="nextPageToken, files(id, name, webViewLink, createdTime, modifiedTime)",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
+            corpora="allDrives",
+            pageToken=pagetoken,
+            pageSize=1000,
+            orderBy="modifiedTime desc",
+        ).execute()
+        results.extend(response.get("files", []))
+        pagetoken = response.get("nextPageToken")
+        if not pagetoken:
+            break
+    return results
+
+
 def get_sheet_titles_with_ids(spreadsheet_id):
     sheetsservice = get_sheets_service()
     spreadsheet = sheetsservice.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
@@ -684,24 +718,20 @@ def get_sheet_titles_with_ids(spreadsheet_id):
 
 def get_single_cell(spreadsheet_id, sheet_title, a1):
     sheetsservice = get_sheets_service()
-    values = sheetsservice.spreadsheets().values().get(
+    resp = sheetsservice.spreadsheets().values().get(
         spreadsheetId=spreadsheet_id,
-        range=f"'{sheet_title}'!{a1}",
-        majorDimension="ROWS",
-    ).execute().get("values", [])
+        range=f"'{sheet_title}'!{a1}"
+    ).execute()
+    values = resp.get("values", [])
     if values and values[0]:
-        return values[0][0]
+        return str(values[0][0]).strip()
     return ""
 
 
 def export_sheet_pdf_bytes(spreadsheet_id, gid):
     creds = get_google_creds()
-    scoped = creds.with_scopes([
-        "https://www.googleapis.com/auth/drive",
-        "https://www.googleapis.com/auth/spreadsheets",
-    ])
-    scoped.refresh(Request())
-    token = scoped.token
+    creds.refresh(Request())
+    token = creds.token
 
     export_url = (
         f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export"
@@ -722,14 +752,17 @@ def export_sheet_pdf_bytes(spreadsheet_id, gid):
         f"&right_margin=0.50"
     )
 
-    headers = {"Authorization": f"Bearer {token}"}
-    response = requests.get(export_url, headers=headers, timeout=60)
+    response = requests.get(
+        export_url,
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=60,
+    )
     response.raise_for_status()
     return response.content
 
 
-def build_cvc_fit_pdf_from_locator(locator):
-    locator_clean = str(locator).strip()
+def build_cvc_fit_pdf_from_locator(locator, progress_callback=None):
+    locator_clean = normalize_locator(locator)
     if not locator_clean:
         raise Exception("Debes introducir un localizador.")
 
@@ -737,44 +770,43 @@ def build_cvc_fit_pdf_from_locator(locator):
     if not spreadsheets:
         raise Exception("No se han encontrado Google Sheets en el folder indicado.")
 
-    for file in spreadsheets:
+    total = len(spreadsheets)
+
+    for i, file in enumerate(spreadsheets, start=1):
         spreadsheet_id = file["id"]
+        spreadsheet_name = file["name"]
 
-        try:
-            sheet_map = get_sheet_titles_with_ids(spreadsheet_id)
-            titles = {s["title"]: s["sheetId"] for s in sheet_map}
+        if progress_callback:
+            progress_callback(i, total, spreadsheet_name)
 
-            if "BOOKING ES" not in titles:
-                continue
-            if "CVC Fit" not in titles:
-                continue
+        sheet_map = get_sheet_titles_with_ids(spreadsheet_id)
+        titles = {s["title"]: s["sheetId"] for s in sheet_map}
 
-            g11_value = first_line(get_single_cell(spreadsheet_id, "BOOKING ES", "G11"))
-            if str(g11_value).strip() != locator_clean:
-                continue
-
-            nombre = first_line(get_single_cell(spreadsheet_id, "BOOKING ES", "G24"))
-            nombre_safe = safe_filename(nombre if nombre else "Sin nombre")
-            pdf_name = safe_filename(f"CVC Fit {nombre_safe} {locator_clean}.pdf")
-
-            pdf_bytes = export_sheet_pdf_bytes(spreadsheet_id, titles["CVC Fit"])
-
-            return {
-                "locator": locator_clean,
-                "spreadsheet_id": spreadsheet_id,
-                "spreadsheet_name": file["name"],
-                "spreadsheet_url": file.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit",
-                "nombre": nombre,
-                "filename": pdf_name,
-                "pdf_bytes": pdf_bytes,
-            }
-
-        except Exception:
+        if "BOOKING ES" not in titles or "CVC Fit" not in titles:
             continue
 
-    raise Exception("No se ha encontrado el localizador en BOOKING ES!G11 de ningún Sheet del folder.")
+        g11_value = normalize_locator(get_single_cell(spreadsheet_id, "BOOKING ES", "G11"))
+        if g11_value != locator_clean:
+            continue
 
+        nombre = first_line(get_single_cell(spreadsheet_id, "BOOKING ES", "G24"))
+        nombre_safe = safe_filename(nombre if nombre else "Sin nombre")
+        pdf_name = safe_filename(f"CVC Fit {nombre_safe} {locator_clean}.pdf")
+        pdf_bytes = export_sheet_pdf_bytes(spreadsheet_id, titles["CVC Fit"])
 
+        return {
+            "locator": locator_clean,
+            "spreadsheet_id": spreadsheet_id,
+            "spreadsheet_name": spreadsheet_name,
+            "spreadsheet_url": file.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit",
+            "nombre": nombre,
+            "filename": pdf_name,
+            "pdf_bytes": pdf_bytes,
+            "checked_files": i,
+            "total_files": total,
+        }
+
+    raise Exception(f"No se ha encontrado el localizador {locator_clean} en BOOKING ES!G11.")
 # ************************************************************
 # *************** 9. ESTILOS CSS *****************************
 # ************************************************************
@@ -1574,20 +1606,34 @@ if st.session_state.get("openbuscaragenciaform"):
 if st.session_state.get("opencvcfitform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### CVC Fit")
+
     locator = st.text_input(
         "Localizador",
         key="cvcfitlocatorwidget",
         placeholder="Introduce el localizador exacto de BOOKING ES!G11",
     )
 
-    if st.button("Generar PDF CVC Fit", key="btncvcfitaction", disabled=not locator):
+    progress_placeholder = st.empty()
+    status_placeholder = st.empty()
+
+    def progress_callback(i, total, spreadsheet_name):
+        status_placeholder.info(f"Revisando {i}/{total}: {spreadsheet_name}")
+        progress_placeholder.progress(i / total)
+
+    if st.button("Generar PDF CVC Fit", key="btncvcfitaction", disabled=not locator.strip()):
+        st.session_state["cvcfit_result"] = None
         try:
-            result = build_cvc_fit_pdf_from_locator(locator)
+            with st.spinner("Buscando localizador y generando PDF..."):
+                result = build_cvc_fit_pdf_from_locator(locator, progress_callback=progress_callback)
             st.session_state["cvcfit_result"] = result
-            st.success("PDF localizado y generado correctamente.")
+            status_placeholder.success(
+                f"Encontrado en {result['spreadsheet_name']} "
+                f"({result['checked_files']}/{result['total_files']})"
+            )
         except Exception as e:
+            progress_placeholder.empty()
+            status_placeholder.error(str(e))
             st.session_state["cvcfit_result"] = None
-            st.exception(e)
 
     result = st.session_state.get("cvcfit_result")
     if result:
@@ -1622,9 +1668,9 @@ if st.session_state.get("opencvcfitform"):
             mime="application/pdf",
             key="btncvcfitdownload",
         )
+
     st.markdown("</div>", unsafe_allow_html=True)
-
-
+    
 # ************************************************************
 # *************** 19. PROCESO CONFIRMACIONES *****************
 # ************************************************************
