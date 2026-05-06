@@ -1179,9 +1179,9 @@ if st.session_state.get("confirmstate") in ["done", "error"]:
     process_result = st.session_state.get("processresult") or {}
 
     if session_type == "es":
-        st.markdown("### MASTER / CONFIRMATION")
+        st.markdown("### MASTER /CONFIRMATION")
     elif session_type == "grupos":
-        st.markdown("### MASTER / GROUPS")
+        st.markdown("### MASTER /GROUPS")
     else:
         st.markdown(f"### {process_title}")
 
