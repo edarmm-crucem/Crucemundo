@@ -1595,7 +1595,7 @@ if st.session_state.get("opencvcfitform"):
 
     if st.button("Generar CVC Fit", key="btncvcfitaction", disabled=not locator.strip()):
         st.session_state["cvcfitresult"] = None
-        clear_cvcfit_status()
+        clear_cvcfit_state()
 
         try:
             set_cvcfit_status("1/6 · Validando localizador...")
@@ -1688,7 +1688,7 @@ if st.session_state.get("opencvcfitform"):
             status_box.success(st.session_state["cvcfit_status"])
 
         except Exception as e:
-            clear_cvcfit_status()
+            clear_cvcfit_state()
             status_box.error("Error en CVC Fit.")
             result_box.exception(e)
 
