@@ -962,22 +962,63 @@ st.markdown(
     .user-top { font-size: 0.72rem; color: #566079; white-space: nowrap; }
 
     .main-content { padding: 0; }
-    .section-head-row {
-        display: flex; align-items: center; justify-content: flex-start;
-        gap: 0.55rem; margin-bottom: 0.75rem; flex-wrap: wrap;
-    }
-    .section-eyebrow {
-        display: inline-flex; align-items: center; padding: 0.34rem 0.74rem;
-        border-radius: 999px; background: #EAF1FF; border: 1px solid #D6E3FF;
-        color: #2E5FB8; font-size: 0.66rem; font-weight: 700;
-        letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0 !important;
-    }
-    .web-chip {
-        display: inline-flex; align-items: center; justify-content: center;
-        padding: 0.34rem 0.74rem; border-radius: 999px; background: #FFF3BF;
-        border: 1px solid #F4D35E; color: #7A5900 !important; font-size: 0.70rem;
-        font-weight: 700; line-height: 1; text-decoration: none; white-space: nowrap;
-    }
+.section-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.55rem;
+  margin-bottom: 0.18rem;
+  flex-wrap: wrap;
+}
+
+.section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.34rem 0.74rem;
+  border-radius: 999px;
+  background: #EAF1FF;
+  border: 1px solid #D6E3FF;
+  color: #2E5FB8;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0 !important;
+}
+
+.web-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.34rem 0.74rem;
+  border-radius: 999px;
+  background: #FFF3BF;
+  border: 1px solid #F4D35E;
+  color: #7A5900 !important;
+  font-size: 0.70rem;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.web-chip:hover {
+  background: #FFE89A;
+  border-color: #E9C94B;
+  color: #6A4D00 !important;
+}
+
+.quick-actions-wrap {
+  margin-bottom: 0.75rem;
+}
+
+.quick-actions-row-2 {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.55rem;
+  margin-top: 0.38rem;
+}
 
 .drive-chip {
   display: inline-flex;
@@ -1000,7 +1041,6 @@ st.markdown(
   border-color: #A9D7B8;
   color: #19563A !important;
 }
-
     .user-pill {
         display: inline-flex; align-items: center; gap: 0.4rem; margin: 0.02rem 0 1rem;
         padding: 0.38rem 0.68rem; border-radius: 999px; background: #fff;
@@ -1217,20 +1257,24 @@ st.markdown(
 st.markdown('<div class="main-content">', unsafe_allow_html=True)
 
 st.markdown(f"""
-<div class="section-head-row">
-  <div class="section-eyebrow">ACCIONES RÁPIDAS QUICK ACTIONS</div>
+<div class="quick-actions-wrap">
+  <div class="section-head-row">
+    <div class="section-eyebrow">ACCIONES RÁPIDAS QUICK ACTIONS</div>
 
-  <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">
-    Ir a Crucemundo
-  </a>
+    <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">
+      Ir a Crucemundo
+    </a>
 
-  <a class="web-chip" href="https://mail.google.com" target="_blank" rel="noopener noreferrer">
-    Gmail
-  </a>
+    <a class="web-chip" href="https://mail.google.com" target="_blank" rel="noopener noreferrer">
+      Gmail
+    </a>
+  </div>
 
-  <a class="drive-chip" href="https://drive.google.com/drive/folders/{DRIVE_ROOT_ID}" target="_blank" rel="noopener noreferrer">
-    Drive raíz
-  </a>
+  <div class="quick-actions-row-2">
+    <a class="drive-chip" href="https://drive.google.com/drive/folders/{DRIVE_ROOT_ID}" target="_blank" rel="noopener noreferrer">
+      Drive raíz
+    </a>
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
