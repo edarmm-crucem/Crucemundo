@@ -722,23 +722,24 @@ def export_sheet_pdf_bytes(spreadsheet_id, gid):
     scoped.refresh(Request())
     token = scoped.token
 
-    exporturl = (
-    f"https://docs.google.com/spreadsheets/d/{spreadsheetid}/export"
-    f"?format=pdf"
-    f"&gid={gid}"
-    f"&size=A4"
-    f"&portrait=true"
-    f"&fitw=true"
-    f"&sheetnames=false"
-    f"&printtitle=false"
-    f"&pagenumbers=false"
-    f"&gridlines=false"
-    f"&fzr=false"
-    f"&top_margin=0.50"
-    f"&bottom_margin=0.50"
-    f"&left_margin=0.50"
-    f"&right_margin=0.50"
-)
+    export_url = (
+        f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export"
+        f"?format=pdf"
+        f"&gid={gid}"
+        f"&size=A4"
+        f"&portrait=true"
+        f"&fitw=true"
+        f"&scale=4"
+        f"&sheetnames=false"
+        f"&printtitle=false"
+        f"&pagenumbers=false"
+        f"&gridlines=false"
+        f"&fzr=false"
+        f"&top_margin=0.50"
+        f"&bottom_margin=0.50"
+        f"&left_margin=0.50"
+        f"&right_margin=0.50"
+    )
 
     headers = {"Authorization": f"Bearer {token}"}
     response = requests.get(export_url, headers=headers, timeout=60)
