@@ -1,6 +1,7 @@
 # ************************************************************
 # ******************** 1. IMPORTS ****************************
 # ************************************************************
+
 import streamlit as st
 from datetime import datetime, date, timedelta
 import urllib.parse
@@ -19,6 +20,7 @@ from docx.oxml.ns import qn
 # ************************************************************
 # **************** 2. CONFIGURACION APP **********************
 # ************************************************************
+
 st.set_page_config(
     page_title="Crucemundo Hub",
     page_icon="🛳️",
@@ -30,6 +32,7 @@ st.set_page_config(
 # ************************************************************
 # *************** 3. CONSTANTES Y IDS ************************
 # ************************************************************
+
 LOGO_ID = "1N7eaCKP1Jeg8KuDXRjJ8tZLhnKStMZ8"
 LOGO_URL = f"https://lh3.googleusercontent.com/d/{LOGO_ID}"
 
@@ -87,6 +90,7 @@ BARCOS_MAP = {
 # ************************************************************
 # *************** 4. SESSION STATE ***************************
 # ************************************************************
+
 defaults = {
     "authenticated": False,
     "useremail": "",
@@ -118,6 +122,7 @@ for k, v in defaults.items():
 # ************************************************************
 # *************** 5. HELPERS GENERALES ***********************
 # ************************************************************
+
 def get_saludo():
     hora = datetime.now().hour
     if 6 <= hora < 14:
@@ -362,6 +367,7 @@ def parse_nombre_apellidos_from_g24(g24_value):
 # ************************************************************
 # *************** 6. GOOGLE AUTH / SERVICES ******************
 # ************************************************************
+
 @st.cache_resource
 def get_google_creds():
     if "gcp_service_account" not in st.secrets:
@@ -390,6 +396,7 @@ def get_sheets_service():
 # ************************************************************
 # *************** 7. DRIVE / SHEETS HELPERS ******************
 # ************************************************************
+
 def list_folder_items(parentid, folders_only=False):
     service = get_drive_service()
     q = f"'{parentid}' in parents and trashed=false"
@@ -670,8 +677,9 @@ def create_crucero_file(barco, fechaobj):
 
 
 # ************************************************************
-# *************** 8. CVC FIT HELPERS *************************
+# *************** 8. CVC FIT / GOOGLE SHEETS *****************
 # ************************************************************
+
 def parse_locator(locator):
     locator = normalize_text(locator).upper().replace(" ", "")
     m = re.fullmatch(r"([A-Z]+)(\d{2})(\d{2})(\d{2})-(\d{3})", locator)
@@ -750,6 +758,10 @@ def build_money_text(matrix):
             lines.append(" | ".join(cleaned))
     return "\n".join(lines).strip()
 
+
+# ************************************************************
+# *************** 9. DOCX HELPERS ****************************
+# ************************************************************
 
 def underline_paragraph(paragraph):
     pPr = paragraph._p.get_or_add_pPr()
@@ -990,8 +1002,9 @@ def build_cvc_fit_from_locator(locator):
 
 
 # ************************************************************
-# *************** 9. ESTILOS / CSS ***************************
+# *************** 10. ESTILOS / CSS **************************
 # ************************************************************
+
 st.markdown(
     """
     <style>
@@ -1094,18 +1107,9 @@ st.markdown(
     .user-top { font-size: 0.72rem; color: #566079; white-space: nowrap; }
 
     .main-content { padding: 0; }
-    .section-head-stack {
-        display: flex;
-        flex-direction: column;
-        gap: 0.45rem;
-        margin-bottom: 0.75rem;
-    }
     .section-head-row {
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        gap: 0.55rem;
-        flex-wrap: wrap;
+        display: flex; align-items: center; justify-content: flex-start;
+        gap: 0.55rem; margin-bottom: 0.75rem; flex-wrap: wrap;
     }
     .section-eyebrow {
         display: inline-flex; align-items: center; padding: 0.34rem 0.74rem;
@@ -1117,12 +1121,6 @@ st.markdown(
         display: inline-flex; align-items: center; justify-content: center;
         padding: 0.34rem 0.74rem; border-radius: 999px; background: #FFF3BF;
         border: 1px solid #F4D35E; color: #7A5900 !important; font-size: 0.70rem;
-        font-weight: 700; line-height: 1; text-decoration: none; white-space: nowrap;
-    }
-    .drive-chip {
-        display: inline-flex; align-items: center; justify-content: center;
-        padding: 0.34rem 0.74rem; border-radius: 999px; background: #DDF5E3;
-        border: 1px solid #86D19A; color: #1F6B35 !important; font-size: 0.70rem;
         font-weight: 700; line-height: 1; text-decoration: none; white-space: nowrap;
     }
     .user-pill {
@@ -1256,8 +1254,9 @@ st.markdown(
 
 
 # ************************************************************
-# *************** 10. LOGIN **********************************
+# *************** 11. LOGIN **********************************
 # ************************************************************
+
 if not st.session_state["authenticated"]:
     st.markdown('<div class="login-page"><div class="login-shell">', unsafe_allow_html=True)
     st.markdown(
@@ -1298,20 +1297,16 @@ if not st.session_state["authenticated"]:
 
 
 # ************************************************************
-# *************** 11. VARIABLES HEADER ***********************
+# *************** 12. CABECERA Y ACCIONES ********************
 # ************************************************************
+
 USEREMAIL = st.session_state.get("useremail", "").strip()
 DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Sin usuario"
 SALUDO = get_saludo()
 SALUDOEN = get_saludo_en()
 confirmstate = st.session_state.get("confirmstate", "idle")
 excursionesurl = f"https://docs.google.com/spreadsheets/d/{EXCURSIONES_SHEET_ID}/edit"
-drive_root_url = f"https://drive.google.com/drive/folders/{DRIVE_ROOT_ID}"
 
-
-# ************************************************************
-# *************** 12. CABECERA *******************************
-# ************************************************************
 st.markdown(
     f"""
     <div class="portal-header">
@@ -1331,30 +1326,18 @@ st.markdown(
 )
 
 st.markdown('<div class="main-content">', unsafe_allow_html=True)
-
 st.markdown(
-    f"""
-    <div class="section-head-stack">
-        <div class="section-head-row">
-            <div class="section-eyebrow">ENLACES WEB · WEB LINKS</div>
-            <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">Ir a Crucemundo</a>
-            <a class="web-chip" href="https://mail.google.com" target="_blank" rel="noopener noreferrer">Gmail</a>
-        </div>
-        <div class="section-head-row">
-            <div class="section-eyebrow">DOCUMENTOS DRIVE · DRIVE DOCS</div>
-            <a class="drive-chip" href="{drive_root_url}" target="_blank" rel="noopener noreferrer">Drive principal</a>
-        </div>
+    """
+    <div class="section-head-row">
+        <div class="section-eyebrow">ACCIONES RÁPIDAS · QUICK ACTIONS</div>
+        <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">Ir a Crucemundo</a>
+        <a class="web-chip" href="https://mail.google.com" target="_blank" rel="noopener noreferrer">Gmail</a>
     </div>
     """,
     unsafe_allow_html=True,
 )
-
 st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
-
-# ************************************************************
-# *************** 13. TARJETAS PRINCIPALES *******************
-# ************************************************************
 col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8, gap="medium")
 
 with col1:
@@ -1374,13 +1357,11 @@ with col1:
         """,
         unsafe_allow_html=True,
     )
-    if st.button("Crear Sesión ES", key="btncreares", disabled=proceso_en_marcha):
-        iniciar_proceso(
-            "es",
-            TEMPLATE_ID_ES,
-            "MASTER",
-            "Estado del Proceso · Process Status · Crear Sesión MASTER/CONFIRMATION",
-        )
+    if confirmstate in ["idle", "done"]:
+        if st.button("Crear Sesión ES", key="btncreares"):
+            iniciar_proceso("es", TEMPLATE_ID_ES, "MASTER", "Estado del Proceso · Process Status · Crear Sesión MASTER/CONFIRMATION")
+    else:
+        st.button("Crear Sesión ES", key="btncrearesdis", disabled=True)
     st.markdown("</div></div>", unsafe_allow_html=True)
 
 with col2:
@@ -1400,17 +1381,13 @@ with col2:
         """,
         unsafe_allow_html=True,
     )
-    if st.button("Crear Sesión GRUPOS", key="btncreargrupos", disabled=proceso_en_marcha):
-        iniciar_proceso(
-            "grupos",
-            TEMPLATE_ID_GRUPOS,
-            "MASTER GRUPOS",
-            "Estado del Proceso · Process Status · Crear Sesión MASTER GRUPOS",
-        )
+    if confirmstate in ["idle", "done"]:
+        if st.button("Crear Sesión GRUPOS", key="btncreargrupos"):
+            iniciar_proceso("grupos", TEMPLATE_ID_GRUPOS, "MASTER GRUPOS", "Estado del Proceso · Process Status · Crear Sesión MASTER/GRUPOS")
+    else:
+        st.button("Crear Sesión GRUPOS", key="btncreargruposdis", disabled=True)
     st.markdown("</div></div>", unsafe_allow_html=True)
 
-
-    
 with col3:
     st.markdown(
         """
@@ -1473,7 +1450,7 @@ with col5:
         unsafe_allow_html=True,
     )
     st.markdown(
-        f'<a class="done-link" href="{excursionesurl}" target="_blank" rel="noopener noreferrer">Abrir Excursiones</a>',
+        f'<a class="done-link" href="{excursionesurl}" target="_blank">Abrir Excursiones</a>',
         unsafe_allow_html=True,
     )
     st.markdown("</div></div>", unsafe_allow_html=True)
@@ -1543,77 +1520,12 @@ with col8:
         open_panel("cvcfit")
         st.rerun()
     st.markdown("</div></div>", unsafe_allow_html=True)
-# ************************************************************
-# *************** PROGRESO CREAR CONFIRMACION ****************
-# ************************************************************
-savedname = st.session_state.get("nombrecopia")
-savedurl = st.session_state.get("copyurl")
-processtitle = st.session_state.get("processtitle", "Estado del Proceso · Process Status")
 
-if confirmstate in ["step1", "step2", "step3", "done"]:
-    st.markdown('<div class="panel-inline" style="max-width:520px;">', unsafe_allow_html=True)
-    st.markdown(f"### {processtitle}")
-
-    if confirmstate == "step1":
-        render_step("Progreso · Progress", "Preparando plantilla · Preparing template...", "active")
-
-    elif confirmstate == "step2":
-        render_step("Progreso · Progress", "Generando copia en Drive · Creating Drive copy...", "active")
-
-    elif confirmstate == "step3":
-        render_step("Progreso · Progress", "Abriendo sesión · Opening session...", "active")
-
-    elif confirmstate == "done":
-        render_step("Progreso · Progress", "Completo · Complete", "done")
-        st.markdown(
-            f"""
-            <div style="margin-top:0.8rem;">
-                <div style="font-size:0.76rem;color:#1F2937;font-weight:600;">Sesión creada · Session created</div>
-                <div style="font-size:0.71rem;color:#657087;margin-top:0.15rem;line-height:1.3;">
-                    Puedes abrir tu sesión en el botón de abajo · You can open your session with the button below.
-                </div>
-                <a class="done-link" href="{savedurl}" target="_blank">Abrir sesión · Open session</a>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    if confirmstate == "step1":
-        time.sleep(0.7)
-        st.session_state["confirmstate"] = "step2"
-        st.rerun()
-
-    elif confirmstate == "step2":
-        time.sleep(0.7)
-        st.session_state["confirmstate"] = "step3"
-        st.rerun()
-
-    elif confirmstate == "step3":
-        time.sleep(0.7)
-        st.session_state["confirmstate"] = "done"
-        existing = [h["nombre"] for h in st.session_state["historial"]]
-        if savedname and savedname not in existing:
-            st.session_state["historial"].insert(0, {
-                "nombre": savedname,
-                "hora": datetime.now().strftime("%H:%M:%S"),
-                "url": savedurl,
-            })
-        st.rerun()
-
-if confirmstate == "done" and savedname and savedurl and not st.session_state.get(f"opened_{savedname}"):
-    st.session_state[f"opened_{savedname}"] = True
-    st.markdown(
-        f"<script>setTimeout(()=>window.open('{savedurl}','_blank'),300);</script>",
-        unsafe_allow_html=True,
-    )
-
-    
 
 # ************************************************************
-# *************** 14. PANEL SALIDA ***************************
+# *************** 13. PANEL SALIDA ***************************
 # ************************************************************
+
 if st.session_state.get("opensalidaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### Seleccionar salida · Select departure")
@@ -1670,7 +1582,7 @@ if st.session_state.get("opensalidaform"):
             selectedobj = next((d for d in departures if d["nombre"] == selecteddeparture), None)
             if selectedobj:
                 st.markdown(
-                    f'<a class="done-link" href="{selectedobj["url"]}" target="_blank" rel="noopener noreferrer">Abrir salida · Open departure</a>',
+                    f'<a class="done-link" href="{selectedobj["url"]}" target="_blank">Abrir salida · Open departure</a>',
                     unsafe_allow_html=True,
                 )
     except Exception as e:
@@ -1679,8 +1591,9 @@ if st.session_state.get("opensalidaform"):
 
 
 # ************************************************************
-# *************** 15. PANEL CREAR CRUCERO ********************
+# *************** 14. PANEL CREAR CRUCERO ********************
 # ************************************************************
+
 if st.session_state.get("opencruceroform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### Crear crucero · Create cruise")
@@ -1701,13 +1614,13 @@ if st.session_state.get("opencruceroform"):
             st.session_state["cruceroyear"] = cruceroyear
 
         cruceroboats = get_boats(cruceroyear) if cruceroyear else []
-        currentboat = st.session_state.get("cruceroboat")
-        if currentboat not in cruceroboats:
-            currentboat = None
+        currentcboat = st.session_state.get("cruceroboat")
+        if currentcboat not in cruceroboats:
+            currentcboat = None
         cruceroboat = st.selectbox(
             "BARCO / SHIP",
             options=cruceroboats,
-            index=cruceroboats.index(currentboat) if currentboat in cruceroboats else None,
+            index=cruceroboats.index(currentcboat) if currentcboat in cruceroboats else None,
             placeholder="Selecciona un barco / Select a ship",
             key="cruceroboatwidget",
             on_change=on_crucero_boat_change,
@@ -1716,77 +1629,79 @@ if st.session_state.get("opencruceroform"):
         if cruceroboat != st.session_state.get("cruceroboat"):
             st.session_state["cruceroboat"] = cruceroboat
 
-        fechasalida = st.date_input(
-            "FECHA SALIDA / DEPARTURE DATE",
-            value=None,
-            format="DD/MM/YYYY",
-            disabled=not cruceroboat,
-        )
+        fechasalida = st.date_input("FECHA DE SALIDA / DEPARTURE DATE", value=date.today(), format="DD/MM/YYYY")
+        if cruceroboat and fechasalida:
+            previewname = f"{cruceroboat}_{fechasalida.strftime('%y%m%d')}"
+            st.caption(f"Nombre previsto / Expected name: {previewname}")
 
         if st.button("Crear Crucero", key="btncrearcruceroaction", disabled=not (cruceroyear and cruceroboat and fechasalida)):
-            result = create_crucero_file(cruceroboat, fechasalida)
-            if result["status"] == "duplicate":
-                st.warning(f"Ya existe: {result['name']}")
-                st.markdown(
-                    f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir existente</a>',
-                    unsafe_allow_html=True,
-                )
+            if int(cruceroyear) != fechasalida.year:
+                st.error("El año seleccionado no coincide con el año de la fecha / Selected year does not match the date year.")
             else:
-                st.success(f"Creado: {result['name']}")
-                st.markdown(
-                    f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir crucero creado</a>',
-                    unsafe_allow_html=True,
-                )
+                result = create_crucero_file(cruceroboat, fechasalida)
+                if result["status"] == "duplicate":
+                    st.warning(f"Ya existe / Already exists: {result['name']}")
+                    st.markdown(
+                        f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir archivo existente · Open existing file</a>',
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.success(f"Archivo creado / File created: {result['name']}")
+                    st.markdown(
+                        f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir crucero · Open cruise</a>',
+                        unsafe_allow_html=True,
+                    )
     except Exception as e:
         st.exception(e)
     st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ************************************************************
-# *************** 16. PANEL NUEVA AGENCIA ********************
+# *************** 15. PANEL NUEVA AGENCIA ********************
 # ************************************************************
+
 if st.session_state.get("opennuevaagenciaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### Nueva agencia · New agency")
 
-    with st.form("new_agency_form", clear_on_submit=False):
-        c1, c2 = st.columns(2)
+    with st.form("form_nueva_agencia", clear_on_submit=False):
+        col_a, col_b = st.columns(2)
 
-        with c1:
+        with col_a:
             agnombre = st.text_input("Nombre", key="agnombre")
             agcodigo = st.text_input("CODIGO", key="agcodigo")
             aggrupogest = st.text_input("Grupo Gest", key="aggrupogest")
             agtelefono = st.text_input("Telefono", key="agtelefono")
             agemail = st.text_input("Email", key="agemail")
-            agdireccion = st.text_input("Direccion", key="agdireccion")
+            agdireccion = st.text_area("Direccion", key="agdireccion")
 
-        with c2:
-            agcomision = st.number_input("COMISION AGENCIA", min_value=0.0, max_value=100.0, step=0.1, key="agcomision")
-            agcomisionoferta = st.number_input("COMISION AGENCIA CON OFERTA", min_value=0.0, max_value=100.0, step=0.1, key="agcomisionoferta")
-            agcomision2x1 = st.number_input("COMISION AGENCIA OFERTA 2X1", min_value=0.0, max_value=100.0, step=0.1, key="agcomision2x1")
-            agiva = st.number_input("IVA", min_value=0.0, max_value=100.0, step=0.1, key="agiva")
-            agivaservicioopcional = st.number_input("IVA SERVICIO OPCIONAL", min_value=0.0, max_value=100.0, step=0.1, key="agivaservicioopcional")
+        with col_b:
+            agcomision = st.number_input("COMISION AGENCIA (%)", min_value=0.0, max_value=100.0, step=0.1, key="agcomision")
+            agcomisionoferta = st.number_input("COMISION AGENCIA CON OFERTA (%)", min_value=0.0, max_value=100.0, step=0.1, key="agcomisionoferta")
+            agcomision2x1 = st.number_input("COMISION AGENCIA OFERTA 2X1 (%)", min_value=0.0, max_value=100.0, step=0.1, key="agcomision2x1")
+            agiva = st.number_input("IVA (%)", min_value=0.0, max_value=100.0, step=0.1, key="agiva")
+            agivaservicioopcional = st.number_input("IVA SERVICIO OPCIONAL (%)", min_value=0.0, max_value=100.0, step=0.1, key="agivaservicioopcional")
 
-        submitted = st.form_submit_button("Guardar Agencia", use_container_width=False)
+        guardar_agencia = st.form_submit_button("Guardar Agencia", type="primary")
 
-        if submitted:
+        if guardar_agencia:
             if not agnombre.strip():
                 st.error("El nombre es obligatorio.")
             else:
-                agencydata = {
-                    "Nombre": agnombre.strip(),
-                    "CODIGO": agcodigo.strip(),
-                    "Grupo Gest": aggrupogest.strip(),
-                    "Telefono": agtelefono.strip(),
-                    "Email": agemail.strip(),
-                    "Direccion": agdireccion.strip(),
-                    "COMISION AGENCIA": percent_to_sheet_decimal(agcomision),
-                    "COMISION AGENCIA CON OFERTA ": percent_to_sheet_decimal(agcomisionoferta),
-                    "COMISION AGENCIA OFERTA 2X1 ": percent_to_sheet_decimal(agcomision2x1),
-                    "IVA": percent_to_sheet_decimal(agiva),
-                    "IVA SERVICIO OPCIONAL": percent_to_sheet_decimal(agivaservicioopcional),
-                }
                 try:
+                    agencydata = {
+                        "Nombre": agnombre.strip(),
+                        "CODIGO": agcodigo.strip(),
+                        "Grupo Gest": aggrupogest.strip(),
+                        "Telefono": agtelefono.strip(),
+                        "Email": agemail.strip(),
+                        "Direccion": agdireccion.strip(),
+                        "COMISION AGENCIA": percent_to_sheet_decimal(agcomision),
+                        "COMISION AGENCIA CON OFERTA ": percent_to_sheet_decimal(agcomisionoferta),
+                        "COMISION AGENCIA OFERTA 2X1 ": percent_to_sheet_decimal(agcomision2x1),
+                        "IVA": percent_to_sheet_decimal(agiva),
+                        "IVA SERVICIO OPCIONAL": percent_to_sheet_decimal(agivaservicioopcional),
+                    }
                     append_agency_row(agencydata)
                     st.success("Agencia guardada correctamente.")
                 except Exception as e:
@@ -1796,19 +1711,20 @@ if st.session_state.get("opennuevaagenciaform"):
 
 
 # ************************************************************
-# *************** 17. PANEL BUSCAR AGENCIA *******************
+# *************** 16. PANEL BUSCAR AGENCIA *******************
 # ************************************************************
+
 if st.session_state.get("openbuscaragenciaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### Buscar agencia · Find agency")
 
     query = st.text_input(
-        "Buscar por nombre, código, teléfono, email o dirección",
+        "Busca por nombre, código, grupo, teléfono, email o dirección",
         key="agencysearchquery",
-        placeholder="Ej. Viajes Sol, 9345..., sales@..., Madrid..."
+        placeholder="Ej.: viajes pepe, 934..., madrid, código..."
     )
 
-    if st.button("Ejecutar búsqueda", key="btnejecutarbusquedaagencia"):
+    if st.button("Buscar", key="btnejecutarbusquedaagencia"):
         try:
             st.session_state["agencymatches"] = search_agencies(query)
             st.session_state["agencyselectedidx"] = 0 if st.session_state["agencymatches"] else None
@@ -1816,117 +1732,145 @@ if st.session_state.get("openbuscaragenciaform"):
             st.exception(e)
 
     matches = st.session_state.get("agencymatches", [])
-    if matches:
-        labels = [
-            f"{idx + 1}. {ag.get('Nombre','')} · {ag.get('CODIGO','')}"
-            for idx, ag in enumerate(matches)
-        ]
-        selected_label = st.selectbox("Resultados", labels, index=st.session_state.get("agencyselectedidx", 0))
-        selected_index = labels.index(selected_label)
-        ag = matches[selected_index]
 
+    if matches:
+        options = [f"{idx+1}. {ag['Nombre']} · {ag['CODIGO']}" for idx, ag in enumerate(matches)]
+        selectedlabel = st.selectbox("Resultados", options=options)
+        selectedidx = options.index(selectedlabel)
+        ag = matches[selectedidx]
+
+        st.markdown('<div class="agency-card">', unsafe_allow_html=True)
         st.markdown(
             f"""
-            <div class="agency-card">
-                <div class="agency-grid">
-                    <div><div class="agency-item-label">Nombre</div><div class="agency-item-value">{ag.get("Nombre","")}</div></div>
-                    <div><div class="agency-item-label">Código</div><div class="agency-item-value">{ag.get("CODIGO","")}</div></div>
-                    <div><div class="agency-item-label">Grupo Gest</div><div class="agency-item-value">{ag.get("Grupo Gest","")}</div></div>
-                    <div><div class="agency-item-label">Teléfono</div><div class="agency-item-value">{ag.get("Telefono","")}</div></div>
-                    <div><div class="agency-item-label">Email</div><div class="agency-item-value">{ag.get("Email","")}</div></div>
-                    <div><div class="agency-item-label">Dirección</div><div class="agency-item-value">{ag.get("Direccion","")}</div></div>
-                    <div><div class="agency-item-label">Comisión agencia</div><div class="agency-item-value">{ag.get("COMISION AGENCIA","")}</div></div>
-                    <div><div class="agency-item-label">Comisión con oferta</div><div class="agency-item-value">{ag.get("COMISION AGENCIA CON OFERTA ","")}</div></div>
-                    <div><div class="agency-item-label">Comisión oferta 2x1</div><div class="agency-item-value">{ag.get("COMISION AGENCIA OFERTA 2X1 ","")}</div></div>
-                    <div><div class="agency-item-label">IVA</div><div class="agency-item-value">{ag.get("IVA","")}</div></div>
-                    <div><div class="agency-item-label">IVA servicio opcional</div><div class="agency-item-value">{ag.get("IVA SERVICIO OPCIONAL","")}</div></div>
-                </div>
+            <div class="agency-grid">
+                <div><div class="agency-item-label">Nombre</div><div class="agency-item-value">{ag.get("Nombre","")}</div></div>
+                <div><div class="agency-item-label">Código</div><div class="agency-item-value">{ag.get("CODIGO","")}</div></div>
+                <div><div class="agency-item-label">Grupo Gest</div><div class="agency-item-value">{ag.get("Grupo Gest","")}</div></div>
+                <div><div class="agency-item-label">Telefono</div><div class="agency-item-value">{ag.get("Telefono","")}</div></div>
+                <div><div class="agency-item-label">Email</div><div class="agency-item-value">{ag.get("Email","")}</div></div>
+                <div><div class="agency-item-label">Direccion</div><div class="agency-item-value">{ag.get("Direccion","")}</div></div>
+                <div><div class="agency-item-label">Comisión Agencia</div><div class="agency-item-value">{ag.get("COMISION AGENCIA","")}</div></div>
+                <div><div class="agency-item-label">Comisión Oferta</div><div class="agency-item-value">{ag.get("COMISION AGENCIA CON OFERTA ","")}</div></div>
+                <div><div class="agency-item-label">Comisión 2x1</div><div class="agency-item-value">{ag.get("COMISION AGENCIA OFERTA 2X1 ","")}</div></div>
+                <div><div class="agency-item-label">IVA</div><div class="agency-item-value">{ag.get("IVA","")}</div></div>
+                <div><div class="agency-item-label">IVA Servicio Opcional</div><div class="agency-item-value">{ag.get("IVA SERVICIO OPCIONAL","")}</div></div>
             </div>
             """,
             unsafe_allow_html=True,
         )
+        st.markdown("</div>", unsafe_allow_html=True)
     elif query:
-        st.info("No se han encontrado coincidencias.")
+        st.info("No se han encontrado agencias.")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ************************************************************
-# *************** 18. PANEL CVC FIT **************************
+# *************** 17. PANEL CVC FIT **************************
 # ************************************************************
+
 if st.session_state.get("opencvcfitform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    st.markdown("### CVC Fit · Contrato desde localizador")
+    st.markdown("### CVC Fit · Contract generator")
 
     locator = st.text_input(
         "LOCALIZADOR",
         key="cvcfitlocatorwidget",
-        placeholder="Ej. ALB260101-001"
+        placeholder="Ejemplo: ALB260101-001"
     )
 
     if st.button("Buscar y preparar contrato", key="btncvcfitaction"):
         try:
             result = build_cvc_fit_from_locator(locator)
             st.session_state["cvcfit_result"] = result
+            st.session_state["cvcfit_locator"] = locator
         except Exception as e:
             st.session_state["cvcfit_result"] = None
             st.exception(e)
 
-    cvcfit_result = st.session_state.get("cvcfit_result")
+    result = st.session_state.get("cvcfit_result")
 
-    if cvcfit_result:
+    if result:
+        st.markdown('<div class="cvcfit-card">', unsafe_allow_html=True)
         st.markdown(
             f"""
-            <div class="cvcfit-card">
-                <div class="cvcfit-grid">
-                    <div><div class="cvcfit-item-label">Localizador</div><div class="cvcfit-item-value">{cvcfit_result.get("locator","")}</div></div>
-                    <div><div class="cvcfit-item-label">Barco</div><div class="cvcfit-item-value">{cvcfit_result.get("boat_name","")}</div></div>
-                    <div><div class="cvcfit-item-label">Nombre</div><div class="cvcfit-item-value">{cvcfit_result.get("nombre","")}</div></div>
-                    <div><div class="cvcfit-item-label">Apellidos</div><div class="cvcfit-item-value">{cvcfit_result.get("apellidos","")}</div></div>
-                    <div><div class="cvcfit-item-label">DNI</div><div class="cvcfit-item-value">{cvcfit_result.get("dni","")}</div></div>
-                    <div><div class="cvcfit-item-label">Personas</div><div class="cvcfit-item-value">{cvcfit_result.get("personas","")}</div></div>
-                    <div><div class="cvcfit-item-label">Habitaciones</div><div class="cvcfit-item-value">{cvcfit_result.get("habitaciones","")}</div></div>
-                    <div><div class="cvcfit-item-label">Fecha salida</div><div class="cvcfit-item-value">{cvcfit_result.get("fecha_salida_str","")}</div></div>
-                    <div><div class="cvcfit-item-label">Fecha límite pago</div><div class="cvcfit-item-value">{cvcfit_result.get("fecha_limite_pago_str","")}</div></div>
-                    <div><div class="cvcfit-item-label">Total</div><div class="cvcfit-item-value">{cvcfit_result.get("total","")}</div></div>
-                </div>
+            <div class="cvcfit-grid">
+                <div><div class="cvcfit-item-label">Localizador</div><div class="cvcfit-item-value">{result.get("locator","")}</div></div>
+                <div><div class="cvcfit-item-label">Barco</div><div class="cvcfit-item-value">{result.get("boat_name","")}</div></div>
+                <div><div class="cvcfit-item-label">Nombre</div><div class="cvcfit-item-value">{result.get("nombre","")}</div></div>
+                <div><div class="cvcfit-item-label">Apellidos</div><div class="cvcfit-item-value">{result.get("apellidos","")}</div></div>
+                <div><div class="cvcfit-item-label">DNI</div><div class="cvcfit-item-value">{result.get("dni","")}</div></div>
+                <div><div class="cvcfit-item-label">Personas</div><div class="cvcfit-item-value">{result.get("personas","")}</div></div>
+                <div><div class="cvcfit-item-label">Habitaciones</div><div class="cvcfit-item-value">{result.get("habitaciones","")}</div></div>
+                <div><div class="cvcfit-item-label">Total</div><div class="cvcfit-item-value">{result.get("total","")}</div></div>
+                <div><div class="cvcfit-item-label">Fecha salida</div><div class="cvcfit-item-value">{result.get("fecha_salida_str","")}</div></div>
+                <div><div class="cvcfit-item-label">Fecha límite pago</div><div class="cvcfit-item-value">{result.get("fecha_limite_pago_str","")}</div></div>
             </div>
             """,
             unsafe_allow_html=True,
         )
+        st.markdown(f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank">Abrir spreadsheet</a>', unsafe_allow_html=True)
 
-        st.markdown(
-            f'<a class="done-link" href="{cvcfit_result["spreadsheet_url"]}" target="_blank" rel="noopener noreferrer">Abrir spreadsheet origen</a>',
-            unsafe_allow_html=True,
-        )
-
-        docx_bytes = build_cvc_fit_doc(cvcfit_result)
+        docbio = build_cvc_fit_doc(result)
         st.download_button(
-            label="Descargar contrato DOCX",
-            data=docx_bytes,
-            file_name=cvcfit_result["filename"],
+            label="Descargar DOCX",
+            data=docbio,
+            file_name=result["filename"],
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             key="btncvcfitdownload",
         )
+        st.markdown("</div>", unsafe_allow_html=True)
 
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ************************************************************
+# *************** 18. PROCESO CONFIRMACION *******************
+# ************************************************************
+
+if st.session_state.get("confirmstate") == "step1":
+    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
+    st.markdown(f"### {st.session_state.get('processtitle', 'Estado del Proceso')}")
+    render_step("Preparando sesión", st.session_state.get("nombrecopia", ""), "active")
+    render_step("Plantilla", st.session_state.get("sessiontype", ""), "wait")
+    render_step("Acción", "Abre el enlace para copiar la plantilla", "wait")
+
+    st.markdown(
+        f'<a class="done-link" href="{st.session_state.get("copyurl","")}" target="_blank">Abrir copia de plantilla</a>',
+        unsafe_allow_html=True,
+    )
+
+    if st.button("Ya he creado la copia", key="btn_confirm_step1_done"):
+        st.session_state["confirmstate"] = "done"
+        st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+elif st.session_state.get("confirmstate") == "done":
+    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
+    st.success("Proceso completado.")
+    render_step("Preparando sesión", st.session_state.get("nombrecopia", ""), "done")
+    render_step("Plantilla", st.session_state.get("sessiontype", ""), "done")
+    render_step("Acción", "Sesión lista", "done")
     st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ************************************************************
 # *************** 19. FOOTER *********************************
 # ************************************************************
+
 st.markdown(
     """
     <div class="portal-footer">
         <div class="footer-text">Crucemundo Hub</div>
     </div>
-    </div>
     """,
     unsafe_allow_html=True,
 )
 
-with st.container():
-    c1, c2 = st.columns([1, 6])
-    with c1:
-        if st.button("Logout", key="logoutbtn"):
-            do_logout()
+col_logout_1, col_logout_2 = st.columns([1, 6])
+with col_logout_1:
+    if st.button("Logout", key="btnlogout"):
+        do_logout()
+
+st.markdown("</div>", unsafe_allow_html=True)
