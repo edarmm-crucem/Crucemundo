@@ -738,8 +738,7 @@ def export_sheet_pdf_bytes(spreadsheet_id, gid):
     f"&bottom_margin=0.50"
     f"&left_margin=0.50"
     f"&right_margin=0.50"
-
-    )
+)
 
     headers = {"Authorization": f"Bearer {token}"}
     response = requests.get(export_url, headers=headers, timeout=60)
