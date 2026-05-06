@@ -1097,6 +1097,25 @@ render_action_card(
 
 
 # ============================================================
+# PANEL CREAR SESIÓN (FIX)
+# ============================================================
+if st.session_state.get("confirmstate") == "step1":
+    st.markdown("### Crear sesión")
+
+    st.markdown(
+        f'<a class="done-link" href="{st.session_state["copyurl"]}" target="_blank">'
+        '👉 Crear copia en Drive'
+        '</a>',
+        unsafe_allow_html=True,
+    )
+
+    if st.button("Ya he creado la copia", key="btnconfirmcopydone"):
+        st.session_state["confirmstate"] = "done"
+        st.success("Sesión creada correctamente")
+
+
+
+# ============================================================
 # PANEL SALIDA
 # ============================================================
 if st.session_state.get("opensalidaform"):
