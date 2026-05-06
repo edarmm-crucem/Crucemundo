@@ -1232,23 +1232,23 @@ if not st.session_state["authenticated"]:
 USEREMAIL = st.session_state.get("useremail", "").strip()
 DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Sin usuario"
 SALUDO = get_saludo()
-SALUDOEN = get_saludo_en()
+SALUDO_EN = get_saludo_en()
 confirmstate = st.session_state.get("confirmstate", "idle")
-excursionesurl = f"https://docs.google.com/spreadsheets/d/{EXCURSIONES_SHEET_ID}/edit"
+excursiones_url = f"https://docs.google.com/spreadsheets/d/{EXCURSIONES_SHEET_ID}/edit"
 
 st.markdown(
     f"""
     <div class="portal-header">
-        <div class="portal-header-left">
-            <img class="portal-logo" src="{LOGO_URL}" alt="Logo">
-            <div>
-                <div class="portal-title">{SALUDO}, {DISPLAYUSER}. ¿Qué hacemos hoy?</div>
-                <div class="portal-title-en">{SALUDOEN}, {DISPLAYUSER}. What are we doing today?</div>
-                <div class="portal-subtitle">Herramientas y automatizaciones · Backend Google Drive</div>
-                <div class="portal-subtitle-en">Tools and automations · Google Drive backend</div>
-            </div>
+      <div class="portal-header-left">
+        <img class="portal-logo" src="{LOGO_URL}" alt="Logo">
+        <div>
+          <div class="portal-title">{SALUDO}, {DISPLAYUSER}. ¿Qué hacemos hoy?</div>
+          <div class="portal-title-en">{SALUDO_EN}, {DISPLAYUSER}. What are we doing today?</div>
+          <div class="portal-subtitle">Herramientas y automatizaciones · Backend Google Drive</div>
+          <div class="portal-subtitle-en">Tools and automations · Google Drive backend</div>
         </div>
-        <div class="user-top">{DISPLAYUSER}</div>
+      </div>
+      <div class="user-top">{DISPLAYUSER}</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -1256,216 +1256,33 @@ st.markdown(
 
 st.markdown('<div class="main-content">', unsafe_allow_html=True)
 
+st.markdown(
+    f"""
+    <div class="section-head-row">
+      <div class="section-eyebrow">ACCIONES RÁPIDAS · QUICK ACTIONS</div>
 
+      <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">
+        Ir a Crucemundo
+      </a>
 
-st.markdown(f"""
-<div class="quick-actions-wrap">
-  <div class="section-head-row">
-    <div class="section-eyebrow">ACCIONES RÁPIDAS QUICK ACTIONS</div>
+      <a class="web-chip" href="https://mail.google.com" target="_blank" rel="noopener noreferrer">
+        Gmail
+      </a>
 
-    <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">
-      Ir a Crucemundo
-    </a>
+      <a class="web-chip" href="https://drive.google.com/drive/folders/{DRIVE_ROOT_ID}" target="_blank" rel="noopener noreferrer">
+        Drive raíz
+      </a>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
-    <a class="web-chip" href="https://mail.google.com" target="_blank" rel="noopener noreferrer">
-      Gmail
-    </a>
-  </div>
-
-  <div class="quick-actions-row-2">
-    <a class="drive-chip" href="https://drive.google.com/drive/folders/{DRIVE_ROOT_ID}" target="_blank" rel="noopener noreferrer">
-      Drive raíz
-    </a>
-  </div>
-</div>
-""", unsafe_allow_html=True)
-
-
-st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
-
-col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8, gap="medium")
-
-with col1:
-    st.markdown(
-        f"""
-        <div class="action-box card-es">
-            <div class="action-top">
-                <div class="action-icon">📄</div>
-                <div class="action-text">
-                    <div class="action-title">Nueva Confirmación</div>
-                    <div class="action-title-en">New Confirmation</div>
-                    <div class="action-desc">Crear sesión MASTER de trabajo para {DISPLAYUSER}</div>
-                    <div class="action-desc-en">Create MASTER working session for {DISPLAYUSER}</div>
-                </div>
-            </div>
-            <div class="action-button-wrap">
-        """,
-        unsafe_allow_html=True,
-    )
-    if confirmstate in ["idle", "done"]:
-        if st.button("Crear Sesión ES", key="btncreares"):
-            iniciar_proceso("es", TEMPLATE_ID_ES, "MASTER", "Estado del Proceso · Process Status · Crear Sesión MASTER/CONFIRMATION")
-    else:
-        st.button("Crear Sesión ES", key="btncrearesdis", disabled=True)
-    st.markdown("</div></div>", unsafe_allow_html=True)
-
-with col2:
-    st.markdown(
-        f"""
-        <div class="action-box card-grupos">
-            <div class="action-top">
-                <div class="action-icon">👥</div>
-                <div class="action-text">
-                    <div class="action-title">Nueva Confirmación GRUPOS</div>
-                    <div class="action-title-en">New GROUPS Confirmation</div>
-                    <div class="action-desc">Crear sesión MASTER GRUPOS de trabajo para {DISPLAYUSER}</div>
-                    <div class="action-desc-en">Create MASTER GROUPS working session for {DISPLAYUSER}</div>
-                </div>
-            </div>
-            <div class="action-button-wrap">
-        """,
-        unsafe_allow_html=True,
-    )
-    if confirmstate in ["idle", "done"]:
-        if st.button("Crear Sesión GRUPOS", key="btncreargrupos"):
-            iniciar_proceso("grupos", TEMPLATE_ID_GRUPOS, "MASTER GRUPOS", "Estado del Proceso · Process Status · Crear Sesión MASTER/GRUPOS")
-    else:
-        st.button("Crear Sesión GRUPOS", key="btncreargruposdis", disabled=True)
-    st.markdown("</div></div>", unsafe_allow_html=True)
-
-with col3:
-    st.markdown(
-        """
-        <div class="action-box card-salida">
-            <div class="action-top">
-                <div class="action-icon">🔎</div>
-                <div class="action-text">
-                    <div class="action-title">Ir a Salida</div>
-                    <div class="action-title-en">Go to Departure</div>
-                    <div class="action-desc">Buscar una salida existente por año, barco y código de salida</div>
-                    <div class="action-desc-en">Find an existing departure by year, ship and departure code</div>
-                </div>
-            </div>
-            <div class="action-button-wrap">
-        """,
-        unsafe_allow_html=True,
-    )
-    if st.button("Buscar Salida", key="btnirsalida"):
-        open_panel("salida")
-        st.rerun()
-    st.markdown("</div></div>", unsafe_allow_html=True)
-
-with col4:
-    st.markdown(
-        """
-        <div class="action-box card-crucero">
-            <div class="action-top">
-                <div class="action-icon">🛳️</div>
-                <div class="action-text">
-                    <div class="action-title">Crear crucero</div>
-                    <div class="action-title-en">Create Cruise</div>
-                    <div class="action-desc">Crear salida nueva desde plantilla y guardarla en año/barco</div>
-                    <div class="action-desc-en">Create a new departure from template and save it in year/ship</div>
-                </div>
-            </div>
-            <div class="action-button-wrap">
-        """,
-        unsafe_allow_html=True,
-    )
-    if st.button("Nuevo Crucero", key="btncrearcruceroopen"):
-        open_panel("crucero")
-        st.rerun()
-    st.markdown("</div></div>", unsafe_allow_html=True)
-
-with col5:
-    st.markdown(
-        """
-        <div class="action-box card-excursiones">
-            <div class="action-top">
-                <div class="action-icon">🧭</div>
-                <div class="action-text">
-                    <div class="action-title">Excursiones</div>
-                    <div class="action-title-en">Excursions</div>
-                    <div class="action-desc">Abrir la hoja de Excursiones</div>
-                    <div class="action-desc-en">Open the Excursions sheet</div>
-                </div>
-            </div>
-            <div class="action-button-wrap">
-        """,
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f'<a class="done-link" href="{excursionesurl}" target="_blank" rel="noopener noreferrer">Abrir Excursiones</a>',
-        unsafe_allow_html=True,
-    )
-    st.markdown("</div></div>", unsafe_allow_html=True)
-
-with col6:
-    st.markdown(
-        """
-        <div class="action-box card-nueva-agencia">
-            <div class="action-top">
-                <div class="action-icon">🏢</div>
-                <div class="action-text">
-                    <div class="action-title">Nueva Agencia</div>
-                    <div class="action-title-en">New Agency</div>
-                    <div class="action-desc">Crear una agencia y guardarla en la hoja Datos</div>
-                    <div class="action-desc-en">Create an agency and save it in Datos sheet</div>
-                </div>
-            </div>
-            <div class="action-button-wrap">
-        """,
-        unsafe_allow_html=True,
-    )
-    if st.button("Nueva Agencia", key="btnnuevaagencia"):
-        open_panel("nuevaagencia")
-        st.rerun()
-    st.markdown("</div></div>", unsafe_allow_html=True)
-
-with col7:
-    st.markdown(
-        """
-        <div class="action-box card-buscar-agencia">
-            <div class="action-top">
-                <div class="action-icon">📇</div>
-                <div class="action-text">
-                    <div class="action-title">Buscar Agencia</div>
-                    <div class="action-title-en">Find Agency</div>
-                    <div class="action-desc">Buscar por cualquier dato y mostrar la ficha completa</div>
-                    <div class="action-desc-en">Search by any known value and show the full record</div>
-                </div>
-            </div>
-            <div class="action-button-wrap">
-        """,
-        unsafe_allow_html=True,
-    )
-    if st.button("Buscar Agencia", key="btnbuscaragencia"):
-        open_panel("buscaragencia")
-        st.rerun()
-    st.markdown("</div></div>", unsafe_allow_html=True)
-
-with col8:
-    st.markdown(
-        """
-        <div class="action-box card-cvcfit">
-            <div class="action-top">
-                <div class="action-icon">🧾</div>
-                <div class="action-text">
-                    <div class="action-title">CVC Fit</div>
-                    <div class="action-title-en">CVC Fit</div>
-                    <div class="action-desc">Buscar por localizador y generar el DOC del contrato</div>
-                    <div class="action-desc-en">Find by locator and generate the contract DOC</div>
-                </div>
-            </div>
-            <div class="action-button-wrap">
-        """,
-        unsafe_allow_html=True,
-    )
-    if st.button("Abrir CVC Fit", key="btncvcfitopen"):
-        open_panel("cvcfit")
-        st.rerun()
-    st.markdown("</div></div>", unsafe_allow_html=True)
-
+st.markdown(
+    f"""
+    <div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>
+    """,
+    unsafe_allow_html=True,
+)
 
 # ************************************************************
 # *************** 12. FORMULARIO SALIDA **********************
