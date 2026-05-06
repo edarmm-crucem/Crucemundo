@@ -27,7 +27,7 @@ st.set_page_config(
 # *************** 3. CONSTANTES Y IDS ************************
 # ************************************************************
 LOGO_ID = "1N7eaCKP1Jeg8KuDXRjJ8tZLhnKStMZ8"
-LOGO_URL = f"https://drive.google.com/file/d/1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8/view?usp=sharing"
+LOGO_URL = f"https://drive.google.com/file/d/1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8/view"
 
 TEMPLATE_ID_ES = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
 TEMPLATE_ID_GRUPOS = "1Z7ktX3PhVkMibWpzdrDDqAT4aPsmjzSJPf1SgZcL5-w"
