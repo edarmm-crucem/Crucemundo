@@ -1374,12 +1374,17 @@ with col1:
         """,
         unsafe_allow_html=True,
     )
-    if confirmstate in ["idle", "done"]:
-        if st.button("Crear Sesión ES", key="btncreares"):
-            iniciar_proceso("es", TEMPLATE_ID_ES, "MASTER", "Estado del Proceso · Process Status · Crear Sesión MASTER/CONFIRMATION")
-    else:
-        st.button("Crear Sesión ES", key="btncrearesdis", disabled=True)
+    if st.button("Crear Sesión ES", key="btncreares"):
+        iniciar_proceso(
+            "es",
+            TEMPLATE_ID_ES,
+            "MASTER",
+            "Estado del Proceso · Process Status · Crear Sesión MASTER/CONFIRMATION",
+        )
     st.markdown("</div></div>", unsafe_allow_html=True)
+
+
+    
 
 with col2:
     st.markdown(
@@ -1398,13 +1403,14 @@ with col2:
         """,
         unsafe_allow_html=True,
     )
-    if confirmstate in ["idle", "done"]:
-        if st.button("Crear Sesión GRUPOS", key="btncreargrupos"):
-            iniciar_proceso("grupos", TEMPLATE_ID_GRUPOS, "MASTER GRUPOS", "Estado del Proceso · Process Status · Crear Sesión MASTER/GRUPOS")
-    else:
-        st.button("Crear Sesión GRUPOS", key="btncreargruposdis", disabled=True)
+    if st.button("Crear Sesión GRUPOS", key="btncreargrupos"):
+        iniciar_proceso(
+            "grupos",
+            TEMPLATE_ID_GRUPOS,
+            "MASTER GRUPOS",
+            "Estado del Proceso · Process Status · Crear Sesión MASTER GRUPOS",
+        )
     st.markdown("</div></div>", unsafe_allow_html=True)
-
 with col3:
     st.markdown(
         """
