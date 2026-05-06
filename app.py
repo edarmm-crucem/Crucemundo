@@ -781,22 +781,22 @@ def build_cvc_fit_pdf_from_locator(locator):
             sheet_map = get_sheet_titles_with_ids(spreadsheet_id)
             titles = {s["title"]: s["sheetId"] for s in sheet_map}
 
-            if "BOOKING ES" not in titles:
-                yield {"type": "skip", "msg": f"⤼ Sin hoja *BOOKING ES* → `{spreadsheet_name}`"}
+            if "Booking ES" not in titles:
+                yield {"type": "skip", "msg": f"⤼ Sin hoja *Booking ES* → `{spreadsheet_name}`"}
                 continue
 
             if "CVC Fit" not in titles:
                 yield {"type": "skip", "msg": f"⤼ Sin hoja *CVC Fit* → `{spreadsheet_name}`"}
                 continue
 
-            g11_value = first_line(get_single_cell(spreadsheet_id, "BOOKING ES", "G11"))
+            g11_value = first_line(get_single_cell(spreadsheet_id, "Booking ES", "G11"))
             if str(g11_value).strip() != locator_clean:
                 yield {"type": "skip", "msg": f"⤼ G11=`{g11_value}` → no coincide en `{spreadsheet_name}`"}
                 continue
 
             yield {"type": "status", "msg": f"✅ **¡Coincidencia encontrada!** en `{spreadsheet_name}` — Leyendo nombre del pasajero..."}
 
-            nombre = first_line(get_single_cell(spreadsheet_id, "BOOKING ES", "G24"))
+            nombre = first_line(get_single_cell(spreadsheet_id, "Booking ES", "G24"))
             nombre_safe = safe_filename(nombre if nombre else "Sin nombre")
             pdf_name = safe_filename(f"CVC Fit {nombre_safe} {locator_clean}.pdf")
 
@@ -821,7 +821,7 @@ def build_cvc_fit_pdf_from_locator(locator):
             yield {"type": "error", "msg": f"⚠️ Error en `{spreadsheet_name}`: {str(e)}"}
             continue
 
-    raise Exception("No se ha encontrado el localizador en BOOKING ES!G11 de ningún Sheet del folder.")
+    raise Exception("No se ha encontrado el localizador en Booking ES!G11 de ningún Sheet del folder.")
 
 
 # ************************************************************
@@ -1349,8 +1349,8 @@ with col8:
                 <div class="action-text">
                     <div class="action-title">CVC Fit</div>
                     <div class="action-title-en">CVC Fit</div>
-                    <div class="action-desc">Buscar localizador en BOOKING ES!G11 y descargar PDF de la hoja CVC Fit</div>
-                    <div class="action-desc-en">Find locator in BOOKING ES!G11 and download the CVC Fit sheet as PDF</div>
+                    <div class="action-desc">Buscar localizador en Booking ES!G11 y descargar PDF de la hoja CVC Fit</div>
+                    <div class="action-desc-en">Find locator in Booking ES!G11 and download the CVC Fit sheet as PDF</div>
                 </div>
             </div>
             <div class="action-button-wrap">
@@ -1638,7 +1638,7 @@ if st.session_state.get("opencvcfitform"):
     locator = st.text_input(
         "Localizador",
         key="cvcfitlocatorwidget",
-        placeholder="Introduce el localizador exacto de BOOKING ES!G11",
+        placeholder="Introduce el localizador exacto de Booking ES!G11",
     )
 
     if st.button("Generar PDF CVC Fit", key="btncvcfitaction", disabled=not locator):
