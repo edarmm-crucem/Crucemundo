@@ -713,7 +713,7 @@ def get_single_cell(spreadsheet_id, sheet_title, a1):
     return ""
 
 
-def export_sheet_pdf_bytes(spreadsheet_id, gid):
+def _sheet_pdf_bytes(spreadsheet_id, gid):
     creds = get_google_creds()
     scoped = creds.with_scopes([
         "https://www.googleapis.com/auth/drive",
@@ -722,24 +722,23 @@ def export_sheet_pdf_bytes(spreadsheet_id, gid):
     scoped.refresh(Request())
     token = scoped.token
 
-    export_url = (
-        f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export"
-        f"?format=pdf"
-        f"&gid={gid}"
-        f"&size=A4"
-        f"&portrait=true"
-        f"&fitw=true"
-        f"&scale=4"
-        f"&sheetnames=false"
-        f"&printtitle=false"
-        f"&pagenumbers=false"
-        f"&gridlines=false"
-        f"&fzr=false"
-        f"&top_margin=0.50"
-        f"&bottom_margin=0.50"
-        f"&left_margin=0.50"
-        f"&right_margin=0.50"
-    )
+    exporturl = (
+    f"https://docs.google.com/spreadsheets/d/{spreadsheetid}/export"
+    f"?format=pdf"
+    f"&gid={gid}"
+    f"&size=A4"
+    f"&portrait=true"
+    f"&fitw=true"
+    f"&sheetnames=false"
+    f"&printtitle=false"
+    f"&pagenumbers=false"
+    f"&gridlines=false"
+    f"&fzr=false"
+    f"&top_margin=0.50"
+    f"&bottom_margin=0.50"
+    f"&left_margin=0.50"
+    f"&right_margin=0.50"
+)
 
     headers = {"Authorization": f"Bearer {token}"}
     response = requests.get(export_url, headers=headers, timeout=60)
