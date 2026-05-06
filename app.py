@@ -764,7 +764,7 @@ def underline_paragraph(paragraph):
 
 
 # ************************************************************
-# *************** 9. DOCX CVC FIT ****************************
+# *************** 9. CVC FIT DOCX ****************************
 # ************************************************************
 def build_cvc_fit_doc(data):
     doc = Document()
@@ -875,50 +875,11 @@ def build_cvc_fit_doc(data):
     add_blank_line()
 
     add_section_title("INFORMACIÓN ADICIONAL")
-    adicionales = [
-        "Revisión de los precios: Estos precios han sido calculados en fecha ____________________ en base a los tipos de cambio de divisa, al precio de transporte derivado coste combustible o de otras fuentes de energía y al nivel de impuestos y tasas sobre los servicios de viaje incluidos en el contrato vigentes en dicha fecha. Hasta 20 días antes de la salida, los precios podrán incrementarse de acuerdo con lo establecido en el apartado 11 de las Condiciones Generales ANEXO III. De igual modo el viajero tendrá derecho a reducción de precio por variación a su favor de dichos conceptos, pudiendo la agencia de viajes en tal caso deducir del reembolso los gastos administrativos reales de su tramitación.",
-        "El viaje es apto para personas de movilidad reducida (persona cuya movilidad para participar en el viaje se halle reducida por motivos de discapacidad física, sensorial o locomotriz, permanente o temporal, discapacidad o deficiencia intelectual o cualquier otra causa de discapacidad, o por la edad, y cuya situación requiera una atención adecuada y la adaptación a sus necesidades particulares del servicio puesto a disposición de los demás participantes): SI / NO.",
-        "Mínimo de personas: La realización del presente viaje requiere la participación de un mínimo de 70 personas. De no llegarse a este mínimo, la agencia tiene derecho a anular el viaje hasta 20 días antes de la fecha de salida. La realización del presente viaje no requiere la participación de un número mínimo de personas.",
-        "Requisitos entrada para turistas de los que fue informado el viajero en el momento de efectuar la reserva: DNI / Pasaporte / Visados / Vacunas / Tiempo aproximado obtención visados.",
-        "El viajero manifiesta que ha sido informado de la situación y requisitos del país o países objeto de su viaje de acuerdo con la información publicada en la página web del Ministerio de Asuntos Exteriores y Cooperación (www.exteriores.gob.es) y que conoce, por lo tanto, las características y posibles riesgos de toda índole del país o países de destino.",
-        "Resolución voluntaria del viaje por el viajero antes de la salida: el viajero, en cualquier momento antes del inicio del viaje, puede resolver el contrato debiendo abonar una penalización de: con más de 42 días antes de la salida, 20%; entre 42 y 28 días antes, 40%; entre 27 y 15 días antes, 60%; entre 14 y 7 días antes, 75%; menos de 7 días antes de la salida, 100%.",
-        "Seguro facultativo de asistencia en viaje: El viajero declara haber sido informado de la posibilidad de contratar un seguro de asistencia en viaje de la compañía aseguradora, póliza número ____, así como de las coberturas, exclusiones, condiciones generales y particulares de este seguro. Su voluntad es: No contratar / Contratar.",
-        "Seguro facultativo de gastos de anulación por fuerza mayor: El viajero declara haber sido informado de la posibilidad de contratar un seguro de gastos de anulación de la compañía aseguradora, póliza número ____, así como de las coberturas, exclusiones, condiciones generales y particulares de este seguro. Su voluntad es: No contratar / Contratar.",
-        "Cesión del viaje: Conforme a lo establecido en el apartado 12 de las Condiciones Generales ANEXO III, el viajero podrá ceder su reserva a una persona que reúna todas las condiciones requeridas.",
-        "Datos de contacto en caso de asistencia y falta de conformidad: Representante local, si hay: Nombre / Dirección / Teléfono / e-mail. Otros puntos de contacto o servicio de asistencia de la agencia de viajes: Teléfono +34 934542041, e-mail info@crucemundo.es. Para cualquier aspecto relacionado con asistencia sanitaria, si el viajero ha contratado un seguro de asistencia en viaje, deberá contactar también con el teléfono de la compañía aseguradora.",
-        "Contacto información menores no acompañados: En caso de menores no acompañados por un familiar u otro adulto autorizado, pueden establecer contacto directo con el menor o con la persona responsable durante la estancia a través de ____.",
-        "Falta de conformidad: El viajero durante el viaje deberá informar toda falta de conformidad en la prestación de los servicios, todo ello de acuerdo con lo establecido en el apartado 16 de las Condiciones Generales ANEXO III.",
-        "Responsabilidad: La agencia de viajes es responsable de la correcta ejecución de todos los servicios de viaje incluidos en el contrato, de conformidad con el artículo 161 del Real Decreto Legislativo 1/2007 y está obligada a prestar asistencia si el viajero se halla en dificultades de conformidad con el artículo 163.2 de dicha norma y de acuerdo con lo establecido en las condiciones generales del contrato ANEXO III.",
-        "Deberá dirigirse directamente a la compañía aseguradora AXA Seguros Generales, S.A. de Seguros y Reaseguros a través de: 1) Teléfonos 902 013 345 / 91 111 95 44. 2) Email del Depto. de Siniestros: aperturas.empresas@axa.es. 3) Presentando su reclamación en alguna de las oficinas AXA.",
-        "Real Decreto 933/2021: Conforme a lo dispuesto en el Real Decreto 933/2021, de 26 de octubre, por el que se establecen las obligaciones de registro documental e información de las personas físicas o jurídicas que contratan actividades de hospedaje y alquiler de vehículos a motor, los datos que se recojan en aplicación de dicha normativa podrán ser accesibles a la policía y las autoridades públicas en el desempeño de sus respectivas competencias en el ámbito de prevención, detección e investigación del delito que tengan asignadas. No se procederá a la comunicación a terceros de los datos personales recogidos en virtud de la citada norma, excepto por obligación legal o requerimiento judicial.",
-    ]
-    for t in adicionales:
-        add_line(t)
-    add_blank_line()
-
-    add_section_title("FIRMAS")
+    add_line("Revisión de los precios: Estos precios han sido calculados en fecha ____________________ en base a los tipos de cambio de divisa, al precio de transporte derivado coste combustible o de otras fuentes de energía y al nivel de impuestos y tasas sobre los servicios de viaje incluidos en el contrato vigentes en dicha fecha. Hasta 20 días antes de la salida, los precios podrán incrementarse de acuerdo con lo establecido en el apartado 11 de las Condiciones Generales ANEXO III. De igual modo el viajero tendrá derecho a reducción de precio por variación a su favor de dichos conceptos, pudiendo la agencia de viajes en tal caso deducir del reembolso los gastos administrativos reales de su tramitación.")
+    add_line("FIRMAS")
     add_line("El presente contrato de viaje combinado se firma por duplicado en el lugar y fecha arriba indicado y a un único efecto, entregándose en este mismo momento un ejemplar al viajero.")
     add_line("Firma viajero: ____________________")
     add_line("Firma agencia de viajes: ____________________")
-
-    doc.add_page_break()
-
-    add_line("ANEXO I", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=13)
-    add_line("CERTIFICADO DE SEGURO DE CAUCIÓN AG. VIAJES", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=12)
-    add_blank_line()
-
-    annex_paragraphs = [
-        "El presente certificado se emite al amparo de lo establecido en el artículo 155.2.c del Real Decreto Legislativo 1/2007, de 16 de noviembre, por el que se aprueba el texto refundido de la Ley General para la Defensa de los Consumidores y Usuarios y otras leyes complementarias.",
-        "Crucemundo S.L. dispone de la garantía por insolvencia establecida para los viajes combinados en el Art. 252-10 de la Ley 22/2010, de 20 de julio, del Código de Consumo de Cataluña, formalizada a través de la póliza de caución número 72974394 con la compañía aseguradora AXA Seguros Generales, S.A. de Seguros y Reaseguros, domiciliada en la calle Monseñor Palmer, 1, 07014 Palma de Mallorca. Dicha garantía está plenamente vigente.",
-        "Procedimiento en caso de que, dándose la situación de insolvencia de la agencia de viajes cubierta por la garantía, el consumidor precise activarla.",
-        "Para la gestión y cumplimiento del objeto del contrato, puede resultar necesario y obligatorio para la prestación del servicio, que sus datos, incluida información sobre alergias, intolerancias alimentarias, minusvalías, etc., tengan que ser comunicados a proveedores tales como compañías aéreas, navieras, hoteles y otros proveedores de servicios, los cuales estarán obligados a utilizar los datos, única y exclusivamente, para dar cumplimiento al objeto del contrato. Estos proveedores, dependiendo del país de destino de su viaje, podrán estar ubicados en países para los que sea necesario realizar una transferencia internacional de datos incluyendo, si fuera el caso, aquellos que no ofrezcan un nivel de protección equiparable a la exigida por la UE, considerándose por tanto una transferencia internacional de datos autorizada expresamente por el interesado.",
-        "Conservación de los datos: Mantendremos su información personal mientras exista una relación contractual y/o comercial con usted, o mientras usted no ejerza su derecho de supresión, cancelación y/o limitación del tratamiento de sus datos. También mantendremos sus datos únicamente al efecto de cumplimiento legal un máximo de 10 años desde la finalización del contrato, si por las características del viaje estuviera afectado por la Ley 10/2010, de 28 de abril, de prevención del blanqueo de capitales y la financiación del terrorismo. Los datos accesorios que Ud. nos informa, p.e. preferencias alimentarias, posibles intolerancias, etc., serán eliminados de nuestros sistemas una vez concluido el servicio o viaje.",
-        "Reclamaciones tras el viaje: El viajero podrá dirigir sus reclamaciones a la dirección postal que consta en el encabezamiento y a la siguiente dirección de correo electrónico: info@crucemundo.es.",
-        "Tratamiento de datos personales: De acuerdo con Reglamento (UE) 2016/679 del Parlamento Europeo y del Consejo, de 27 de abril de 2016 (RGPD) y la Ley Orgánica 3/2018, de 5 de diciembre, de Protección de Datos Personales y Garantía de los Derechos Digitales, el cliente acepta que los datos personales que informa en este documento así como los que puedan ser facilitados en el futuro para el mismo fin, sean recogidos y tratados por la agencia. Dichos datos han sido recogidos por la agencia con la finalidad de gestionar y desarrollar el conjunto de servicios estipulados en este contrato con el cliente, siendo necesarios para cumplir dichos propósitos. El afectado podrá ejercitar los derechos reconocidos en el RGPD y, en particular, los de acceso, limitación, rectificación, supresión, oposición y olvido, a través de un escrito que podrá dirigir a la sede social de la Agencia en la dirección indicada, con la referencia Protección de Datos.",
-        "Comunicación y transferencia de datos: La Agencia le informa que, dependiendo de la modalidad de pago de los servicios, se procederá a la comunicación de los datos incluidos en dicho fichero (Nombre, CIF/NIF, Nº-Cuenta) a las Entidades Financieras (Bancos y Cajas) con las que trabaja la Agencia, a los solos efectos de gestionar las transferencias, cobros y pagos a que dé lugar la relación comercial y el uso de nuestros servicios.",
-    ]
-    for txt in annex_paragraphs:
-        add_line(txt)
 
     bio = io.BytesIO()
     doc.save(bio)
@@ -993,7 +954,7 @@ def build_cvc_fit_from_locator(locator):
 
 
 # ************************************************************
-# ******************** 10. ESTILOS CSS ***********************
+# *************** 10. ESTILOS CSS ****************************
 # ************************************************************
 st.markdown(
     """
@@ -1061,20 +1022,6 @@ st.markdown(
         box-shadow: none !important;
     }
 
-    div.st-key-btncreares button { background: #EEF4FF !important; }
-    div.st-key-btncreargrupos button { background: #ECF8EF !important; }
-    div.st-key-btnirsalida button { background: #FFF3E4 !important; }
-    div.st-key-btncrearcruceroopen button,
-    div.st-key-btncrearcruceroaction button { background: #F1EBFF !important; }
-    div.st-key-btnexcursiones button { background: #E9F7FB !important; }
-    div.st-key-btnnuevaagencia button,
-    div.st-key-btnguardaragencia button { background: #EAF8F0 !important; }
-    div.st-key-btnbuscaragencia button,
-    div.st-key-btnejecutarbusquedaagencia button { background: #FFF4EA !important; }
-    div.st-key-btncvcfitopen button,
-    div.st-key-btncvcfitaction button,
-    div.st-key-btncvcfitdownload button { background: #FFEFF5 !important; }
-
     .portal-header {
         padding: 0.1rem 0 0.55rem 0;
         display: flex;
@@ -1083,6 +1030,7 @@ st.markdown(
         gap: 1rem;
         margin-bottom: 0.55rem;
     }
+
     .portal-header-left { display: flex; align-items: center; gap: 0.9rem; }
     .portal-logo { height: 42px; width: auto; object-fit: contain; display: block; }
     .portal-title, .portal-title-en {
@@ -1125,6 +1073,7 @@ st.markdown(
         margin-bottom: 0.85rem; display: flex; flex-direction: column;
         justify-content: space-between; gap: 0.9rem; border: 1px solid transparent;
     }
+
     .card-es { background: #F3F7FF; border-color: #D9E5FF; }
     .card-grupos { background: #F4FBF6; border-color: #D8EEDC; }
     .card-salida { background: #FFF8F1; border-color: #F1DFC7; }
@@ -1139,15 +1088,6 @@ st.markdown(
         width: 38px; height: 38px; border-radius: 12px; display: flex;
         align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;
     }
-    .card-es .action-icon { background: #E6EEFF; border: 1px solid #D2DFFF; }
-    .card-grupos .action-icon { background: #E7F5EA; border: 1px solid #D0EAD7; }
-    .card-salida .action-icon { background: #FFF0DD; border: 1px solid #F2DEC0; }
-    .card-crucero .action-icon { background: #EEE8FF; border: 1px solid #DDD2FF; }
-    .card-excursiones .action-icon { background: #E2F2F7; border: 1px solid #CFE6EE; }
-    .card-nueva-agencia .action-icon { background: #E2F4E7; border: 1px solid #CFE5D6; }
-    .card-buscar-agencia .action-icon { background: #FDEBD9; border: 1px solid #F2D9B9; }
-    .card-cvcfit .action-icon { background: #FFE3EE; border: 1px solid #F5CADC; }
-
     .action-text { display: flex; flex-direction: column; gap: 0.10rem; min-width: 0; }
     .action-title, .action-title-en {
         font-size: 0.95rem; font-weight: 700; color: #1F2937; line-height: 1.1;
@@ -1244,7 +1184,7 @@ st.markdown(
 
 
 # ************************************************************
-# ******************** 11. LOGIN *****************************
+# *************** 11. LOGIN **********************************
 # ************************************************************
 if not st.session_state["authenticated"]:
     st.markdown('<div class="login-page"><div class="login-shell">', unsafe_allow_html=True)
@@ -1286,7 +1226,7 @@ if not st.session_state["authenticated"]:
 
 
 # ************************************************************
-# ******************** 12. CABECERA **************************
+# *************** 12. VARIABLES UI ***************************
 # ************************************************************
 USEREMAIL = st.session_state.get("useremail", "").strip()
 DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Sin usuario"
@@ -1295,6 +1235,10 @@ SALUDOEN = get_saludo_en()
 confirmstate = st.session_state.get("confirmstate", "idle")
 excursionesurl = f"https://docs.google.com/spreadsheets/d/{EXCURSIONES_SHEET_ID}/edit"
 
+
+# ************************************************************
+# *************** 13. CABECERA *******************************
+# ************************************************************
 st.markdown(
     f"""
     <div class="portal-header">
@@ -1328,7 +1272,7 @@ st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe
 
 
 # ************************************************************
-# ******************** 13. TARJETAS **************************
+# *************** 14. TARJETAS PRINCIPALES *******************
 # ************************************************************
 col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8, gap="medium")
 
@@ -1515,7 +1459,7 @@ with col8:
 
 
 # ************************************************************
-# ******************** 14. PANEL SALIDA **********************
+# *************** 15. PANEL SALIDA ***************************
 # ************************************************************
 if st.session_state.get("opensalidaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
@@ -1582,7 +1526,7 @@ if st.session_state.get("opensalidaform"):
 
 
 # ************************************************************
-# ******************** 15. PANEL CRUCERO *********************
+# *************** 16. PANEL CREAR CRUCERO ********************
 # ************************************************************
 if st.session_state.get("opencruceroform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
@@ -1647,7 +1591,7 @@ if st.session_state.get("opencruceroform"):
 
 
 # ************************************************************
-# ******************** 16. NUEVA AGENCIA *********************
+# *************** 17. PANEL NUEVA AGENCIA ********************
 # ************************************************************
 if st.session_state.get("opennuevaagenciaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
@@ -1715,7 +1659,7 @@ if st.session_state.get("opennuevaagenciaform"):
 
 
 # ************************************************************
-# ******************** 17. BUSCAR AGENCIA ********************
+# *************** 18. PANEL BUSCAR AGENCIA *******************
 # ************************************************************
 if st.session_state.get("openbuscaragenciaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
@@ -1780,7 +1724,7 @@ if st.session_state.get("openbuscaragenciaform"):
 
 
 # ************************************************************
-# ******************** 18. CVC FIT PANEL *********************
+# *************** 19. PANEL CVC FIT **************************
 # ************************************************************
 if st.session_state.get("opencvcfitform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
@@ -1847,7 +1791,7 @@ if st.session_state.get("opencvcfitform"):
 
 
 # ************************************************************
-# ******************** 19. ESTADO PROCESO ********************
+# *************** 20. PROCESO CONFIRMACIONES *****************
 # ************************************************************
 savedname = st.session_state.get("nombrecopia")
 savedurl = st.session_state.get("copyurl")
@@ -1898,6 +1842,10 @@ if confirmstate in ["step1", "step2", "step3", "done"]:
             })
         st.rerun()
 
+
+# ************************************************************
+# *************** 21. AUTO-OPEN SESION ***********************
+# ************************************************************
 if confirmstate == "done" and savedname and not st.session_state.get(f"opened_{savedname}"):
     st.session_state[f"opened_{savedname}"] = True
     st.markdown(
@@ -1907,7 +1855,7 @@ if confirmstate == "done" and savedname and not st.session_state.get(f"opened_{s
 
 
 # ************************************************************
-# ******************** 20. LOGOUT E HISTORIAL ***************
+# *************** 22. LOGOUT + HISTORIAL + FOOTER ************
 # ************************************************************
 st.markdown('<div style="height:1rem;"></div>', unsafe_allow_html=True)
 st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
@@ -1931,10 +1879,6 @@ if st.session_state.get("historial"):
             unsafe_allow_html=True,
         )
 
-
-# ************************************************************
-# ******************** 21. FOOTER ****************************
-# ************************************************************
 st.markdown(
     f"""
     <div class="portal-footer">
