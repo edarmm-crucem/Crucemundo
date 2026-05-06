@@ -1572,61 +1572,171 @@ if st.session_state.get("openbuscaragenciaform"):
     st.markdown("</div>", unsafe_allow_html=True)
 
 
+
 # ************************************************************
-# *************** 18. PANEL CVC FIT **************************
+# *************** PANEL CVC FIT ******************************
 # ************************************************************
 if st.session_state.get("opencvcfitform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### CVC Fit")
+
     locator = st.text_input(
         "Localizador",
         key="cvcfitlocatorwidget",
-        placeholder="Introduce el localizador exacto de BOOKING ES!G11",
+        placeholder="Ej: ALB260101-001",
     )
 
-    if st.button("Generar PDF CVC Fit", key="btncvcfitaction", disabled=not locator):
-        try:
-            result = build_cvc_fit_pdf_from_locator(locator)
-            st.session_state["cvcfit_result"] = result
-            st.success("PDF localizado y generado correctamente.")
-        except Exception as e:
-            st.session_state["cvcfit_result"] = None
-            st.exception(e)
+    status_box = st.empty()
+    result_box = st.empty()
 
-    result = st.session_state.get("cvcfit_result")
+    status_msg = st.session_state.get("cvcfit_status", "")
+    if status_msg:
+        status_box.info(status_msg)
+
+    if st.button("Generar CVC Fit", key="btncvcfitaction", disabled=not locator.strip()):
+        st.session_state["cvcfitresult"] = None
+        clear_cvcfit_status()
+
+        try:
+            set_cvcfit_status("1/6 · Validando localizador...")
+            status_box.info(st.session_state["cvcfit_status"])
+
+            locatorinfo = parse_locator(locator)
+
+            set_cvcfit_status("2/6 · Buscando archivo en Google Drive...")
+            status_box.info(st.session_state["cvcfit_status"])
+
+            drivefile = find_drive_file_for_locator(locatorinfo)
+            spreadsheetid = drivefile["id"]
+
+            set_cvcfit_status("3/6 · Leyendo pestañas del spreadsheet...")
+            status_box.info(st.session_state["cvcfit_status"])
+
+            sheettitles = get_sheet_titles(spreadsheetid)
+
+            if locatorinfo["locator"] not in sheettitles:
+                raise Exception(
+                    f"No existe una pestaña con nombre {locatorinfo['locator']} dentro del spreadsheet."
+                )
+
+            sheettitle = locatorinfo["locator"]
+
+            set_cvcfit_status("4/6 · Leyendo datos del pasajero y del viaje...")
+            status_box.info(st.session_state["cvcfit_status"])
+
+            g24 = get_single_cell(spreadsheetid, sheettitle, "G24")
+            p24 = get_single_cell(spreadsheetid, sheettitle, "P24")
+            nombre, apellidos = parse_nombre_apellidos_from_g24(g24)
+            dni = first_line(p24)
+
+            valuespeople = [
+                get_single_cell(spreadsheetid, sheettitle, "G22"),
+                get_single_cell(spreadsheetid, sheettitle, "K22"),
+                get_single_cell(spreadsheetid, sheettitle, "N22"),
+                get_single_cell(spreadsheetid, sheettitle, "P22"),
+            ]
+            personas = sum(extract_first_number(v) for v in valuespeople)
+
+            valuesrooms = [
+                get_single_cell(spreadsheetid, sheettitle, "G20"),
+                get_single_cell(spreadsheetid, sheettitle, "K20"),
+                get_single_cell(spreadsheetid, sheettitle, "N20"),
+                get_single_cell(spreadsheetid, sheettitle, "P20"),
+            ]
+            habitaciones = sum(extract_first_number(v) for v in valuesrooms)
+
+            dinero = get_range(spreadsheetid, sheettitle, "G33:R53")
+            total = get_single_cell(spreadsheetid, sheettitle, "Q55")
+
+            fechasalida = locatorinfo["fechasalida"]
+            fechalimitepago = locatorinfo["fechalimitepago"]
+
+            filename = safe_filename(
+                f"CVC Fit {apellidos} {nombre} {locatorinfo['boatname']} salida {fechasalida.strftime('%d %m %Y')}.docx"
+            )
+
+            payload = {
+                "locator": locatorinfo["locator"],
+                "boatname": locatorinfo["boatname"],
+                "spreadsheetid": spreadsheetid,
+                "spreadsheeturl": drivefile["url"],
+                "sheettitle": sheettitle,
+                "nombre": nombre,
+                "apellidos": apellidos,
+                "dni": dni,
+                "personas": personas,
+                "habitaciones": habitaciones,
+                "dineromatrix": dinero,
+                "dinerotext": build_money_text(dinero),
+                "total": total,
+                "fechasalida": fechasalida,
+                "fechasalidastr": fechasalida.strftime("%d/%m/%Y"),
+                "fechalimitepago": fechalimitepago,
+                "fechalimitepagostr": fechalimitepago.strftime("%d/%m/%Y"),
+                "filename": filename,
+            }
+
+            set_cvcfit_status("5/6 · Generando documento Word...")
+            status_box.info(st.session_state["cvcfit_status"])
+
+            docio = build_cvcfit_doc(payload)
+            payload["docbytes"] = docio.getvalue()
+
+            st.session_state["cvcfitresult"] = payload
+
+            set_cvcfit_status("6/6 · Documento listo para descargar.")
+            status_box.success(st.session_state["cvcfit_status"])
+
+        except Exception as e:
+            clear_cvcfit_status()
+            status_box.error("Error en CVC Fit.")
+            result_box.exception(e)
+
+    result = st.session_state.get("cvcfitresult")
     if result:
-        st.markdown('<div class="cvcfit-card"><div class="cvcfit-grid">', unsafe_allow_html=True)
-        fields = [
-            ("Localizador", result["locator"]),
-            ("Nombre", result["nombre"]),
-            ("Spreadsheet", result["spreadsheet_name"]),
-            ("Archivo PDF", result["filename"]),
-        ]
-        for label, value in fields:
+        with result_box.container():
+            st.markdown('<div class="cvcfit-card"><div class="cvcfit-grid">', unsafe_allow_html=True)
+            fields = [
+                ("Localizador", result["locator"]),
+                ("Barco", result["boatname"]),
+                ("Salida", result["fechasalidastr"]),
+                ("Límite pago", result["fechalimitepagostr"]),
+                ("Nombre", result["nombre"]),
+                ("Apellidos", result["apellidos"]),
+                ("DNI", result["dni"]),
+                ("Personas", result["personas"]),
+                ("Habitaciones", result["habitaciones"]),
+                ("Total", result["total"]),
+                ("Pestaña", result["sheettitle"]),
+                ("Archivo Drive", result["filename"]),
+            ]
+            for label, value in fields:
+                st.markdown(
+                    f"""
+                    <div>
+                        <div class="cvcfit-item-label">{label}</div>
+                        <div class="cvcfit-item-value">{value if value not in [None, ''] else '-'}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            st.markdown("</div></div>", unsafe_allow_html=True)
+
             st.markdown(
-                f"""
-                <div>
-                    <div class="cvcfit-item-label">{label}</div>
-                    <div class="cvcfit-item-value">{value if value not in [None, ''] else '-'}</div>
-                </div>
-                """,
+                f'<a class="done-link" href="{result["spreadsheeturl"]}" target="_blank">Abrir hoja origen</a>',
                 unsafe_allow_html=True,
             )
-        st.markdown("</div></div>", unsafe_allow_html=True)
 
-        st.markdown(
-            f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank">Abrir hoja origen</a>',
-            unsafe_allow_html=True,
-        )
+            st.download_button(
+                "Descargar DOCX",
+                data=result["docbytes"],
+                file_name=result["filename"],
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                key="btncvcfitdownload",
+            )
 
-        st.download_button(
-            "Descargar PDF",
-            data=result["pdf_bytes"],
-            file_name=result["filename"],
-            mime="application/pdf",
-            key="btncvcfitdownload",
-        )
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 # ************************************************************
