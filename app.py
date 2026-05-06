@@ -94,6 +94,10 @@ defaults = {
     "agencyselectedidx": None,
     "cvcfit_locator": "",
     "cvcfit_result": None,
+    "cvcfit_status_lines": [],
+    "cvcfit_last_checked": "",
+    "cvcfit_total_files": 0,
+    "cvcfit_current_index": 0,
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -148,7 +152,15 @@ def clear_agencia_state():
 
 
 def clear_cvcfit_state():
-    for k in ["cvcfit_locator", "cvcfit_result", "cvcfitlocatorwidget"]:
+    for k in [
+        "cvcfit_locator",
+        "cvcfit_result",
+        "cvcfitlocatorwidget",
+        "cvcfit_status_lines",
+        "cvcfit_last_checked",
+        "cvcfit_total_files",
+        "cvcfit_current_index",
+    ]:
         st.session_state.pop(k, None)
 
 
@@ -215,7 +227,8 @@ def do_logout():
         "agnombre", "agcodigo", "aggrupogest", "agtelefono", "agemail",
         "agdireccion", "agcomision", "agcomisionoferta", "agcomision2x1",
         "agiva", "agivaservicioopcional",
-        "cvcfit_locator", "cvcfit_result", "cvcfitlocatorwidget"
+        "cvcfit_locator", "cvcfit_result", "cvcfitlocatorwidget",
+        "cvcfit_status_lines", "cvcfit_last_checked", "cvcfit_total_files", "cvcfit_current_index",
     ]
     for k in keys_to_delete:
         st.session_state.pop(k, None)
@@ -327,6 +340,12 @@ def first_line(value):
     if value is None:
         return ""
     return str(value).splitlines()[0].strip()
+
+
+def add_cvcfit_status(message):
+    lines = st.session_state.get("cvcfit_status_lines", [])
+    lines.append(f"{datetime.now().strftime('%H:%M:%S')} · {message}")
+    st.session_state["cvcfit_status_lines"] = lines[-15:]
 
 
 # ************************************************************
@@ -733,45 +752,69 @@ def build_cvc_fit_pdf_from_locator(locator):
     if not locator_clean:
         raise Exception("Debes introducir un localizador.")
 
+    st.session_state["cvcfit_status_lines"] = []
+    st.session_state["cvcfit_last_checked"] = ""
+    st.session_state["cvcfit_total_files"] = 0
+    st.session_state["cvcfit_current_index"] = 0
+
+    add_cvcfit_status("Iniciando búsqueda del localizador.")
     spreadsheets = list_spreadsheets_in_folder_recent_first(FOLDER_ID)
+
     if not spreadsheets:
+        add_cvcfit_status("No se han encontrado Google Sheets en el folder indicado.")
         raise Exception("No se han encontrado Google Sheets en el folder indicado.")
 
-    for file in spreadsheets:
+    st.session_state["cvcfit_total_files"] = len(spreadsheets)
+    add_cvcfit_status(f"Encontrados {len(spreadsheets)} spreadsheets en el folder CVC Fit.")
+
+    for idx, file in enumerate(spreadsheets, start=1):
         spreadsheet_id = file["id"]
+        spreadsheet_name = file["name"]
+        st.session_state["cvcfit_current_index"] = idx
+        st.session_state["cvcfit_last_checked"] = spreadsheet_name
+        add_cvcfit_status(f"Revisando {idx}/{len(spreadsheets)} · {spreadsheet_name}")
 
         try:
             sheet_map = get_sheet_titles_with_ids(spreadsheet_id)
             titles = {s["title"]: s["sheetId"] for s in sheet_map}
 
             if "BOOKING ES" not in titles:
+                add_cvcfit_status(f"Saltado {spreadsheet_name}: no existe hoja BOOKING ES.")
                 continue
+
             if "CVC Fit" not in titles:
+                add_cvcfit_status(f"Saltado {spreadsheet_name}: no existe hoja CVC Fit.")
                 continue
 
             g11_value = first_line(get_single_cell(spreadsheet_id, "BOOKING ES", "G11"))
             if str(g11_value).strip() != locator_clean:
+                add_cvcfit_status(f"Sin coincidencia en {spreadsheet_name}: G11='{g11_value}'.")
                 continue
 
+            add_cvcfit_status(f"Coincidencia encontrada en {spreadsheet_name}. Leyendo nombre del pasajero.")
             nombre = first_line(get_single_cell(spreadsheet_id, "BOOKING ES", "G24"))
             nombre_safe = safe_filename(nombre if nombre else "Sin nombre")
             pdf_name = safe_filename(f"CVC Fit {nombre_safe} {locator_clean}.pdf")
 
+            add_cvcfit_status(f"Generando PDF de la hoja CVC Fit para {spreadsheet_name}.")
             pdf_bytes = export_sheet_pdf_bytes(spreadsheet_id, titles["CVC Fit"])
+            add_cvcfit_status(f"PDF generado correctamente: {pdf_name}")
 
             return {
                 "locator": locator_clean,
                 "spreadsheet_id": spreadsheet_id,
-                "spreadsheet_name": file["name"],
+                "spreadsheet_name": spreadsheet_name,
                 "spreadsheet_url": file.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit",
                 "nombre": nombre,
                 "filename": pdf_name,
                 "pdf_bytes": pdf_bytes,
             }
 
-        except Exception:
+        except Exception as e:
+            add_cvcfit_status(f"Error en {spreadsheet_name}: {str(e)}")
             continue
 
+    add_cvcfit_status("Búsqueda finalizada sin coincidencias.")
     raise Exception("No se ha encontrado el localizador en BOOKING ES!G11 de ningún Sheet del folder.")
 
 
@@ -963,7 +1006,7 @@ st.markdown(
         word-wrap: break-word !important; overflow-wrap: break-word !important; white-space: normal !important;
     }
 
-    .agency-card, .cvcfit-card {
+    .agency-card, .cvcfit-card, .cvcfit-status-card {
         background: #FBFCFF; border: 1px solid #E6EBF3; border-radius: 18px;
         padding: 1rem; margin-top: 0.75rem;
     }
@@ -976,6 +1019,17 @@ st.markdown(
     }
     .agency-item-value, .cvcfit-item-value {
         font-size: 0.8rem; color: #1F2937; line-height: 1.35; word-break: break-word;
+    }
+
+    .cvcfit-log-line {
+        font-size: 0.74rem;
+        color: #465066;
+        line-height: 1.45;
+        margin-bottom: 0.35rem;
+        word-break: break-word;
+    }
+    .cvcfit-log-line:last-child {
+        margin-bottom: 0;
     }
 
     .history-row {
@@ -1582,12 +1636,31 @@ if st.session_state.get("opencvcfitform"):
 
     if st.button("Generar PDF CVC Fit", key="btncvcfitaction", disabled=not locator):
         try:
+            st.session_state["cvcfit_result"] = None
             result = build_cvc_fit_pdf_from_locator(locator)
             st.session_state["cvcfit_result"] = result
             st.success("PDF localizado y generado correctamente.")
         except Exception as e:
             st.session_state["cvcfit_result"] = None
             st.exception(e)
+
+    total_files = st.session_state.get("cvcfit_total_files", 0)
+    current_index = st.session_state.get("cvcfit_current_index", 0)
+    last_checked = st.session_state.get("cvcfit_last_checked", "")
+    status_lines = st.session_state.get("cvcfit_status_lines", [])
+
+    if status_lines:
+        st.markdown('<div class="cvcfit-status-card">', unsafe_allow_html=True)
+        st.markdown("#### Estado del proceso")
+        if total_files > 0:
+            progreso = current_index / total_files
+            st.progress(progreso if progreso <= 1 else 1)
+            st.caption(f"Revisados {current_index} de {total_files} spreadsheets")
+        if last_checked:
+            st.caption(f"Último archivo revisado: {last_checked}")
+        for line in status_lines:
+            st.markdown(f'<div class="cvcfit-log-line">{line}</div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     result = st.session_state.get("cvcfit_result")
     if result:
