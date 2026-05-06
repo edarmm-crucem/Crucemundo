@@ -982,7 +982,7 @@ cards = [
         "button_label": "Crear Sesión ES",
         "key": "btncreares",
         "action": lambda: iniciar_proceso("es", TEMPLATE_ID_ES, "MASTER", "Estado del Proceso · Process Status · Crear Sesión MASTER/CONFIRMATION"),
-        "disabled": confirmstate not in ["idle", "done"],
+        "disabled": False,
     },
     {
         "card_class": "card-grupos",
@@ -994,7 +994,7 @@ cards = [
         "button_label": "Crear Sesión GRUPOS",
         "key": "btncreargrupos",
         "action": lambda: iniciar_proceso("grupos", TEMPLATE_ID_GRUPOS, "MASTER GRUPOS", "Estado del Proceso · Process Status · Crear Sesión MASTER/GRUPOS"),
-        "disabled": confirmstate not in ["idle", "done"],
+        "disabled": False,
     },
     {
         "card_class": "card-salida",
