@@ -27,8 +27,8 @@ st.set_page_config(
 # *************** 3. CONSTANTES Y IDS ************************
 # ************************************************************
 
-LOGO_ID = "1N7eaCKP1Jeg8KuDXRjJ8tZLhnKStMZ8"
-LOGO_URL = f"https://drive.google.com/uc?export=view&id={LOGO_ID}"
+LOGO_ID = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
+LOGO_URL = f"https://lh3.googleusercontent.com/d/{LOGO_ID}"
 
 
 TEMPLATE_ID_ES = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
