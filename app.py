@@ -35,15 +35,15 @@ DRIVE_ROOT_ID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
 VALID_USERS = {
     "support@crucemundo.com": "Albina",
     "sales@crucemundo.com": "Kristina",
-    "cruise@crucemundo.com": "Malvina Shogenova",
+    "cruise@crucemundo.com": "Malvina",
     "tania@crucemundo.com": "Tania Bondar",
-    "incoming@crucemundo.com": "Tatiana Sereda",
-    "operations@crucemundo.com": "Anton Babkin",
+    "incoming@crucemundo.com": "Tatiana",
+    "operations@crucemundo.com": "Anton",
     "reservations@crucemundo.com": "Serge",
-    "marketing@crucemundo.com": "Asel Botpaeva",
-    "alexei@crucemundo.com": "Alexei Prokhorov",
-    "anton@crucemundo.com": "Anton Babkin",
-    "finance@crucemundo.com": "Aleksandr Dynin",
+    "marketing@crucemundo.com": "Asel",
+    "alexei@crucemundo.com": "Alexei",
+    "anton@crucemundo.com": "Anton",
+    "finance@crucemundo.com": "Aleksandr",
     "edarmm@gmail.com": "Esteban",
 }
 VALID_PASSWORD = st.secrets["app_password"]
