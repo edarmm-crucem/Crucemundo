@@ -37,15 +37,15 @@ EXCURSIONES_SHEET_ID = "1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg"
 AGENCY_SHEET_ID = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
 AGENCY_SHEET_NAME = "Datos"
 
-# Folder CVC Fit que me indicaste
-FOLDER_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
-
-# Folder raíz para chip verde
+# Folder de sesiones / trabajo general
 DRIVE_ROOT_ID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
+
+# Folder específico para buscar la CVC Fit
+CVCFIT_FOLDER_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
 
 VALID_USERS = {
     "support@crucemundo.com": "Albina",
-    "sales@crucemundo.com": "Kristina",
+    "sales@crucemundo.com": "Sales",
     "cruise@crucemundo.com": "Cruise",
     "tania@crucemundo.com": "Tania",
     "incoming@crucemundo.com": "Incoming",
@@ -248,7 +248,7 @@ def iniciar_proceso(sessiontype, templateid, prefixname, processtitle):
     nombrecopia = f"SESION - {displayuser} - {prefixname} - {fechastr}"
     copyurl = (
         f"https://docs.google.com/spreadsheets/d/{templateid}/copy"
-        f"?copyDestination={FOLDER_ID}"
+        f"?copyDestination={DRIVE_ROOT_ID}"
         f"&title={urllib.parse.quote(nombrecopia)}"
     )
     st.session_state["confirmstate"] = "step1"
@@ -666,110 +666,109 @@ def create_crucero_file(barco, fechaobj):
     }
 
 
-
 # ************************************************************
-# *************** 8. CVC FIT CORREGIDO ***********************
+# *************** 8. CVC FIT NUEVO ***************************
 # ************************************************************
-def normalize_locator(value):
-    return str(value or "").strip().upper()
-
-
-def list_spreadsheets_in_folder_recent_first(folder_id):
-    service = get_drive_service()
-    q = f"'{folder_id}' in parents and trashed=false and mimeType='application/vnd.google-apps.spreadsheet'"
-    results = []
-    pagetoken = None
-    while True:
-        response = service.files().list(
-            q=q,
-            fields="nextPageToken, files(id, name, webViewLink, modifiedTime)",
-            supportsAllDrives=True,
-            includeItemsFromAllDrives=True,
-            corpora="allDrives",
-            pageToken=pagetoken,
-            pageSize=1000,
-            orderBy="modifiedTime desc",
-        ).execute()
-        results.extend(response.get("files", []))
-        pagetoken = response.get("nextPageToken")
-        if not pagetoken:
-            break
-    return results
-
-
 def get_sheet_titles_with_ids(spreadsheet_id):
     sheetsservice = get_sheets_service()
     spreadsheet = sheetsservice.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
-    return {s["properties"]["title"]: s["properties"]["sheetId"] for s in spreadsheet.get("sheets", [])}
+    result = []
+    for s in spreadsheet.get("sheets", []):
+        props = s.get("properties", {})
+        result.append({
+            "title": props.get("title", ""),
+            "sheetId": props.get("sheetId"),
+        })
+    return result
 
 
 def get_single_cell(spreadsheet_id, sheet_title, a1):
     sheetsservice = get_sheets_service()
-    resp = sheetsservice.spreadsheets().values().get(
+    values = sheetsservice.spreadsheets().values().get(
         spreadsheetId=spreadsheet_id,
-        range=f"'{sheet_title}'!{a1}"
-    ).execute()
-    values = resp.get("values", [])
-    return normalize_locator(values[0][0]) if values and values[0] else ""
+        range=f"'{sheet_title}'!{a1}",
+        majorDimension="ROWS",
+    ).execute().get("values", [])
+    if values and values[0]:
+        return values[0][0]
+    return ""
 
 
 def export_sheet_pdf_bytes(spreadsheet_id, gid):
-    """Export usando Drive API v3 - evita problemas SSL de requests"""
-    service = get_drive_service()
-    return service.files().export(
-        fileId=spreadsheet_id,
-        mimeType='application/pdf'
-    ).execute()
+    creds = get_google_creds()
+    if not creds.valid:
+        creds.refresh(Request())
+
+    export_url = (
+        f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export"
+        f"?format=pdf"
+        f"&gid={gid}"
+        f"&size=A4"
+        f"&portrait=true"
+        f"&fitw=true"
+        f"&scale=4"
+        f"&sheetnames=false"
+        f"&printtitle=false"
+        f"&pagenumbers=false"
+        f"&gridlines=false"
+        f"&fzr=false"
+        f"&top_margin=0.50"
+        f"&bottom_margin=0.50"
+        f"&left_margin=0.50"
+        f"&right_margin=0.50"
+    )
+
+    headers = {"Authorization": f"Bearer {creds.token}"}
+    response = requests.get(export_url, headers=headers, timeout=60)
+    response.raise_for_status()
+    return response.content
 
 
 def build_cvc_fit_pdf_from_locator(locator):
-    locator_clean = normalize_locator(locator)
+    locator_clean = str(locator).strip()
     if not locator_clean:
-        raise Exception("Introduce un localizador válido.")
+        raise Exception("Debes introducir un localizador.")
 
-    st.info(f"🔍 Buscando '{locator_clean}' en BOOKING ES!G11...")
-    
-    spreadsheets = list_spreadsheets_in_folder_recent_first(FOLDER_ID)
-    st.write(f"📁 {len(spreadsheets)} Sheets en el folder {FOLDER_ID}")
-    
+    spreadsheets = list_spreadsheets_in_folder_recent_first(CVCFIT_FOLDER_ID)
     if not spreadsheets:
-        raise Exception("❌ No hay Sheets en el folder indicado.")
+        raise Exception("No se han encontrado Google Sheets en el folder indicado.")
 
-    for i, file in enumerate(spreadsheets, 1):
+    for file in spreadsheets:
         spreadsheet_id = file["id"]
-        spreadsheet_name = file["name"]
-        st.caption(f"Revisando {i}/{len(spreadsheets)}: {spreadsheet_name}")
 
         try:
-            titles = get_sheet_titles_with_ids(spreadsheet_id)
-            if "BOOKING ES" not in titles or "CVC Fit" not in titles:
+            sheet_map = get_sheet_titles_with_ids(spreadsheet_id)
+            titles = {s["title"]: s["sheetId"] for s in sheet_map}
+
+            if "BOOKING ES" not in titles:
+                continue
+            if "CVC Fit" not in titles:
                 continue
 
-            g11_value = get_single_cell(spreadsheet_id, "BOOKING ES", "G11")
+            g11_value = first_line(get_single_cell(spreadsheet_id, "BOOKING ES", "G11")).strip()
             if g11_value != locator_clean:
                 continue
 
             nombre = first_line(get_single_cell(spreadsheet_id, "BOOKING ES", "G24"))
-            nombre_safe = safe_filename(nombre or "Sin nombre")
-            pdf_name = f"CVC Fit {nombre_safe} {locator_clean}.pdf"
+            nombre_safe = safe_filename(nombre if nombre else "Sin nombre")
+            pdf_name = safe_filename(f"CVC Fit {nombre_safe} {locator_clean}.pdf")
 
-            st.success(f"✅ Encontrado en: {spreadsheet_name}")
             pdf_bytes = export_sheet_pdf_bytes(spreadsheet_id, titles["CVC Fit"])
 
             return {
                 "locator": locator_clean,
                 "spreadsheet_id": spreadsheet_id,
-                "spreadsheet_name": spreadsheet_name,
-                "spreadsheet_url": file.get("webViewLink", f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"),
+                "spreadsheet_name": file["name"],
+                "spreadsheet_url": file.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit",
                 "nombre": nombre,
                 "filename": pdf_name,
                 "pdf_bytes": pdf_bytes,
             }
-        except Exception as sheet_error:
-            st.caption(f"Error en {spreadsheet_name}: {sheet_error}")
+
+        except Exception:
             continue
 
-    raise Exception(f"❌ Localizador '{locator_clean}' no encontrado en ningún BOOKING ES!G11")
+    raise Exception("No se ha encontrado el localizador en BOOKING ES!G11 de ningún Sheet del folder.")
 
 
 # ************************************************************
@@ -1064,7 +1063,7 @@ SALUDOEN = get_saludo_en()
 confirmstate = st.session_state.get("confirmstate", "idle")
 excursionesurl = f"https://docs.google.com/spreadsheets/d/{EXCURSIONES_SHEET_ID}/edit"
 drive_root_url = f"https://drive.google.com/drive/folders/{DRIVE_ROOT_ID}"
-cvcfit_folder_url = f"https://drive.google.com/drive/folders/{FOLDER_ID}"
+cvcfit_folder_url = f"https://drive.google.com/drive/folders/{CVCFIT_FOLDER_ID}"
 
 
 # ************************************************************
@@ -1103,7 +1102,7 @@ st.markdown(
 st.markdown(
     f"""
     <div class="section-head-row-green">
-        <a class="web-chip-green" href="{drive_root_url}" target="_blank" rel="noopener noreferrer">Abrir Drive Root</a>
+        <a class="web-chip-green" href="{drive_root_url}" target="_blank" rel="noopener noreferrer">Abrir folder raíz</a>
         <a class="web-chip-green" href="{cvcfit_folder_url}" target="_blank" rel="noopener noreferrer">Abrir folder CVC Fit</a>
     </div>
     """,
@@ -1228,7 +1227,7 @@ with col5:
         unsafe_allow_html=True,
     )
     st.markdown(
-        f'<a class="done-link" href="{excursionesurl}" target="_blank">Abrir Excursiones</a>',
+        f'<a class="done-link" href="{excursionesurl}" target="_blank" rel="noopener noreferrer">Abrir Excursiones</a>',
         unsafe_allow_html=True,
     )
     st.markdown("</div></div>", unsafe_allow_html=True)
@@ -1286,8 +1285,8 @@ with col8:
                 <div class="action-text">
                     <div class="action-title">CVC Fit</div>
                     <div class="action-title-en">CVC Fit</div>
-                    <div class="action-desc">Buscar localizador en BOOKING ES!G11 y descargar PDF de la hoja CVC Fit</div>
-                    <div class="action-desc-en">Find locator in BOOKING ES!G11 and download the CVC Fit sheet as PDF</div>
+                    <div class="action-desc">Pide localizador, busca en BOOKING ES!G11 y descarga la hoja CVC Fit en PDF</div>
+                    <div class="action-desc-en">Ask for locator, find it in BOOKING ES!G11 and download the CVC Fit sheet as PDF</div>
                 </div>
             </div>
             <div class="action-button-wrap">
@@ -1359,7 +1358,7 @@ if st.session_state.get("opensalidaform"):
             selectedobj = next((d for d in departures if d["nombre"] == selecteddeparture), None)
             if selectedobj:
                 st.markdown(
-                    f'<a class="done-link" href="{selectedobj["url"]}" target="_blank">Abrir salida · Open departure</a>',
+                    f'<a class="done-link" href="{selectedobj["url"]}" target="_blank" rel="noopener noreferrer">Abrir salida · Open departure</a>',
                     unsafe_allow_html=True,
                 )
     except Exception as e:
@@ -1418,13 +1417,13 @@ if st.session_state.get("opencruceroform"):
                 if result["status"] == "duplicate":
                     st.warning(f"Ya existe / Already exists: {result['name']}")
                     st.markdown(
-                        f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir archivo existente · Open existing file</a>',
+                        f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir archivo existente · Open existing file</a>',
                         unsafe_allow_html=True,
                     )
                 else:
                     st.success(f"Archivo creado / File created: {result['name']}")
                     st.markdown(
-                        f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir crucero · Open cruise</a>',
+                        f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir crucero · Open cruise</a>',
                         unsafe_allow_html=True,
                     )
     except Exception as e:
@@ -1571,34 +1570,20 @@ if st.session_state.get("openbuscaragenciaform"):
 if st.session_state.get("opencvcfitform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### CVC Fit")
-
     locator = st.text_input(
         "Localizador",
         key="cvcfitlocatorwidget",
         placeholder="Introduce el localizador exacto de BOOKING ES!G11",
     )
 
-    progress_placeholder = st.empty()
-    status_placeholder = st.empty()
-
-    def progress_callback(i, total, spreadsheet_name):
-        status_placeholder.info(f"Revisando {i}/{total}: {spreadsheet_name}")
-        progress_placeholder.progress(i / total)
-
-    if st.button("Generar PDF CVC Fit", key="btncvcfitaction", disabled=not locator.strip()):
-        st.session_state["cvcfit_result"] = None
+    if st.button("Generar PDF CVC Fit", key="btncvcfitaction", disabled=not locator):
         try:
-            with st.spinner("Buscando localizador y generando PDF..."):
-                result = build_cvc_fit_pdf_from_locator(locator, progress_callback=progress_callback)
+            result = build_cvc_fit_pdf_from_locator(locator)
             st.session_state["cvcfit_result"] = result
-            status_placeholder.success(
-                f"Encontrado en {result['spreadsheet_name']} "
-                f"({result['checked_files']}/{result['total_files']})"
-            )
+            st.success("PDF localizado y generado correctamente.")
         except Exception as e:
-            progress_placeholder.empty()
-            status_placeholder.error(str(e))
             st.session_state["cvcfit_result"] = None
+            st.exception(e)
 
     result = st.session_state.get("cvcfit_result")
     if result:
@@ -1622,7 +1607,7 @@ if st.session_state.get("opencvcfitform"):
         st.markdown("</div></div>", unsafe_allow_html=True)
 
         st.markdown(
-            f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank">Abrir hoja origen</a>',
+            f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank" rel="noopener noreferrer">Abrir hoja origen</a>',
             unsafe_allow_html=True,
         )
 
@@ -1633,9 +1618,9 @@ if st.session_state.get("opencvcfitform"):
             mime="application/pdf",
             key="btncvcfitdownload",
         )
-
     st.markdown("</div>", unsafe_allow_html=True)
-    
+
+
 # ************************************************************
 # *************** 19. PROCESO CONFIRMACIONES *****************
 # ************************************************************
@@ -1661,7 +1646,7 @@ if confirmstate in ["step1", "step2", "step3", "done"]:
                 <div style="font-size:0.71rem;color:#657087;margin-top:0.15rem;line-height:1.3;">
                     Puedes abrir tu sesión en el botón de abajo · You can open your session with the button below.
                 </div>
-                <a class="done-link" href="{savedurl}" target="_blank">Abrir sesión · Open session</a>
+                <a class="done-link" href="{savedurl}" target="_blank" rel="noopener noreferrer">Abrir sesión · Open session</a>
             </div>
             """,
             unsafe_allow_html=True,
@@ -1719,7 +1704,7 @@ if st.session_state.get("historial"):
                 <div class="history-num">{i}</div>
                 <div class="history-name">{entry["nombre"]}</div>
                 <div class="history-time">{entry["hora"]}</div>
-                <a class="history-link" href="{entry["url"]}" target="_blank">Abrir · Open</a>
+                <a class="history-link" href="{entry["url"]}" target="_blank" rel="noopener noreferrer">Abrir · Open</a>
             </div>
             """,
             unsafe_allow_html=True,
