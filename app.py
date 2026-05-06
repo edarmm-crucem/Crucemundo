@@ -703,6 +703,7 @@ def list_folder_spreadsheets_recent_first(folder_id):
         f"'{folder_id}' in parents and trashed=false "
         f"and mimeType='application/vnd.google-apps.spreadsheet'"
     )
+
     results = []
     page_token = None
 
@@ -712,18 +713,17 @@ def list_folder_spreadsheets_recent_first(folder_id):
             fields="nextPageToken, files(id, name, webViewLink, createdTime, modifiedTime)",
             supportsAllDrives=True,
             includeItemsFromAllDrives=True,
-            corpora="allDrives",
-            orderBy="modifiedTime desc",
             pageToken=page_token,
             pageSize=200,
         ).execute()
+
         results.extend(response.get("files", []))
         page_token = response.get("nextPageToken")
         if not page_token:
             break
 
+    results.sort(key=lambda x: x.get("modifiedTime", ""), reverse=True)
     return results
-
 
 def get_sheet_id_by_title(spreadsheet_id, target_title):
     sheetsservice = get_sheets_service()
