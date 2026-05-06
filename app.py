@@ -1,6 +1,3 @@
-# ************************************************************
-# ******************** 1. IMPORTS ****************************
-# ************************************************************
 import streamlit as st
 from datetime import datetime, date
 import urllib.parse
@@ -11,38 +8,27 @@ from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 import requests
 
+TITLE = "Crucemundo Hub"
 
-# ************************************************************
-# **************** 2. CONFIGURACION APP **********************
-# ************************************************************
 st.set_page_config(
-    page_title="Crucemundo Hub",
-    page_icon="🛳️",
+    page_title=TITLE,
+    page_icon="📄",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
-
-# ************************************************************
-# *************** 3. CONSTANTES Y IDS ************************
-# ************************************************************
-
-LOGO_ID = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
+LOGO_ID = "1N7eaCKP1Jeg8KuDXRjR8tZLhnKStMZ8"
 LOGO_URL = f"https://lh3.googleusercontent.com/d/{LOGO_ID}"
-
 
 TEMPLATE_ID_ES = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
 TEMPLATE_ID_GRUPOS = "1Z7ktX3PhVkMibWpzdrDDqAT4aPsmjzSJPf1SgZcL5-w"
-TEMPLATE_ID_CRUCERO = "1zSJPi6St_Z5Jw1c6eieVnKI4NyEdP7E9n3WTZ9yy3C0"
+TEMPLATE_ID_CRUCERO = "1zSJPi6StZ5Jw1c6eieVnKI4NyEdP7E9n3WTZ9yy3C0"
 
-EXCURSIONES_SHEET_ID = "1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg"
+EXCURSIONES_SHEET_ID = "1ojMHeoosUyel8BA2XTmDsmyDJfvvJrrJNOyxn2u1jg"
 AGENCY_SHEET_ID = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
 AGENCY_SHEET_NAME = "Datos"
 
-# Folder CVC Fit que me indicaste
-FOLDER_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
-
-# Folder raíz para chip verde
+FOLDER_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8FCsO"  # Folder CVC Fit
 DRIVE_ROOT_ID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
 
 VALID_USERS = {
@@ -70,10 +56,6 @@ AGENCY_FIELDS = [
     "IVA SERVICIO OPCIONAL",
 ]
 
-
-# ************************************************************
-# *************** 4. SESSION STATE ***************************
-# ************************************************************
 defaults = {
     "authenticated": False,
     "useremail": "",
@@ -87,6 +69,7 @@ defaults = {
     "opennuevaagenciaform": False,
     "openbuscaragenciaform": False,
     "opencvcfitform": False,
+    "opencvcagenciasform": False,
     "salidayear": None,
     "salidaboat": None,
     "salidaname": None,
@@ -94,21 +77,25 @@ defaults = {
     "cruceroboat": None,
     "agencymatches": [],
     "agencyselectedidx": None,
-    "cvcfit_locator": "",
-    "cvcfit_result": None,
-    "cvcfit_status_lines": [],
-    "cvcfit_last_checked": "",
-    "cvcfit_total_files": 0,
-    "cvcfit_current_index": 0,
+    "cvcfitlocator": "",
+    "cvcfitresult": None,
+    "cvcfitstatuslines": [],
+    "cvcfitlastchecked": "",
+    "cvcfittotalfiles": 0,
+    "cvcfitcurrentindex": 0,
+    "cvcagenciaslocator": "",
+    "cvcagenciasresult": None,
+    "cvcagenciasstatuslines": [],
+    "cvcagenciaslastchecked": "",
+    "cvcagenciastotalfiles": 0,
+    "cvcagenciascurrentindex": 0,
 }
+
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
 
-# ************************************************************
-# *************** 5. HELPERS GENERALES ***********************
-# ************************************************************
 def get_saludo():
     hora = datetime.now().hour
     if 6 <= hora < 14:
@@ -129,39 +116,70 @@ def get_saludo_en():
 
 def clear_salida_state():
     for k in [
-        "salidayear", "salidaboat", "salidaname",
-        "salidayearwidget", "salidaboatwidget", "salidanamewidget"
+        "salidayear",
+        "salidaboat",
+        "salidaname",
+        "salidayearwidget",
+        "salidaboatwidget",
+        "salidanamewidget",
     ]:
         st.session_state.pop(k, None)
 
 
 def clear_crucero_state():
     for k in [
-        "cruceroyear", "cruceroboat",
-        "cruceroyearwidget", "cruceroboatwidget"
+        "cruceroyear",
+        "cruceroboat",
+        "cruceroyearwidget",
+        "cruceroboatwidget",
     ]:
         st.session_state.pop(k, None)
 
 
-def clear_agencia_state():
+def clear_agencias_state():
     for k in [
-        "agencymatches", "agencyselectedidx", "agencysearchquery",
-        "agnombre", "agcodigo", "aggrupogest", "agtelefono", "agemail",
-        "agdireccion", "agcomision", "agcomisionoferta", "agcomision2x1",
-        "agiva", "agivaservicioopcional"
+        "agencymatches",
+        "agencyselectedidx",
+        "agencysearchquery",
+        "agnombre",
+        "agcodigo",
+        "aggrupogest",
+        "agtelefono",
+        "agemail",
+        "agdireccion",
+        "agcomision",
+        "agcomisionoferta",
+        "agcomision2x1",
+        "agiva",
+        "agivaservicioopcional",
     ]:
         st.session_state.pop(k, None)
 
 
 def clear_cvcfit_state():
     for k in [
-        "cvcfit_locator",
-        "cvcfit_result",
+        "cvcfitlocator",
+        "cvcfitresult",
         "cvcfitlocatorwidget",
-        "cvcfit_status_lines",
-        "cvcfit_last_checked",
-        "cvcfit_total_files",
-        "cvcfit_current_index",
+        "cvcfitstatuslines",
+        "cvcfitlastchecked",
+        "cvcfittotalfiles",
+        "cvcfitcurrentindex",
+        "cvcfitlog",
+    ]:
+        st.session_state.pop(k, None)
+
+
+def clear_cvcagencias_state():
+    for k in [
+        "cvcagenciaslocator",
+        "cvcagenciasresult",
+        "cvcagenciaslocatorwidget",
+        "cvcagenciasstatuslines",
+        "cvcagenciaslastchecked",
+        "cvcagenciastotalfiles",
+        "cvcagenciascurrentindex",
+        "cvcagenciaslog",
     ]:
         st.session_state.pop(k, None)
 
@@ -172,65 +190,121 @@ def close_all_panels():
     st.session_state["opennuevaagenciaform"] = False
     st.session_state["openbuscaragenciaform"] = False
     st.session_state["opencvcfitform"] = False
+    st.session_state["opencvcagenciasform"] = False
 
 
 def open_panel(panelname):
     close_all_panels()
     if panelname == "salida":
         clear_crucero_state()
-        clear_agencia_state()
+        clear_agencias_state()
         clear_cvcfit_state()
+        clear_cvcagencias_state()
         st.session_state["opensalidaform"] = True
     elif panelname == "crucero":
         clear_salida_state()
-        clear_agencia_state()
+        clear_agencias_state()
         clear_cvcfit_state()
+        clear_cvcagencias_state()
         st.session_state["opencruceroform"] = True
     elif panelname == "nuevaagencia":
         clear_salida_state()
         clear_crucero_state()
-        clear_agencia_state()
+        clear_agencias_state()
         clear_cvcfit_state()
+        clear_cvcagencias_state()
         st.session_state["opennuevaagenciaform"] = True
     elif panelname == "buscaragencia":
         clear_salida_state()
         clear_crucero_state()
-        clear_agencia_state()
+        clear_agencias_state()
         clear_cvcfit_state()
+        clear_cvcagencias_state()
         st.session_state["openbuscaragenciaform"] = True
     elif panelname == "cvcfit":
         clear_salida_state()
         clear_crucero_state()
-        clear_agencia_state()
+        clear_agencias_state()
         clear_cvcfit_state()
+        clear_cvcagencias_state()
         st.session_state["opencvcfitform"] = True
+    elif panelname == "cvcagencias":
+        clear_salida_state()
+        clear_crucero_state()
+        clear_agencias_state()
+        clear_cvcfit_state()
+        clear_cvcagencias_state()
+        st.session_state["opencvcagenciasform"] = True
     st.session_state["activepanel"] = panelname
 
 
 def clear_all_selectors():
     clear_salida_state()
     clear_crucero_state()
-    clear_agencia_state()
+    clear_agencias_state()
     clear_cvcfit_state()
+    clear_cvcagencias_state()
     close_all_panels()
     st.session_state["activepanel"] = None
 
 
 def do_logout():
     keys_to_delete = [
-        "authenticated", "useremail", "displayname", "confirmstate", "sessiontype",
-        "activepanel", "opensalidaform", "opencruceroform", "opennuevaagenciaform",
-        "openbuscaragenciaform", "opencvcfitform",
-        "salidayear", "salidaboat", "salidaname", "cruceroyear", "cruceroboat",
-        "salidayearwidget", "salidaboatwidget", "salidanamewidget",
-        "cruceroyearwidget", "cruceroboatwidget",
-        "nombrecopia", "copyurl", "processtitle",
-        "agencymatches", "agencyselectedidx", "agencysearchquery",
-        "agnombre", "agcodigo", "aggrupogest", "agtelefono", "agemail",
-        "agdireccion", "agcomision", "agcomisionoferta", "agcomision2x1",
-        "agiva", "agivaservicioopcional",
-        "cvcfit_locator", "cvcfit_result", "cvcfitlocatorwidget",
-        "cvcfit_status_lines", "cvcfit_last_checked", "cvcfit_total_files", "cvcfit_current_index",
+        "authenticated",
+        "useremail",
+        "displayname",
+        "confirmstate",
+        "sessiontype",
+        "activepanel",
+        "opensalidaform",
+        "opencruceroform",
+        "opennuevaagenciaform",
+        "openbuscaragenciaform",
+        "opencvcfitform",
+        "opencvcagenciasform",
+        "salidayear",
+        "salidaboat",
+        "salidaname",
+        "cruceroyear",
+        "cruceroboat",
+        "salidayearwidget",
+        "salidaboatwidget",
+        "salidanamewidget",
+        "cruceroyearwidget",
+        "cruceroboatwidget",
+        "nombrecopia",
+        "copyurl",
+        "processtitle",
+        "agencymatches",
+        "agencyselectedidx",
+        "agencysearchquery",
+        "agnombre",
+        "agcodigo",
+        "aggrupogest",
+        "agtelefono",
+        "agemail",
+        "agdireccion",
+        "agcomision",
+        "agcomisionoferta",
+        "agcomision2x1",
+        "agiva",
+        "agivaservicioopcional",
+        "cvcfitlocator",
+        "cvcfitresult",
+        "cvcfitlocatorwidget",
+        "cvcfitstatuslines",
+        "cvcfitlastchecked",
+        "cvcfittotalfiles",
+        "cvcfitcurrentindex",
+        "cvcfitlog",
+        "cvcagenciaslocator",
+        "cvcagenciasresult",
+        "cvcagenciaslocatorwidget",
+        "cvcagenciasstatuslines",
+        "cvcagenciaslastchecked",
+        "cvcagenciastotalfiles",
+        "cvcagenciascurrentindex",
+        "cvcagenciaslog",
     ]
     for k in keys_to_delete:
         st.session_state.pop(k, None)
@@ -238,15 +312,15 @@ def do_logout():
 
 
 def render_step(label, detail, state):
-    dot_class = {"done": "sd-done", "active": "sd-active", "wait": "sd-wait"}[state]
-    text_class = {"done": "st-done", "active": "st-active", "wait": "st-wait"}[state]
-    symbol = {"done": "✓", "active": "•", "wait": "•"}[state]
+    dotclass = "sd-done" if state == "done" else "sd-active" if state == "active" else "sd-wait"
+    textclass = "st-done" if state == "done" else "st-active" if state == "active" else "st-wait"
+    symbol = "✓" if state == "done" else "•" if state == "active" else ""
     st.markdown(
         f"""
         <div class="step">
-            <div class="step-dot {dot_class}">{symbol}</div>
+            <div class="step-dot {dotclass}">{symbol}</div>
             <div class="step-content">
-                <div class="{text_class}">{label}</div>
+                <div class="{textclass}">{label}</div>
                 <div class="step-detail">{detail}</div>
             </div>
         </div>
@@ -333,8 +407,8 @@ def percent_to_sheet_decimal(value):
 
 
 def safe_filename(text):
-    text = re.sub(r'[\\/:*?"<>|]', "", str(text))
-    text = re.sub(r"\s+", " ", text).strip()
+    text = re.sub(r'[\\/*?:"<>|]', "", str(text))
+    text = re.sub(r"\s+", " ", text.strip())
     return text
 
 
@@ -345,14 +419,17 @@ def first_line(value):
 
 
 def add_cvcfit_status(message):
-    lines = st.session_state.get("cvcfit_status_lines", [])
+    lines = st.session_state.get("cvcfitstatuslines", [])
     lines.append(f"{datetime.now().strftime('%H:%M:%S')} · {message}")
-    st.session_state["cvcfit_status_lines"] = lines[-15:]
+    st.session_state["cvcfitstatuslines"] = lines[-15:]
 
 
-# ************************************************************
-# *************** 6. GOOGLE AUTH / SERVICES ******************
-# ************************************************************
+def add_cvcagencias_status(message):
+    lines = st.session_state.get("cvcagenciasstatuslines", [])
+    lines.append(f"{datetime.now().strftime('%H:%M:%S')} · {message}")
+    st.session_state["cvcagenciasstatuslines"] = lines[-15:]
+
+
 @st.cache_resource
 def get_google_creds():
     if "gcp_service_account" not in st.secrets:
@@ -378,16 +455,13 @@ def get_sheets_service():
     return build("sheets", "v4", credentials=creds)
 
 
-# ************************************************************
-# *************** 7. DRIVE / SHEETS HELPERS ******************
-# ************************************************************
 def list_folder_items(parentid, folders_only=False):
     service = get_drive_service()
     q = f"'{parentid}' in parents and trashed=false"
     if folders_only:
         q += " and mimeType='application/vnd.google-apps.folder'"
     results = []
-    pagetoken = None
+    page_token = None
     while True:
         response = service.files().list(
             q=q,
@@ -395,25 +469,22 @@ def list_folder_items(parentid, folders_only=False):
             supportsAllDrives=True,
             includeItemsFromAllDrives=True,
             corpora="allDrives",
-            pageToken=pagetoken,
+            pageToken=page_token,
             pageSize=1000,
             orderBy="modifiedTime desc",
         ).execute()
         results.extend(response.get("files", []))
-        pagetoken = response.get("nextPageToken")
-        if not pagetoken:
+        page_token = response.get("nextPageToken")
+        if not page_token:
             break
     return results
 
 
-def list_spreadsheets_in_folder_recent_first(folder_id):
+def list_spreadsheets_in_folder_recent_first(folderid):
     service = get_drive_service()
-    q = (
-        f"'{folder_id}' in parents and trashed=false "
-        "and mimeType='application/vnd.google-apps.spreadsheet'"
-    )
+    q = f"'{folderid}' in parents and trashed=false and mimeType='application/vnd.google-apps.spreadsheet'"
     results = []
-    pagetoken = None
+    page_token = None
     while True:
         response = service.files().list(
             q=q,
@@ -421,13 +492,13 @@ def list_spreadsheets_in_folder_recent_first(folder_id):
             supportsAllDrives=True,
             includeItemsFromAllDrives=True,
             corpora="allDrives",
-            pageToken=pagetoken,
+            pageToken=page_token,
             pageSize=1000,
             orderBy="modifiedTime desc",
         ).execute()
         results.extend(response.get("files", []))
-        pagetoken = response.get("nextPageToken")
-        if not pagetoken:
+        page_token = response.get("nextPageToken")
+        if not page_token:
             break
     return results
 
@@ -484,9 +555,7 @@ def copy_file_to_folder(fileid, newname, parentfolderid, description=None):
 
 def update_crucero_sheet(spreadsheetid, barco):
     sheetsservice = get_sheets_service()
-    spreadsheet = sheetsservice.spreadsheets().get(
-        spreadsheetId=spreadsheetid
-    ).execute()
+    spreadsheet = sheetsservice.spreadsheets().get(spreadsheetId=spreadsheetid).execute()
     sheets = spreadsheet.get("sheets", [])
     if not sheets:
         raise Exception("El spreadsheet no contiene hojas.")
@@ -507,10 +576,7 @@ def update_crucero_sheet(spreadsheetid, barco):
             "requests": [
                 {
                     "updateSheetProperties": {
-                        "properties": {
-                            "sheetId": firstsheetid,
-                            "title": barco,
-                        },
+                        "properties": {"sheetId": firstsheetid, "title": barco},
                         "fields": "title",
                     }
                 }
@@ -629,7 +695,7 @@ def get_departures(yearname, boatname):
     if not boatfolder:
         return []
     files = list_folder_items(boatfolder["id"], folders_only=False)
-    pattern = re.compile(rf"^{re.escape(boatname)}_\d{{6}}$")
+    pattern = re.compile(rf"^{re.escape(boatname)}\d{{6}}$")
     departures = []
     for file in files:
         name = file["name"].strip()
@@ -651,7 +717,7 @@ def create_crucero_file(barco, fechaobj):
     mm = fechaobj.strftime("%m")
     dd = fechaobj.strftime("%d")
     fechaes = fechaobj.strftime("%d/%m/%Y")
-    nombrenuevo = f"{barco}_{yy}{mm}{dd}"
+    nombrenuevo = f"{barco}{yy}{mm}{dd}"
 
     carpetaanio = get_or_create_folder(DRIVE_ROOT_ID, anio)
     carpetabarco = get_or_create_folder(carpetaanio["id"], barco)
@@ -665,14 +731,14 @@ def create_crucero_file(barco, fechaobj):
         }
 
     descripcion = (
-        f"Barco: {barco} | Salida: {fechaes} | "
-        f"Creado: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} | "
+        f"Barco: {barco}\n"
+        f"Salida: {fechaes}\n"
+        f"Creado: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}\n"
         f"Los archivos de sesión deben borrarse a los 30 días."
     )
     copia = copy_file_to_folder(TEMPLATE_ID_CRUCERO, nombrenuevo, carpetabarco["id"], descripcion)
     spreadsheetid = copia["id"]
     update_crucero_sheet(spreadsheetid, barco)
-
     get_years.clear()
     get_year_folder_id.clear()
     get_boats.clear()
@@ -687,12 +753,9 @@ def create_crucero_file(barco, fechaobj):
     }
 
 
-# ************************************************************
-# *************** 8. CVC FIT NUEVO ***************************
-# ************************************************************
-def get_sheet_titles_with_ids(spreadsheet_id):
+def get_sheet_titles_with_ids(spreadsheetid):
     sheetsservice = get_sheets_service()
-    spreadsheet = sheetsservice.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+    spreadsheet = sheetsservice.spreadsheets().get(spreadsheetId=spreadsheetid).execute()
     result = []
     for s in spreadsheet.get("sheets", []):
         props = s.get("properties", {})
@@ -703,11 +766,11 @@ def get_sheet_titles_with_ids(spreadsheet_id):
     return result
 
 
-def get_single_cell(spreadsheet_id, sheet_title, a1):
+def get_single_cell(spreadsheetid, sheettitle, a1):
     sheetsservice = get_sheets_service()
     values = sheetsservice.spreadsheets().values().get(
-        spreadsheetId=spreadsheet_id,
-        range=f"'{sheet_title}'!{a1}",
+        spreadsheetId=spreadsheetid,
+        range=f"{sheettitle}!{a1}",
         majorDimension="ROWS",
     ).execute().get("values", [])
     if values and values[0]:
@@ -715,7 +778,7 @@ def get_single_cell(spreadsheet_id, sheet_title, a1):
     return ""
 
 
-def export_sheet_pdf_bytes(spreadsheet_id, gid):
+def export_sheet_pdf_bytes(spreadsheetid, gid):
     creds = get_google_creds()
     scoped = creds.with_scopes([
         "https://www.googleapis.com/auth/drive",
@@ -724,112 +787,171 @@ def export_sheet_pdf_bytes(spreadsheet_id, gid):
     scoped.refresh(Request())
     token = scoped.token
 
-    export_url = (
-        f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export"
+    exporturl = (
+        f"https://docs.google.com/spreadsheets/d/{spreadsheetid}/export"
         f"?format=pdf"
         f"&gid={gid}"
         f"&size=A4"
         f"&portrait=true"
         f"&fitw=true"
-        f"&fith=false"        
+        f"&fith=false"
         f"&sheetnames=false"
         f"&scale=2"
         f"&printtitle=false"
         f"&pagenumbers=false"
         f"&gridlines=false"
         f"&fzr=false"
-        f"&top_margin=0.50"
-        f"&bottom_margin=0.50"
-        f"&left_margin=0.50"
-        f"&right_margin=0.50"
+        f"&topmargin=0.50"
+        f"&bottommargin=0.50"
+        f"&leftmargin=0.50"
+        f"&rightmargin=0.50"
     )
-
     headers = {"Authorization": f"Bearer {token}"}
-    response = requests.get(export_url, headers=headers, timeout=60)
+    response = requests.get(exporturl, headers=headers, timeout=60)
     response.raise_for_status()
     return response.content
 
 
-def build_cvc_fit_pdf_from_locator(locator):
-    """
-    Generador. Hace yield de dicts de progreso mientras busca, y al final
-    hace yield del resultado final con 'done': True y los bytes del PDF.
-    """
-    locator_clean = str(locator).strip()
-    if not locator_clean:
+def build_cvcfit_pdf_from_locator(locator):
+    locatorclean = str(locator).strip()
+    if not locatorclean:
         raise Exception("Debes introducir un localizador.")
 
-    yield {"type": "status", "msg": "🔍 Listando spreadsheets en el folder CVC Fit..."}
+    yield {"type": "status", "msg": "Listando spreadsheets en el folder CVC Fit..."}
     spreadsheets = list_spreadsheets_in_folder_recent_first(FOLDER_ID)
-
     if not spreadsheets:
         raise Exception("No se han encontrado Google Sheets en el folder indicado.")
 
     total = len(spreadsheets)
-    yield {"type": "status", "msg": f"📁 Encontrados **{total}** spreadsheets. Iniciando búsqueda del localizador `{locator_clean}`..."}
+    yield {"type": "status", "msg": f"✅ Encontrados {total} spreadsheets. Iniciando búsqueda del localizador {locatorclean}..."}
 
     for idx, file in enumerate(spreadsheets, start=1):
-        spreadsheet_id = file["id"]
-        spreadsheet_name = file["name"]
+        spreadsheetid = file["id"]
+        spreadsheetname = file["name"]
 
         yield {
             "type": "progress",
             "current": idx,
             "total": total,
-            "file": spreadsheet_name,
-            "msg": f"Revisando **{idx}/{total}** · `{spreadsheet_name}`",
+            "file": spreadsheetname,
+            "msg": f"Revisando {idx}/{total}: {spreadsheetname}",
         }
 
         try:
-            sheet_map = get_sheet_titles_with_ids(spreadsheet_id)
-            titles = {s["title"]: s["sheetId"] for s in sheet_map}
+            sheetmap = get_sheet_titles_with_ids(spreadsheetid)
+            titles = {s["title"]: s["sheetId"] for s in sheetmap}
 
             if "Booking ES" not in titles:
-                yield {"type": "skip", "msg": f"⤼ Sin hoja *Booking ES* → `{spreadsheet_name}`"}
+                yield {"type": "skip", "msg": f"⏭️ Sin hoja Booking ES: {spreadsheetname}"}
                 continue
-
             if "CVC Fit" not in titles:
-                yield {"type": "skip", "msg": f"⤼ Sin hoja *CVC Fit* → `{spreadsheet_name}`"}
+                yield {"type": "skip", "msg": f"⏭️ Sin hoja CVC Fit: {spreadsheetname}"}
                 continue
 
-            g11_value = first_line(get_single_cell(spreadsheet_id, "Booking ES", "G11"))
-            if str(g11_value).strip() != locator_clean:
-                yield {"type": "skip", "msg": f"⤼ G11=`{g11_value}` → no coincide en `{spreadsheet_name}`"}
+            g11value = first_line(get_single_cell(spreadsheetid, "Booking ES", "G11"))
+            if str(g11value).strip() != locatorclean:
+                yield {"type": "skip", "msg": f"⏭️ G11='{g11value}' no coincide en {spreadsheetname}"}
                 continue
 
-            yield {"type": "status", "msg": f"✅ **¡Coincidencia encontrada!** en `{spreadsheet_name}` — Leyendo nombre del pasajero..."}
+            yield {"type": "status", "msg": f"🎯 Coincidencia encontrada en {spreadsheetname}. Leyendo nombre del pasajero..."}
+            nombre = first_line(get_single_cell(spreadsheetid, "Booking ES", "G24"))
+            nombresafe = safe_filename(nombre) if nombre else "Sin nombre"
+            pdfname = safe_filename(f"CVC Fit - {nombresafe} - {locatorclean}.pdf")
 
-            nombre = first_line(get_single_cell(spreadsheet_id, "Booking ES", "G24"))
-            nombre_safe = safe_filename(nombre if nombre else "Sin nombre")
-            pdf_name = safe_filename(f"CVC Fit {nombre_safe} {locator_clean}.pdf")
-
-            yield {"type": "status", "msg": f"📄 Generando PDF de la hoja **CVC Fit**..."}
-            pdf_bytes = export_sheet_pdf_bytes(spreadsheet_id, titles["CVC Fit"])
+            yield {"type": "status", "msg": "📄 Generando PDF de la hoja CVC Fit..."}
+            pdfbytes = export_sheet_pdf_bytes(spreadsheetid, titles["CVC Fit"])
 
             yield {
                 "type": "done",
-                "locator": locator_clean,
-                "spreadsheet_id": spreadsheet_id,
-                "spreadsheet_name": spreadsheet_name,
-                "spreadsheet_url": file.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit",
+                "locator": locatorclean,
+                "spreadsheetid": spreadsheetid,
+                "spreadsheetname": spreadsheetname,
+                "spreadsheeturl": file.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{spreadsheetid}/edit",
                 "nombre": nombre,
-                "filename": pdf_name,
-                "pdf_bytes": pdf_bytes,
+                "filename": pdfname,
+                "pdfbytes": pdfbytes,
             }
             return
 
         except StopIteration:
             raise
         except Exception as e:
-            yield {"type": "error", "msg": f"⚠️ Error en `{spreadsheet_name}`: {str(e)}"}
+            yield {"type": "error", "msg": f"⚠️ Error en {spreadsheetname}: {str(e)}"}
             continue
 
     raise Exception("No se ha encontrado el localizador en Booking ES!G11 de ningún Sheet del folder.")
 
 
-# ************************************************************
-# *************** 9. ESTILOS CSS *****************************
-# ************************************************************
+def build_cvcagencias_pdf_from_locator(locator):
+    locatorclean = str(locator).strip()
+    if not locatorclean:
+        raise Exception("Debes introducir un localizador.")
+
+    yield {"type": "status", "msg": "Listando spreadsheets en el folder CVC Fit..."}
+    spreadsheets = list_spreadsheets_in_folder_recent_first(FOLDER_ID)
+    if not spreadsheets:
+        raise Exception("No se han encontrado Google Sheets en el folder indicado.")
+
+    total = len(spreadsheets)
+    yield {"type": "status", "msg": f"✅ Encontrados {total} spreadsheets. Iniciando búsqueda del localizador {locatorclean}..."}
+
+    for idx, file in enumerate(spreadsheets, start=1):
+        spreadsheetid = file["id"]
+        spreadsheetname = file["name"]
+
+        yield {
+            "type": "progress",
+            "current": idx,
+            "total": total,
+            "file": spreadsheetname,
+            "msg": f"Revisando {idx}/{total}: {spreadsheetname}",
+        }
+
+        try:
+            sheetmap = get_sheet_titles_with_ids(spreadsheetid)
+            titles = {s["title"]: s["sheetId"] for s in sheetmap}
+
+            if "Booking ES" not in titles:
+                yield {"type": "skip", "msg": f"⏭️ Sin hoja Booking ES: {spreadsheetname}"}
+                continue
+            if "CVC Agencias" not in titles:
+                yield {"type": "skip", "msg": f"⏭️ Sin hoja CVC Agencias: {spreadsheetname}"}
+                continue
+
+            g11value = first_line(get_single_cell(spreadsheetid, "Booking ES", "G11"))
+            if str(g11value).strip() != locatorclean:
+                yield {"type": "skip", "msg": f"⏭️ G11='{g11value}' no coincide en {spreadsheetname}"}
+                continue
+
+            yield {"type": "status", "msg": f"🎯 Coincidencia encontrada en {spreadsheetname}. Leyendo nombre del pasajero..."}
+            nombre = first_line(get_single_cell(spreadsheetid, "Booking ES", "G24"))
+            nombresafe = safe_filename(nombre) if nombre else "Sin nombre"
+            pdfname = safe_filename(f"CVC Agencias - {nombresafe} - {locatorclean}.pdf")
+
+            yield {"type": "status", "msg": "📄 Generando PDF de la hoja CVC Agencias..."}
+            pdfbytes = export_sheet_pdf_bytes(spreadsheetid, titles["CVC Agencias"])
+
+            yield {
+                "type": "done",
+                "locator": locatorclean,
+                "spreadsheetid": spreadsheetid,
+                "spreadsheetname": spreadsheetname,
+                "spreadsheeturl": file.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{spreadsheetid}/edit",
+                "nombre": nombre,
+                "filename": pdfname,
+                "pdfbytes": pdfbytes,
+            }
+            return
+
+        except StopIteration:
+            raise
+        except Exception as e:
+            yield {"type": "error", "msg": f"⚠️ Error en {spreadsheetname}: {str(e)}"}
+            continue
+
+    raise Exception("No se ha encontrado el localizador en Booking ES!G11 de ningún Sheet del folder.")
+
+
 st.markdown(
     """
     <style>
@@ -844,7 +966,10 @@ st.markdown(
     [data-testid="stHeader"] { background: transparent !important; }
     section[data-testid="stSidebar"] { display: none !important; }
 
-    .block-container, section.stMain > .block-container, .stMainBlockContainer, [data-testid="stMainBlockContainer"] {
+    .block-container,
+    section.stMain .block-container,
+    .stMainBlockContainer,
+    [data-testid="stMainBlockContainer"] {
         padding-top: 0rem !important;
         padding-bottom: 1rem !important;
         padding-left: 1rem !important;
@@ -853,14 +978,49 @@ st.markdown(
         margin: 0 auto !important;
     }
 
-    .login-page { min-height: auto; display: flex; align-items: flex-start; justify-content: center; padding: 0.2rem 1rem 1rem; }
-    .login-shell { width: 100%; max-width: 390px; margin: 0 auto; }
-    .login-head { text-align: center; margin-bottom: 0.55rem; }
-    .login-logo { height: 56px; width: auto; margin: 0 auto 0.65rem auto; display: block; }
-    .login-title { font-size: 1.08rem; font-weight: 700; color: #1F2937; }
-    .login-subtitle { font-size: 0.78rem; color: #7C869D; margin-top: 0.28rem; }
-    .login-form-box { background: transparent !important; border: none !important; padding: 0 !important; }
-    .login-note { margin-top: 0.65rem; text-align: center; font-size: 0.72rem; color: #8A93A5; }
+    .login-page {
+        min-height: auto;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 0.2rem 1rem 1rem;
+    }
+    .login-shell {
+        width: 100%;
+        max-width: 390px;
+        margin: 0 auto;
+    }
+    .login-head {
+        text-align: center;
+        margin-bottom: 0.55rem;
+    }
+    .login-logo {
+        height: 56px;
+        width: auto;
+        margin: 0 auto 0.65rem auto;
+        display: block;
+    }
+    .login-title {
+        font-size: 1.08rem;
+        font-weight: 700;
+        color: #1F2937;
+    }
+    .login-subtitle {
+        font-size: 0.78rem;
+        color: #7C869D;
+        margin-top: 0.28rem;
+    }
+    .login-form-box {
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+    }
+    .login-note {
+        margin-top: 0.65rem;
+        text-align: center;
+        font-size: 0.72rem;
+        color: #8A93A5;
+    }
 
     div[data-testid="stTextInput"] label,
     div[data-testid="stSelectbox"] label,
@@ -904,58 +1064,125 @@ st.markdown(
         gap: 1rem;
         margin-bottom: 0.55rem;
     }
-
-    .portal-header-left { display: flex; align-items: center; gap: 0.9rem; }
-    .portal-logo { height: 42px; width: auto; object-fit: contain; display: block; }
+    .portal-header-left {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+    }
+    .portal-logo {
+        height: 42px;
+        width: auto;
+        object-fit: contain;
+        display: block;
+    }
     .portal-title, .portal-title-en {
-        font-size: 0.96rem; font-weight: 700; color: #1F2937; line-height: 1.15;
+        font-size: 0.96rem;
+        font-weight: 700;
+        color: #1F2937;
+        line-height: 1.15;
     }
     .portal-title-en { margin-top: 0.12rem; }
     .portal-subtitle, .portal-subtitle-en {
-        font-size: 0.72rem; color: #7C869D; line-height: 1.2;
+        font-size: 0.72rem;
+        color: #7C869D;
+        line-height: 1.2;
     }
     .portal-subtitle { margin-top: 0.12rem; }
     .portal-subtitle-en { margin-top: 0.08rem; }
-    .user-top { font-size: 0.72rem; color: #566079; white-space: nowrap; }
+    .user-top {
+        font-size: 0.72rem;
+        color: #566079;
+        white-space: nowrap;
+    }
 
     .main-content { padding: 0; }
-    .section-head-row {
-        display: flex; align-items: center; justify-content: flex-start;
-        gap: 0.55rem; margin-bottom: 0.75rem; flex-wrap: wrap;
-    }
+
+    .section-head-row,
     .section-head-row-green {
-        display: flex; align-items: center; justify-content: flex-start;
-        gap: 0.55rem; margin-top: -0.15rem; margin-bottom: 0.75rem; flex-wrap: wrap;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.55rem;
+        flex-wrap: wrap;
     }
+    .section-head-row { margin-bottom: 0.75rem; }
+    .section-head-row-green {
+        margin-top: -0.15rem;
+        margin-bottom: 0.75rem;
+    }
+
     .section-eyebrow {
-        display: inline-flex; align-items: center; padding: 0.34rem 0.74rem;
-        border-radius: 999px; background: #EAF1FF; border: 1px solid #D6E3FF;
-        color: #2E5FB8; font-size: 0.66rem; font-weight: 700;
-        letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0 !important;
+        display: inline-flex;
+        align-items: center;
+        padding: 0.34rem 0.74rem;
+        border-radius: 999px;
+        background: #EAF1FF;
+        border: 1px solid #D6E3FF;
+        color: #2E5FB8;
+        font-size: 0.66rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 0 !important;
     }
+
     .web-chip {
-        display: inline-flex; align-items: center; justify-content: center;
-        padding: 0.34rem 0.74rem; border-radius: 999px; background: #FFF3BF;
-        border: 1px solid #F4D35E; color: #7A5900 !important; font-size: 0.70rem;
-        font-weight: 700; line-height: 1; text-decoration: none; white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.34rem 0.74rem;
+        border-radius: 999px;
+        background: #FFF3BF;
+        border: 1px solid #F4D35E;
+        color: #7A5900 !important;
+        font-size: 0.70rem;
+        font-weight: 700;
+        line-height: 1;
+        text-decoration: none;
+        white-space: nowrap;
     }
     .web-chip-green {
-        display: inline-flex; align-items: center; justify-content: center;
-        padding: 0.34rem 0.74rem; border-radius: 999px; background: #E9F8EE;
-        border: 1px solid #BEE3C8; color: #1E6B3A !important; font-size: 0.70rem;
-        font-weight: 700; line-height: 1; text-decoration: none; white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.34rem 0.74rem;
+        border-radius: 999px;
+        background: #E9F8EE;
+        border: 1px solid #BEE3C8;
+        color: #1E6B3A !important;
+        font-size: 0.70rem;
+        font-weight: 700;
+        line-height: 1;
+        text-decoration: none;
+        white-space: nowrap;
     }
+
     .user-pill {
-        display: inline-flex; align-items: center; gap: 0.4rem; margin: 0.02rem 0 1rem;
-        padding: 0.38rem 0.68rem; border-radius: 999px; background: #fff;
-        border: 1px solid #E4E7EF; font-size: 0.72rem; color: #5D6880;
-        max-width: 100%; word-break: break-word;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin: 0.02rem 0 1rem;
+        padding: 0.38rem 0.68rem;
+        border-radius: 999px;
+        background: #fff;
+        border: 1px solid #E4E7EF;
+        font-size: 0.72rem;
+        color: #5D6880;
+        max-width: 100%;
+        word-break: break-word;
     }
 
     .action-box {
-        width: 100%; min-height: 210px; border-radius: 22px; padding: 1rem;
-        margin-bottom: 0.85rem; display: flex; flex-direction: column;
-        justify-content: space-between; gap: 0.9rem; border: 1px solid transparent;
+        width: 100%;
+        min-height: 210px;
+        border-radius: 22px;
+        padding: 1rem;
+        margin-bottom: 0.85rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 0.9rem;
+        border: 1px solid transparent;
     }
 
     .card-es { background: #F3F7FF; border-color: #D9E5FF; }
@@ -966,121 +1193,234 @@ st.markdown(
     .card-nueva-agencia { background: #F1FAF4; border-color: #D7EEDC; }
     .card-buscar-agencia { background: #FFF7EF; border-color: #F4E1CA; }
     .card-cvcfit { background: #FFF2F7; border-color: #F4D7E3; }
+    .card-cvcagencias { background: #F2FFF8; border-color: #CFEFDE; }
 
-    .action-top { display: flex; align-items: flex-start; gap: 0.75rem; }
-    .action-icon {
-        width: 38px; height: 38px; border-radius: 12px; display: flex;
-        align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;
+    .action-top {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
     }
-    .action-text { display: flex; flex-direction: column; gap: 0.10rem; min-width: 0; }
+    .action-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+    .action-text {
+        display: flex;
+        flex-direction: column;
+        gap: 0.10rem;
+        min-width: 0;
+    }
     .action-title, .action-title-en {
-        font-size: 0.95rem; font-weight: 700; color: #1F2937; line-height: 1.1;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #1F2937;
+        line-height: 1.1;
     }
     .action-title-en { margin-top: 0.05rem; }
     .action-desc, .action-desc-en {
-        font-size: 0.73rem; color: #6F7B91; line-height: 1.28;
+        font-size: 0.73rem;
+        color: #6F7B91;
+        line-height: 1.28;
     }
     .action-desc { margin-top: 0.18rem; }
     .action-desc-en { margin-top: 0.04rem; }
+
     .action-button-wrap {
-        display: flex !important; justify-content: flex-start !important;
-        align-items: center !important; width: 100% !important; margin-top: 0.1rem;
+        display: flex !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        width: 100% !important;
+        margin-top: 0.1rem;
     }
 
-    .panel-inline { margin-top: 1rem; padding-top: 0.2rem; width: 100%; max-width: 1100px; }
+    .panel-inline {
+        margin-top: 1rem;
+        padding-top: 0.2rem;
+        width: 100%;
+        max-width: 1100px;
+    }
+
     .done-link {
-        display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 0.65rem;
-        background: #D9E9FF; color: #214D92 !important; border: 1px solid #BDD6FF;
-        border-radius: 999px; padding: 0.42rem 0.88rem; font-size: 0.71rem;
-        font-weight: 600; text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-top: 0.65rem;
+        background: #D9E9FF;
+        color: #214D92 !important;
+        border: 1px solid #BDD6FF;
+        border-radius: 999px;
+        padding: 0.42rem 0.88rem;
+        font-size: 0.71rem;
+        font-weight: 600;
+        text-decoration: none;
     }
 
-    .step { display: flex; align-items: flex-start; gap: 0.65rem; margin-bottom: 0.6rem; }
+    .step {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.65rem;
+        margin-bottom: 0.6rem;
+    }
     .step:last-child { margin-bottom: 0; }
     .step-dot {
-        width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
-        margin-top: 0.05rem; display: flex; align-items: center; justify-content: center;
-        font-size: 0.55rem; font-weight: 700;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        margin-top: 0.05rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.55rem;
+        font-weight: 700;
     }
     .sd-done { background: #EEF7F1; border: 1px solid #D8ECDF; color: #2E7D58; }
     .sd-active { background: #F2F4F9; border: 1px solid #DDE2EC; color: #6E778B; }
     .sd-wait { background: #F8F9FC; border: 1px solid #E6E9F0; color: #B1B8C9; }
-    .step-content { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+
+    .step-content {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        flex: 1;
+    }
     .st-done, .st-active, .st-wait { font-size: 0.76rem; }
     .st-done { color: #394255; }
     .st-active { color: #1F2937; font-weight: 600; }
     .st-wait { color: #A2ABBD; }
     .step-detail {
-        font-size: 0.7rem; color: #8790A4; margin-top: 0.08rem;
-        word-wrap: break-word !important; overflow-wrap: break-word !important; white-space: normal !important;
+        font-size: 0.7rem;
+        color: #8790A4;
+        margin-top: 0.08rem;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        white-space: normal !important;
     }
 
-    .agency-card, .cvcfit-card, .cvcfit-status-card {
-        background: #FBFCFF; border: 1px solid #E6EBF3; border-radius: 18px;
-        padding: 1rem; margin-top: 0.75rem;
-    }
-    .agency-grid, .cvcfit-grid {
-        display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem 1rem;
-    }
-    .agency-item-label, .cvcfit-item-label {
-        font-size: 0.68rem; color: #7E889D; text-transform: uppercase;
-        letter-spacing: 0.04em; margin-bottom: 0.16rem;
-    }
-    .agency-item-value, .cvcfit-item-value {
-        font-size: 0.8rem; color: #1F2937; line-height: 1.35; word-break: break-word;
+    .agency-card, .cvcfit-card, .cvcfit-status-card, .cvcagencias-card, .cvcagencias-status-card {
+        background: #FBFCFF;
+        border: 1px solid #E6EBF3;
+        border-radius: 18px;
+        padding: 1rem;
+        margin-top: 0.75rem;
     }
 
-    .cvcfit-log-line {
+    .agency-grid, .cvcfit-grid, .cvcagencias-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.85rem 1rem;
+    }
+
+    .agency-item-label, .cvcfit-item-label, .cvcagencias-item-label {
+        font-size: 0.68rem;
+        color: #7E889D;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.16rem;
+    }
+
+    .agency-item-value, .cvcfit-item-value, .cvcagencias-item-value {
+        font-size: 0.8rem;
+        color: #1F2937;
+        line-height: 1.35;
+        word-break: break-word;
+    }
+
+    .cvcfit-log-line, .cvcagencias-log-line {
         font-size: 0.74rem;
         color: #465066;
         line-height: 1.45;
         margin-bottom: 0.35rem;
         word-break: break-word;
     }
-    .cvcfit-log-line:last-child {
+    .cvcfit-log-line:last-child, .cvcagencias-log-line:last-child {
         margin-bottom: 0;
     }
 
     .history-row {
-        display: flex; align-items: center; gap: 0.75rem; padding: 0.28rem 0;
-        margin-bottom: 0.35rem; width: 100%; max-width: 620px;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.28rem 0;
+        margin-bottom: 0.35rem;
+        width: 100%;
+        max-width: 620px;
     }
     .history-num {
-        width: 22px; height: 22px; border-radius: 7px; background: #F2F4F9;
-        border: 1px solid #E3E7F1; display: flex; align-items: center; justify-content: center;
-        font-size: 0.62rem; font-weight: 600; color: #5D6880; flex-shrink: 0;
+        width: 22px;
+        height: 22px;
+        border-radius: 7px;
+        background: #F2F4F9;
+        border: 1px solid #E3E7F1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.62rem;
+        font-weight: 600;
+        color: #5D6880;
+        flex-shrink: 0;
     }
     .history-name {
-        font-size: 0.75rem; color: #394255; flex: 1; word-wrap: break-word;
-        overflow-wrap: break-word; white-space: normal;
+        font-size: 0.75rem;
+        color: #394255;
+        flex: 1;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        white-space: normal;
     }
-    .history-time { font-size: 0.68rem; color: #A2ABBD; white-space: nowrap; }
+    .history-time {
+        font-size: 0.68rem;
+        color: #A2ABBD;
+        white-space: nowrap;
+    }
     .history-link {
-        font-size: 0.71rem; color: #5D6880; text-decoration: none; font-weight: 500; white-space: nowrap;
+        font-size: 0.71rem;
+        color: #5D6880;
+        text-decoration: none;
+        font-weight: 500;
+        white-space: nowrap;
     }
 
     .portal-footer {
-        margin-top: 1rem; padding: 0.5rem 0 0 0; display: flex;
-        justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap;
+        margin-top: 1rem;
+        padding: 0.5rem 0 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.8rem;
+        flex-wrap: wrap;
     }
-    .footer-text { font-size: 0.71rem; color: #A2ABBD; }
+    .footer-text {
+        font-size: 0.71rem;
+        color: #A2ABBD;
+    }
 
     @media (max-width: 1600px) {
-        .agency-grid, .cvcfit-grid { grid-template-columns: 1fr; }
+        .agency-grid, .cvcfit-grid, .cvcagencias-grid {
+            grid-template-columns: 1fr;
+        }
     }
     @media (max-width: 1300px) {
-        .portal-header { flex-direction: column; align-items: flex-start; }
-        .portal-footer { flex-direction: column; align-items: flex-start; }
+        .portal-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .portal-footer {
+            flex-direction: column;
+            align-items: flex-start;
+        }
     }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-
-# ************************************************************
-# *************** 10. LOGIN **********************************
-# ************************************************************
 if not st.session_state["authenticated"]:
     st.markdown('<div class="login-page"><div class="login-shell">', unsafe_allow_html=True)
     st.markdown(
@@ -1094,10 +1434,12 @@ if not st.session_state["authenticated"]:
         unsafe_allow_html=True,
     )
     st.markdown('<div class="login-form-box">', unsafe_allow_html=True)
+
     with st.form("loginform", clear_on_submit=False):
         email = st.text_input("Mail / Email", placeholder="support@crucemundo.com")
         password = st.text_input("Contraseña / Password", type="password", placeholder="••••••••")
         submitted = st.form_submit_button("Entrar / Login")
+
         if submitted:
             emailclean = email.strip().lower()
             if not emailclean or not password:
@@ -1111,6 +1453,7 @@ if not st.session_state["authenticated"]:
                 st.session_state["useremail"] = emailclean
                 st.session_state["displayname"] = VALID_USERS[emailclean]
                 st.rerun()
+
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown(
         '<div class="login-note">El mail valida el acceso y el alias se usará para nombrar la sesión / Email validates access and the alias will be used to name the session.</div>',
@@ -1119,23 +1462,16 @@ if not st.session_state["authenticated"]:
     st.markdown("</div></div>", unsafe_allow_html=True)
     st.stop()
 
-
-# ************************************************************
-# *************** 11. VARIABLES UI ***************************
-# ************************************************************
 USEREMAIL = st.session_state.get("useremail", "").strip()
 DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Sin usuario"
 SALUDO = get_saludo()
 SALUDOEN = get_saludo_en()
 confirmstate = st.session_state.get("confirmstate", "idle")
+
 excursionesurl = f"https://docs.google.com/spreadsheets/d/{EXCURSIONES_SHEET_ID}/edit"
-drive_root_url = f"https://drive.google.com/drive/folders/{DRIVE_ROOT_ID}"
-cvcfit_folder_url = f"https://drive.google.com/drive/folders/{FOLDER_ID}"
+driverooturl = f"https://drive.google.com/drive/folders/{DRIVE_ROOT_ID}"
+cvcfitfolderurl = f"https://drive.google.com/drive/folders/{FOLDER_ID}"
 
-
-# ************************************************************
-# *************** 12. CABECERA *******************************
-# ************************************************************
 st.markdown(
     f"""
     <div class="portal-header">
@@ -1155,6 +1491,7 @@ st.markdown(
 )
 
 st.markdown('<div class="main-content">', unsafe_allow_html=True)
+
 st.markdown(
     """
     <div class="section-head-row">
@@ -1169,8 +1506,9 @@ st.markdown(
 st.markdown(
     f"""
     <div class="section-head-row-green">
-        <a class="web-chip-green" href="{drive_root_url}" target="_blank" rel="noopener noreferrer">Abre Drive Root</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre Cabinas</a>
+        <a class="web-chip-green" href="{driverooturl}" target="_blank" rel="noopener noreferrer">Abre Drive Root</a>
+        <a class="web-chip-green" href="{cvcfitfolderurl}" target="_blank" rel="noopener noreferrer">Abre folder CVC Fit</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-TnE3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre Cabinas</a>
     </div>
     """,
     unsafe_allow_html=True,
@@ -1178,11 +1516,7 @@ st.markdown(
 
 st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
-
-# ************************************************************
-# *************** 13. TARJETAS PRINCIPALES *******************
-# ************************************************************
-col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8, gap="medium")
+col1, col2, col3, col4, col5, col6, col7, col8, col9 = st.columns(9, gap="medium")
 
 with col1:
     st.markdown(
@@ -1201,7 +1535,7 @@ with col1:
         """,
         unsafe_allow_html=True,
     )
-    if confirmstate in ["idle", "done"]:
+    if confirmstate in ("idle", "done"):
         if st.button("Crear Sesión ES", key="btncreares"):
             iniciar_proceso("es", TEMPLATE_ID_ES, "MASTER", "Estado del Proceso · Process Status · Crear Sesión MASTER/CONFIRMATION")
     else:
@@ -1225,7 +1559,7 @@ with col2:
         """,
         unsafe_allow_html=True,
     )
-    if confirmstate in ["idle", "done"]:
+    if confirmstate in ("idle", "done"):
         if st.button("Crear Sesión GRUPOS", key="btncreargrupos"):
             iniciar_proceso("grupos", TEMPLATE_ID_GRUPOS, "MASTER GRUPOS", "Estado del Proceso · Process Status · Crear Sesión MASTER/GRUPOS")
     else:
@@ -1237,7 +1571,7 @@ with col3:
         """
         <div class="action-box card-salida">
             <div class="action-top">
-                <div class="action-icon">🔎</div>
+                <div class="action-icon">🛳️</div>
                 <div class="action-text">
                     <div class="action-title">Ir a Salida</div>
                     <div class="action-title-en">Go to Departure</div>
@@ -1259,7 +1593,7 @@ with col4:
         """
         <div class="action-box card-crucero">
             <div class="action-top">
-                <div class="action-icon">🛳️</div>
+                <div class="action-icon">➕</div>
                 <div class="action-text">
                     <div class="action-title">Crear crucero</div>
                     <div class="action-title-en">Create Cruise</div>
@@ -1293,10 +1627,7 @@ with col5:
         """,
         unsafe_allow_html=True,
     )
-    st.markdown(
-        f'<a class="done-link" href="{excursionesurl}" target="_blank">Abrir Excursiones</a>',
-        unsafe_allow_html=True,
-    )
+    st.markdown(f'<a class="done-link" href="{excursionesurl}" target="_blank">Abrir Excursiones</a>', unsafe_allow_html=True)
     st.markdown("</div></div>", unsafe_allow_html=True)
 
 with col6:
@@ -1326,7 +1657,7 @@ with col7:
         """
         <div class="action-box card-buscar-agencia">
             <div class="action-top">
-                <div class="action-icon">📇</div>
+                <div class="action-icon">🔎</div>
                 <div class="action-text">
                     <div class="action-title">Buscar Agencia</div>
                     <div class="action-title-en">Find Agency</div>
@@ -1348,7 +1679,7 @@ with col8:
         """
         <div class="action-box card-cvcfit">
             <div class="action-top">
-                <div class="action-icon">🧾</div>
+                <div class="action-icon">💗</div>
                 <div class="action-text">
                     <div class="action-title">CVC Fit</div>
                     <div class="action-title-en">CVC Fit</div>
@@ -1365,10 +1696,28 @@ with col8:
         st.rerun()
     st.markdown("</div></div>", unsafe_allow_html=True)
 
+with col9:
+    st.markdown(
+        """
+        <div class="action-box card-cvcagencias">
+            <div class="action-top">
+                <div class="action-icon">🟢</div>
+                <div class="action-text">
+                    <div class="action-title">CVC Agencias</div>
+                    <div class="action-title-en">CVC Agencies</div>
+                    <div class="action-desc">Buscar localizador en Booking ES!G11 y descargar PDF de la hoja CVC Agencias</div>
+                    <div class="action-desc-en">Find locator in Booking ES!G11 and download the CVC Agencias sheet as PDF</div>
+                </div>
+            </div>
+            <div class="action-button-wrap">
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button("Abrir CVC Agencias", key="btncvcagenciasopen"):
+        open_panel("cvcagencias")
+        st.rerun()
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
-# ************************************************************
-# *************** 14. PANEL SALIDA ***************************
-# ************************************************************
 if st.session_state.get("opensalidaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### Seleccionar salida · Select departure")
@@ -1377,11 +1726,12 @@ if st.session_state.get("opensalidaform"):
         currentyear = st.session_state.get("salidayear")
         if currentyear not in years:
             currentyear = None
+
         selectedyear = st.selectbox(
             "AÑO / YEAR",
             options=years,
             index=years.index(currentyear) if currentyear in years else None,
-            placeholder="Selecciona un año / Select a year",
+            placeholder="Selecciona un año · Select a year",
             key="salidayearwidget",
             on_change=on_year_change,
         )
@@ -1392,11 +1742,12 @@ if st.session_state.get("opensalidaform"):
         currentboat = st.session_state.get("salidaboat")
         if currentboat not in boats:
             currentboat = None
+
         selectedboat = st.selectbox(
             "BARCO / SHIP",
             options=boats,
             index=boats.index(currentboat) if currentboat in boats else None,
-            placeholder="Selecciona un barco / Select a ship",
+            placeholder="Selecciona un barco · Select a ship",
             key="salidaboatwidget",
             on_change=on_boat_change,
             disabled=not selectedyear,
@@ -1409,11 +1760,12 @@ if st.session_state.get("opensalidaform"):
         currentdeparture = st.session_state.get("salidaname")
         if currentdeparture not in departurenames:
             currentdeparture = None
+
         selecteddeparture = st.selectbox(
             "SALIDA / DEPARTURE",
             options=departurenames,
             index=departurenames.index(currentdeparture) if currentdeparture in departurenames else None,
-            placeholder="Selecciona una salida / Select a departure",
+            placeholder="Selecciona una salida · Select a departure",
             key="salidanamewidget",
             on_change=on_salida_change,
             disabled=not selectedboat,
@@ -1424,18 +1776,11 @@ if st.session_state.get("opensalidaform"):
         if selecteddeparture:
             selectedobj = next((d for d in departures if d["nombre"] == selecteddeparture), None)
             if selectedobj:
-                st.markdown(
-                    f'<a class="done-link" href="{selectedobj["url"]}" target="_blank">Abrir salida · Open departure</a>',
-                    unsafe_allow_html=True,
-                )
+                st.markdown(f'<a class="done-link" href="{selectedobj["url"]}" target="_blank">Abrir salida · Open departure</a>', unsafe_allow_html=True)
     except Exception as e:
         st.exception(e)
     st.markdown("</div>", unsafe_allow_html=True)
 
-
-# ************************************************************
-# *************** 15. PANEL CREAR CRUCERO ********************
-# ************************************************************
 if st.session_state.get("opencruceroform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### Crear crucero · Create cruise")
@@ -1444,11 +1789,12 @@ if st.session_state.get("opencruceroform"):
         currentcyear = st.session_state.get("cruceroyear")
         if currentcyear not in years:
             currentcyear = None
+
         cruceroyear = st.selectbox(
             "AÑO DESTINO / TARGET YEAR",
             options=years,
             index=years.index(currentcyear) if currentcyear in years else None,
-            placeholder="Selecciona un año / Select a year",
+            placeholder="Selecciona un año · Select a year",
             key="cruceroyearwidget",
             on_change=on_crucero_year_change,
         )
@@ -1459,11 +1805,12 @@ if st.session_state.get("opencruceroform"):
         currentcboat = st.session_state.get("cruceroboat")
         if currentcboat not in cruceroboats:
             currentcboat = None
+
         cruceroboat = st.selectbox(
             "BARCO / SHIP",
             options=cruceroboats,
             index=cruceroboats.index(currentcboat) if currentcboat in cruceroboats else None,
-            placeholder="Selecciona un barco / Select a ship",
+            placeholder="Selecciona un barco · Select a ship",
             key="cruceroboatwidget",
             on_change=on_crucero_boat_change,
             disabled=not cruceroyear,
@@ -1472,8 +1819,9 @@ if st.session_state.get("opencruceroform"):
             st.session_state["cruceroboat"] = cruceroboat
 
         fechasalida = st.date_input("FECHA DE SALIDA / DEPARTURE DATE", value=date.today(), format="DD/MM/YYYY")
+
         if cruceroboat and fechasalida:
-            previewname = f"{cruceroboat}_{fechasalida.strftime('%y%m%d')}"
+            previewname = f"{cruceroboat}{fechasalida.strftime('%y%m%d')}"
             st.caption(f"Nombre previsto / Expected name: {previewname}")
 
         if st.button("Crear Crucero", key="btncrearcruceroaction", disabled=not (cruceroyear and cruceroboat and fechasalida)):
@@ -1483,27 +1831,18 @@ if st.session_state.get("opencruceroform"):
                 result = create_crucero_file(cruceroboat, fechasalida)
                 if result["status"] == "duplicate":
                     st.warning(f"Ya existe / Already exists: {result['name']}")
-                    st.markdown(
-                        f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir archivo existente · Open existing file</a>',
-                        unsafe_allow_html=True,
-                    )
+                    st.markdown(f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir archivo existente · Open existing file</a>', unsafe_allow_html=True)
                 else:
                     st.success(f"Archivo creado / File created: {result['name']}")
-                    st.markdown(
-                        f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir crucero · Open cruise</a>',
-                        unsafe_allow_html=True,
-                    )
+                    st.markdown(f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir crucero · Open cruise</a>', unsafe_allow_html=True)
     except Exception as e:
         st.exception(e)
     st.markdown("</div>", unsafe_allow_html=True)
 
-
-# ************************************************************
-# *************** 16. PANEL NUEVA AGENCIA ********************
-# ************************************************************
 if st.session_state.get("opennuevaagenciaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### Nueva Agencia · New Agency")
+
     with st.form("formnuevaagencia", clear_on_submit=False):
         rowa1, rowa2 = st.columns(2, gap="medium")
         with rowa1:
@@ -1539,6 +1878,7 @@ if st.session_state.get("opennuevaagenciaform"):
             agivaservicioopcional = st.number_input("IVA SERVICIO OPCIONAL %", min_value=0.0, max_value=100.0, value=21.0, step=0.5, format="%.2f", key="agivaservicioopcional")
 
         guardaragencia = st.form_submit_button("Guardar Agencia")
+
         if guardaragencia:
             if not agnombre.strip():
                 st.error("El campo Nombre es obligatorio.")
@@ -1563,20 +1903,19 @@ if st.session_state.get("opennuevaagenciaform"):
                     st.success(f"Agencia guardada correctamente: {agencydata['Nombre']}")
                 except Exception as e:
                     st.exception(e)
+
     st.markdown("</div>", unsafe_allow_html=True)
 
-
-# ************************************************************
-# *************** 17. PANEL BUSCAR AGENCIA *******************
-# ************************************************************
 if st.session_state.get("openbuscaragenciaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### Buscar Agencia · Find Agency")
+
     searchquery = st.text_input(
-        "Introduce lo que sepas (nombre, código, grupo, teléfono, email o dirección)",
+        "Introduce lo que sepas: nombre, código, grupo, teléfono, email o dirección",
         key="agencysearchquery",
-        placeholder="Ej: Viajes Pepe / AG123 / 912345678 / info@...",
+        placeholder="Ej: Viajes Pepe, AG123, 912345678, info@...",
     )
+
     if st.button("Buscar coincidencias", key="btnejecutarbusquedaagencia"):
         try:
             matches = search_agencies(searchquery)
@@ -1586,6 +1925,7 @@ if st.session_state.get("openbuscaragenciaform"):
             st.exception(e)
 
     matches = st.session_state.get("agencymatches", [])
+
     if searchquery and not matches:
         st.info("No hay coincidencias.")
 
@@ -1604,6 +1944,7 @@ if st.session_state.get("openbuscaragenciaform"):
                 unsafe_allow_html=True,
             )
         st.markdown("</div></div>", unsafe_allow_html=True)
+
     elif len(matches) > 1:
         st.warning(f"Hay {len(matches)} coincidencias. Selecciona la correcta.")
         options = [f"{i+1}. {ag['Nombre']} · {ag['CODIGO']} · {ag['Telefono']} · {ag['Email']}" for i, ag in enumerate(matches)]
@@ -1628,12 +1969,9 @@ if st.session_state.get("openbuscaragenciaform"):
                     unsafe_allow_html=True,
                 )
             st.markdown("</div></div>", unsafe_allow_html=True)
+
     st.markdown("</div>", unsafe_allow_html=True)
 
-
-# ************************************************************
-# *************** 18. PANEL CVC FIT **************************
-# ************************************************************
 if st.session_state.get("opencvcfitform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### CVC Fit")
@@ -1645,19 +1983,13 @@ if st.session_state.get("opencvcfitform"):
     )
 
     if st.button("Generar PDF CVC Fit", key="btncvcfitaction", disabled=not locator):
-        # Limpia resultado previo
-        st.session_state["cvcfit_result"] = None
-        st.session_state["cvcfit_log"] = []
-
-        # Zona de progreso en tiempo real
-        progress_bar = st.progress(0.0, text="Iniciando...")
-        status_box = st.empty()
-        log_box = st.empty()
-
-        log_lines = []
+        progressbar = st.progress(0.0, text="Iniciando...")
+        statusbox = st.empty()
+        logbox = st.empty()
+        loglines = []
 
         try:
-            gen = build_cvc_fit_pdf_from_locator(locator)
+            gen = build_cvcfit_pdf_from_locator(locator)
             result = None
 
             for event in gen:
@@ -1665,79 +1997,55 @@ if st.session_state.get("opencvcfitform"):
 
                 if etype == "progress":
                     pct = event["current"] / event["total"]
-                    progress_bar.progress(
-                        pct,
-                        text=f"Revisando {event['current']}/{event['total']} · {event['file']}"
-                    )
-                    status_box.markdown(
-                        f"<div class='cvcfit-log-line'>{event['msg']}</div>",
-                        unsafe_allow_html=True,
-                    )
+                    progressbar.progress(pct, text=f"Revisando {event['current']}/{event['total']} · {event['file']}")
+                    statusbox.markdown(f'<div class="cvcfit-log-line">{event["msg"]}</div>', unsafe_allow_html=True)
 
                 elif etype == "status":
-                    log_lines.append(event["msg"])
-                    log_box.markdown(
-                        "<br>".join(
-                            f"<div class='cvcfit-log-line'>{l}</div>" for l in log_lines[-12:]
-                        ),
+                    loglines.append(event["msg"])
+                    logbox.markdown(
+                        "<br>".join([f'<div class="cvcfit-log-line">{l}</div>' for l in loglines[-12:]]),
                         unsafe_allow_html=True,
                     )
 
                 elif etype == "skip":
-                    log_lines.append(event["msg"])
-                    log_box.markdown(
-                        "<br>".join(
-                            f"<div class='cvcfit-log-line' style='color:#9BA5B7;'>{l}</div>"
-                            for l in log_lines[-12:]
-                        ),
+                    loglines.append(event["msg"])
+                    logbox.markdown(
+                        "<br>".join([f'<div class="cvcfit-log-line" style="color:#9BA5B7">{l}</div>' for l in loglines[-12:]]),
                         unsafe_allow_html=True,
                     )
 
                 elif etype == "error":
-                    log_lines.append(f"<span style='color:#D97706;'>{event['msg']}</span>")
-                    log_box.markdown(
-                        "<br>".join(
-                            f"<div class='cvcfit-log-line'>{l}</div>" for l in log_lines[-12:]
-                        ),
+                    loglines.append(f'<span style="color:#D97706">{event["msg"]}</span>')
+                    logbox.markdown(
+                        "<br>".join([f'<div class="cvcfit-log-line">{l}</div>' for l in loglines[-12:]]),
                         unsafe_allow_html=True,
                     )
 
                 elif etype == "done":
                     result = event
-                    progress_bar.progress(1.0, text="✅ PDF generado correctamente")
-                    status_box.empty()
+                    progressbar.progress(1.0, text="PDF generado correctamente")
+                    statusbox.empty()
 
             if result:
-                st.session_state["cvcfit_result"] = result
-                st.session_state["cvcfit_log"] = log_lines
+                st.session_state["cvcfitresult"] = result
+                st.session_state["cvcfitlog"] = loglines
             else:
                 st.error("Búsqueda finalizada sin coincidencias.")
 
         except Exception as e:
-            progress_bar.empty()
-            status_box.empty()
+            progressbar.empty()
+            statusbox.empty()
             st.error(f"Error: {e}")
-            st.session_state["cvcfit_result"] = None
+            st.session_state["cvcfitresult"] = None
+            st.session_state["cvcfitlog"] = None
 
-    # --- Mostrar log acumulado de la última búsqueda (persiste tras el rerun de descarga) ---
-    log_lines_saved = st.session_state.get("cvcfit_log", [])
-    if log_lines_saved:
-        st.markdown('<div class="cvcfit-status-card" style="margin-top:0.75rem;">', unsafe_allow_html=True)
-        st.markdown("**Log de la búsqueda:**")
-        st.markdown(
-            "<br>".join(f"<div class='cvcfit-log-line'>{l}</div>" for l in log_lines_saved),
-            unsafe_allow_html=True,
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # --- Resultado + descarga ---
-    result = st.session_state.get("cvcfit_result")
+    result = st.session_state.get("cvcfitresult")
     if result:
-        st.markdown('<div class="cvcfit-card" style="margin-top:1rem;"><div class="cvcfit-grid">', unsafe_allow_html=True)
+        st.markdown('<div class="cvcfit-card" style="margin-top:1rem"><div class="cvcfit-grid">', unsafe_allow_html=True)
         fields = [
             ("Localizador", result["locator"]),
             ("Nombre pasajero", result["nombre"]),
-            ("Spreadsheet origen", result["spreadsheet_name"]),
+            ("Spreadsheet origen", result["spreadsheetname"]),
             ("Nombre del PDF", result["filename"]),
         ]
         for label, value in fields:
@@ -1745,42 +2053,161 @@ if st.session_state.get("opencvcfitform"):
                 f"""
                 <div>
                     <div class="cvcfit-item-label">{label}</div>
-                    <div class="cvcfit-item-value">{value if value not in [None, ''] else '-'}</div>
+                    <div class="cvcfit-item-value">{value if value not in [None, ""] else "-"}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
-        st.markdown("</div></div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
         cola, colb = st.columns([1, 3], gap="small")
         with cola:
             st.download_button(
-                label="⬇ Descargar PDF",
-                data=result["pdf_bytes"],
+                label="Descargar PDF",
+                data=result["pdfbytes"],
                 file_name=result["filename"],
                 mime="application/pdf",
                 key="btncvcfitdownload",
                 type="primary",
             )
         with colb:
-            st.markdown(
-                f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank">📊 Abrir hoja origen en Drive</a>',
-                unsafe_allow_html=True,
-            )
+            st.markdown(f'<a class="done-link" href="{result["spreadsheeturl"]}" target="_blank">Abrir hoja origen en Drive</a>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    loglinessaved = st.session_state.get("cvcfitlog")
+    if loglinessaved:
+        st.markdown('<div class="cvcfit-status-card" style="margin-top:0.75rem">', unsafe_allow_html=True)
+        st.markdown("#### Log de la búsqueda")
+        st.markdown(
+            "<br>".join([f'<div class="cvcfit-log-line">{l}</div>' for l in loglinessaved]),
+            unsafe_allow_html=True,
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
+if st.session_state.get("opencvcagenciasform"):
+    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
+    st.markdown("### CVC Agencias")
 
-# ************************************************************
-# *************** 19. PROCESO CONFIRMACIONES *****************
-# ************************************************************
+    locator_ag = st.text_input(
+        "Localizador",
+        key="cvcagenciaslocatorwidget",
+        placeholder="Introduce el localizador exacto de Booking ES!G11",
+    )
+
+    if st.button("Generar PDF CVC Agencias", key="btncvcagenciasaction", disabled=not locator_ag):
+        progressbar = st.progress(0.0, text="Iniciando...")
+        statusbox = st.empty()
+        logbox = st.empty()
+        loglines = []
+
+        try:
+            gen = build_cvcagencias_pdf_from_locator(locator_ag)
+            result = None
+
+            for event in gen:
+                etype = event.get("type")
+
+                if etype == "progress":
+                    pct = event["current"] / event["total"]
+                    progressbar.progress(pct, text=f"Revisando {event['current']}/{event['total']} · {event['file']}")
+                    statusbox.markdown(f'<div class="cvcagencias-log-line">{event["msg"]}</div>', unsafe_allow_html=True)
+
+                elif etype == "status":
+                    loglines.append(event["msg"])
+                    logbox.markdown(
+                        "<br>".join([f'<div class="cvcagencias-log-line">{l}</div>' for l in loglines[-12:]]),
+                        unsafe_allow_html=True,
+                    )
+
+                elif etype == "skip":
+                    loglines.append(event["msg"])
+                    logbox.markdown(
+                        "<br>".join([f'<div class="cvcagencias-log-line" style="color:#9BA5B7">{l}</div>' for l in loglines[-12:]]),
+                        unsafe_allow_html=True,
+                    )
+
+                elif etype == "error":
+                    loglines.append(f'<span style="color:#D97706">{event["msg"]}</span>')
+                    logbox.markdown(
+                        "<br>".join([f'<div class="cvcagencias-log-line">{l}</div>' for l in loglines[-12:]]),
+                        unsafe_allow_html=True,
+                    )
+
+                elif etype == "done":
+                    result = event
+                    progressbar.progress(1.0, text="PDF generado correctamente")
+                    statusbox.empty()
+
+            if result:
+                st.session_state["cvcagenciasresult"] = result
+                st.session_state["cvcagenciaslog"] = loglines
+            else:
+                st.error("Búsqueda finalizada sin coincidencias.")
+
+        except Exception as e:
+            progressbar.empty()
+            statusbox.empty()
+            st.error(f"Error: {e}")
+            st.session_state["cvcagenciasresult"] = None
+            st.session_state["cvcagenciaslog"] = None
+
+    result_ag = st.session_state.get("cvcagenciasresult")
+    if result_ag:
+        st.markdown('<div class="cvcagencias-card" style="margin-top:1rem"><div class="cvcagencias-grid">', unsafe_allow_html=True)
+        fields = [
+            ("Localizador", result_ag["locator"]),
+            ("Nombre pasajero", result_ag["nombre"]),
+            ("Spreadsheet origen", result_ag["spreadsheetname"]),
+            ("Nombre del PDF", result_ag["filename"]),
+        ]
+        for label, value in fields:
+            st.markdown(
+                f"""
+                <div>
+                    <div class="cvcagencias-item-label">{label}</div>
+                    <div class="cvcagencias-item-value">{value if value not in [None, ""] else "-"}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        cola, colb = st.columns([1, 3], gap="small")
+        with cola:
+            st.download_button(
+                label="Descargar PDF",
+                data=result_ag["pdfbytes"],
+                file_name=result_ag["filename"],
+                mime="application/pdf",
+                key="btncvcagenciasdownload",
+                type="primary",
+            )
+        with colb:
+            st.markdown(f'<a class="done-link" href="{result_ag["spreadsheeturl"]}" target="_blank">Abrir hoja origen en Drive</a>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    loglinessaved_ag = st.session_state.get("cvcagenciaslog")
+    if loglinessaved_ag:
+        st.markdown('<div class="cvcagencias-status-card" style="margin-top:0.75rem">', unsafe_allow_html=True)
+        st.markdown("#### Log de la búsqueda")
+        st.markdown(
+            "<br>".join([f'<div class="cvcagencias-log-line">{l}</div>' for l in loglinessaved_ag]),
+            unsafe_allow_html=True,
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
 savedname = st.session_state.get("nombrecopia")
 savedurl = st.session_state.get("copyurl")
 processtitle = st.session_state.get("processtitle", "Estado del Proceso · Process Status")
 
-if confirmstate in ["step1", "step2", "step3", "done"]:
-    st.markdown('<div class="panel-inline" style="max-width:520px;">', unsafe_allow_html=True)
+if confirmstate in ("step1", "step2", "step3", "done"):
+    st.markdown('<div class="panel-inline" style="max-width:520px">', unsafe_allow_html=True)
     st.markdown(f"### {processtitle}")
+
     if confirmstate == "step1":
         render_step("Progreso · Progress", "Preparando plantilla · Preparing template...", "active")
     elif confirmstate == "step2":
@@ -1791,9 +2218,9 @@ if confirmstate in ["step1", "step2", "step3", "done"]:
         render_step("Progreso · Progress", "Completo · Complete", "done")
         st.markdown(
             f"""
-            <div style="margin-top:0.8rem;">
-                <div style="font-size:0.76rem;color:#1F2937;font-weight:600;">Sesión creada · Session created</div>
-                <div style="font-size:0.71rem;color:#657087;margin-top:0.15rem;line-height:1.3;">
+            <div style="margin-top:0.8rem">
+                <div style="font-size:0.76rem;color:#1F2937;font-weight:600">Sesión creada · Session created</div>
+                <div style="font-size:0.71rem;color:#657087;margin-top:0.15rem;line-height:1.3">
                     Puedes abrir tu sesión en el botón de abajo · You can open your session with the button below.
                 </div>
                 <a class="done-link" href="{savedurl}" target="_blank">Abrir sesión · Open session</a>
@@ -1803,49 +2230,34 @@ if confirmstate in ["step1", "step2", "step3", "done"]:
         )
     st.markdown("</div>", unsafe_allow_html=True)
 
-    if confirmstate == "step1":
-        time.sleep(0.7)
-        st.session_state["confirmstate"] = "step2"
-        st.rerun()
-    elif confirmstate == "step2":
-        time.sleep(0.7)
-        st.session_state["confirmstate"] = "step3"
-        st.rerun()
-    elif confirmstate == "step3":
-        time.sleep(0.7)
-        st.session_state["confirmstate"] = "done"
-        existing = [h["nombre"] for h in st.session_state["historial"]]
-        if savedname and savedname not in existing:
-            st.session_state["historial"].insert(0, {
-                "nombre": savedname,
-                "hora": datetime.now().strftime("%H:%M:%S"),
-                "url": savedurl,
-            })
-        st.rerun()
+if confirmstate == "step1":
+    time.sleep(0.7)
+    st.session_state["confirmstate"] = "step2"
+    st.rerun()
+elif confirmstate == "step2":
+    time.sleep(0.7)
+    st.session_state["confirmstate"] = "step3"
+    st.rerun()
+elif confirmstate == "step3":
+    time.sleep(0.7)
+    st.session_state["confirmstate"] = "done"
+    existing = [h["nombre"] for h in st.session_state["historial"]]
+    if savedname and savedname not in existing:
+        st.session_state["historial"].insert(0, {
+            "nombre": savedname,
+            "hora": datetime.now().strftime("%H:%M:%S"),
+            "url": savedurl,
+        })
+    st.rerun()
 
-
-# ************************************************************
-# *************** 20. AUTO-OPEN SESION ***********************
-# ************************************************************
-if confirmstate == "done" and savedname and not st.session_state.get(f"opened_{savedname}"):
-    st.session_state[f"opened_{savedname}"] = True
-    st.markdown(
-        f"<script>setTimeout(()=>window.open('{savedurl}','_blank'),300);</script>",
-        unsafe_allow_html=True,
-    )
-
-
-# ************************************************************
-# *************** 21. LOGOUT + HISTORIAL + FOOTER ************
-# ************************************************************
-st.markdown('<div style="height:1rem;"></div>', unsafe_allow_html=True)
+st.markdown('<div style="height:1rem"></div>', unsafe_allow_html=True)
 st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
 if st.button("Cerrar sesión / Logout", key="btnlogout"):
     do_logout()
 st.markdown("</div>", unsafe_allow_html=True)
 
 if st.session_state.get("historial"):
-    st.markdown('<div style="height:1.2rem;"></div>', unsafe_allow_html=True)
+    st.markdown('<div style="height:1.2rem"></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-eyebrow">ESTA SESIÓN · THIS SESSION</div>', unsafe_allow_html=True)
     for i, entry in enumerate(st.session_state["historial"], 1):
         st.markdown(
@@ -1864,9 +2276,10 @@ st.markdown(
     f"""
     <div class="portal-footer">
         <span class="footer-text">Panel de Control · Control Panel · v4.4.0</span>
-        <span class="footer-text">Raíz Drive · Drive Root · {DRIVE_ROOT_ID}</span>
+        <span class="footer-text">Drive Root · {DRIVE_ROOT_ID}</span>
     </div>
     """,
     unsafe_allow_html=True,
 )
+
 st.markdown("</div>", unsafe_allow_html=True)
