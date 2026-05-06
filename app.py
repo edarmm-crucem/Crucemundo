@@ -763,6 +763,9 @@ def underline_paragraph(paragraph):
     pPr.append(pBdr)
 
 
+# ************************************************************
+# *************** 9. DOCX CVC FIT ****************************
+# ************************************************************
 def build_cvc_fit_doc(data):
     doc = Document()
 
@@ -990,7 +993,7 @@ def build_cvc_fit_from_locator(locator):
 
 
 # ************************************************************
-# *************** 9. ESTILOS / CSS ***************************
+# ******************** 10. ESTILOS CSS ***********************
 # ************************************************************
 st.markdown(
     """
@@ -1241,7 +1244,7 @@ st.markdown(
 
 
 # ************************************************************
-# *************** 10. LOGIN *********************************
+# ******************** 11. LOGIN *****************************
 # ************************************************************
 if not st.session_state["authenticated"]:
     st.markdown('<div class="login-page"><div class="login-shell">', unsafe_allow_html=True)
@@ -1283,7 +1286,7 @@ if not st.session_state["authenticated"]:
 
 
 # ************************************************************
-# *************** 11. CABECERA Y ACCIONES ********************
+# ******************** 12. CABECERA **************************
 # ************************************************************
 USEREMAIL = st.session_state.get("useremail", "").strip()
 DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Sin usuario"
@@ -1323,6 +1326,10 @@ st.markdown(
 )
 st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
+
+# ************************************************************
+# ******************** 13. TARJETAS **************************
+# ************************************************************
 col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8, gap="medium")
 
 with col1:
@@ -1508,7 +1515,7 @@ with col8:
 
 
 # ************************************************************
-# *************** 12. PANEL SALIDA ***************************
+# ******************** 14. PANEL SALIDA **********************
 # ************************************************************
 if st.session_state.get("opensalidaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
@@ -1575,7 +1582,7 @@ if st.session_state.get("opensalidaform"):
 
 
 # ************************************************************
-# *************** 13. PANEL CREAR CRUCERO ********************
+# ******************** 15. PANEL CRUCERO *********************
 # ************************************************************
 if st.session_state.get("opencruceroform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
@@ -1614,7 +1621,7 @@ if st.session_state.get("opencruceroform"):
 
         fechasalida = st.date_input("FECHA DE SALIDA / DEPARTURE DATE", value=date.today(), format="DD/MM/YYYY")
         if cruceroboat and fechasalida:
-            previewname = f"{cruceroboat}_{fechasalida.strftime('%y%m%d')}"
+            previewname = f"{cruceroboat}{fechasalida.strftime('%y%m%d')}"
             st.caption(f"Nombre previsto / Expected name: {previewname}")
 
         if st.button("Crear Crucero", key="btncrearcruceroaction", disabled=not (cruceroyear and cruceroboat and fechasalida)):
@@ -1640,7 +1647,7 @@ if st.session_state.get("opencruceroform"):
 
 
 # ************************************************************
-# *************** 14. PANEL NUEVA AGENCIA ********************
+# ******************** 16. NUEVA AGENCIA *********************
 # ************************************************************
 if st.session_state.get("opennuevaagenciaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
@@ -1708,7 +1715,7 @@ if st.session_state.get("opennuevaagenciaform"):
 
 
 # ************************************************************
-# *************** 15. PANEL BUSCAR AGENCIA *******************
+# ******************** 17. BUSCAR AGENCIA ********************
 # ************************************************************
 if st.session_state.get("openbuscaragenciaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
@@ -1745,22 +1752,18 @@ if st.session_state.get("openbuscaragenciaform"):
                 unsafe_allow_html=True,
             )
         st.markdown("</div></div>", unsafe_allow_html=True)
-
     elif len(matches) > 1:
         st.warning(f"Hay {len(matches)} coincidencias. Selecciona la correcta.")
-        options = [
-            f"{i+1}. {ag['Nombre']} · {ag['CODIGO']} · {ag['Telefono']}"
-            for i, ag in enumerate(matches)
-        ]
-        selected_option = st.selectbox(
-            "Selecciona una agencia",
+        options = [f"{i+1}. {ag['Nombre']} · {ag['CODIGO']} · {ag['Telefono']} · {ag['Email']}" for i, ag in enumerate(matches)]
+        selectedlabel = st.selectbox(
+            "Elige la agencia correcta",
             options=options,
             index=None,
-            placeholder="Elige una coincidencia",
+            placeholder="Selecciona una coincidencia",
         )
-        if selected_option:
-            selected_index = options.index(selected_option)
-            selectedagency = matches[selected_index]
+        if selectedlabel:
+            selectedidx = options.index(selectedlabel)
+            selectedagency = matches[selectedidx]
             st.markdown('<div class="agency-card"><div class="agency-grid">', unsafe_allow_html=True)
             for field in AGENCY_FIELDS:
                 st.markdown(
@@ -1773,121 +1776,172 @@ if st.session_state.get("openbuscaragenciaform"):
                     unsafe_allow_html=True,
                 )
             st.markdown("</div></div>", unsafe_allow_html=True)
-
     st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ************************************************************
-# *************** 16. PANEL CVC FIT **************************
+# ******************** 18. CVC FIT PANEL *********************
 # ************************************************************
 if st.session_state.get("opencvcfitform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    st.markdown("### CVC Fit · Contract generator")
-
+    st.markdown("### CVC Fit")
     locator = st.text_input(
         "Localizador",
         key="cvcfitlocatorwidget",
         placeholder="Ej: ALB260101-001",
     )
 
-    if st.button("Buscar y preparar contrato", key="btncvcfitaction"):
+    if st.button("Generar CVC Fit", key="btncvcfitaction", disabled=not locator):
         try:
-            result = build_cvc_fit_from_locator(locator)
-            st.session_state["cvcfit_locator"] = locator
-            st.session_state["cvcfit_result"] = result
+            payload = build_cvc_fit_from_locator(locator)
+            doc_io = build_cvc_fit_doc(payload)
+            payload["doc_bytes"] = doc_io.getvalue()
+            st.session_state["cvcfit_result"] = payload
+            st.success("Documento generado correctamente.")
         except Exception as e:
             st.session_state["cvcfit_result"] = None
             st.exception(e)
 
-    cvcfit_result = st.session_state.get("cvcfit_result")
-
-    if cvcfit_result:
-        st.success("Localizador encontrado.")
+    result = st.session_state.get("cvcfit_result")
+    if result:
         st.markdown('<div class="cvcfit-card"><div class="cvcfit-grid">', unsafe_allow_html=True)
-
-        fields_to_show = [
-            ("Localizador", cvcfit_result.get("locator")),
-            ("Barco", cvcfit_result.get("boat_name")),
-            ("Pestaña", cvcfit_result.get("sheet_title")),
-            ("Nombre", cvcfit_result.get("nombre")),
-            ("Apellidos", cvcfit_result.get("apellidos")),
-            ("DNI", cvcfit_result.get("dni")),
-            ("Personas", cvcfit_result.get("personas")),
-            ("Habitaciones", cvcfit_result.get("habitaciones")),
-            ("Fecha salida", cvcfit_result.get("fecha_salida_str")),
-            ("Fecha límite pago", cvcfit_result.get("fecha_limite_pago_str")),
-            ("Total", cvcfit_result.get("total")),
+        fields = [
+            ("Localizador", result["locator"]),
+            ("Barco", result["boat_name"]),
+            ("Salida", result["fecha_salida_str"]),
+            ("Límite pago", result["fecha_limite_pago_str"]),
+            ("Nombre", result["nombre"]),
+            ("Apellidos", result["apellidos"]),
+            ("DNI", result["dni"]),
+            ("Personas", result["personas"]),
+            ("Habitaciones", result["habitaciones"]),
+            ("Total", result["total"]),
+            ("Pestaña", result["sheet_title"]),
+            ("Archivo Drive", result["filename"]),
         ]
-
-        for label, value in fields_to_show:
+        for label, value in fields:
             st.markdown(
                 f"""
                 <div>
                     <div class="cvcfit-item-label">{label}</div>
-                    <div class="cvcfit-item-value">{value if value not in [None, ""] else "-"}</div>
+                    <div class="cvcfit-item-value">{value if value not in [None, ''] else '-'}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
-
         st.markdown("</div></div>", unsafe_allow_html=True)
 
-        try:
-            docbio = build_cvc_fit_doc(cvcfit_result)
-            st.download_button(
-                "Descargar contrato DOCX",
-                data=docbio,
-                file_name=cvcfit_result["filename"],
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                key="btncvcfitdownload",
-            )
-            st.markdown(
-                f'<a class="done-link" href="{cvcfit_result["spreadsheet_url"]}" target="_blank">Abrir spreadsheet origen</a>',
-                unsafe_allow_html=True,
-            )
-        except Exception as e:
-            st.exception(e)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-# ************************************************************
-# *************** 17. ESTADO PROCESO SESION ******************
-# ************************************************************
-if st.session_state.get("confirmstate") == "step1":
-    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    st.markdown(f"### {st.session_state.get('processtitle', 'Estado del Proceso')}")
-    render_step("Sesión preparada", st.session_state.get("nombrecopia", ""), "done")
-    render_step("Crear copia", "Haz clic en el enlace para crear la sesión en Google Sheets.", "active")
-    render_step("Continuar trabajo", "La nueva sesión se abrirá en una pestaña nueva.", "wait")
-
-    copyurl = st.session_state.get("copyurl", "")
-    if copyurl:
         st.markdown(
-            f'<a class="done-link" href="{copyurl}" target="_blank">Crear copia ahora · Create copy now</a>',
+            f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank">Abrir hoja origen</a>',
             unsafe_allow_html=True,
         )
-    if st.button("Marcar como hecho", key="btnconfirmdone"):
-        st.session_state["confirmstate"] = "done"
-        st.rerun()
+
+        st.download_button(
+            "Descargar DOCX",
+            data=result["doc_bytes"],
+            file_name=result["filename"],
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            key="btncvcfitdownload",
+        )
     st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ************************************************************
-# *************** 18. FOOTER ********************************
+# ******************** 19. ESTADO PROCESO ********************
+# ************************************************************
+savedname = st.session_state.get("nombrecopia")
+savedurl = st.session_state.get("copyurl")
+processtitle = st.session_state.get("processtitle", "Estado del Proceso · Process Status")
+
+if confirmstate in ["step1", "step2", "step3", "done"]:
+    st.markdown('<div class="panel-inline" style="max-width:520px;">', unsafe_allow_html=True)
+    st.markdown(f"### {processtitle}")
+    if confirmstate == "step1":
+        render_step("Progreso · Progress", "Preparando plantilla · Preparing template...", "active")
+    elif confirmstate == "step2":
+        render_step("Progreso · Progress", "Generando copia en Drive · Creating Drive copy...", "active")
+    elif confirmstate == "step3":
+        render_step("Progreso · Progress", "Abriendo sesión · Opening session...", "active")
+    elif confirmstate == "done":
+        render_step("Progreso · Progress", "Completo · Complete", "done")
+        st.markdown(
+            f"""
+            <div style="margin-top:0.8rem;">
+                <div style="font-size:0.76rem;color:#1F2937;font-weight:600;">Sesión creada · Session created</div>
+                <div style="font-size:0.71rem;color:#657087;margin-top:0.15rem;line-height:1.3;">
+                    Puedes abrir tu sesión en el botón de abajo · You can open your session with the button below.
+                </div>
+                <a class="done-link" href="{savedurl}" target="_blank">Abrir sesión · Open session</a>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    if confirmstate == "step1":
+        time.sleep(0.7)
+        st.session_state["confirmstate"] = "step2"
+        st.rerun()
+    elif confirmstate == "step2":
+        time.sleep(0.7)
+        st.session_state["confirmstate"] = "step3"
+        st.rerun()
+    elif confirmstate == "step3":
+        time.sleep(0.7)
+        st.session_state["confirmstate"] = "done"
+        existing = [h["nombre"] for h in st.session_state["historial"]]
+        if savedname and savedname not in existing:
+            st.session_state["historial"].insert(0, {
+                "nombre": savedname,
+                "hora": datetime.now().strftime("%H:%M:%S"),
+                "url": savedurl,
+            })
+        st.rerun()
+
+if confirmstate == "done" and savedname and not st.session_state.get(f"opened_{savedname}"):
+    st.session_state[f"opened_{savedname}"] = True
+    st.markdown(
+        f"<script>setTimeout(()=>window.open('{savedurl}','_blank'),300);</script>",
+        unsafe_allow_html=True,
+    )
+
+
+# ************************************************************
+# ******************** 20. LOGOUT E HISTORIAL ***************
+# ************************************************************
+st.markdown('<div style="height:1rem;"></div>', unsafe_allow_html=True)
+st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
+if st.button("Cerrar sesión / Logout", key="btnlogout"):
+    do_logout()
+st.markdown("</div>", unsafe_allow_html=True)
+
+if st.session_state.get("historial"):
+    st.markdown('<div style="height:1.2rem;"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-eyebrow">ESTA SESIÓN · THIS SESSION</div>', unsafe_allow_html=True)
+    for i, entry in enumerate(st.session_state["historial"], 1):
+        st.markdown(
+            f"""
+            <div class="history-row">
+                <div class="history-num">{i}</div>
+                <div class="history-name">{entry["nombre"]}</div>
+                <div class="history-time">{entry["hora"]}</div>
+                <a class="history-link" href="{entry["url"]}" target="_blank">Abrir · Open</a>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+# ************************************************************
+# ******************** 21. FOOTER ****************************
 # ************************************************************
 st.markdown(
-    """
+    f"""
     <div class="portal-footer">
-        <div class="footer-text">Crucemundo Hub</div>
-        <div class="footer-text">Streamlit · Google Drive · Google Sheets</div>
+        <span class="footer-text">Panel de Control · Control Panel · v4.3.1</span>
+        <span class="footer-text">Raíz Drive · Drive Root · {DRIVE_ROOT_ID}</span>
     </div>
     """,
     unsafe_allow_html=True,
 )
 st.markdown("</div>", unsafe_allow_html=True)
-
-footer_col1, footer_col2 = st.columns([1, 6])
-with footer_col1:
-    if st.button("Logout", key="btnlogoutfooter"):
-        do_logout()
