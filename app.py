@@ -666,29 +666,23 @@ def create_crucero_file(barco, fechaobj):
     }
 
 
-# ************************************************************
-# *************** 8. CVC FIT NUEVO ***************************
-# ************************************************************
-from google.auth.transport.requests import Request
-import requests
 
-
+# ************************************************************
+# *************** 8. CVC FIT CORREGIDO ***********************
+# ************************************************************
 def normalize_locator(value):
     return str(value or "").strip().upper()
 
 
 def list_spreadsheets_in_folder_recent_first(folder_id):
     service = get_drive_service()
-    q = (
-        f"'{folder_id}' in parents and trashed=false "
-        "and mimeType='application/vnd.google-apps.spreadsheet'"
-    )
+    q = f"'{folder_id}' in parents and trashed=false and mimeType='application/vnd.google-apps.spreadsheet'"
     results = []
     pagetoken = None
     while True:
         response = service.files().list(
             q=q,
-            fields="nextPageToken, files(id, name, webViewLink, createdTime, modifiedTime)",
+            fields="nextPageToken, files(id, name, webViewLink, modifiedTime)",
             supportsAllDrives=True,
             includeItemsFromAllDrives=True,
             corpora="allDrives",
@@ -706,14 +700,7 @@ def list_spreadsheets_in_folder_recent_first(folder_id):
 def get_sheet_titles_with_ids(spreadsheet_id):
     sheetsservice = get_sheets_service()
     spreadsheet = sheetsservice.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
-    result = []
-    for s in spreadsheet.get("sheets", []):
-        props = s.get("properties", {})
-        result.append({
-            "title": props.get("title", ""),
-            "sheetId": props.get("sheetId"),
-        })
-    return result
+    return {s["properties"]["title"]: s["properties"]["sheetId"] for s in spreadsheet.get("sheets", [])}
 
 
 def get_single_cell(spreadsheet_id, sheet_title, a1):
@@ -723,90 +710,68 @@ def get_single_cell(spreadsheet_id, sheet_title, a1):
         range=f"'{sheet_title}'!{a1}"
     ).execute()
     values = resp.get("values", [])
-    if values and values[0]:
-        return str(values[0][0]).strip()
-    return ""
+    return normalize_locator(values[0][0]) if values and values[0] else ""
 
 
 def export_sheet_pdf_bytes(spreadsheet_id, gid):
-    creds = get_google_creds()
-    creds.refresh(Request())
-    token = creds.token
-
-    export_url = (
-        f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export"
-        f"?format=pdf"
-        f"&gid={gid}"
-        f"&size=A4"
-        f"&portrait=true"
-        f"&fitw=true"
-        f"&scale=4"
-        f"&sheetnames=false"
-        f"&printtitle=false"
-        f"&pagenumbers=false"
-        f"&gridlines=false"
-        f"&fzr=false"
-        f"&top_margin=0.50"
-        f"&bottom_margin=0.50"
-        f"&left_margin=0.50"
-        f"&right_margin=0.50"
-    )
-
-    response = requests.get(
-        export_url,
-        headers={"Authorization": f"Bearer {token}"},
-        timeout=60,
-    )
-    response.raise_for_status()
-    return response.content
+    """Export usando Drive API v3 - evita problemas SSL de requests"""
+    service = get_drive_service()
+    return service.files().export(
+        fileId=spreadsheet_id,
+        mimeType='application/pdf'
+    ).execute()
 
 
-def build_cvc_fit_pdf_from_locator(locator, progress_callback=None):
+def build_cvc_fit_pdf_from_locator(locator):
     locator_clean = normalize_locator(locator)
     if not locator_clean:
-        raise Exception("Debes introducir un localizador.")
+        raise Exception("Introduce un localizador válido.")
 
+    st.info(f"🔍 Buscando '{locator_clean}' en BOOKING ES!G11...")
+    
     spreadsheets = list_spreadsheets_in_folder_recent_first(FOLDER_ID)
+    st.write(f"📁 {len(spreadsheets)} Sheets en el folder {FOLDER_ID}")
+    
     if not spreadsheets:
-        raise Exception("No se han encontrado Google Sheets en el folder indicado.")
+        raise Exception("❌ No hay Sheets en el folder indicado.")
 
-    total = len(spreadsheets)
-
-    for i, file in enumerate(spreadsheets, start=1):
+    for i, file in enumerate(spreadsheets, 1):
         spreadsheet_id = file["id"]
         spreadsheet_name = file["name"]
+        st.caption(f"Revisando {i}/{len(spreadsheets)}: {spreadsheet_name}")
 
-        if progress_callback:
-            progress_callback(i, total, spreadsheet_name)
+        try:
+            titles = get_sheet_titles_with_ids(spreadsheet_id)
+            if "BOOKING ES" not in titles or "CVC Fit" not in titles:
+                continue
 
-        sheet_map = get_sheet_titles_with_ids(spreadsheet_id)
-        titles = {s["title"]: s["sheetId"] for s in sheet_map}
+            g11_value = get_single_cell(spreadsheet_id, "BOOKING ES", "G11")
+            if g11_value != locator_clean:
+                continue
 
-        if "BOOKING ES" not in titles or "CVC Fit" not in titles:
+            nombre = first_line(get_single_cell(spreadsheet_id, "BOOKING ES", "G24"))
+            nombre_safe = safe_filename(nombre or "Sin nombre")
+            pdf_name = f"CVC Fit {nombre_safe} {locator_clean}.pdf"
+
+            st.success(f"✅ Encontrado en: {spreadsheet_name}")
+            pdf_bytes = export_sheet_pdf_bytes(spreadsheet_id, titles["CVC Fit"])
+
+            return {
+                "locator": locator_clean,
+                "spreadsheet_id": spreadsheet_id,
+                "spreadsheet_name": spreadsheet_name,
+                "spreadsheet_url": file.get("webViewLink", f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"),
+                "nombre": nombre,
+                "filename": pdf_name,
+                "pdf_bytes": pdf_bytes,
+            }
+        except Exception as sheet_error:
+            st.caption(f"Error en {spreadsheet_name}: {sheet_error}")
             continue
 
-        g11_value = normalize_locator(get_single_cell(spreadsheet_id, "BOOKING ES", "G11"))
-        if g11_value != locator_clean:
-            continue
+    raise Exception(f"❌ Localizador '{locator_clean}' no encontrado en ningún BOOKING ES!G11")
 
-        nombre = first_line(get_single_cell(spreadsheet_id, "BOOKING ES", "G24"))
-        nombre_safe = safe_filename(nombre if nombre else "Sin nombre")
-        pdf_name = safe_filename(f"CVC Fit {nombre_safe} {locator_clean}.pdf")
-        pdf_bytes = export_sheet_pdf_bytes(spreadsheet_id, titles["CVC Fit"])
 
-        return {
-            "locator": locator_clean,
-            "spreadsheet_id": spreadsheet_id,
-            "spreadsheet_name": spreadsheet_name,
-            "spreadsheet_url": file.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit",
-            "nombre": nombre,
-            "filename": pdf_name,
-            "pdf_bytes": pdf_bytes,
-            "checked_files": i,
-            "total_files": total,
-        }
-
-    raise Exception(f"No se ha encontrado el localizador {locator_clean} en BOOKING ES!G11.")
 # ************************************************************
 # *************** 9. ESTILOS CSS *****************************
 # ************************************************************
