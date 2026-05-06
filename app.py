@@ -1215,6 +1215,7 @@ st.markdown(
 )
 
 st.markdown('<div class="main-content">', unsafe_allow_html=True)
+
 st.markdown(f"""
 <div class="section-head-row">
   <div class="section-eyebrow">ACCIONES RÁPIDAS QUICK ACTIONS</div>
@@ -1232,7 +1233,7 @@ st.markdown(f"""
   </a>
 </div>
 """, unsafe_allow_html=True)
-)
+
 st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
 col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8, gap="medium")
