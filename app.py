@@ -847,7 +847,7 @@ st.markdown(
     .card-grupos { background: #F4FBF6; border-color: #D8EEDC; }
     .card-salida { background: #FFF8F1; border-color: #F1DFC7; }
     .card-crucero { background: #F7F4FF; border-color: #E4DDF9; }
-    .card-excursiones { background: #EEF8FB; border-color: #D5EAF1; }
+    ##.card-excursiones { background: #EEF8FB; border-color: #D5EAF1; }
     .card-nueva-agencia { background: #F1FAF4; border-color: #D7EEDC; }
     .card-buscar-agencia { background: #FFF7EF; border-color: #F4E1CA; }
     .card-cvcfit { background: #FFF2F7; border-color: #F4D7E3; }
@@ -1090,17 +1090,17 @@ cards = [
         "key": "btncrearcruceroopen",
         "action": lambda: (open_panel("crucero"), st.rerun()),
     },
-    {
-        "card_class": "card-excursiones",
-        "icon": "🧭",
-        "title_es": "Excursiones",
-        "title_en": "Excursions",
-        "desc_es": "Abrir la hoja de Excursiones",
-        "desc_en": "Open the Excursions sheet",
-        "button_label": "Abrir Excursiones",
-        "key": "btnexcursioneslink",
-        "link": excursionesurl,
-    },
+    ##{
+     ##   "card_class": "card-excursiones",
+     ##   "icon": "🧭",
+     ##   "title_es": "Excursiones",
+    ##    "title_en": "Excursions",
+    ##    "desc_es": "Abrir la hoja de Excursiones",
+    ##    "desc_en": "Open the Excursions sheet",
+   ##     "button_label": "Abrir Excursiones",
+     ##   "key": "btnexcursioneslink",
+     ##   "link": excursionesurl,
+   ## },
     {
         "card_class": "card-nueva-agencia",
         "icon": "🏢",
