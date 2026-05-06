@@ -348,9 +348,11 @@ def safe_filename(text):
 def first_line(value):
     if value is None:
         return ""
-    return str(value).splitlines()[0].strip()
-
-
+    text = str(value).strip()
+    if not text:
+        return ""
+    lines = text.splitlines()
+    return lines[0].strip() if lines else ""
 def parse_nombre_apellidos_from_g24(g24_value):
     raw = first_line(g24_value)
     if "/" in raw:
