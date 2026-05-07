@@ -1446,7 +1446,7 @@ st.markdown(
 
     .action-top { display: flex; align-items: flex-start; gap: 0.75rem; }
     .action-icon {
-        width: 40px;
+        width: 10px;
         height: 40px;
         border-radius: 12px;
         display: flex;
