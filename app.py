@@ -166,7 +166,6 @@ PANEL_FLAGS = {
     "informebarco": "openinformebarcoform",
 }
 
-# Mapeo de action query param -> panel
 ACTION_TO_PANEL = {
     "salida": "salida",
     "crucero": "crucero",
@@ -178,7 +177,6 @@ ACTION_TO_PANEL = {
     "informebarco": "informebarco",
 }
 
-# Mapeo de action query param -> sessiontype para sesiones master
 ACTION_TO_SESSION = {
     "crear_es": ("es", TEMPLATE_ID_ES, "MASTER", "Crear Sesión MASTER / CONFIRMATION"),
     "crear_grupos": ("grupos", TEMPLATE_ID_GRUPOS, "MASTER GRUPOS", "Crear Sesión MASTER / GROUPS"),
@@ -364,6 +362,48 @@ def render_key_value_grid(css_prefix, fields):
             unsafe_allow_html=True,
         )
     st.markdown("</div></div>", unsafe_allow_html=True)
+
+
+def to_embed_url(url):
+    url = str(url or "").strip()
+    if not url:
+        return ""
+
+    m = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", url)
+    if m:
+        file_id = m.group(1)
+        gid_match = re.search(r"[#?&]gid=([0-9]+)", url)
+        gid = gid_match.group(1) if gid_match else "0"
+        return f"https://docs.google.com/spreadsheets/d/{file_id}/preview?gid={gid}"
+
+    m = re.search(r"/document/d/([a-zA-Z0-9-_]+)", url)
+    if m:
+        file_id = m.group(1)
+        return f"https://docs.google.com/document/d/{file_id}/preview"
+
+    m = re.search(r"/presentation/d/([a-zA-Z0-9-_]+)", url)
+    if m:
+        file_id = m.group(1)
+        return f"https://docs.google.com/presentation/d/{file_id}/preview"
+
+    m = re.search(r"[?&]id=([a-zA-Z0-9-_]+)", url)
+    if "drive.google.com" in url and m:
+        file_id = m.group(1)
+        return f"https://drive.google.com/file/d/{file_id}/preview"
+
+    m = re.search(r"/file/d/([a-zA-Z0-9-_]+)", url)
+    if m:
+        file_id = m.group(1)
+        return f"https://drive.google.com/file/d/{file_id}/preview"
+
+    return url
+
+
+def render_embedded_preview(url, height=900):
+    embed_url = to_embed_url(url)
+    if embed_url:
+        st.markdown("#### Vista previa")
+        st.components.v1.iframe(embed_url, height=height, scrolling=True)
 
 
 def create_master_session(sessiontype, templateid, prefixname, processtitle):
@@ -1116,7 +1156,7 @@ def extract_informe_por_barco(spreadsheet_id, spreadsheet_name):
 
 
 # ============================================================
-# HANDLE QUERY PARAMS → abre panel o lanza sesión
+# HANDLE QUERY PARAMS
 # ============================================================
 _qp = st.query_params.to_dict()
 _action = _qp.get("action", "")
@@ -1126,7 +1166,6 @@ if _action and st.session_state.get("authenticated"):
         open_panel(ACTION_TO_PANEL[_action])
     elif _action in ACTION_TO_SESSION:
         sessiontype, templateid, prefixname, processtitle = ACTION_TO_SESSION[_action]
-        # la función llama a st.rerun() internamente así que lo llamamos después del CSS
         st.session_state["_pending_session"] = (sessiontype, templateid, prefixname, processtitle)
 
 
@@ -1557,7 +1596,6 @@ div[data-testid="stFormSubmitButton"] button:focus,
     transform: translateY(-1px);
 }
 
-/* Botones de tarjeta: pure HTML links con variables CSS heredadas */
 .card-es .card-btn { background: var(--card-btn-bg); border-color: var(--card-btn-border); color: var(--card-btn-text); }
 .card-grupos .card-btn { background: var(--card-btn-bg); border-color: var(--card-btn-border); color: var(--card-btn-text); }
 .card-salida .card-btn { background: var(--card-btn-bg); border-color: var(--card-btn-border); color: var(--card-btn-text); }
@@ -1717,7 +1755,7 @@ div[data-testid="stFormSubmitButton"] button:focus,
 
 
 # ============================================================
-# EJECUTAR SESION PENDIENTE (tras CSS)
+# EJECUTAR SESION PENDIENTE
 # ============================================================
 if st.session_state.get("_pending_session"):
     sessiontype, templateid, prefixname, processtitle = st.session_state.pop("_pending_session")
@@ -1831,16 +1869,12 @@ st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe
 
 
 # ============================================================
-# TARJETAS PRINCIPALES — todos los botones son HTML puro
+# TARJETAS PRINCIPALES
 # ============================================================
 def render_action_card(col, config):
     with col:
-        # Construir el botón: si tiene link externo usa target="_blank", si es acción interna usa ?action=
-        if config.get("link"):
-            btn_html = f'<a class="card-btn done-link" href="{config["link"]}" target="_blank" rel="noopener noreferrer">{config["button_label"]}</a>'
-        else:
-            action_url = f"?action={config['action_key']}"
-            btn_html = f'<a class="card-btn" href="{action_url}">{config["button_label"]}</a>'
+        action_url = f"?action={config['action_key']}"
+        btn_html = f'<a class="card-btn" href="{action_url}">{config["button_label"]}</a>'
 
         st.markdown(
             f"""
@@ -1983,10 +2017,7 @@ if st.session_state.get("confirmstate") in ["done", "error"]:
         )
         final_url = process_result.get("url", "")
         if final_url:
-            st.markdown(
-                f'<a class="done-link" href="{final_url}" target="_blank" rel="noopener noreferrer">Abrir sesión creada</a>',
-                unsafe_allow_html=True,
-            )
+            render_embedded_preview(final_url, height=900)
     elif st.session_state.get("confirmstate") == "error":
         st.error(f"No se pudo crear la sesión: {process_result.get('message', 'Error desconocido')}")
 
@@ -2051,10 +2082,7 @@ if st.session_state.get("opensalidaform"):
         if selecteddeparture:
             selectedobj = next((d for d in departures if d["nombre"] == selecteddeparture), None)
             if selectedobj:
-                st.markdown(
-                    f'<a class="done-link" href="{selectedobj["url"]}" target="_blank" rel="noopener noreferrer">Abrir salida · Open departure</a>',
-                    unsafe_allow_html=True,
-                )
+                render_embedded_preview(selectedobj["url"], height=900)
     except Exception as exc:
         st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
@@ -2110,16 +2138,10 @@ if st.session_state.get("opencruceroform"):
                 result = create_crucero_file(cruceroboat, fechasalida)
                 if result["status"] == "duplicate":
                     st.warning(f"Ya existe / Already exists: {result['name']}")
-                    st.markdown(
-                        f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir archivo existente · Open existing file</a>',
-                        unsafe_allow_html=True,
-                    )
+                    render_embedded_preview(result["url"], height=900)
                 else:
                     st.success(f"Archivo creado / File created: {result['name']}")
-                    st.markdown(
-                        f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir crucero · Open cruise</a>',
-                        unsafe_allow_html=True,
-                    )
+                    render_embedded_preview(result["url"], height=900)
     except Exception as exc:
         st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
@@ -2274,10 +2296,7 @@ if st.session_state.get("opencvcfitform"):
             mime="application/pdf",
             key="downloadcvcfitpdf",
         )
-        st.markdown(
-            f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank" rel="noopener noreferrer">Abrir spreadsheet</a>',
-            unsafe_allow_html=True,
-        )
+        render_embedded_preview(result["spreadsheet_url"], height=900)
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -2319,10 +2338,7 @@ if st.session_state.get("opencvcagenciasform"):
             mime="application/pdf",
             key="downloadcvcagenciaspdf",
         )
-        st.markdown(
-            f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank" rel="noopener noreferrer">Abrir spreadsheet</a>',
-            unsafe_allow_html=True,
-        )
+        render_embedded_preview(result["spreadsheet_url"], height=900)
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -2366,10 +2382,7 @@ if st.session_state.get("openirconfirmacionform"):
                 ("Pestaña", result.get("sheet", {}).get("title", "")),
             ],
         )
-        st.markdown(
-            f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir confirmación</a>',
-            unsafe_allow_html=True,
-        )
+        render_embedded_preview(result["url"], height=900)
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -2512,6 +2525,10 @@ if st.session_state.get("openinformebarcoform"):
                 """
             table_html += "</tbody></table></div>"
             st.markdown(table_html, unsafe_allow_html=True)
+
+            selected_dep = next((d for d in departures if d["nombre"] == informesalida), None)
+            if selected_dep:
+                render_embedded_preview(selected_dep["url"], height=900)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
