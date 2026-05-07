@@ -31,6 +31,7 @@ AGENCY_SHEET_ID = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
 AGENCY_SHEET_NAME = "Datos"
 FOLDER_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
 DRIVE_ROOT_ID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
+GROUPS_ROOT_ID = "1MMNH3y1E3jJIp6uUnxbwV0toAtdr2F2M"
 
 VALID_USERS = {
     "support@crucemundo.com": "Albina",
@@ -62,6 +63,22 @@ AGENCY_FIELDS = [
     "IVA SERVICIO OPCIONAL",
 ]
 
+SHIP_CODE_MAP = {
+    "MS_ALBERTINA": "ALB",
+    "MS_ARENA": "ARN",
+    "MS_CRUCEVITA": "CV",
+    "MS_DOURO_CRUISER": "DC",
+    "MS_FIDELIO": "FID",
+    "MS_LEONORA": "LEO",
+    "MS_RIVER_DIAMOND": "RDA",
+    "MS_RIVER_SAPPHIRE": "RSA",
+    "MS_SWISS_SPLENDOR": "SPL",
+    "MS_VISTA_GRACIA": "VGR",
+    "MS_VISTAMILLA": "VMI",
+    "MS_VISTA_RIO": "VRI",
+}
+SHIP_CODE_TO_NAME = {v: k for k, v in SHIP_CODE_MAP.items()}
+
 STATE_DEFAULTS = {
     "authenticated": False,
     "useremail": "",
@@ -76,6 +93,8 @@ STATE_DEFAULTS = {
     "openbuscaragenciaform": False,
     "opencvcfitform": False,
     "opencvcagenciasform": False,
+    "openirconfirmacionform": False,
+    "openinformebarcoform": False,
     "salidayear": None,
     "salidaboat": None,
     "salidaname": None,
@@ -89,6 +108,14 @@ STATE_DEFAULTS = {
     "cvcagencias_locator": "",
     "cvcagencias_result": None,
     "cvcagencias_log": [],
+    "irconfirmacion_locator": "",
+    "irconfirmacion_result": None,
+    "irconfirmacion_log": [],
+    "informetype": None,
+    "informeyear": None,
+    "informeboat": None,
+    "informesalida": None,
+    "informeresult": None,
     "nombrecopia": "",
     "copyurl": "",
     "processtitle": "",
@@ -116,6 +143,13 @@ STATE_GROUPS = {
     "cvcagencias": [
         "cvcagencias_locator", "cvcagencias_result", "cvcagenciaslocatorwidget", "cvcagencias_log",
     ],
+    "irconfirmacion": [
+        "irconfirmacion_locator", "irconfirmacion_result", "irconfirmacionlocatorwidget", "irconfirmacion_log",
+    ],
+    "informebarco": [
+        "informetype", "informeyear", "informeboat", "informesalida", "informeresult",
+        "informetypewidget", "informeyearwidget", "informeboatwidget", "informesalidawidget",
+    ],
     "process": [
         "nombrecopia", "copyurl", "processtitle", "confirmstate", "sessiontype", "processresult",
     ],
@@ -128,6 +162,8 @@ PANEL_FLAGS = {
     "buscaragencia": "openbuscaragenciaform",
     "cvcfit": "opencvcfitform",
     "cvcagencias": "opencvcagenciasform",
+    "irconfirmacion": "openirconfirmacionform",
+    "informebarco": "openinformebarcoform",
 }
 
 
@@ -233,6 +269,27 @@ def reset_crucero_downstream(level):
         st.session_state.pop("cruceroboatwidget", None)
 
 
+def reset_informe_downstream(level):
+    if level == "type":
+        st.session_state["informeyear"] = None
+        st.session_state["informeboat"] = None
+        st.session_state["informesalida"] = None
+        st.session_state["informeresult"] = None
+        st.session_state.pop("informeyearwidget", None)
+        st.session_state.pop("informeboatwidget", None)
+        st.session_state.pop("informesalidawidget", None)
+    elif level == "year":
+        st.session_state["informeboat"] = None
+        st.session_state["informesalida"] = None
+        st.session_state["informeresult"] = None
+        st.session_state.pop("informeboatwidget", None)
+        st.session_state.pop("informesalidawidget", None)
+    elif level == "boat":
+        st.session_state["informesalida"] = None
+        st.session_state["informeresult"] = None
+        st.session_state.pop("informesalidawidget", None)
+
+
 def on_year_change():
     st.session_state["salidayear"] = st.session_state.get("salidayearwidget")
     reset_salida_downstream("year")
@@ -254,6 +311,25 @@ def on_crucero_year_change():
 
 def on_crucero_boat_change():
     st.session_state["cruceroboat"] = st.session_state.get("cruceroboatwidget")
+
+
+def on_informe_type_change():
+    st.session_state["informetype"] = st.session_state.get("informetypewidget")
+    reset_informe_downstream("type")
+
+
+def on_informe_year_change():
+    st.session_state["informeyear"] = st.session_state.get("informeyearwidget")
+    reset_informe_downstream("year")
+
+
+def on_informe_boat_change():
+    st.session_state["informeboat"] = st.session_state.get("informeboatwidget")
+    reset_informe_downstream("boat")
+
+
+def on_informe_salida_change():
+    st.session_state["informesalida"] = st.session_state.get("informesalidawidget")
 
 
 def render_key_value_grid(css_prefix, fields):
@@ -648,6 +724,21 @@ def get_single_cell(spreadsheet_id, sheet_title, a1):
     return values[0][0] if values and values[0] else ""
 
 
+def get_sheet_cells_batch(spreadsheet_id, sheet_title, a1_list):
+    sheetsservice = get_sheets_service()
+    ranges = [f"'{sheet_title}'!{a1}" for a1 in a1_list]
+    response = sheetsservice.spreadsheets().values().batchGet(
+        spreadsheetId=spreadsheet_id,
+        ranges=ranges,
+        majorDimension="ROWS",
+    ).execute()
+    out = {}
+    for a1, vr in zip(a1_list, response.get("valueRanges", [])):
+        vals = vr.get("values", [])
+        out[a1] = vals[0][0] if vals and vals[0] else ""
+    return out
+
+
 def export_sheet_pdf_bytes(spreadsheet_id, gid):
     creds = get_google_creds().with_scopes([
         "https://www.googleapis.com/auth/drive",
@@ -791,6 +882,239 @@ def run_cvc_search(locator, target_sheet, pdf_prefix, state_key):
 
 
 # ============================================================
+# NUEVOS HELPERS CONFIRMACION / INFORME
+# ============================================================
+def parse_locator_input(locator_raw):
+    locator = str(locator_raw or "").strip().upper()
+    if not locator:
+        raise Exception("Debes introducir un localizador.")
+
+    is_group = locator.endswith("_GROUP")
+    core = locator[:-6] if is_group else locator
+
+    m = re.fullmatch(r"([A-Z]{2,3})(\d{6})-(\d{3})", core)
+    if not m:
+        raise Exception("Formato de localizador no válido. Debe ser CODIGOBARCO+AAMMDD-999 o terminar en _GROUP.")
+
+    ship_code, yymmdd, sequence = m.groups()
+    boat_name = SHIP_CODE_TO_NAME.get(ship_code)
+    if not boat_name:
+        raise Exception(f"Código de barco no reconocido: {ship_code}")
+
+    year_full = f"20{yymmdd[:2]}"
+    file_base = f"{boat_name}_{yymmdd}"
+
+    return {
+        "original": locator,
+        "is_group": is_group,
+        "core": core,
+        "ship_code": ship_code,
+        "boat_name": boat_name,
+        "yymmdd": yymmdd,
+        "sequence": sequence,
+        "year_full": year_full,
+        "year_folder_name": f"{year_full}_GROUP" if is_group else year_full,
+        "file_name": f"{file_base}_GROUP" if is_group else file_base,
+        "sheet_name": f"{core}_GROUP" if is_group else core,
+        "root_id": GROUPS_ROOT_ID if is_group else DRIVE_ROOT_ID,
+    }
+
+
+def build_sheet_tab_url(spreadsheet_id, sheet_gid):
+    return f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit#gid={sheet_gid}"
+
+
+def find_locator_confirmation(locator_raw):
+    parsed = parse_locator_input(locator_raw)
+    log_lines = []
+
+    year_folder = find_child_folder(parsed["root_id"], parsed["year_folder_name"])
+    if not year_folder:
+        log_lines.append(f"❌ No existe la carpeta de año: {parsed['year_folder_name']}")
+        return {
+            "status": "missing_year",
+            "parsed": parsed,
+            "log": log_lines,
+        }
+    log_lines.append(f"✅ Carpeta de año encontrada: {parsed['year_folder_name']}")
+
+    boat_folder = find_child_folder(year_folder["id"], parsed["boat_name"])
+    if not boat_folder:
+        log_lines.append(f"❌ No existe la carpeta del barco: {parsed['boat_name']}")
+        return {
+            "status": "missing_boat",
+            "parsed": parsed,
+            "log": log_lines,
+        }
+    log_lines.append(f"✅ Carpeta de barco encontrada: {parsed['boat_name']}")
+
+    file_obj = find_file_by_name(boat_folder["id"], parsed["file_name"])
+    if not file_obj:
+        log_lines.append(f"❌ No existe el archivo: {parsed['file_name']}")
+        return {
+            "status": "missing_file",
+            "parsed": parsed,
+            "log": log_lines,
+        }
+    log_lines.append(f"✅ Archivo encontrado: {parsed['file_name']}")
+
+    sheets = get_sheet_titles_with_ids(file_obj["id"])
+    target_sheet = next((s for s in sheets if s["title"].strip() == parsed["sheet_name"].strip()), None)
+    if not target_sheet:
+        log_lines.append(f"❌ No existe la pestaña/localizador: {parsed['sheet_name']}")
+        return {
+            "status": "missing_locator",
+            "parsed": parsed,
+            "file": file_obj,
+            "log": log_lines,
+        }
+
+    final_url = build_sheet_tab_url(file_obj["id"], target_sheet["sheetId"])
+    log_lines.append(f"✅ Pestaña encontrada: {parsed['sheet_name']}")
+
+    return {
+        "status": "found",
+        "parsed": parsed,
+        "file": file_obj,
+        "sheet": target_sheet,
+        "url": final_url,
+        "log": log_lines,
+    }
+
+
+@st.cache_data(ttl=300)
+def get_years_by_root(root_id):
+    folders = list_folder_items(root_id, folders_only=True)
+    if root_id == DRIVE_ROOT_ID:
+        years = [f["name"].strip() for f in folders if re.fullmatch(r"\d{4}", f["name"].strip())]
+    else:
+        years = [f["name"].strip() for f in folders if re.fullmatch(r"\d{4}_GROUP", f["name"].strip())]
+    return sorted(years, reverse=True)
+
+
+@st.cache_data(ttl=300)
+def get_year_folder_id_by_root(root_id, yearname):
+    folder = find_child_folder(root_id, yearname)
+    return folder["id"] if folder else None
+
+
+@st.cache_data(ttl=300)
+def get_boats_by_root(root_id, yearname):
+    yearfolderid = get_year_folder_id_by_root(root_id, yearname)
+    if not yearfolderid:
+        return []
+    folders = list_folder_items(yearfolderid, folders_only=True)
+    return sorted([f["name"].strip() for f in folders if f["name"].strip()])
+
+
+@st.cache_data(ttl=300)
+def get_departures_by_root(root_id, yearname, boatname):
+    yearfolderid = get_year_folder_id_by_root(root_id, yearname)
+    if not yearfolderid:
+        return []
+    boatfolder = find_child_folder(yearfolderid, boatname)
+    if not boatfolder:
+        return []
+
+    files = list_folder_items(boatfolder["id"], folders_only=False)
+    if root_id == DRIVE_ROOT_ID:
+        pattern = re.compile(rf"^{re.escape(boatname)}_\d{{6}}$")
+    else:
+        pattern = re.compile(rf"^{re.escape(boatname)}_\d{{6}}_GROUP$")
+
+    departures = []
+    for file in files:
+        name = file["name"].strip()
+        if pattern.match(name):
+            departures.append(
+                {
+                    "nombre": name,
+                    "id": file["id"],
+                    "url": file.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{file['id']}/edit",
+                }
+            )
+    departures.sort(key=lambda x: x["nombre"])
+    return departures
+
+
+def parse_numeric_value(value):
+    text = str(value or "").strip()
+    if not text:
+        return 0.0
+    text = text.replace("€", "").replace("EUR", "").replace("PAX", "").strip()
+    text = text.replace(".", "").replace(",", ".")
+    m = re.search(r"-?\d+(?:\.\d+)?", text)
+    if not m:
+        return 0.0
+    try:
+        return float(m.group(0))
+    except Exception:
+        return 0.0
+
+
+def parse_int_from_text(value):
+    text = str(value or "").strip().upper().replace("PAX", "").strip()
+    m = re.search(r"\d+", text)
+    return int(m.group(0)) if m else 0
+
+
+def get_sheet_title_b2(spreadsheet_id, sheet_title):
+    return get_single_cell(spreadsheet_id, sheet_title, "B2")
+
+
+def extract_informe_por_barco(spreadsheet_id, spreadsheet_name):
+    sheets = get_sheet_titles_with_ids(spreadsheet_id)
+    rows = []
+
+    for sheet in sheets:
+        sheet_title = sheet["title"]
+        try:
+            b2 = str(get_sheet_title_b2(spreadsheet_id, sheet_title) or "").upper()
+            if "CONFIR" not in b2 and "PROFORMA" not in b2:
+                continue
+
+            cells = get_sheet_cells_batch(
+                spreadsheet_id,
+                sheet_title,
+                ["G11", "G5", "G57", "Q55", "P57", "G22", "K22", "N22", "P22", "G20", "K20", "N20", "P20", "G19", "G18"]
+            )
+
+            pax = sum(parse_int_from_text(cells.get(a1, "")) for a1 in ["G22", "K22", "N22", "P22"])
+            cabinas = sum(int(parse_numeric_value(cells.get(a1, ""))) for a1 in ["G20", "K20", "N20", "P20"])
+            total_eur = parse_numeric_value(cells.get("Q55", ""))
+            deposito = parse_numeric_value(cells.get("P57", ""))
+            duracion_num = int(parse_numeric_value(cells.get("G18", "")))
+
+            rows.append({
+                "Hoja": sheet_title,
+                "Localizador": str(cells.get("G11", "")).strip(),
+                "Agencia": str(cells.get("G5", "")).strip(),
+                "Estado Pago": str(cells.get("G57", "")).strip(),
+                "Total €": total_eur,
+                "Cantidad Deposito": deposito,
+                "PAX": pax,
+                "Cabinas": cabinas,
+                "Itinerario": str(cells.get("G19", "")).strip(),
+                "Duracion": f"{duracion_num} Dias" if duracion_num else "",
+                "Tipo Documento": b2,
+                "SheetId": sheet["sheetId"],
+            })
+        except Exception:
+            continue
+
+    total_importe = round(sum(r["Total €"] for r in rows), 2)
+    total_pax = sum(r["PAX"] for r in rows)
+
+    return {
+        "spreadsheet_id": spreadsheet_id,
+        "spreadsheet_name": spreadsheet_name,
+        "rows": rows,
+        "total_importe": total_importe,
+        "total_pax": total_pax,
+    }
+
+
+# ============================================================
 # CSS
 # ============================================================
 st.markdown(
@@ -847,12 +1171,12 @@ st.markdown(
     .card-grupos { background: #F4FBF6; border-color: #D8EEDC; }
     .card-salida { background: #FFF8F1; border-color: #F1DFC7; }
     .card-crucero { background: #F7F4FF; border-color: #E4DDF9; }
-    ##.card-excursiones { background: #EEF8FB; border-color: #D5EAF1; }
     .card-nueva-agencia { background: #F1FAF4; border-color: #D7EEDC; }
     .card-buscar-agencia { background: #FFF7EF; border-color: #F4E1CA; }
     .card-cvcfit { background: #FFF2F7; border-color: #F4D7E3; }
     .card-cvcagencias { background: #EEF9F1; border-color: #D5EEDB; }
-    .card-nextcard { background: #F6F7FB; border-color: #E1E5EF; }
+    .card-irconfirmacion { background: #F6F7FB; border-color: #E1E5EF; }
+    .card-informebarco { background: #EEF8FB; border-color: #D5EAF1; }
     .action-top { display: flex; align-items: flex-start; gap: 0.75rem; }
     .action-icon { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
     .action-text { display: flex; flex-direction: column; gap: 0.10rem; min-width: 0; }
@@ -862,27 +1186,32 @@ st.markdown(
     .action-desc { margin-top: 0.18rem; }
     .action-desc-en { margin-top: 0.04rem; }
     .action-button-wrap { display: flex !important; justify-content: flex-start !important; align-items: center !important; width: 100% !important; margin-top: 0.1rem; }
-    .panel-inline { margin-top: 1rem; padding-top: 0.2rem; width: 100%; max-width: 1100px; }
+    .panel-inline { margin-top: 1rem; padding-top: 0.2rem; width: 100%; max-width: 1200px; }
     .done-link { display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 0.65rem; background: #D9E9FF; color: #214D92 !important; border: 1px solid #BDD6FF; border-radius: 999px; padding: 0.42rem 0.88rem; font-size: 0.71rem; font-weight: 600; text-decoration: none; }
-    .agency-card, .cvcfit-card, .cvcfit-status-card, .cvcagencias-card, .cvcagencias-status-card, .process-card {
+    .agency-card, .cvcfit-card, .cvcfit-status-card, .cvcagencias-card, .cvcagencias-status-card, .process-card, .irconfirmacion-card, .informebarco-card {
         background: #FBFCFF; border: 1px solid #E6EBF3; border-radius: 18px; padding: 1rem; margin-top: 0.75rem;
     }
-    .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid {
+    .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid, .irconfirmacion-grid, .informebarco-grid {
         display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem 1rem;
     }
-    .agency-item-label, .cvcfit-item-label, .cvcagencias-item-label, .process-item-label {
+    .agency-item-label, .cvcfit-item-label, .cvcagencias-item-label, .process-item-label, .irconfirmacion-item-label, .informebarco-item-label {
         font-size: 0.68rem; color: #7E889D; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.16rem;
     }
-    .agency-item-value, .cvcfit-item-value, .cvcagencias-item-value, .process-item-value {
+    .agency-item-value, .cvcfit-item-value, .cvcagencias-item-value, .process-item-value, .irconfirmacion-item-value, .informebarco-item-value {
         font-size: 0.8rem; color: #1F2937; line-height: 1.35; word-break: break-word;
     }
-    .cvcfit-log-line, .cvcagencias-log-line {
+    .cvcfit-log-line, .cvcagencias-log-line, .irconfirmacion-log-line {
         font-size: 0.74rem; color: #465066; line-height: 1.45; margin-bottom: 0.35rem; word-break: break-word;
     }
+    .report-table-wrap { margin-top: 1rem; overflow-x: auto; }
+    .report-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #E6EBF3; border-radius: 16px; overflow: hidden; }
+    .report-table th, .report-table td { font-size: 0.76rem; padding: 0.65rem 0.7rem; border-bottom: 1px solid #EEF2F7; text-align: left; vertical-align: top; }
+    .report-table th { background: #F7FAFD; color: #44506A; font-weight: 700; white-space: nowrap; }
+    .report-table td { color: #1F2937; }
     .portal-footer { margin-top: 1rem; padding: 0.5rem 0 0 0; display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
     .footer-text { font-size: 0.71rem; color: #A2ABBD; }
     @media (max-width: 1600px) {
-        .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid { grid-template-columns: 1fr; }
+        .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid, .irconfirmacion-grid, .informebarco-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 1300px) {
         .portal-header, .portal-footer { flex-direction: column; align-items: flex-start; }
@@ -944,6 +1273,7 @@ SALUDO = get_saludo("es")
 SALUDOEN = get_saludo("en")
 excursionesurl = f"https://docs.google.com/spreadsheets/d/{EXCURSIONES_SHEET_ID}/edit"
 drive_root_url = f"https://drive.google.com/drive/folders/{DRIVE_ROOT_ID}"
+groups_root_url = f"https://drive.google.com/drive/folders/{GROUPS_ROOT_ID}"
 cvcfit_folder_url = f"https://drive.google.com/drive/folders/{FOLDER_ID}"
 
 
@@ -984,6 +1314,7 @@ st.markdown(
     f"""
     <div class="section-head-row-green">
         <a class="web-chip-green" href="{drive_root_url}" target="_blank" rel="noopener noreferrer">Abre Drive Root</a>
+        <a class="web-chip-green" href="{groups_root_url}" target="_blank" rel="noopener noreferrer">Abre Drive Groups</a>
         <a class="web-chip-green" href="{cvcfit_folder_url}" target="_blank" rel="noopener noreferrer">Abre Folder Sesiones</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER_CABINAS</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre EXCURSIONES</a>
@@ -1091,17 +1422,6 @@ cards = [
         "key": "btncrearcruceroopen",
         "action": lambda: (open_panel("crucero"), st.rerun()),
     },
-    ##{
-     ##   "card_class": "card-excursiones",
-     ##   "icon": "🧭",
-     ##   "title_es": "Excursiones",
-    ##    "title_en": "Excursions",
-    ##    "desc_es": "Abrir la hoja de Excursiones",
-    ##    "desc_en": "Open the Excursions sheet",
-   ##     "button_label": "Abrir Excursiones",
-     ##   "key": "btnexcursioneslink",
-     ##   "link": excursionesurl,
-   ## },
     {
         "card_class": "card-nueva-agencia",
         "icon": "🏢",
@@ -1148,7 +1468,7 @@ cards = [
     },
 ]
 
-cols = st.columns(9, gap="medium")
+cols = st.columns(8, gap="medium")
 for col, card in zip(cols, cards):
     render_action_card(col, card)
 
@@ -1156,15 +1476,29 @@ row2 = st.columns(9, gap="medium")
 render_action_card(
     row2[0],
     {
-        "card_class": "card-nextcard",
-        "icon": "🚀",
-        "title_es": "NextCard",
-        "title_en": "NextCard",
-        "desc_es": "Tarjeta reservada para un uso futuro",
-        "desc_en": "Reserved card for future use",
-        "button_label": "Próximamente",
-        "key": "btnnextcardfuture",
-        "disabled": True,
+        "card_class": "card-irconfirmacion",
+        "icon": "📌",
+        "title_es": "Ir a Confirmación",
+        "title_en": "Go to Confirmation",
+        "desc_es": "Buscar localizador normal o GROUP y abrir el archivo en su pestaña exacta",
+        "desc_en": "Find normal or GROUP locator and open the exact tab",
+        "button_label": "Buscar Localizador",
+        "key": "btnirconfirmacionopen",
+        "action": lambda: (open_panel("irconfirmacion"), st.rerun()),
+    },
+)
+render_action_card(
+    row2[1],
+    {
+        "card_class": "card-informebarco",
+        "icon": "💶",
+        "title_es": "Informe € por Barco",
+        "title_en": "€ Report by Ship",
+        "desc_es": "Elegir tipo, año, barco y salida para extraer el informe de confirmaciones",
+        "desc_en": "Choose type, year, ship and departure to extract the confirmations report",
+        "button_label": "Abrir Informe",
+        "key": "btninformebarcoopen",
+        "action": lambda: (open_panel("informebarco"), st.rerun()),
     },
 )
 
@@ -1552,6 +1886,228 @@ if st.session_state.get("opencvcagenciasform"):
                 f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank" rel="noopener noreferrer">📊 Abrir hoja origen en Drive</a>',
                 unsafe_allow_html=True,
             )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ============================================================
+# PANEL IR A CONFIRMACION
+# ============================================================
+if st.session_state.get("openirconfirmacionform"):
+    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
+    st.markdown("### Ir a Confirmación")
+
+    locator = st.text_input(
+        "Localizador",
+        key="irconfirmacionlocatorwidget",
+        placeholder="Ej: VMI260102-002 o VMI260102-002_GROUP",
+    )
+
+    if st.button("Buscar confirmación", key="btnirconfirmacionaction", disabled=not locator):
+        try:
+            result = find_locator_confirmation(locator)
+            st.session_state["irconfirmacion_result"] = result
+            st.session_state["irconfirmacion_log"] = result.get("log", [])
+        except Exception as exc:
+            st.session_state["irconfirmacion_result"] = {"status": "error", "message": str(exc), "log": [f"❌ {exc}"]}
+            st.session_state["irconfirmacion_log"] = [f"❌ {exc}"]
+
+    log_lines_saved = st.session_state.get("irconfirmacion_log", [])
+    if log_lines_saved:
+        st.markdown('<div class="cvcfit-status-card" style="margin-top:0.75rem;">', unsafe_allow_html=True)
+        st.markdown("**Resultado de la búsqueda:**")
+        st.markdown("<br>".join(f"<div class='irconfirmacion-log-line'>{line}</div>" for line in log_lines_saved), unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    result = st.session_state.get("irconfirmacion_result")
+    if result:
+        if result.get("status") == "found":
+            parsed = result["parsed"]
+            render_key_value_grid(
+                "irconfirmacion",
+                [
+                    ("Localizador", parsed["original"]),
+                    ("Tipo", "GROUP" if parsed["is_group"] else "Normal"),
+                    ("Año", parsed["year_folder_name"]),
+                    ("Barco", parsed["boat_name"]),
+                    ("Archivo", parsed["file_name"]),
+                    ("Pestaña", parsed["sheet_name"]),
+                ],
+            )
+            st.markdown(
+                f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir confirmación en su pestaña</a>',
+                unsafe_allow_html=True,
+            )
+        elif result.get("status") == "error":
+            st.error(result.get("message", "Error desconocido"))
+        else:
+            st.warning("No se ha podido completar la búsqueda. Revisa el detalle anterior.")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ============================================================
+# PANEL INFORME € POR BARCO
+# ============================================================
+if st.session_state.get("openinformebarcoform"):
+    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
+    st.markdown("### Informe € por Barco")
+
+    tip_options = ["CONFIRMACIONES INDIVIDUALES", "GRUPOS"]
+    current_type = st.session_state.get("informetype")
+    if current_type not in tip_options:
+        current_type = None
+
+    tipo = st.selectbox(
+        "TIPO",
+        options=tip_options,
+        index=tip_options.index(current_type) if current_type in tip_options else None,
+        placeholder="Selecciona un tipo",
+        key="informetypewidget",
+        on_change=on_informe_type_change,
+    )
+    if tipo != st.session_state.get("informetype"):
+        st.session_state["informetype"] = tipo
+
+    root_id_informe = None
+    if tipo == "CONFIRMACIONES INDIVIDUALES":
+        root_id_informe = DRIVE_ROOT_ID
+    elif tipo == "GRUPOS":
+        root_id_informe = GROUPS_ROOT_ID
+
+    c1, c2, c3 = st.columns(3, gap="medium")
+
+    with c1:
+        years = get_years_by_root(root_id_informe) if root_id_informe else []
+        current_year = st.session_state.get("informeyear")
+        if current_year not in years:
+            current_year = None
+        year_sel = st.selectbox(
+            "AÑO",
+            options=years,
+            index=years.index(current_year) if current_year in years else None,
+            placeholder="Selecciona un año",
+            key="informeyearwidget",
+            on_change=on_informe_year_change,
+            disabled=not root_id_informe,
+        )
+        if year_sel != st.session_state.get("informeyear"):
+            st.session_state["informeyear"] = year_sel
+
+    with c2:
+        boats = get_boats_by_root(root_id_informe, year_sel) if root_id_informe and year_sel else []
+        current_boat = st.session_state.get("informeboat")
+        if current_boat not in boats:
+            current_boat = None
+        boat_sel = st.selectbox(
+            "BARCO",
+            options=boats,
+            index=boats.index(current_boat) if current_boat in boats else None,
+            placeholder="Selecciona un barco",
+            key="informeboatwidget",
+            on_change=on_informe_boat_change,
+            disabled=not year_sel,
+        )
+        if boat_sel != st.session_state.get("informeboat"):
+            st.session_state["informeboat"] = boat_sel
+
+    with c3:
+        salidas = get_departures_by_root(root_id_informe, year_sel, boat_sel) if root_id_informe and year_sel and boat_sel else []
+        salidas_names = [s["nombre"] for s in salidas]
+        current_salida = st.session_state.get("informesalida")
+        if current_salida not in salidas_names:
+            current_salida = None
+        salida_sel = st.selectbox(
+            "SALIDA",
+            options=salidas_names,
+            index=salidas_names.index(current_salida) if current_salida in salidas_names else None,
+            placeholder="Selecciona una salida",
+            key="informesalidawidget",
+            on_change=on_informe_salida_change,
+            disabled=not boat_sel,
+        )
+        if salida_sel != st.session_state.get("informesalida"):
+            st.session_state["informesalida"] = salida_sel
+
+    if st.button(
+        "Extraer informacion",
+        key="btnextraerinformacionbarco",
+        disabled=not (root_id_informe and year_sel and boat_sel and salida_sel),
+    ):
+        try:
+            selected_obj = next((d for d in salidas if d["nombre"] == salida_sel), None)
+            if not selected_obj:
+                st.error("No se ha encontrado la salida seleccionada.")
+            else:
+                informe = extract_informe_por_barco(selected_obj["id"], selected_obj["nombre"])
+                informe["file_url"] = selected_obj["url"]
+                st.session_state["informeresult"] = informe
+        except Exception as exc:
+            st.exception(exc)
+
+    informe_result = st.session_state.get("informeresult")
+    if informe_result:
+        render_key_value_grid(
+            "informebarco",
+            [
+                ("Archivo", informe_result.get("spreadsheet_name", "")),
+                ("Total €", f"{informe_result.get('total_importe', 0):,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")),
+                ("Total Personas", str(informe_result.get("total_pax", 0))),
+                ("Nº Hojas Informe", str(len(informe_result.get("rows", [])))),
+            ],
+        )
+
+        file_url = informe_result.get("file_url")
+        if file_url:
+            st.markdown(
+                f'<a class="done-link" href="{file_url}" target="_blank" rel="noopener noreferrer">Abrir archivo de la salida</a>',
+                unsafe_allow_html=True,
+            )
+
+        rows = informe_result.get("rows", [])
+        if rows:
+            st.markdown('<div class="report-table-wrap">', unsafe_allow_html=True)
+            html = """
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Hoja</th>
+                        <th>Localizador</th>
+                        <th>Agencia</th>
+                        <th>Estado Pago</th>
+                        <th>Total €</th>
+                        <th>Deposito</th>
+                        <th>PAX</th>
+                        <th>Cabinas</th>
+                        <th>Itinerario</th>
+                        <th>Duracion</th>
+                    </tr>
+                </thead>
+                <tbody>
+            """
+            for row in rows:
+                gid_url = build_sheet_tab_url(informe_result["spreadsheet_id"], row["SheetId"])
+                total_fmt = f"{row['Total €']:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
+                dep_fmt = f"{row['Cantidad Deposito']:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
+                html += f"""
+                    <tr>
+                        <td><a href="{gid_url}" target="_blank" rel="noopener noreferrer">{row['Hoja']}</a></td>
+                        <td>{row['Localizador']}</td>
+                        <td>{row['Agencia']}</td>
+                        <td>{row['Estado Pago']}</td>
+                        <td>{total_fmt}</td>
+                        <td>{dep_fmt}</td>
+                        <td>{row['PAX']}</td>
+                        <td>{row['Cabinas']}</td>
+                        <td>{row['Itinerario']}</td>
+                        <td>{row['Duracion']}</td>
+                    </tr>
+                """
+            html += "</tbody></table>"
+            st.markdown(html, unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+        else:
+            st.info("No se han encontrado hojas con CONFIR o PROFORMA en B2.")
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 
