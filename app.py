@@ -1337,189 +1337,210 @@ st.markdown(
         font-size: 1rem !important;
     }
 
-    .action-box {
-        width: 100%;
-        min-height: 20px;
-        border-radius: 22px;
-        padding: 1rem;
-        margin-bottom: 0.85rem;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        gap: 0.9rem;
-        border: 1px solid transparent;
-        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
-    }
+.action-box {
+    width: 100%;
+    min-height: 20px;
+    border-radius: 22px;
+    padding: 1rem;
+    margin-bottom: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.9rem;
+    border: 1px solid transparent;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+}
 
-    .card-es {
-        background: #EAF3FF;
-        border-color: #BFD7FF;
-        --card-btn-bg: #CFE3FF;
-        --card-btn-border: #94BEFF;
-        --card-btn-text: #1E4E93;
-        --card-btn-shadow: rgba(30, 78, 147, 0.16);
-    }
+.card-es {
+    background: #EAF3FF;
+    border-color: #BFD7FF;
+    --card-btn-bg: #CFE3FF;
+    --card-btn-border: #94BEFF;
+    --card-btn-text: #1E4E93;
+    --card-btn-shadow: rgba(30, 78, 147, 0.16);
+}
 
-    .card-grupos {
-        background: #EAF8EE;
-        border-color: #BDE3C7;
-        --card-btn-bg: #CDEFD7;
-        --card-btn-border: #93D0A7;
-        --card-btn-text: #1F6A3A;
-        --card-btn-shadow: rgba(31, 106, 58, 0.15);
-    }
+.card-grupos {
+    background: #EAF8EE;
+    border-color: #BDE3C7;
+    --card-btn-bg: #CDEFD7;
+    --card-btn-border: #93D0A7;
+    --card-btn-text: #1F6A3A;
+    --card-btn-shadow: rgba(31, 106, 58, 0.15);
+}
 
-    .card-salida {
-        background: #FFF2E3;
-        border-color: #F1CFA9;
-        --card-btn-bg: #FFDDB8;
-        --card-btn-border: #F1B97B;
-        --card-btn-text: #8A5318;
-        --card-btn-shadow: rgba(138, 83, 24, 0.16);
-    }
+.card-salida {
+    background: #FFF2E3;
+    border-color: #F1CFA9;
+    --card-btn-bg: #FFDDB8;
+    --card-btn-border: #F1B97B;
+    --card-btn-text: #8A5318;
+    --card-btn-shadow: rgba(138, 83, 24, 0.16);
+}
 
-    .card-crucero {
-        background: #F0EAFE;
-        border-color: #D3C4FA;
-        --card-btn-bg: #DDD0FF;
-        --card-btn-border: #B9A0F8;
-        --card-btn-text: #5A3E9E;
-        --card-btn-shadow: rgba(90, 62, 158, 0.16);
-    }
+.card-crucero {
+    background: #F0EAFE;
+    border-color: #D3C4FA;
+    --card-btn-bg: #DDD0FF;
+    --card-btn-border: #B9A0F8;
+    --card-btn-text: #5A3E9E;
+    --card-btn-shadow: rgba(90, 62, 158, 0.16);
+}
 
-    .card-nueva-agencia {
-        background: #EAF8EF;
-        border-color: #BEE3C9;
-        --card-btn-bg: #D0EFDA;
-        --card-btn-border: #98D0AA;
-        --card-btn-text: #256245;
-        --card-btn-shadow: rgba(37, 98, 69, 0.16);
-    }
+.card-nueva-agencia {
+    background: #EAF8EF;
+    border-color: #BEE3C9;
+    --card-btn-bg: #D0EFDA;
+    --card-btn-border: #98D0AA;
+    --card-btn-text: #256245;
+    --card-btn-shadow: rgba(37, 98, 69, 0.16);
+}
 
-    .card-buscar-agencia {
-        background: #FFF1E5;
-        border-color: #F1D1B0;
-        --card-btn-bg: #FFDDBF;
-        --card-btn-border: #F0B77E;
-        --card-btn-text: #8B5620;
-        --card-btn-shadow: rgba(139, 86, 32, 0.16);
-    }
+.card-buscar-agencia {
+    background: #FFF1E5;
+    border-color: #F1D1B0;
+    --card-btn-bg: #FFDDBF;
+    --card-btn-border: #F0B77E;
+    --card-btn-text: #8B5620;
+    --card-btn-shadow: rgba(139, 86, 32, 0.16);
+}
 
-    .card-cvcfit {
-        background: #FDECF3;
-        border-color: #F1C3D6;
-        --card-btn-bg: #F7D2E2;
-        --card-btn-border: #E89BBB;
-        --card-btn-text: #9B3A63;
-        --card-btn-shadow: rgba(155, 58, 99, 0.16);
-    }
+.card-cvcfit {
+    background: #FDECF3;
+    border-color: #F1C3D6;
+    --card-btn-bg: #F7D2E2;
+    --card-btn-border: #E89BBB;
+    --card-btn-text: #9B3A63;
+    --card-btn-shadow: rgba(155, 58, 99, 0.16);
+}
 
-    .card-cvcagencias {
-        background: #EBF8EF;
-        border-color: #BFE1C9;
-        --card-btn-bg: #D0EFD8;
-        --card-btn-border: #97D0A9;
-        --card-btn-text: #2C6A44;
-        --card-btn-shadow: rgba(44, 106, 68, 0.16);
-    }
+.card-cvcagencias {
+    background: #EBF8EF;
+    border-color: #BFE1C9;
+    --card-btn-bg: #D0EFD8;
+    --card-btn-border: #97D0A9;
+    --card-btn-text: #2C6A44;
+    --card-btn-shadow: rgba(44, 106, 68, 0.16);
+}
 
-    .card-irconfirmacion {
-        background: #F0F3F8;
-        border-color: #CFD8E6;
-        --card-btn-bg: #E0E7F1;
-        --card-btn-border: #B8C6DC;
-        --card-btn-text: #4A5874;
-        --card-btn-shadow: rgba(74, 88, 116, 0.16);
-    }
+.card-irconfirmacion {
+    background: #F0F3F8;
+    border-color: #CFD8E6;
+    --card-btn-bg: #E0E7F1;
+    --card-btn-border: #B8C6DC;
+    --card-btn-text: #4A5874;
+    --card-btn-shadow: rgba(74, 88, 116, 0.16);
+}
 
-    .card-informebarco {
-        background: #EAF7FB;
-        border-color: #BFDDE8;
-        --card-btn-bg: #D2EDF6;
-        --card-btn-border: #97CEE0;
-        --card-btn-text: #2B6881;
-        --card-btn-shadow: rgba(43, 104, 129, 0.16);
-    }
+.card-informebarco {
+    background: #EAF7FB;
+    border-color: #BFDDE8;
+    --card-btn-bg: #D2EDF6;
+    --card-btn-border: #97CEE0;
+    --card-btn-text: #2B6881;
+    --card-btn-shadow: rgba(43, 104, 129, 0.16);
+}
 
-    .action-top { display: flex; align-items: flex-start; gap: 0.75rem; }
-    .action-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1rem;
-        flex-shrink: 0;
-        background: rgba(255,255,255,0.42);
-        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
-    }
+.action-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
 
-    .action-text { display: flex; flex-direction: column; gap: 0.12rem; min-width: 0; }
+.action-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.42);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
+}
 
-    .action-title,
-    .action-title-en {
-        font-family: 'DM Sans', sans-serif !important;
-        line-height: 1.1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
+.action-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+    min-width: 0;
+}
 
-    .action-title {
-        font-size: 0.96rem;
-        font-weight: 800;
-        color: #1F2937;
-    }
+.action-title,
+.action-title-en {
+    font-family: 'DM Sans', sans-serif !important;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
-    .action-title-en {
-        margin-top: 0.08rem;
-        color: #41506B;
-        font-size: 0.83rem;
-        font-weight: 700;
-    }
+.action-title {
+    font-size: 0.96rem;
+    font-weight: 800;
+    color: #1F2937;
+}
 
-    .action-button-wrap {
-        display: flex !important;
-        justify-content: flex-start !important;
-        align-items: center !important;
-        width: 100% !important;
-        margin-top: 0.1rem;
-    }
+.action-title-en {
+    margin-top: 0.08rem;
+    color: #41506B;
+    font-size: 0.83rem;
+    font-weight: 700;
+}
 
-    .action-button-wrap a.done-link {
-        margin-top: 0 !important;
-    }
+.action-button-wrap {
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    width: 100% !important;
+    margin-top: 0.1rem;
+}
 
-    .done-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        border-radius: 999px;
-        padding: 0.48rem 0.96rem;
-        font-size: 0.82rem;
-        font-weight: 800;
-        font-family: 'DM Sans', sans-serif !important;
-        text-decoration: none;
-        white-space: nowrap;
-        box-shadow: 0 5px 14px rgba(15, 23, 42, 0.08);
-        transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
-    }
+.action-button-wrap a.done-link {
+    margin-top: 0 !important;
+}
 
-    .done-link:hover {
-        transform: translateY(-1px);
-        filter: saturate(1.04);
-    }
+.done-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    padding: 0.48rem 0.96rem;
+    font-size: 0.82rem;
+    font-weight: 800;
+    font-family: 'DM Sans', sans-serif !important;
+    text-decoration: none;
+    white-space: nowrap;
+    box-shadow: 0 5px 14px rgba(15, 23, 42, 0.08);
+    transition: transform 0.15s ease,
+                box-shadow 0.15s ease,
+                filter 0.15s ease;
+}
 
-    .action-box[data-card] div.stButton button,
-    .action-box[data-card] .done-link {
-        background: var(--card-btn-bg) !important;
-        border: 1.5px solid var(--card-btn-border) !important;
-        color: var(--card-btn-text) !important;
-        box-shadow: 0 6px 14px var(--card-btn-shadow) !important;
-        font-family: 'DM Sans', sans-serif !important;
-    }
+.done-link:hover {
+    transform: translateY(-1px);
+    filter: saturate(1.04);
+}
 
+/* =========================================================
+   BOTONES DINÁMICOS POR TARJETA
+========================================================= */
+
+.action-box div.stButton button,
+.action-box .done-link {
+    background: var(--card-btn-bg) !important;
+    border: 1.5px solid var(--card-btn-border) !important;
+    color: var(--card-btn-text) !important;
+    box-shadow: 0 6px 14px var(--card-btn-shadow) !important;
+    font-family: 'DM Sans', sans-serif !important;
+}
+
+.action-box div.stButton button:hover,
+.action-box .done-link:hover {
+    filter: brightness(0.98) saturate(1.06);
+    box-shadow: 0 10px 20px var(--card-btn-shadow) !important;
+}
     .action-box[data-card] div.stButton button:hover,
     .action-box[data-card] .done-link:hover {
         filter: brightness(0.98) saturate(1.06);
