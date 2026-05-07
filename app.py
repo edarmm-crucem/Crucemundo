@@ -1208,7 +1208,7 @@ st.markdown(
         font-family: 'DM Sans', sans-serif !important;
         letter-spacing: 0.01em !important;
         transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease !important;
-        border: 1.5px solid transparent !important;
+        border: 4.5px solid transparent !important;
     }
 
     div.stButton button:hover,
