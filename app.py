@@ -166,22 +166,6 @@ PANEL_FLAGS = {
     "informebarco": "openinformebarcoform",
 }
 
-ACTION_TO_PANEL = {
-    "salida": "salida",
-    "crucero": "crucero",
-    "nuevaagencia": "nuevaagencia",
-    "buscaragencia": "buscaragencia",
-    "cvcfit": "cvcfit",
-    "cvcagencias": "cvcagencias",
-    "irconfirmacion": "irconfirmacion",
-    "informebarco": "informebarco",
-}
-
-ACTION_TO_SESSION = {
-    "crear_es": ("es", TEMPLATE_ID_ES, "MASTER", "Crear Sesión MASTER / CONFIRMATION"),
-    "crear_grupos": ("grupos", TEMPLATE_ID_GRUPOS, "MASTER GRUPOS", "Crear Sesión MASTER / GROUPS"),
-}
-
 
 # ============================================================
 # SESSION STATE
@@ -362,48 +346,6 @@ def render_key_value_grid(css_prefix, fields):
             unsafe_allow_html=True,
         )
     st.markdown("</div></div>", unsafe_allow_html=True)
-
-
-def to_embed_url(url):
-    url = str(url or "").strip()
-    if not url:
-        return ""
-
-    m = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", url)
-    if m:
-        file_id = m.group(1)
-        gid_match = re.search(r"[#?&]gid=([0-9]+)", url)
-        gid = gid_match.group(1) if gid_match else "0"
-        return f"https://docs.google.com/spreadsheets/d/{file_id}/preview?gid={gid}"
-
-    m = re.search(r"/document/d/([a-zA-Z0-9-_]+)", url)
-    if m:
-        file_id = m.group(1)
-        return f"https://docs.google.com/document/d/{file_id}/preview"
-
-    m = re.search(r"/presentation/d/([a-zA-Z0-9-_]+)", url)
-    if m:
-        file_id = m.group(1)
-        return f"https://docs.google.com/presentation/d/{file_id}/preview"
-
-    m = re.search(r"[?&]id=([a-zA-Z0-9-_]+)", url)
-    if "drive.google.com" in url and m:
-        file_id = m.group(1)
-        return f"https://drive.google.com/file/d/{file_id}/preview"
-
-    m = re.search(r"/file/d/([a-zA-Z0-9-_]+)", url)
-    if m:
-        file_id = m.group(1)
-        return f"https://drive.google.com/file/d/{file_id}/preview"
-
-    return url
-
-
-def render_embedded_preview(url, height=900):
-    embed_url = to_embed_url(url)
-    if embed_url:
-        st.markdown("#### Vista previa")
-        st.components.v1.iframe(embed_url, height=height, scrolling=True)
 
 
 def create_master_session(sessiontype, templateid, prefixname, processtitle):
@@ -989,26 +931,43 @@ def find_locator_confirmation(locator_raw):
     year_folder = find_child_folder(parsed["root_id"], parsed["year_folder_name"])
     if not year_folder:
         log_lines.append(f"❌ No existe la carpeta de año: {parsed['year_folder_name']}")
-        return {"status": "missing_year", "parsed": parsed, "log": log_lines}
+        return {
+            "status": "missing_year",
+            "parsed": parsed,
+            "log": log_lines,
+        }
     log_lines.append(f"✅ Carpeta de año encontrada: {parsed['year_folder_name']}")
 
     boat_folder = find_child_folder(year_folder["id"], parsed["boat_name"])
     if not boat_folder:
         log_lines.append(f"❌ No existe la carpeta del barco: {parsed['boat_name']}")
-        return {"status": "missing_boat", "parsed": parsed, "log": log_lines}
+        return {
+            "status": "missing_boat",
+            "parsed": parsed,
+            "log": log_lines,
+        }
     log_lines.append(f"✅ Carpeta de barco encontrada: {parsed['boat_name']}")
 
     file_obj = find_file_by_name(boat_folder["id"], parsed["file_name"])
     if not file_obj:
         log_lines.append(f"❌ No existe el archivo: {parsed['file_name']}")
-        return {"status": "missing_file", "parsed": parsed, "log": log_lines}
+        return {
+            "status": "missing_file",
+            "parsed": parsed,
+            "log": log_lines,
+        }
     log_lines.append(f"✅ Archivo encontrado: {parsed['file_name']}")
 
     sheets = get_sheet_titles_with_ids(file_obj["id"])
     target_sheet = next((s for s in sheets if s["title"].strip() == parsed["sheet_name"].strip()), None)
     if not target_sheet:
         log_lines.append(f"❌ No existe la pestaña/localizador: {parsed['sheet_name']}")
-        return {"status": "missing_locator", "parsed": parsed, "file": file_obj, "log": log_lines}
+        return {
+            "status": "missing_locator",
+            "parsed": parsed,
+            "file": file_obj,
+            "log": log_lines,
+        }
 
     final_url = build_sheet_tab_url(file_obj["id"], target_sheet["sheetId"])
     log_lines.append(f"✅ Pestaña encontrada: {parsed['sheet_name']}")
@@ -1156,610 +1115,537 @@ def extract_informe_por_barco(spreadsheet_id, spreadsheet_name):
 
 
 # ============================================================
-# HANDLE QUERY PARAMS
-# ============================================================
-_qp = st.query_params.to_dict()
-_action = _qp.get("action", "")
-if _action and st.session_state.get("authenticated"):
-    st.query_params.clear()
-    if _action in ACTION_TO_PANEL:
-        open_panel(ACTION_TO_PANEL[_action])
-    elif _action in ACTION_TO_SESSION:
-        sessiontype, templateid, prefixname, processtitle = ACTION_TO_SESSION[_action]
-        st.session_state["_pending_session"] = (sessiontype, templateid, prefixname, processtitle)
-
-
-# ============================================================
 # CSS
 # ============================================================
 st.markdown(
     """
     <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
 
-* { box-sizing: border-box; }
+    * { box-sizing: border-box; }
 
-html, body, [class*="css"] {
-    font-family: 'DM Sans', sans-serif;
-    background: #FFFFFF !important;
-}
-
-[data-testid="stAppViewContainer"] { background: #FFFFFF !important; }
-[data-testid="stHeader"] { background: transparent !important; }
-section[data-testid="stSidebar"] { display: none !important; }
-
-.block-container, section.stMain > .block-container, .stMainBlockContainer, [data-testid="stMainBlockContainer"] {
-    padding-top: 0rem !important;
-    padding-bottom: 1rem !important;
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
-    max-width: 1900px !important;
-    margin: 0 auto !important;
-}
-
-.login-page {
-    min-height: auto;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding: 0.2rem 1rem 1rem;
-}
-
-.login-shell { width: 100%; max-width: 390px; margin: 0 auto; }
-.login-head { text-align: center; margin-bottom: 0.55rem; }
-.login-logo { height: 56px; width: auto; margin: 0 auto 0.65rem auto; display: block; }
-.login-title { font-size: 1.08rem; font-weight: 800; color: #1F2937; }
-.login-subtitle { font-size: 0.78rem; color: #667085; margin-top: 0.28rem; }
-.login-form-box { background: transparent !important; border: none !important; padding: 0 !important; }
-.login-note { margin-top: 0.65rem; text-align: center; font-size: 0.72rem; color: #8A93A5; }
-
-div[data-testid="stTextInput"] label,
-div[data-testid="stSelectbox"] label,
-div[data-testid="stDateInput"] label,
-div[data-testid="stNumberInput"] label {
-    color: #334155 !important;
-    font-size: 0.80rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.01em;
-}
-
-div[data-testid="stTextInput"] input,
-div[data-testid="stDateInput"] input,
-div[data-testid="stNumberInput"] input,
-div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-    background: #FFFFFF !important;
-    border: 1.6px solid #CBD5E1 !important;
-    border-radius: 14px !important;
-    color: #1F2937 !important;
-    min-height: 46px !important;
-    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05) !important;
-    font-family: 'DM Sans', sans-serif !important;
-    font-size: 0.90rem !important;
-    font-weight: 600 !important;
-    transition: all 0.18s ease !important;
-}
-
-div[data-testid="stTextInput"] input:focus,
-div[data-testid="stDateInput"] input:focus,
-div[data-testid="stNumberInput"] input:focus,
-div[data-testid="stSelectbox"] div[data-baseweb="select"] > div:focus-within {
-    border-color: #2563EB !important;
-    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14), 0 8px 18px rgba(37, 99, 235, 0.10) !important;
-    background: #FFFFFF !important;
-}
-
-div.stButton { width: fit-content !important; }
-
-div.stButton button,
-div[data-testid="stFormSubmitButton"] button,
-.logout-btn div button,
-.download-btn button {
-    border-radius: 999px !important;
-    min-height: 42px !important;
-    padding: 0 1.15rem !important;
-    font-size: 0.83rem !important;
-    font-weight: 800 !important;
-    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08) !important;
-    font-family: 'DM Sans', sans-serif !important;
-    letter-spacing: 0.01em !important;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease !important;
-    border: 1.5px solid transparent !important;
-}
-
-div.stButton button:hover,
-div[data-testid="stFormSubmitButton"] button:hover,
-.download-btn button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12) !important;
-    filter: saturate(1.04);
-}
-
-div.stButton button:focus,
-div[data-testid="stFormSubmitButton"] button:focus,
-.download-btn button:focus {
-    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14), 0 8px 18px rgba(37, 99, 235, 0.10) !important;
-}
-
-.portal-header {
-    padding: 0.1rem 0 0.55rem 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 0.55rem;
-}
-
-.portal-header-left { display: flex; align-items: center; gap: 0.9rem; }
-.portal-logo { height: 42px; width: auto; object-fit: contain; display: block; }
-
-.portal-title, .portal-title-en {
-    font-size: 0.96rem;
-    font-weight: 800;
-    color: #1F2937;
-    line-height: 1.15;
-}
-
-.portal-title-en { margin-top: 0.12rem; }
-.portal-subtitle, .portal-subtitle-en { font-size: 0.72rem; color: #667085; line-height: 1.2; }
-.portal-subtitle { margin-top: 0.12rem; }
-.portal-subtitle-en { margin-top: 0.08rem; }
-.user-top { font-size: 0.72rem; color: #566079; white-space: nowrap; }
-.main-content { padding: 0; }
-
-.section-head-row, .section-head-row-green {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 0.55rem;
-    margin-bottom: 0.75rem;
-    flex-wrap: wrap;
-}
-
-.section-head-row-green { margin-top: -0.15rem; }
-
-.section-eyebrow {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.34rem 0.74rem;
-    border-radius: 999px;
-    background: #E0ECFF;
-    border: 1px solid #BFD4FF;
-    color: #1E4FBF;
-    font-size: 0.66rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-bottom: 0 !important;
-}
-
-.web-chip, .web-chip-green {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.38rem 0.82rem;
-    border-radius: 999px;
-    font-size: 0.71rem;
-    font-weight: 800;
-    line-height: 1;
-    text-decoration: none;
-    white-space: nowrap;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
-}
-
-.web-chip {
-    background: #FFE69A;
-    border: 1px solid #F2C94C;
-    color: #7A5900 !important;
-}
-
-.web-chip-green {
-    background: #DDF7E6;
-    border: 1px solid #9FDEB4;
-    color: #17663B !important;
-}
-
-.user-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin: 0.02rem 0 1rem;
-    padding: 0.42rem 0.78rem;
-    border-radius: 999px;
-    background: #fff;
-    border: 1px solid #D9E2EC;
-    font-size: 0.73rem;
-    font-weight: 700;
-    color: #4B5565;
-    max-width: 100%;
-    word-break: break-word;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
-}
-
-.panel-inline {
-    background: linear-gradient(180deg, #FFFFFF 0%, #FAFBFD 100%);
-    border: 1px solid #DCE5F0;
-    border-radius: 22px;
-    padding: 1rem 1rem 1.1rem 1rem;
-    margin-top: 0.95rem;
-    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.05);
-}
-
-.panel-inline h3 {
-    font-family: 'DM Sans', sans-serif !important;
-    font-weight: 800 !important;
-    color: #1F2937 !important;
-    margin-bottom: 0.65rem !important;
-    font-size: 1rem !important;
-}
-
-.action-box {
-    width: 100%;
-    min-height: 20px;
-    border-radius: 22px;
-    padding: 1rem;
-    margin-bottom: 0.85rem;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 0.9rem;
-    border: 1px solid transparent;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
-}
-
-.card-es {
-    background: #EAF3FF;
-    border-color: #BFD7FF;
-    --card-btn-bg: #EAF3FF;
-    --card-btn-border: #9CC3FF;
-    --card-btn-text: #1E4E93;
-    --card-btn-hover-bg: #1E4E93;
-    --card-btn-hover-border: #163B70;
-    --card-btn-hover-text: #FFFFFF;
-    --card-btn-shadow: rgba(30, 78, 147, 0.16);
-}
-
-.card-grupos {
-    background: #EAF8EE;
-    border-color: #BDE3C7;
-    --card-btn-bg: #EAF8EE;
-    --card-btn-border: #9ED1AE;
-    --card-btn-text: #1F6A3A;
-    --card-btn-hover-bg: #1F6A3A;
-    --card-btn-hover-border: #174E2B;
-    --card-btn-hover-text: #FFFFFF;
-    --card-btn-shadow: rgba(31, 106, 58, 0.15);
-}
-
-.card-salida {
-    background: #FFF2E3;
-    border-color: #F1CFA9;
-    --card-btn-bg: #FFF2E3;
-    --card-btn-border: #EDBB84;
-    --card-btn-text: #8A5318;
-    --card-btn-hover-bg: #8A5318;
-    --card-btn-hover-border: #6E4011;
-    --card-btn-hover-text: #FFFFFF;
-    --card-btn-shadow: rgba(138, 83, 24, 0.16);
-}
-
-.card-crucero {
-    background: #F0EAFE;
-    border-color: #D3C4FA;
-    --card-btn-bg: #F0EAFE;
-    --card-btn-border: #BDA7F6;
-    --card-btn-text: #5A3E9E;
-    --card-btn-hover-bg: #5A3E9E;
-    --card-btn-hover-border: #432D78;
-    --card-btn-hover-text: #FFFFFF;
-    --card-btn-shadow: rgba(90, 62, 158, 0.16);
-}
-
-.card-nueva-agencia {
-    background: #EAF8EF;
-    border-color: #BEE3C9;
-    --card-btn-bg: #EAF8EF;
-    --card-btn-border: #9CCFB0;
-    --card-btn-text: #256245;
-    --card-btn-hover-bg: #256245;
-    --card-btn-hover-border: #1A4A33;
-    --card-btn-hover-text: #FFFFFF;
-    --card-btn-shadow: rgba(37, 98, 69, 0.16);
-}
-
-.card-buscar-agencia {
-    background: #FFF1E5;
-    border-color: #F1D1B0;
-    --card-btn-bg: #FFF1E5;
-    --card-btn-border: #EABB8A;
-    --card-btn-text: #8B5620;
-    --card-btn-hover-bg: #8B5620;
-    --card-btn-hover-border: #6D4117;
-    --card-btn-hover-text: #FFFFFF;
-    --card-btn-shadow: rgba(139, 86, 32, 0.16);
-}
-
-.card-cvcfit {
-    background: #FDECF3;
-    border-color: #F1C3D6;
-    --card-btn-bg: #FDECF3;
-    --card-btn-border: #E9A7C4;
-    --card-btn-text: #9B3A63;
-    --card-btn-hover-bg: #9B3A63;
-    --card-btn-hover-border: #7A294C;
-    --card-btn-hover-text: #FFFFFF;
-    --card-btn-shadow: rgba(155, 58, 99, 0.16);
-}
-
-.card-cvcagencias {
-    background: #EBF8EF;
-    border-color: #BFE1C9;
-    --card-btn-bg: #EBF8EF;
-    --card-btn-border: #9FD0AE;
-    --card-btn-text: #2C6A44;
-    --card-btn-hover-bg: #2C6A44;
-    --card-btn-hover-border: #1F5031;
-    --card-btn-hover-text: #FFFFFF;
-    --card-btn-shadow: rgba(44, 106, 68, 0.16);
-}
-
-.card-irconfirmacion {
-    background: #F0F3F8;
-    border-color: #CFD8E6;
-    --card-btn-bg: #F0F3F8;
-    --card-btn-border: #B8C6DC;
-    --card-btn-text: #4A5874;
-    --card-btn-hover-bg: #4A5874;
-    --card-btn-hover-border: #374359;
-    --card-btn-hover-text: #FFFFFF;
-    --card-btn-shadow: rgba(74, 88, 116, 0.16);
-}
-
-.card-informebarco {
-    background: #EAF7FB;
-    border-color: #BFDDE8;
-    --card-btn-bg: #EAF7FB;
-    --card-btn-border: #9BCCE0;
-    --card-btn-text: #2B6881;
-    --card-btn-hover-bg: #2B6881;
-    --card-btn-hover-border: #1E4E61;
-    --card-btn-hover-text: #FFFFFF;
-    --card-btn-shadow: rgba(43, 104, 129, 0.16);
-}
-
-.action-top { display: flex; align-items: flex-start; gap: 0.75rem; }
-.action-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    flex-shrink: 0;
-    background: rgba(255,255,255,0.42);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
-}
-
-.action-text { display: flex; flex-direction: column; gap: 0.12rem; min-width: 0; }
-
-.action-title,
-.action-title-en {
-    font-family: 'DM Sans', sans-serif !important;
-    line-height: 1.1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.action-title {
-    font-size: 0.96rem;
-    font-weight: 800;
-    color: #1F2937;
-}
-
-.action-title-en {
-    margin-top: 0.08rem;
-    color: #41506B;
-    font-size: 0.83rem;
-    font-weight: 700;
-}
-
-.action-button-wrap {
-    display: flex !important;
-    justify-content: flex-start !important;
-    align-items: center !important;
-    width: 100% !important;
-    margin-top: 0.1rem;
-}
-
-.action-button-wrap a.done-link {
-    margin-top: 0 !important;
-}
-
-.done-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    border-radius: 999px;
-    padding: 0.48rem 0.96rem;
-    font-size: 0.82rem;
-    font-weight: 800;
-    font-family: 'DM Sans', sans-serif !important;
-    text-decoration: none;
-    white-space: nowrap;
-    box-shadow: 0 5px 14px rgba(15, 23, 42, 0.08);
-    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-    border: 1.5px solid transparent;
-}
-
-.done-link:hover {
-    transform: translateY(-1px);
-}
-
-.card-es .card-btn { background: var(--card-btn-bg); border-color: var(--card-btn-border); color: var(--card-btn-text); }
-.card-grupos .card-btn { background: var(--card-btn-bg); border-color: var(--card-btn-border); color: var(--card-btn-text); }
-.card-salida .card-btn { background: var(--card-btn-bg); border-color: var(--card-btn-border); color: var(--card-btn-text); }
-.card-crucero .card-btn { background: var(--card-btn-bg); border-color: var(--card-btn-border); color: var(--card-btn-text); }
-.card-nueva-agencia .card-btn { background: var(--card-btn-bg); border-color: var(--card-btn-border); color: var(--card-btn-text); }
-.card-buscar-agencia .card-btn { background: var(--card-btn-bg); border-color: var(--card-btn-border); color: var(--card-btn-text); }
-.card-cvcfit .card-btn { background: var(--card-btn-bg); border-color: var(--card-btn-border); color: var(--card-btn-text); }
-.card-cvcagencias .card-btn { background: var(--card-btn-bg); border-color: var(--card-btn-border); color: var(--card-btn-text); }
-.card-irconfirmacion .card-btn { background: var(--card-btn-bg); border-color: var(--card-btn-border); color: var(--card-btn-text); }
-.card-informebarco .card-btn { background: var(--card-btn-bg); border-color: var(--card-btn-border); color: var(--card-btn-text); }
-
-.card-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    border-radius: 999px;
-    padding: 0.48rem 0.96rem;
-    font-size: 0.82rem;
-    font-weight: 800;
-    font-family: 'DM Sans', sans-serif;
-    text-decoration: none;
-    white-space: nowrap;
-    border: 1.5px solid transparent;
-    cursor: pointer;
-    box-shadow: 0 5px 14px rgba(15, 23, 42, 0.08);
-    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.card-es .card-btn:hover { background: var(--card-btn-hover-bg) !important; border-color: var(--card-btn-hover-border) !important; color: var(--card-btn-hover-text) !important; transform: translateY(-1px); box-shadow: 0 10px 22px var(--card-btn-shadow) !important; }
-.card-grupos .card-btn:hover { background: var(--card-btn-hover-bg) !important; border-color: var(--card-btn-hover-border) !important; color: var(--card-btn-hover-text) !important; transform: translateY(-1px); box-shadow: 0 10px 22px var(--card-btn-shadow) !important; }
-.card-salida .card-btn:hover { background: var(--card-btn-hover-bg) !important; border-color: var(--card-btn-hover-border) !important; color: var(--card-btn-hover-text) !important; transform: translateY(-1px); box-shadow: 0 10px 22px var(--card-btn-shadow) !important; }
-.card-crucero .card-btn:hover { background: var(--card-btn-hover-bg) !important; border-color: var(--card-btn-hover-border) !important; color: var(--card-btn-hover-text) !important; transform: translateY(-1px); box-shadow: 0 10px 22px var(--card-btn-shadow) !important; }
-.card-nueva-agencia .card-btn:hover { background: var(--card-btn-hover-bg) !important; border-color: var(--card-btn-hover-border) !important; color: var(--card-btn-hover-text) !important; transform: translateY(-1px); box-shadow: 0 10px 22px var(--card-btn-shadow) !important; }
-.card-buscar-agencia .card-btn:hover { background: var(--card-btn-hover-bg) !important; border-color: var(--card-btn-hover-border) !important; color: var(--card-btn-hover-text) !important; transform: translateY(-1px); box-shadow: 0 10px 22px var(--card-btn-shadow) !important; }
-.card-cvcfit .card-btn:hover { background: var(--card-btn-hover-bg) !important; border-color: var(--card-btn-hover-border) !important; color: var(--card-btn-hover-text) !important; transform: translateY(-1px); box-shadow: 0 10px 22px var(--card-btn-shadow) !important; }
-.card-cvcagencias .card-btn:hover { background: var(--card-btn-hover-bg) !important; border-color: var(--card-btn-hover-border) !important; color: var(--card-btn-hover-text) !important; transform: translateY(-1px); box-shadow: 0 10px 22px var(--card-btn-shadow) !important; }
-.card-irconfirmacion .card-btn:hover { background: var(--card-btn-hover-bg) !important; border-color: var(--card-btn-hover-border) !important; color: var(--card-btn-hover-text) !important; transform: translateY(-1px); box-shadow: 0 10px 22px var(--card-btn-shadow) !important; }
-.card-informebarco .card-btn:hover { background: var(--card-btn-hover-bg) !important; border-color: var(--card-btn-hover-border) !important; color: var(--card-btn-hover-text) !important; transform: translateY(-1px); box-shadow: 0 10px 22px var(--card-btn-shadow) !important; }
-
-.panel-inline div.stButton button,
-.panel-inline div[data-testid="stFormSubmitButton"] button,
-.panel-inline .download-btn button,
-.panel-inline .stDownloadButton button {
-    background: linear-gradient(180deg, #2F6DF6 0%, #245FE0 100%) !important;
-    color: #FFFFFF !important;
-    border: 1.5px solid #1E4FC7 !important;
-    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.22) !important;
-    font-family: 'DM Sans', sans-serif !important;
-}
-
-.panel-inline div.stButton button:hover,
-.panel-inline div[data-testid="stFormSubmitButton"] button:hover,
-.panel-inline .stDownloadButton button:hover {
-    filter: brightness(1.03);
-    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.26) !important;
-}
-
-.agency-card, .cvcfit-card, .cvcfit-status-card, .cvcagencias-card, .cvcagencias-status-card, .process-card, .irconfirmacion-card, .informebarco-card {
-    background: #FBFCFF;
-    border: 1px solid #DCE5F0;
-    border-radius: 18px;
-    padding: 1rem;
-    margin-top: 0.75rem;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
-}
-
-.agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid, .irconfirmacion-grid, .informebarco-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.85rem 1rem;
-}
-
-.agency-item-label, .cvcfit-item-label, .cvcagencias-item-label, .process-item-label, .irconfirmacion-item-label, .informebarco-item-label {
-    font-size: 0.68rem;
-    color: #64748B;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin-bottom: 0.16rem;
-    font-weight: 700;
-}
-
-.agency-item-value, .cvcfit-item-value, .cvcagencias-item-value, .process-item-value, .irconfirmacion-item-value, .informebarco-item-value {
-    font-size: 0.82rem;
-    color: #1F2937;
-    line-height: 1.35;
-    word-break: break-word;
-    font-weight: 600;
-}
-
-.cvcfit-log-line, .cvcagencias-log-line, .irconfirmacion-log-line {
-    font-size: 0.74rem;
-    color: #465066;
-    line-height: 1.45;
-    margin-bottom: 0.35rem;
-    word-break: break-word;
-}
-
-.report-table-wrap { margin-top: 1rem; overflow-x: auto; }
-
-.report-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #fff;
-    border: 1px solid #DCE5F0;
-    border-radius: 16px;
-    overflow: hidden;
-}
-
-.report-table th, .report-table td {
-    font-size: 0.76rem;
-    padding: 0.65rem 0.7rem;
-    border-bottom: 1px solid #EEF2F7;
-    text-align: left;
-    vertical-align: top;
-}
-
-.report-table th {
-    background: #F5F8FC;
-    color: #334155;
-    font-weight: 800;
-    white-space: nowrap;
-}
-
-.report-table td {
-    color: #1F2937;
-    font-weight: 500;
-}
-
-.portal-footer {
-    margin-top: 1rem;
-    padding: 0.5rem 0 0 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 0.8rem;
-    flex-wrap: wrap;
-}
-
-.footer-text { font-size: 0.71rem; color: #A2ABBD; }
-
-@media (max-width: 1600px) {
-    .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid, .irconfirmacion-grid, .informebarco-grid {
-        grid-template-columns: 1fr;
+    html, body, [class*="css"] {
+        font-family: 'DM Sans', sans-serif;
+        background: #FFFFFF !important;
     }
-}
 
-@media (max-width: 1300px) {
-    .portal-header, .portal-footer {
-        flex-direction: column;
+    [data-testid="stAppViewContainer"] { background: #FFFFFF !important; }
+    [data-testid="stHeader"] { background: transparent !important; }
+    section[data-testid="stSidebar"] { display: none !important; }
+
+    .block-container, section.stMain > .block-container, .stMainBlockContainer, [data-testid="stMainBlockContainer"] {
+        padding-top: 0rem !important;
+        padding-bottom: 1rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        max-width: 1900px !important;
+        margin: 0 auto !important;
+    }
+
+    .login-page {
+        min-height: auto;
+        display: flex;
         align-items: flex-start;
+        justify-content: center;
+        padding: 0.2rem 1rem 1rem;
     }
+
+    .login-shell { width: 100%; max-width: 390px; margin: 0 auto; }
+    .login-head { text-align: center; margin-bottom: 0.55rem; }
+    .login-logo { height: 56px; width: auto; margin: 0 auto 0.65rem auto; display: block; }
+    .login-title { font-size: 1.08rem; font-weight: 800; color: #1F2937; }
+    .login-subtitle { font-size: 0.78rem; color: #667085; margin-top: 0.28rem; }
+    .login-form-box { background: transparent !important; border: none !important; padding: 0 !important; }
+    .login-note { margin-top: 0.65rem; text-align: center; font-size: 0.72rem; color: #8A93A5; }
+
+    div[data-testid="stTextInput"] label,
+    div[data-testid="stSelectbox"] label,
+    div[data-testid="stDateInput"] label,
+    div[data-testid="stNumberInput"] label {
+        color: #334155 !important;
+        font-size: 0.80rem !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.01em;
+    }
+
+    div[data-testid="stTextInput"] input,
+    div[data-testid="stDateInput"] input,
+    div[data-testid="stNumberInput"] input,
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+        background: #FFFFFF !important;
+        border: 1.6px solid #CBD5E1 !important;
+        border-radius: 14px !important;
+        color: #1F2937 !important;
+        min-height: 46px !important;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05) !important;
+        font-family: 'DM Sans', sans-serif !important;
+        font-size: 0.90rem !important;
+        font-weight: 600 !important;
+        transition: all 0.18s ease !important;
+    }
+
+    div[data-testid="stTextInput"] input:focus,
+    div[data-testid="stDateInput"] input:focus,
+    div[data-testid="stNumberInput"] input:focus,
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div:focus-within {
+        border-color: #2563EB !important;
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14), 0 8px 18px rgba(37, 99, 235, 0.10) !important;
+        background: #FFFFFF !important;
+    }
+
+    div.stButton { width: fit-content !important; }
+
+    div.stButton button,
+    div[data-testid="stFormSubmitButton"] button,
+    .logout-btn div button,
+    .download-btn button {
+        border-radius: 999px !important;
+        min-height: 42px !important;
+        padding: 0 1.15rem !important;
+        font-size: 0.83rem !important;
+        font-weight: 800 !important;
+        box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08) !important;
+        font-family: 'DM Sans', sans-serif !important;
+        letter-spacing: 0.01em !important;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease !important;
+        border: 4.5px solid transparent !important;
+    }
+
+    div.stButton button:hover,
+    div[data-testid="stFormSubmitButton"] button:hover,
+    .download-btn button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12) !important;
+        filter: saturate(1.04);
+    }
+
+    div.stButton button:focus,
+    div[data-testid="stFormSubmitButton"] button:focus,
+    .download-btn button:focus {
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14), 0 8px 18px rgba(37, 99, 235, 0.10) !important;
+    }
+
+    .portal-header {
+        padding: 0.1rem 0 0.55rem 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.55rem;
+    }
+
+    .portal-header-left { display: flex; align-items: center; gap: 0.9rem; }
+    .portal-logo { height: 42px; width: auto; object-fit: contain; display: block; }
+
+    .portal-title, .portal-title-en {
+        font-size: 0.96rem;
+        font-weight: 800;
+        color: #1F2937;
+        line-height: 1.15;
+    }
+
+    .portal-title-en { margin-top: 0.12rem; }
+    .portal-subtitle, .portal-subtitle-en { font-size: 0.72rem; color: #667085; line-height: 1.2; }
+    .portal-subtitle { margin-top: 0.12rem; }
+    .portal-subtitle-en { margin-top: 0.08rem; }
+    .user-top { font-size: 0.72rem; color: #566079; white-space: nowrap; }
+    .main-content { padding: 0; }
+
+    .section-head-row, .section-head-row-green {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.55rem;
+        margin-bottom: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .section-head-row-green { margin-top: -0.15rem; }
+
+    .section-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.34rem 0.74rem;
+        border-radius: 999px;
+        background: #E0ECFF;
+        border: 1px solid #BFD4FF;
+        color: #1E4FBF;
+        font-size: 0.66rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 0 !important;
+    }
+
+    .web-chip, .web-chip-green {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.38rem 0.82rem;
+        border-radius: 999px;
+        font-size: 0.71rem;
+        font-weight: 800;
+        line-height: 1;
+        text-decoration: none;
+        white-space: nowrap;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    }
+
+    .web-chip {
+        background: #FFE69A;
+        border: 1px solid #F2C94C;
+        color: #7A5900 !important;
+    }
+
+    .web-chip-green {
+        background: #DDF7E6;
+        border: 1px solid #9FDEB4;
+        color: #17663B !important;
+    }
+
+    .user-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin: 0.02rem 0 1rem;
+        padding: 0.42rem 0.78rem;
+        border-radius: 999px;
+        background: #fff;
+        border: 1px solid #D9E2EC;
+        font-size: 0.73rem;
+        font-weight: 700;
+        color: #4B5565;
+        max-width: 100%;
+        word-break: break-word;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    }
+
+    .panel-inline {
+        background: linear-gradient(180deg, #FFFFFF 0%, #FAFBFD 100%);
+        border: 1px solid #DCE5F0;
+        border-radius: 22px;
+        padding: 1rem 1rem 1.1rem 1rem;
+        margin-top: 0.95rem;
+        box-shadow: 0 8px 28px rgba(15, 23, 42, 0.05);
+    }
+
+    .panel-inline h3 {
+        font-family: 'DM Sans', sans-serif !important;
+        font-weight: 800 !important;
+        color: #1F2937 !important;
+        margin-bottom: 0.65rem !important;
+        font-size: 1rem !important;
+    }
+
+    .action-box {
+        width: 100%;
+        min-height: 20px;
+        border-radius: 22px;
+        padding: 1rem;
+        margin-bottom: 0.85rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 0.9rem;
+        border: 1px solid transparent;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+    }
+
+    .card-es {
+        background: #EAF3FF;
+        border-color: #BFD7FF;
+        --card-btn-bg: #CFE3FF;
+        --card-btn-border: #94BEFF;
+        --card-btn-text: #1E4E93;
+        --card-btn-shadow: rgba(30, 78, 147, 0.16);
+    }
+
+    .card-grupos {
+        background: #EAF8EE;
+        border-color: #BDE3C7;
+        --card-btn-bg: #CDEFD7;
+        --card-btn-border: #93D0A7;
+        --card-btn-text: #1F6A3A;
+        --card-btn-shadow: rgba(31, 106, 58, 0.15);
+    }
+
+    .card-salida {
+        background: #FFF2E3;
+        border-color: #F1CFA9;
+        --card-btn-bg: #FFDDB8;
+        --card-btn-border: #F1B97B;
+        --card-btn-text: #8A5318;
+        --card-btn-shadow: rgba(138, 83, 24, 0.16);
+    }
+
+    .card-crucero {
+        background: #F0EAFE;
+        border-color: #D3C4FA;
+        --card-btn-bg: #DDD0FF;
+        --card-btn-border: #B9A0F8;
+        --card-btn-text: #5A3E9E;
+        --card-btn-shadow: rgba(90, 62, 158, 0.16);
+    }
+
+    .card-nueva-agencia {
+        background: #EAF8EF;
+        border-color: #BEE3C9;
+        --card-btn-bg: #D0EFDA;
+        --card-btn-border: #98D0AA;
+        --card-btn-text: #256245;
+        --card-btn-shadow: rgba(37, 98, 69, 0.16);
+    }
+
+    .card-buscar-agencia {
+        background: #FFF1E5;
+        border-color: #F1D1B0;
+        --card-btn-bg: #FFDDBF;
+        --card-btn-border: #F0B77E;
+        --card-btn-text: #8B5620;
+        --card-btn-shadow: rgba(139, 86, 32, 0.16);
+    }
+
+    .card-cvcfit {
+        background: #FDECF3;
+        border-color: #F1C3D6;
+        --card-btn-bg: #F7D2E2;
+        --card-btn-border: #E89BBB;
+        --card-btn-text: #9B3A63;
+        --card-btn-shadow: rgba(155, 58, 99, 0.16);
+    }
+
+    .card-cvcagencias {
+        background: #EBF8EF;
+        border-color: #BFE1C9;
+        --card-btn-bg: #D0EFD8;
+        --card-btn-border: #97D0A9;
+        --card-btn-text: #2C6A44;
+        --card-btn-shadow: rgba(44, 106, 68, 0.16);
+    }
+
+    .card-irconfirmacion {
+        background: #F0F3F8;
+        border-color: #CFD8E6;
+        --card-btn-bg: #E0E7F1;
+        --card-btn-border: #B8C6DC;
+        --card-btn-text: #4A5874;
+        --card-btn-shadow: rgba(74, 88, 116, 0.16);
+    }
+
+    .card-informebarco {
+        background: #EAF7FB;
+        border-color: #BFDDE8;
+        --card-btn-bg: #D2EDF6;
+        --card-btn-border: #97CEE0;
+        --card-btn-text: #2B6881;
+        --card-btn-shadow: rgba(43, 104, 129, 0.16);
+    }
+
+    .action-top { display: flex; align-items: flex-start; gap: 0.75rem; }
+    .action-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        flex-shrink: 0;
+        background: rgba(255,255,255,0.42);
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
+    }
+
+    .action-text { display: flex; flex-direction: column; gap: 0.12rem; min-width: 0; }
+
+    .action-title,
+    .action-title-en {
+        font-family: 'DM Sans', sans-serif !important;
+        line-height: 1.1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .action-title {
+        font-size: 0.96rem;
+        font-weight: 800;
+        color: #1F2937;
+    }
+
+    .action-title-en {
+        margin-top: 0.08rem;
+        color: #41506B;
+        font-size: 0.83rem;
+        font-weight: 700;
+    }
+
+    .action-button-wrap {
+        display: flex !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        width: 100% !important;
+        margin-top: 0.1rem;
+    }
+
+    .action-button-wrap a.done-link {
+        margin-top: 0 !important;
+    }
+
+    .done-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border-radius: 999px;
+        padding: 0.48rem 0.96rem;
+        font-size: 0.82rem;
+        font-weight: 800;
+        font-family: 'DM Sans', sans-serif !important;
+        text-decoration: none;
+        white-space: nowrap;
+        box-shadow: 0 5px 14px rgba(15, 23, 42, 0.08);
+        transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    }
+
+    .done-link:hover {
+        transform: translateY(-1px);
+        filter: saturate(1.04);
+    }
+
+.action-box div.stButton button,
+.action-box .done-link {
+    background: var(--card-btn-bg) !important;
+    border: 1.5px solid var(--card-btn-border) !important;
+    color: var(--card-btn-text) !important;
+    box-shadow: 0 6px 14px var(--card-btn-shadow) !important;
+    font-family: 'DM Sans', sans-serif !important;
 }
+
+.action-box div.stButton button:hover,
+.action-box .done-link:hover {
+    background: var(--card-btn-hover-bg) !important;
+    border-color: var(--card-btn-hover-border) !important;
+    color: var(--card-btn-hover-text) !important;
+    box-shadow: 0 10px 22px var(--card-btn-shadow) !important;
+    transform: translateY(-1px);
+    filter: none !important;
+}
+    .panel-inline div.stButton button,
+    .panel-inline div[data-testid="stFormSubmitButton"] button,
+    .panel-inline .download-btn button,
+    .panel-inline .stDownloadButton button {
+        background: linear-gradient(180deg, #2F6DF6 0%, #245FE0 100%) !important;
+        color: #FFFFFF !important;
+        border: 1.5px solid #1E4FC7 !important;
+        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.22) !important;
+        font-family: 'DM Sans', sans-serif !important;
+    }
+
+    .panel-inline div.stButton button:hover,
+    .panel-inline div[data-testid="stFormSubmitButton"] button:hover,
+    .panel-inline .stDownloadButton button:hover {
+        filter: brightness(1.03);
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.26) !important;
+    }
+
+    .agency-card, .cvcfit-card, .cvcfit-status-card, .cvcagencias-card, .cvcagencias-status-card, .process-card, .irconfirmacion-card, .informebarco-card {
+        background: #FBFCFF;
+        border: 1px solid #DCE5F0;
+        border-radius: 18px;
+        padding: 1rem;
+        margin-top: 0.75rem;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+    }
+
+    .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid, .irconfirmacion-grid, .informebarco-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.85rem 1rem;
+    }
+
+    .agency-item-label, .cvcfit-item-label, .cvcagencias-item-label, .process-item-label, .irconfirmacion-item-label, .informebarco-item-label {
+        font-size: 0.68rem;
+        color: #64748B;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.16rem;
+        font-weight: 700;
+    }
+
+    .agency-item-value, .cvcfit-item-value, .cvcagencias-item-value, .process-item-value, .irconfirmacion-item-value, .informebarco-item-value {
+        font-size: 0.82rem;
+        color: #1F2937;
+        line-height: 1.35;
+        word-break: break-word;
+        font-weight: 600;
+    }
+
+    .cvcfit-log-line, .cvcagencias-log-line, .irconfirmacion-log-line {
+        font-size: 0.74rem;
+        color: #465066;
+        line-height: 1.45;
+        margin-bottom: 0.35rem;
+        word-break: break-word;
+    }
+
+    .report-table-wrap { margin-top: 1rem; overflow-x: auto; }
+
+    .report-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #fff;
+        border: 1px solid #DCE5F0;
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .report-table th, .report-table td {
+        font-size: 0.76rem;
+        padding: 0.65rem 0.7rem;
+        border-bottom: 1px solid #EEF2F7;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    .report-table th {
+        background: #F5F8FC;
+        color: #334155;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .report-table td {
+        color: #1F2937;
+        font-weight: 500;
+    }
+
+    .portal-footer {
+        margin-top: 1rem;
+        padding: 0.5rem 0 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+    }
+
+    .footer-text { font-size: 0.71rem; color: #A2ABBD; }
+
+    @media (max-width: 1600px) {
+        .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid, .irconfirmacion-grid, .informebarco-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 1300px) {
+        .portal-header, .portal-footer {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
     </style>
     """,
     unsafe_allow_html=True,
 )
-
-
-# ============================================================
-# EJECUTAR SESION PENDIENTE
-# ============================================================
-if st.session_state.get("_pending_session"):
-    sessiontype, templateid, prefixname, processtitle = st.session_state.pop("_pending_session")
-    create_master_session(sessiontype, templateid, prefixname, processtitle)
 
 
 # ============================================================
@@ -1858,8 +1744,8 @@ st.markdown(
         <a class="web-chip-green" href="{cvcfit_folder_url}" target="_blank" rel="noopener noreferrer">Abre Folder Sesiones</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER_CABINAS</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre EXCURSIONES</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44_WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER CLIENTES</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCR_HJr9TCD7VWrGI6nDhMtwi27cMJL_1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre Ventas FIT</a>
+         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44_WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER CLIENTES</a>
+          <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCR_HJr9TCD7VWrGI6nDhMtwi27cMJL_1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre Ventas FIT</a>
     </div>
     """,
     unsafe_allow_html=True,
@@ -1873,12 +1759,9 @@ st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe
 # ============================================================
 def render_action_card(col, config):
     with col:
-        action_url = f"?action={config['action_key']}"
-        btn_html = f'<a class="card-btn" href="{action_url}">{config["button_label"]}</a>'
-
         st.markdown(
             f"""
-            <div class="action-box {config['card_class']}">
+            <div class="action-box {config['card_class']}" data-card="{config['card_class']}">
                 <div class="action-top">
                     <div class="action-icon">{config['icon']}</div>
                     <div class="action-text">
@@ -1887,12 +1770,25 @@ def render_action_card(col, config):
                     </div>
                 </div>
                 <div class="action-button-wrap">
-                    {btn_html}
-                </div>
-            </div>
             """,
             unsafe_allow_html=True,
         )
+
+        if config.get("link"):
+            st.markdown(
+                f'<a class="done-link" href="{config["link"]}" target="_blank" rel="noopener noreferrer">{config["button_label"]}</a>',
+                unsafe_allow_html=True,
+            )
+        else:
+            disabled = config.get("disabled", False)
+            if not disabled and st.button(config["button_label"], key=config["key"]):
+                action = config.get("action")
+                if action:
+                    action()
+            elif disabled:
+                st.button(config["button_label"], key=config["key"], disabled=True)
+
+        st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 cards = [
@@ -1902,7 +1798,14 @@ cards = [
         "title_es": "Nueva Confirmación",
         "title_en": "New Confirmation",
         "button_label": "Crear Sesión",
-        "action_key": "crear_es",
+        "key": "btncreares",
+        "action": lambda: create_master_session(
+            "es",
+            TEMPLATE_ID_ES,
+            "MASTER",
+            "Crear Sesión MASTER / CONFIRMATION"
+        ),
+        "disabled": False,
     },
     {
         "card_class": "card-grupos",
@@ -1910,7 +1813,14 @@ cards = [
         "title_es": "Nueva Confirmación GRUPOS",
         "title_en": "New GROUPS Confirmation",
         "button_label": "Crear Sesión GRUPOS",
-        "action_key": "crear_grupos",
+        "key": "btncreargrupos",
+        "action": lambda: create_master_session(
+            "grupos",
+            TEMPLATE_ID_GRUPOS,
+            "MASTER GRUPOS",
+            "Crear Sesión MASTER / GROUPS"
+        ),
+        "disabled": False,
     },
     {
         "card_class": "card-salida",
@@ -1918,7 +1828,8 @@ cards = [
         "title_es": "Ir a Salida",
         "title_en": "Go to Departure",
         "button_label": "Buscar Salida",
-        "action_key": "salida",
+        "key": "btnirsalida",
+        "action": lambda: (open_panel("salida"), st.rerun()),
     },
     {
         "card_class": "card-crucero",
@@ -1926,7 +1837,8 @@ cards = [
         "title_es": "Crear Crucero",
         "title_en": "Create Cruise",
         "button_label": "Nuevo Crucero",
-        "action_key": "crucero",
+        "key": "btncrearcruceroopen",
+        "action": lambda: (open_panel("crucero"), st.rerun()),
     },
     {
         "card_class": "card-nueva-agencia",
@@ -1934,7 +1846,8 @@ cards = [
         "title_es": "Nueva Agencia",
         "title_en": "New Agency",
         "button_label": "Nueva Agencia",
-        "action_key": "nuevaagencia",
+        "key": "btnnuevaagencia",
+        "action": lambda: (open_panel("nuevaagencia"), st.rerun()),
     },
     {
         "card_class": "card-buscar-agencia",
@@ -1942,7 +1855,8 @@ cards = [
         "title_es": "Buscar Agencia",
         "title_en": "Find Agency",
         "button_label": "Buscar Agencia",
-        "action_key": "buscaragencia",
+        "key": "btnbuscaragencia",
+        "action": lambda: (open_panel("buscaragencia"), st.rerun()),
     },
     {
         "card_class": "card-cvcfit",
@@ -1950,7 +1864,8 @@ cards = [
         "title_es": "CVC Fit",
         "title_en": "CVC Fit",
         "button_label": "Abrir CVC Fit",
-        "action_key": "cvcfit",
+        "key": "btncvcfitopen",
+        "action": lambda: (open_panel("cvcfit"), st.rerun()),
     },
     {
         "card_class": "card-cvcagencias",
@@ -1958,7 +1873,8 @@ cards = [
         "title_es": "CVC Agencias",
         "title_en": "CVC Agencies",
         "button_label": "Abrir CVC Agencias",
-        "action_key": "cvcagencias",
+        "key": "btncvcagenciasopen",
+        "action": lambda: (open_panel("cvcagencias"), st.rerun()),
     },
     {
         "card_class": "card-irconfirmacion",
@@ -1966,7 +1882,8 @@ cards = [
         "title_es": "Ir a Confirmación",
         "title_en": "Go to Confirmation",
         "button_label": "Buscar Localizador",
-        "action_key": "irconfirmacion",
+        "key": "btnirconfirmacionopen",
+        "action": lambda: (open_panel("irconfirmacion"), st.rerun()),
     },
     {
         "card_class": "card-informebarco",
@@ -1974,10 +1891,12 @@ cards = [
         "title_es": "Informe € por Barco",
         "title_en": "€ Report by Ship",
         "button_label": "Abrir Informe",
-        "action_key": "informebarco",
+        "key": "btninformebarcoopen",
+        "action": lambda: (open_panel("informebarco"), st.rerun()),
     },
 ]
 
+# ANCHOS PERSONALIZADOS
 row1 = st.columns([1.45, 1.45, 1.05, 1.05, 1.10, 1.10], gap="medium")
 for col, card in zip(row1, cards[:6]):
     render_action_card(col, card)
@@ -2006,6 +1925,7 @@ if st.session_state.get("confirmstate") in ["done", "error"]:
 
     if st.session_state.get("confirmstate") == "done":
         st.success("Ok")
+
         render_key_value_grid(
             "process",
             [
@@ -2015,9 +1935,14 @@ if st.session_state.get("confirmstate") in ["done", "error"]:
                 ("Estado", "Creada correctamente"),
             ],
         )
+
         final_url = process_result.get("url", "")
         if final_url:
-            render_embedded_preview(final_url, height=900)
+            st.markdown(
+                f'<a class="done-link" href="{final_url}" target="_blank" rel="noopener noreferrer">Abrir sesión creada</a>',
+                unsafe_allow_html=True,
+            )
+
     elif st.session_state.get("confirmstate") == "error":
         st.error(f"No se pudo crear la sesión: {process_result.get('message', 'Error desconocido')}")
 
@@ -2082,7 +2007,10 @@ if st.session_state.get("opensalidaform"):
         if selecteddeparture:
             selectedobj = next((d for d in departures if d["nombre"] == selecteddeparture), None)
             if selectedobj:
-                render_embedded_preview(selectedobj["url"], height=900)
+                st.markdown(
+                    f'<a class="done-link" href="{selectedobj["url"]}" target="_blank" rel="noopener noreferrer">Abrir salida · Open departure</a>',
+                    unsafe_allow_html=True,
+                )
     except Exception as exc:
         st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
@@ -2138,10 +2066,16 @@ if st.session_state.get("opencruceroform"):
                 result = create_crucero_file(cruceroboat, fechasalida)
                 if result["status"] == "duplicate":
                     st.warning(f"Ya existe / Already exists: {result['name']}")
-                    render_embedded_preview(result["url"], height=900)
+                    st.markdown(
+                        f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir archivo existente · Open existing file</a>',
+                        unsafe_allow_html=True,
+                    )
                 else:
                     st.success(f"Archivo creado / File created: {result['name']}")
-                    render_embedded_preview(result["url"], height=900)
+                    st.markdown(
+                        f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir crucero · Open cruise</a>',
+                        unsafe_allow_html=True,
+                    )
     except Exception as exc:
         st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
@@ -2296,7 +2230,10 @@ if st.session_state.get("opencvcfitform"):
             mime="application/pdf",
             key="downloadcvcfitpdf",
         )
-        render_embedded_preview(result["spreadsheet_url"], height=900)
+        st.markdown(
+            f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank" rel="noopener noreferrer">Abrir spreadsheet</a>',
+            unsafe_allow_html=True,
+        )
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -2338,7 +2275,10 @@ if st.session_state.get("opencvcagenciasform"):
             mime="application/pdf",
             key="downloadcvcagenciaspdf",
         )
-        render_embedded_preview(result["spreadsheet_url"], height=900)
+        st.markdown(
+            f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank" rel="noopener noreferrer">Abrir spreadsheet</a>',
+            unsafe_allow_html=True,
+        )
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -2382,7 +2322,10 @@ if st.session_state.get("openirconfirmacionform"):
                 ("Pestaña", result.get("sheet", {}).get("title", "")),
             ],
         )
-        render_embedded_preview(result["url"], height=900)
+        st.markdown(
+            f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir confirmación</a>',
+            unsafe_allow_html=True,
+        )
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -2525,10 +2468,6 @@ if st.session_state.get("openinformebarcoform"):
                 """
             table_html += "</tbody></table></div>"
             st.markdown(table_html, unsafe_allow_html=True)
-
-            selected_dep = next((d for d in departures if d["nombre"] == informesalida), None)
-            if selected_dep:
-                render_embedded_preview(selected_dep["url"], height=900)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
