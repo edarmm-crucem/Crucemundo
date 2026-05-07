@@ -1372,7 +1372,7 @@ div[data-testid="stFormSubmitButton"] button:focus,
 .card-salida {
     background: #FFF2E3;
     border-color: #F1CFA9;
-    --card-btn-bg: #FFDDB8;
+    --card-btn-bg: #FFF2E3;
     --card-btn-border: #F1B97B;
     --card-btn-text: #8A5318;
     --card-btn-shadow: rgba(138, 83, 24, 0.16);
