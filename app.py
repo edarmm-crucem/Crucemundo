@@ -2429,42 +2429,50 @@ if st.session_state.get("openinformebarcoform"):
         )
 
         rows = informeresult.get("rows", [])
-        if rows:
-            table_html = """
-            <div class="report-table-wrap">
-            <table class="report-table">
-                <thead>
-                    <tr>
-                        <th>Hoja</th>
-                        <th>Localizador</th>
-                        <th>Agencia</th>
-                        <th>Estado Pago</th>
-                        <th>Total €</th>
-                        <th>Depósito</th>
-                        <th>PAX</th>
-                        <th>Cabinas</th>
-                        <th>Itinerario</th>
-                        <th>Duración</th>
-                        <th>Tipo</th>
-                    </tr>
-                </thead>
-                <tbody>
-            """
-for row in rows:
-    tablehtml += f"""
-    <tr>
-        <td>{row.get('Hoja', '')}</td>
-        <td>{row.get('Localizador', '')}</td>
-        <td>{row.get('Agencia', '')}</td>
-        <td>{row.get('Estado Pago', '')}</td>
-        <td>{row.get('Total', 0):,.2f} €</td>
-        <td>{row.get('Cantidad Deposito', 0):,.2f} €</td>
-        <td>{row.get('PAX', 0)}</td>
-        <td>{row.get('Cabinas', 0)}</td>
-        <td>{row.get('Itinerario', '')}</td>
-        <td>{row.get('Duracion', '')}</td>
-        <td>{row.get('Tipo Documento', '')}</td>
-    </tr>
+if rows:
+    table_html = """
+    <div class="report-table-wrap">
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Hoja</th>
+                    <th>Localizador</th>
+                    <th>Agencia</th>
+                    <th>Estado Pago</th>
+                    <th>Total</th>
+                    <th>Depósito</th>
+                    <th>PAX</th>
+                    <th>Cabinas</th>
+                    <th>Itinerario</th>
+                    <th>Duración</th>
+                    <th>Tipo</th>
+                </tr>
+            </thead>
+            <tbody>
+    """
+
+    for row in rows:
+        table_html += f"""
+                <tr>
+                    <td>{row.get('Hoja', '')}</td>
+                    <td>{row.get('Localizador', '')}</td>
+                    <td>{row.get('Agencia', '')}</td>
+                    <td>{row.get('Estado Pago', '')}</td>
+                    <td>{row.get('Total', 0):,.2f} €</td>
+                    <td>{row.get('Cantidad Deposito', 0):,.2f} €</td>
+                    <td>{row.get('PAX', 0)}</td>
+                    <td>{row.get('Cabinas', 0)}</td>
+                    <td>{row.get('Itinerario', '')}</td>
+                    <td>{row.get('Duracion', '')}</td>
+                    <td>{row.get('Tipo Documento', '')}</td>
+                </tr>
+        """
+
+    table_html += """
+            </tbody>
+        </table>
+    </div>
+    """
     """
             table_html += "</tbody></table></div>"
             st.markdown(table_html, unsafe_allow_html=True)
