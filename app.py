@@ -1441,6 +1441,142 @@ div[data-testid="stFormSubmitButton"] button:focus,
     --card-btn-shadow: rgba(43, 104, 129, 0.16);
 }
 
+.action-box[data-card] div.stButton button,
+.action-box[data-card] .done-link {
+    background: var(--card-btn-bg) !important;
+    border: 1.5px solid var(--card-btn-border) !important;
+    color: var(--card-btn-text) !important;
+    box-shadow: 0 6px 14px var(--card-btn-shadow) !important;
+    font-family: 'DM Sans', sans-serif !important;
+}
+
+.action-box[data-card] div.stButton button:hover,
+.action-box[data-card] .done-link:hover {
+    filter: brightness(0.98) saturate(1.06);
+    box-shadow: 0 10px 20px var(--card-btn-shadow) !important;
+}
+por este otro:
+
+css
+.card-es {
+    background: #EAF3FF;
+    border-color: #BFD7FF;
+    --card-btn-bg: #EAF3FF;
+    --card-btn-border: #9CC3FF;
+    --card-btn-text: #1E4E93;
+    --card-btn-hover-bg: #1E4E93;
+    --card-btn-hover-border: #163B70;
+    --card-btn-hover-text: #FFFFFF;
+    --card-btn-shadow: rgba(30, 78, 147, 0.16);
+}
+
+.card-grupos {
+    background: #EAF8EE;
+    border-color: #BDE3C7;
+    --card-btn-bg: #EAF8EE;
+    --card-btn-border: #9ED1AE;
+    --card-btn-text: #1F6A3A;
+    --card-btn-hover-bg: #1F6A3A;
+    --card-btn-hover-border: #174E2B;
+    --card-btn-hover-text: #FFFFFF;
+    --card-btn-shadow: rgba(31, 106, 58, 0.15);
+}
+
+.card-salida {
+    background: #FFF2E3;
+    border-color: #F1CFA9;
+    --card-btn-bg: #FFF2E3;
+    --card-btn-border: #EDBB84;
+    --card-btn-text: #8A5318;
+    --card-btn-hover-bg: #8A5318;
+    --card-btn-hover-border: #6E4011;
+    --card-btn-hover-text: #FFFFFF;
+    --card-btn-shadow: rgba(138, 83, 24, 0.16);
+}
+
+.card-crucero {
+    background: #F0EAFE;
+    border-color: #D3C4FA;
+    --card-btn-bg: #F0EAFE;
+    --card-btn-border: #BDA7F6;
+    --card-btn-text: #5A3E9E;
+    --card-btn-hover-bg: #5A3E9E;
+    --card-btn-hover-border: #432D78;
+    --card-btn-hover-text: #FFFFFF;
+    --card-btn-shadow: rgba(90, 62, 158, 0.16);
+}
+
+.card-nueva-agencia {
+    background: #EAF8EF;
+    border-color: #BEE3C9;
+    --card-btn-bg: #EAF8EF;
+    --card-btn-border: #9CCFB0;
+    --card-btn-text: #256245;
+    --card-btn-hover-bg: #256245;
+    --card-btn-hover-border: #1A4A33;
+    --card-btn-hover-text: #FFFFFF;
+    --card-btn-shadow: rgba(37, 98, 69, 0.16);
+}
+
+.card-buscar-agencia {
+    background: #FFF1E5;
+    border-color: #F1D1B0;
+    --card-btn-bg: #FFF1E5;
+    --card-btn-border: #EABB8A;
+    --card-btn-text: #8B5620;
+    --card-btn-hover-bg: #8B5620;
+    --card-btn-hover-border: #6D4117;
+    --card-btn-hover-text: #FFFFFF;
+    --card-btn-shadow: rgba(139, 86, 32, 0.16);
+}
+
+.card-cvcfit {
+    background: #FDECF3;
+    border-color: #F1C3D6;
+    --card-btn-bg: #FDECF3;
+    --card-btn-border: #E9A7C4;
+    --card-btn-text: #9B3A63;
+    --card-btn-hover-bg: #9B3A63;
+    --card-btn-hover-border: #7A294C;
+    --card-btn-hover-text: #FFFFFF;
+    --card-btn-shadow: rgba(155, 58, 99, 0.16);
+}
+
+.card-cvcagencias {
+    background: #EBF8EF;
+    border-color: #BFE1C9;
+    --card-btn-bg: #EBF8EF;
+    --card-btn-border: #9FD0AE;
+    --card-btn-text: #2C6A44;
+    --card-btn-hover-bg: #2C6A44;
+    --card-btn-hover-border: #1F5031;
+    --card-btn-hover-text: #FFFFFF;
+    --card-btn-shadow: rgba(44, 106, 68, 0.16);
+}
+
+.card-irconfirmacion {
+    background: #F0F3F8;
+    border-color: #CFD8E6;
+    --card-btn-bg: #F0F3F8;
+    --card-btn-border: #B8C6DC;
+    --card-btn-text: #4A5874;
+    --card-btn-hover-bg: #4A5874;
+    --card-btn-hover-border: #374359;
+    --card-btn-hover-text: #FFFFFF;
+    --card-btn-shadow: rgba(74, 88, 116, 0.16);
+}
+
+.card-informebarco {
+    background: #EAF7FB;
+    border-color: #BFDDE8;
+    --card-btn-bg: #EAF7FB;
+    --card-btn-border: #9BCCE0;
+    --card-btn-text: #2B6881;
+    --card-btn-hover-bg: #2B6881;
+    --card-btn-hover-border: #1E4E61;
+    --card-btn-hover-text: #FFFFFF;
+    --card-btn-shadow: rgba(43, 104, 129, 0.16);
+}
 .action-top { display: flex; align-items: flex-start; gap: 0.75rem; }
 .action-icon {
     width: 40px;
@@ -1523,8 +1659,12 @@ div[data-testid="stFormSubmitButton"] button:focus,
 
 .action-box[data-card] div.stButton button:hover,
 .action-box[data-card] .done-link:hover {
-    filter: brightness(0.98) saturate(1.06);
-    box-shadow: 0 10px 20px var(--card-btn-shadow) !important;
+    background: var(--card-btn-hover-bg) !important;
+    border-color: var(--card-btn-hover-border) !important;
+    color: var(--card-btn-hover-text) !important;
+    box-shadow: 0 10px 22px var(--card-btn-shadow) !important;
+    transform: translateY(-1px);
+    filter: none !important;
 }
 
 /* Botones e inputs dentro de paneles: más visibles */
