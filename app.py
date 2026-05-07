@@ -1144,11 +1144,15 @@ st.markdown(
     div[data-testid="stTextInput"] input, div[data-testid="stSelectbox"] div[data-baseweb="select"] > div, div[data-testid="stDateInput"] input, div[data-testid="stNumberInput"] input {
         background: #F8FAFC !important; border: 1px solid #E5EAF2 !important; border-radius: 12px !important; color: #1F2937 !important;
     }
-
     div.stButton { width: fit-content !important; }
+
     div.stButton button, div[data-testid="stFormSubmitButton"] button, .logout-btn div button, .download-btn button {
-        color: #214D92 !important; border: 1px solid rgba(33,77,146,0.14) !important; border-radius: 999px !important;
-        min-height: 38px !important; padding: 0 1.15rem !important; font-size: 0.76rem !important; font-weight: 600 !important; box-shadow: none !important;
+        border-radius: 999px !important;
+        min-height: 38px !important;
+        padding: 0 1.15rem !important;
+        font-size: 0.80rem !important;
+        font-weight: 700 !important;
+        box-shadow: none !important;
     }
 
     .portal-header { padding: 0.1rem 0 0.55rem 0; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.55rem; }
@@ -1161,131 +1165,44 @@ st.markdown(
     .portal-subtitle-en { margin-top: 0.08rem; }
     .user-top { font-size: 0.72rem; color: #566079; white-space: nowrap; }
     .main-content { padding: 0; }
-
-    .section-head-row, .section-head-row-green {
-        display: flex; align-items: center; justify-content: flex-start; gap: 0.55rem; margin-bottom: 0.75rem; flex-wrap: wrap;
-    }
+    .section-head-row, .section-head-row-green { display: flex; align-items: center; justify-content: flex-start; gap: 0.55rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
     .section-head-row-green { margin-top: -0.15rem; }
-    .section-eyebrow {
-        display: inline-flex; align-items: center; padding: 0.34rem 0.74rem; border-radius: 999px; background: #EAF1FF; border: 1px solid #D6E3FF;
-        color: #2E5FB8; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0 !important;
-    }
-    .web-chip, .web-chip-green {
-        display: inline-flex; align-items: center; justify-content: center; padding: 0.34rem 0.74rem; border-radius: 999px;
-        font-size: 0.70rem; font-weight: 700; line-height: 1; text-decoration: none; white-space: nowrap;
-    }
+    .section-eyebrow { display: inline-flex; align-items: center; padding: 0.34rem 0.74rem; border-radius: 999px; background: #EAF1FF; border: 1px solid #D6E3FF; color: #2E5FB8; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0 !important; }
+    .web-chip, .web-chip-green { display: inline-flex; align-items: center; justify-content: center; padding: 0.34rem 0.74rem; border-radius: 999px; font-size: 0.70rem; font-weight: 700; line-height: 1; text-decoration: none; white-space: nowrap; }
     .web-chip { background: #FFF3BF; border: 1px solid #F4D35E; color: #7A5900 !important; }
     .web-chip-green { background: #E9F8EE; border: 1px solid #BEE3C8; color: #1E6B3A !important; }
-    .user-pill {
-        display: inline-flex; align-items: center; gap: 0.4rem; margin: 0.02rem 0 1rem; padding: 0.38rem 0.68rem; border-radius: 999px;
-        background: #fff; border: 1px solid #E4E7EF; font-size: 0.72rem; color: #5D6880; max-width: 100%; word-break: break-word;
-    }
+    .user-pill { display: inline-flex; align-items: center; gap: 0.4rem; margin: 0.02rem 0 1rem; padding: 0.38rem 0.68rem; border-radius: 999px; background: #fff; border: 1px solid #E4E7EF; font-size: 0.72rem; color: #5D6880; max-width: 100%; word-break: break-word; }
 
     .action-box {
         width: 100%;
-        min-height: 50px;
-        border-radius: 20px;
-        padding: 0.78rem 0.90rem;
-        margin-bottom: 0.70rem;
+        min-height: 180px;
+        border-radius: 22px;
+        padding: 1rem;
+        margin-bottom: 0.85rem;
         display: flex;
         flex-direction: column;
-        justify-content: flex-start;
-        gap: 0.40rem;
+        justify-content: space-between;
+        gap: 0.9rem;
         border: 1px solid transparent;
-        --btn-bg: #E8EEF9;
-        --btn-border: #C9D7F2;
-        --btn-text: #214D92;
-        --btn-bg-hover: #DCE7F8;
     }
 
-    .card-es {
-        background: #F3F7FF;
-        border-color: #D9E5FF;
-        --btn-bg: #DCE9FF;
-        --btn-border: #BDD3FF;
-        --btn-text: #1F56B3;
-        --btn-bg-hover: #CFE1FF;
-    }
-    .card-grupos {
-        background: #F4FBF6;
-        border-color: #D8EEDC;
-        --btn-bg: #DDF4E3;
-        --btn-border: #BFE3C8;
-        --btn-text: #1F7A3D;
-        --btn-bg-hover: #D1EDD9;
-    }
-    .card-salida {
-        background: #FFF8F1;
-        border-color: #F1DFC7;
-        --btn-bg: #FBEBD8;
-        --btn-border: #EED2AE;
-        --btn-text: #9A5A00;
-        --btn-bg-hover: #F7E2C8;
-    }
-    .card-crucero {
-        background: #F7F4FF;
-        border-color: #E4DDF9;
-        --btn-bg: #EAE4FB;
-        --btn-border: #D4C8F4;
-        --btn-text: #6C46B2;
-        --btn-bg-hover: #E0D7F8;
-    }
-    .card-nueva-agencia {
-        background: #F1FAF4;
-        border-color: #D7EEDC;
-        --btn-bg: #DDF3E4;
-        --btn-border: #BFE3C9;
-        --btn-text: #1F7A47;
-        --btn-bg-hover: #D2ECD9;
-    }
-    .card-buscar-agencia {
-        background: #FFF7EF;
-        border-color: #F4E1CA;
-        --btn-bg: #FBE8D3;
-        --btn-border: #EFCFAC;
-        --btn-text: #A15C00;
-        --btn-bg-hover: #F6DFC4;
-    }
-    .card-cvcfit {
-        background: #FFF2F7;
-        border-color: #F4D7E3;
-        --btn-bg: #FADFEA;
-        --btn-border: #EFBFD1;
-        --btn-text: #A03D6B;
-        --btn-bg-hover: #F6D4E2;
-    }
-    .card-cvcagencias {
-        background: #EEF9F1;
-        border-color: #D5EEDB;
-        --btn-bg: #DBF0E0;
-        --btn-border: #BAE0C4;
-        --btn-text: #247046;
-        --btn-bg-hover: #D0EAD7;
-    }
-    .card-irconfirmacion {
-        background: #F6F7FB;
-        border-color: #E1E5EF;
-        --btn-bg: #E8ECF5;
-        --btn-border: #CCD5E5;
-        --btn-text: #4D5D7A;
-        --btn-bg-hover: #DCE3F0;
-    }
-    .card-informebarco {
-        background: #EEF8FB;
-        border-color: #D5EAF1;
-        --btn-bg: #DBEFF5;
-        --btn-border: #B9DCE7;
-        --btn-text: #256C86;
-        --btn-bg-hover: #D0E8F0;
-    }
+    .card-es { background: #F3F7FF; border-color: #D9E5FF; }
+    .card-grupos { background: #F4FBF6; border-color: #D8EEDC; }
+    .card-salida { background: #FFF8F1; border-color: #F1DFC7; }
+    .card-crucero { background: #F7F4FF; border-color: #E4DDF9; }
+    .card-nueva-agencia { background: #F1FAF4; border-color: #D7EEDC; }
+    .card-buscar-agencia { background: #FFF7EF; border-color: #F4E1CA; }
+    .card-cvcfit { background: #FFF2F7; border-color: #F4D7E3; }
+    .card-cvcagencias { background: #EEF9F1; border-color: #D5EEDB; }
+    .card-irconfirmacion { background: #F6F7FB; border-color: #E1E5EF; }
+    .card-informebarco { background: #EEF8FB; border-color: #D5EAF1; }
 
     .action-top { display: flex; align-items: flex-start; gap: 0.75rem; }
-    .action-icon {
-        width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
-        font-size: 1rem; flex-shrink: 0;
-    }
-    .action-text { display: flex; flex-direction: column; gap: 0.10rem; min-width: 0; }
-    .action-title {
+    .action-icon { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+    .action-text { display: flex; flex-direction: column; gap: 0.12rem; min-width: 0; }
+
+    .action-title,
+    .action-title-en {
         font-size: 0.95rem;
         font-weight: 700;
         color: #1F2937;
@@ -1294,11 +1211,12 @@ st.markdown(
         overflow: hidden;
         text-overflow: ellipsis;
     }
-    .action-desc {
-        font-size: 0.73rem;
-        color: #6F7B91;
-        line-height: 1.28;
-        margin-top: 0.10rem;
+
+    .action-title-en {
+        margin-top: 0.08rem;
+        color: #41506B;
+        font-size: 0.83rem;
+        font-weight: 700;
     }
 
     .action-button-wrap {
@@ -1309,52 +1227,93 @@ st.markdown(
         margin-top: 0.1rem;
     }
 
-    .action-box div.stButton {
-        width: 100% !important;
+    .action-button-wrap a.done-link {
+        margin-top: 0 !important;
     }
-
-    .action-box div.stButton > button {
-        width: auto !important;
-        min-height: 32px !important;
-        padding: 0.38rem 0.82rem !important;
-        border-radius: 999px !important;
-        background: var(--btn-bg) !important;
-        border: 1px solid var(--btn-border) !important;
-        color: var(--btn-text) !important;
-        box-shadow: none !important;
-        font-size: 0.95rem !important;
-        font-weight: 700 !important;
-        line-height: 1.1 !important;
-        font-family: "DM Sans", sans-serif !important;
-    }
-
-    .action-box div.stButton > button:hover {
-        background: var(--btn-bg-hover) !important;
-        border-color: var(--btn-border) !important;
-        color: var(--btn-text) !important;
-    }
-
-    .panel-inline { margin-top: 1rem; padding-top: 0.2rem; width: 100%; max-width: 1200px; }
 
     .done-link {
         display: inline-flex;
         align-items: center;
         gap: 0.35rem;
-        margin-top: 0.15rem;
-        background: var(--btn-bg);
-        color: var(--btn-text) !important;
-        border: 1px solid var(--btn-border);
+        background: #D9E9FF;
+        color: #214D92 !important;
+        border: 1px solid #BDD6FF;
         border-radius: 999px;
-        padding: 0.38rem 0.82rem;
-        text-decoration: none;
-        font-size: 0.95rem;
+        padding: 0.42rem 0.88rem;
+        font-size: 0.80rem;
         font-weight: 700;
-        line-height: 1.1;
-        font-family: "DM Sans", sans-serif;
+        text-decoration: none;
+        white-space: nowrap;
     }
 
-    .done-link:hover {
-        background: var(--btn-bg-hover);
+    .action-box[data-card="card-es"] div.stButton button,
+    .action-box[data-card="card-es"] .done-link {
+        background: #DDEAFF !important;
+        border: 1px solid #BDD6FF !important;
+        color: #214D92 !important;
+    }
+
+    .action-box[data-card="card-grupos"] div.stButton button,
+    .action-box[data-card="card-grupos"] .done-link {
+        background: #DFF4E6 !important;
+        border: 1px solid #BFE2CB !important;
+        color: #1F6A3A !important;
+    }
+
+    .action-box[data-card="card-salida"] div.stButton button,
+    .action-box[data-card="card-salida"] .done-link {
+        background: #FDE9D2 !important;
+        border: 1px solid #F1D0A8 !important;
+        color: #8A5318 !important;
+    }
+
+    .action-box[data-card="card-crucero"] div.stButton button,
+    .action-box[data-card="card-crucero"] .done-link {
+        background: #E9E1FF !important;
+        border: 1px solid #D3C6FB !important;
+        color: #5A3E9E !important;
+    }
+
+    .action-box[data-card="card-nueva-agencia"] div.stButton button,
+    .action-box[data-card="card-nueva-agencia"] .done-link {
+        background: #DDF3E4 !important;
+        border: 1px solid #BDE0C8 !important;
+        color: #256245 !important;
+    }
+
+    .action-box[data-card="card-buscar-agencia"] div.stButton button,
+    .action-box[data-card="card-buscar-agencia"] .done-link {
+        background: #FCE8D5 !important;
+        border: 1px solid #EFD0B0 !important;
+        color: #8B5620 !important;
+    }
+
+    .action-box[data-card="card-cvcfit"] div.stButton button,
+    .action-box[data-card="card-cvcfit"] .done-link {
+        background: #F9DDE8 !important;
+        border: 1px solid #EFC2D4 !important;
+        color: #9B3A63 !important;
+    }
+
+    .action-box[data-card="card-cvcagencias"] div.stButton button,
+    .action-box[data-card="card-cvcagencias"] .done-link {
+        background: #DDF3E3 !important;
+        border: 1px solid #BDDCC6 !important;
+        color: #2C6A44 !important;
+    }
+
+    .action-box[data-card="card-irconfirmacion"] div.stButton button,
+    .action-box[data-card="card-irconfirmacion"] .done-link {
+        background: #E8EBF3 !important;
+        border: 1px solid #D5DAE7 !important;
+        color: #4A5874 !important;
+    }
+
+    .action-box[data-card="card-informebarco"] div.stButton button,
+    .action-box[data-card="card-informebarco"] .done-link {
+        background: #DDF1F7 !important;
+        border: 1px solid #BDDCE7 !important;
+        color: #2B6881 !important;
     }
 
     .agency-card, .cvcfit-card, .cvcfit-status-card, .cvcagencias-card, .cvcagencias-status-card, .process-card, .irconfirmacion-card, .informebarco-card {
@@ -1377,10 +1336,8 @@ st.markdown(
     .report-table th, .report-table td { font-size: 0.76rem; padding: 0.65rem 0.7rem; border-bottom: 1px solid #EEF2F7; text-align: left; vertical-align: top; }
     .report-table th { background: #F7FAFD; color: #44506A; font-weight: 700; white-space: nowrap; }
     .report-table td { color: #1F2937; }
-
     .portal-footer { margin-top: 1rem; padding: 0.5rem 0 0 0; display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
     .footer-text { font-size: 0.71rem; color: #A2ABBD; }
-
     @media (max-width: 1600px) {
         .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid, .irconfirmacion-grid, .informebarco-grid { grid-template-columns: 1fr; }
     }
@@ -1504,12 +1461,12 @@ def render_action_card(col, config):
     with col:
         st.markdown(
             f"""
-            <div class="action-box {config['card_class']}">
+            <div class="action-box {config['card_class']}" data-card="{config['card_class']}">
                 <div class="action-top">
                     <div class="action-icon">{config['icon']}</div>
                     <div class="action-text">
                         <div class="action-title">{config['title_es']}</div>
-                        <div class="action-desc">{config['desc_es']}</div>
+                        <div class="action-title-en">{config['title_en']}</div>
                     </div>
                 </div>
                 <div class="action-button-wrap">
@@ -1539,7 +1496,7 @@ cards = [
         "card_class": "card-es",
         "icon": "📄",
         "title_es": "Nueva Confirmación",
-        "desc_es": f"Crear sesión MASTER CONFIRMATION para {DISPLAYUSER}",
+        "title_en": "New Confirmation",
         "button_label": "Crear Sesión",
         "key": "btncreares",
         "action": lambda: create_master_session(
@@ -1554,7 +1511,7 @@ cards = [
         "card_class": "card-grupos",
         "icon": "👥",
         "title_es": "Nueva Confirmación GRUPOS",
-        "desc_es": f"Crear sesión MASTER GROUPS para {DISPLAYUSER}",
+        "title_en": "New GROUPS Confirmation",
         "button_label": "Crear Sesión GRUPOS",
         "key": "btncreargrupos",
         "action": lambda: create_master_session(
@@ -1569,7 +1526,7 @@ cards = [
         "card_class": "card-salida",
         "icon": "🔎",
         "title_es": "Ir a Salida",
-        "desc_es": "Buscar una salida existente por año, barco y código de salida",
+        "title_en": "Go to Departure",
         "button_label": "Buscar Salida",
         "key": "btnirsalida",
         "action": lambda: (open_panel("salida"), st.rerun()),
@@ -1577,8 +1534,8 @@ cards = [
     {
         "card_class": "card-crucero",
         "icon": "🛳️",
-        "title_es": "Crear crucero",
-        "desc_es": "Crear salida nueva desde plantilla y guardarla en año/barco",
+        "title_es": "Crear Crucero",
+        "title_en": "Create Cruise",
         "button_label": "Nuevo Crucero",
         "key": "btncrearcruceroopen",
         "action": lambda: (open_panel("crucero"), st.rerun()),
@@ -1587,7 +1544,7 @@ cards = [
         "card_class": "card-nueva-agencia",
         "icon": "🏢",
         "title_es": "Nueva Agencia",
-        "desc_es": "Crear una agencia y guardarla en la hoja Datos",
+        "title_en": "New Agency",
         "button_label": "Nueva Agencia",
         "key": "btnnuevaagencia",
         "action": lambda: (open_panel("nuevaagencia"), st.rerun()),
@@ -1596,7 +1553,7 @@ cards = [
         "card_class": "card-buscar-agencia",
         "icon": "📇",
         "title_es": "Buscar Agencia",
-        "desc_es": "Buscar por cualquier dato y mostrar la ficha completa",
+        "title_en": "Find Agency",
         "button_label": "Buscar Agencia",
         "key": "btnbuscaragencia",
         "action": lambda: (open_panel("buscaragencia"), st.rerun()),
@@ -1605,7 +1562,7 @@ cards = [
         "card_class": "card-cvcfit",
         "icon": "🧾",
         "title_es": "CVC Fit",
-        "desc_es": "Buscar por localizador y descargar PDF CVC Fit",
+        "title_en": "CVC Fit",
         "button_label": "Abrir CVC Fit",
         "key": "btncvcfitopen",
         "action": lambda: (open_panel("cvcfit"), st.rerun()),
@@ -1614,7 +1571,7 @@ cards = [
         "card_class": "card-cvcagencias",
         "icon": "🏷️",
         "title_es": "CVC Agencias",
-        "desc_es": "Buscar por localizador descargar PDF CVC Agencias",
+        "title_en": "CVC Agencies",
         "button_label": "Abrir CVC Agencias",
         "key": "btncvcagenciasopen",
         "action": lambda: (open_panel("cvcagencias"), st.rerun()),
@@ -1623,7 +1580,7 @@ cards = [
         "card_class": "card-irconfirmacion",
         "icon": "📌",
         "title_es": "Ir a Confirmación",
-        "desc_es": "Buscar localizador normal o GROUP y abrir el archivo en su pestaña exacta",
+        "title_en": "Go to Confirmation",
         "button_label": "Buscar Localizador",
         "key": "btnirconfirmacionopen",
         "action": lambda: (open_panel("irconfirmacion"), st.rerun()),
@@ -1632,7 +1589,7 @@ cards = [
         "card_class": "card-informebarco",
         "icon": "💶",
         "title_es": "Informe € por Barco",
-        "desc_es": "Elegir tipo, año, barco y salida para extraer el informe de confirmaciones",
+        "title_en": "€ Report by Ship",
         "button_label": "Abrir Informe",
         "key": "btninformebarcoopen",
         "action": lambda: (open_panel("informebarco"), st.rerun()),
@@ -1960,27 +1917,22 @@ if st.session_state.get("opencvcfitform"):
         render_key_value_grid(
             "cvcfit",
             [
-                ("Localizador", result["locator"]),
-                ("Nombre pasajero", result["nombre"]),
-                ("Spreadsheet origen", result["spreadsheet_name"]),
-                ("Nombre del PDF", result["filename"]),
+                ("Localizador", result.get("locator", "")),
+                ("Nombre pasajero", result.get("nombre", "")),
+                ("Spreadsheet", result.get("spreadsheet_name", "")),
             ],
         )
-        cola, colb = st.columns([1, 3], gap="small")
-        with cola:
-            st.download_button(
-                label="⬇ Descargar PDF",
-                data=result["pdf_bytes"],
-                file_name=result["filename"],
-                mime="application/pdf",
-                key="btncvcfitdownload",
-                type="primary",
-            )
-        with colb:
-            st.markdown(
-                f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank" rel="noopener noreferrer">📊 Abrir hoja origen en Drive</a>',
-                unsafe_allow_html=True,
-            )
+        st.download_button(
+            "Descargar PDF CVC Fit",
+            data=result["pdf_bytes"],
+            file_name=result["filename"],
+            mime="application/pdf",
+            key="downloadcvcfitpdf",
+        )
+        st.markdown(
+            f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank" rel="noopener noreferrer">Abrir spreadsheet</a>',
+            unsafe_allow_html=True,
+        )
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -2010,27 +1962,22 @@ if st.session_state.get("opencvcagenciasform"):
         render_key_value_grid(
             "cvcagencias",
             [
-                ("Localizador", result["locator"]),
-                ("Nombre pasajero", result["nombre"]),
-                ("Spreadsheet origen", result["spreadsheet_name"]),
-                ("Nombre del PDF", result["filename"]),
+                ("Localizador", result.get("locator", "")),
+                ("Nombre pasajero", result.get("nombre", "")),
+                ("Spreadsheet", result.get("spreadsheet_name", "")),
             ],
         )
-        cola, colb = st.columns([1, 3], gap="small")
-        with cola:
-            st.download_button(
-                label="⬇ Descargar PDF",
-                data=result["pdf_bytes"],
-                file_name=result["filename"],
-                mime="application/pdf",
-                key="btncvcagenciasdownload",
-                type="primary",
-            )
-        with colb:
-            st.markdown(
-                f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank" rel="noopener noreferrer">📊 Abrir hoja origen en Drive</a>',
-                unsafe_allow_html=True,
-            )
+        st.download_button(
+            "Descargar PDF CVC Agencias",
+            data=result["pdf_bytes"],
+            file_name=result["filename"],
+            mime="application/pdf",
+            key="downloadcvcagenciaspdf",
+        )
+        st.markdown(
+            f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank" rel="noopener noreferrer">Abrir spreadsheet</a>',
+            unsafe_allow_html=True,
+        )
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -2040,178 +1987,150 @@ if st.session_state.get("opencvcagenciasform"):
 if st.session_state.get("openirconfirmacionform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### Ir a Confirmación")
-
     locator = st.text_input(
         "Localizador",
         key="irconfirmacionlocatorwidget",
-        placeholder="Ej: VMI260102-002 o VMI260102-002_GROUP",
+        placeholder="Ej: ALB250601-001 o ALB250601-001_GROUP",
     )
-
     if st.button("Buscar confirmación", key="btnirconfirmacionaction", disabled=not locator):
         try:
             result = find_locator_confirmation(locator)
             st.session_state["irconfirmacion_result"] = result
             st.session_state["irconfirmacion_log"] = result.get("log", [])
         except Exception as exc:
-            st.session_state["irconfirmacion_result"] = {"status": "error", "message": str(exc), "log": [f"❌ {exc}"]}
-            st.session_state["irconfirmacion_log"] = [f"❌ {exc}"]
+            st.error(str(exc))
+            st.session_state["irconfirmacion_result"] = None
+            st.session_state["irconfirmacion_log"] = []
 
     log_lines_saved = st.session_state.get("irconfirmacion_log", [])
     if log_lines_saved:
-        st.markdown('<div class="cvcfit-status-card" style="margin-top:0.75rem;">', unsafe_allow_html=True)
+        st.markdown('<div class="irconfirmacion-card" style="margin-top:0.75rem;">', unsafe_allow_html=True)
         st.markdown("**Resultado de la búsqueda:**")
         st.markdown("<br>".join(f"<div class='irconfirmacion-log-line'>{line}</div>" for line in log_lines_saved), unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     result = st.session_state.get("irconfirmacion_result")
-    if result:
-        if result.get("status") == "found":
-            parsed = result["parsed"]
-            render_key_value_grid(
-                "irconfirmacion",
-                [
-                    ("Localizador", parsed["original"]),
-                    ("Tipo", "GROUP" if parsed["is_group"] else "Normal"),
-                    ("Año", parsed["year_folder_name"]),
-                    ("Barco", parsed["boat_name"]),
-                    ("Archivo", parsed["file_name"]),
-                    ("Pestaña", parsed["sheet_name"]),
-                ],
-            )
-            st.markdown(
-                f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir confirmación en su pestaña</a>',
-                unsafe_allow_html=True,
-            )
-        elif result.get("status") == "error":
-            st.error(result.get("message", "Error desconocido"))
-        else:
-            st.warning("No se ha podido completar la búsqueda. Revisa el detalle anterior.")
-
+    if result and result.get("status") == "found":
+        parsed = result.get("parsed", {})
+        render_key_value_grid(
+            "irconfirmacion",
+            [
+                ("Localizador", parsed.get("original", "")),
+                ("Barco", parsed.get("boat_name", "")),
+                ("Archivo", result.get("file", {}).get("name", "")),
+                ("Pestaña", result.get("sheet", {}).get("title", "")),
+            ],
+        )
+        st.markdown(
+            f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir confirmación</a>',
+            unsafe_allow_html=True,
+        )
     st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ============================================================
-# PANEL INFORME € POR BARCO
+# PANEL INFORME BARCO
 # ============================================================
 if st.session_state.get("openinformebarcoform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### Informe € por Barco")
 
-    tip_options = ["CONFIRMACIONES INDIVIDUALES", "GRUPOS"]
-    current_type = st.session_state.get("informetype")
-    if current_type not in tip_options:
-        current_type = None
+    tipo_options = ["NORMAL", "GROUPS"]
+    current_tipo = st.session_state.get("informetype")
+    if current_tipo not in tipo_options:
+        current_tipo = None
 
-    tipo = st.selectbox(
+    informetype = st.selectbox(
         "TIPO",
-        options=tip_options,
-        index=tip_options.index(current_type) if current_type in tip_options else None,
-        placeholder="Selecciona un tipo",
+        options=tipo_options,
+        index=tipo_options.index(current_tipo) if current_tipo in tipo_options else None,
+        placeholder="Selecciona tipo",
         key="informetypewidget",
         on_change=on_informe_type_change,
     )
-    if tipo != st.session_state.get("informetype"):
-        st.session_state["informetype"] = tipo
+    if informetype != st.session_state.get("informetype"):
+        st.session_state["informetype"] = informetype
 
-    root_id_informe = None
-    if tipo == "CONFIRMACIONES INDIVIDUALES":
-        root_id_informe = DRIVE_ROOT_ID
-    elif tipo == "GRUPOS":
-        root_id_informe = GROUPS_ROOT_ID
+    root_id = GROUPS_ROOT_ID if informetype == "GROUPS" else DRIVE_ROOT_ID
 
-    c1, c2, c3 = st.columns(3, gap="medium")
+    years = get_years_by_root(root_id) if informetype else []
+    current_year = st.session_state.get("informeyear")
+    if current_year not in years:
+        current_year = None
 
-    with c1:
-        years = get_years_by_root(root_id_informe) if root_id_informe else []
-        current_year = st.session_state.get("informeyear")
-        if current_year not in years:
-            current_year = None
-        year_sel = st.selectbox(
-            "AÑO",
-            options=years,
-            index=years.index(current_year) if current_year in years else None,
-            placeholder="Selecciona un año",
-            key="informeyearwidget",
-            on_change=on_informe_year_change,
-            disabled=not root_id_informe,
-        )
-        if year_sel != st.session_state.get("informeyear"):
-            st.session_state["informeyear"] = year_sel
+    informeyear = st.selectbox(
+        "AÑO",
+        options=years,
+        index=years.index(current_year) if current_year in years else None,
+        placeholder="Selecciona año",
+        key="informeyearwidget",
+        on_change=on_informe_year_change,
+        disabled=not informetype,
+    )
+    if informeyear != st.session_state.get("informeyear"):
+        st.session_state["informeyear"] = informeyear
 
-    with c2:
-        boats = get_boats_by_root(root_id_informe, year_sel) if root_id_informe and year_sel else []
-        current_boat = st.session_state.get("informeboat")
-        if current_boat not in boats:
-            current_boat = None
-        boat_sel = st.selectbox(
-            "BARCO",
-            options=boats,
-            index=boats.index(current_boat) if current_boat in boats else None,
-            placeholder="Selecciona un barco",
-            key="informeboatwidget",
-            on_change=on_informe_boat_change,
-            disabled=not year_sel,
-        )
-        if boat_sel != st.session_state.get("informeboat"):
-            st.session_state["informeboat"] = boat_sel
+    boats = get_boats_by_root(root_id, informeyear) if informetype and informeyear else []
+    current_boat = st.session_state.get("informeboat")
+    if current_boat not in boats:
+        current_boat = None
 
-    with c3:
-        salidas = get_departures_by_root(root_id_informe, year_sel, boat_sel) if root_id_informe and year_sel and boat_sel else []
-        salidas_names = [s["nombre"] for s in salidas]
-        current_salida = st.session_state.get("informesalida")
-        if current_salida not in salidas_names:
-            current_salida = None
-        salida_sel = st.selectbox(
-            "SALIDA",
-            options=salidas_names,
-            index=salidas_names.index(current_salida) if current_salida in salidas_names else None,
-            placeholder="Selecciona una salida",
-            key="informesalidawidget",
-            on_change=on_informe_salida_change,
-            disabled=not boat_sel,
-        )
-        if salida_sel != st.session_state.get("informesalida"):
-            st.session_state["informesalida"] = salida_sel
+    informeboat = st.selectbox(
+        "BARCO",
+        options=boats,
+        index=boats.index(current_boat) if current_boat in boats else None,
+        placeholder="Selecciona barco",
+        key="informeboatwidget",
+        on_change=on_informe_boat_change,
+        disabled=not informeyear,
+    )
+    if informeboat != st.session_state.get("informeboat"):
+        st.session_state["informeboat"] = informeboat
 
-    if st.button(
-        "Extraer informacion",
-        key="btnextraerinformacionbarco",
-        disabled=not (root_id_informe and year_sel and boat_sel and salida_sel),
-    ):
+    departures = get_departures_by_root(root_id, informeyear, informeboat) if informetype and informeyear and informeboat else []
+    departure_names = [d["nombre"] for d in departures]
+    current_dep = st.session_state.get("informesalida")
+    if current_dep not in departure_names:
+        current_dep = None
+
+    informesalida = st.selectbox(
+        "SALIDA",
+        options=departure_names,
+        index=departure_names.index(current_dep) if current_dep in departure_names else None,
+        placeholder="Selecciona salida",
+        key="informesalidawidget",
+        on_change=on_informe_salida_change,
+        disabled=not informeboat,
+    )
+    if informesalida != st.session_state.get("informesalida"):
+        st.session_state["informesalida"] = informesalida
+
+    if st.button("Generar informe", key="btngenerarinforme", disabled=not informesalida):
         try:
-            selected_obj = next((d for d in salidas if d["nombre"] == salida_sel), None)
-            if not selected_obj:
+            selected = next((d for d in departures if d["nombre"] == informesalida), None)
+            if not selected:
                 st.error("No se ha encontrado la salida seleccionada.")
             else:
-                informe = extract_informe_por_barco(selected_obj["id"], selected_obj["nombre"])
-                informe["file_url"] = selected_obj["url"]
-                st.session_state["informeresult"] = informe
+                st.session_state["informeresult"] = extract_informe_por_barco(selected["id"], selected["nombre"])
         except Exception as exc:
             st.exception(exc)
 
-    informe_result = st.session_state.get("informeresult")
-    if informe_result:
+    informeresult = st.session_state.get("informeresult")
+    if informeresult:
         render_key_value_grid(
             "informebarco",
             [
-                ("Archivo", informe_result.get("spreadsheet_name", "")),
-                ("Total €", f"{informe_result.get('total_importe', 0):,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")),
-                ("Total Personas", str(informe_result.get("total_pax", 0))),
-                ("Nº Hojas Informe", str(len(informe_result.get("rows", [])))),
+                ("Spreadsheet", informeresult.get("spreadsheet_name", "")),
+                ("Total Importe", f"{informeresult.get('total_importe', 0):,.2f} €"),
+                ("Total PAX", str(informeresult.get("total_pax", 0))),
+                ("Total Hojas", str(len(informeresult.get("rows", [])))),
             ],
         )
 
-        file_url = informe_result.get("file_url")
-        if file_url:
-            st.markdown(
-                f'<a class="done-link" href="{file_url}" target="_blank" rel="noopener noreferrer">Abrir archivo de la salida</a>',
-                unsafe_allow_html=True,
-            )
-
-        rows = informe_result.get("rows", [])
+        rows = informeresult.get("rows", [])
         if rows:
-            st.markdown('<div class="report-table-wrap">', unsafe_allow_html=True)
-            html = """
+            table_html = """
+            <div class="report-table-wrap">
             <table class="report-table">
                 <thead>
                     <tr>
@@ -2220,50 +2139,45 @@ if st.session_state.get("openinformebarcoform"):
                         <th>Agencia</th>
                         <th>Estado Pago</th>
                         <th>Total €</th>
-                        <th>Deposito</th>
+                        <th>Depósito</th>
                         <th>PAX</th>
                         <th>Cabinas</th>
                         <th>Itinerario</th>
-                        <th>Duracion</th>
+                        <th>Duración</th>
+                        <th>Tipo</th>
                     </tr>
                 </thead>
                 <tbody>
             """
             for row in rows:
-                gid_url = build_sheet_tab_url(informe_result["spreadsheet_id"], row["SheetId"])
-                total_fmt = f"{row['Total €']:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
-                dep_fmt = f"{row['Cantidad Deposito']:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
-                html += f"""
+                table_html += f"""
                     <tr>
-                        <td><a href="{gid_url}" target="_blank" rel="noopener noreferrer">{row['Hoja']}</a></td>
-                        <td>{row['Localizador']}</td>
-                        <td>{row['Agencia']}</td>
-                        <td>{row['Estado Pago']}</td>
-                        <td>{total_fmt}</td>
-                        <td>{dep_fmt}</td>
-                        <td>{row['PAX']}</td>
-                        <td>{row['Cabinas']}</td>
-                        <td>{row['Itinerario']}</td>
-                        <td>{row['Duracion']}</td>
+                        <td>{row.get('Hoja', '')}</td>
+                        <td>{row.get('Localizador', '')}</td>
+                        <td>{row.get('Agencia', '')}</td>
+                        <td>{row.get('Estado Pago', '')}</td>
+                        <td>{row.get('Total €', 0):,.2f} €</td>
+                        <td>{row.get('Cantidad Deposito', 0):,.2f} €</td>
+                        <td>{row.get('PAX', 0)}</td>
+                        <td>{row.get('Cabinas', 0)}</td>
+                        <td>{row.get('Itinerario', '')}</td>
+                        <td>{row.get('Duracion', '')}</td>
+                        <td>{row.get('Tipo Documento', '')}</td>
                     </tr>
                 """
-            html += "</tbody></table>"
-            st.markdown(html, unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
-        else:
-            st.info("No se han encontrado hojas con CONFIR o PROFORMA en B2.")
+            table_html += "</tbody></table></div>"
+            st.markdown(table_html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ============================================================
-# FOOTER
-# ============================================================
-footer_col1, footer_col2 = st.columns([3, 1])
-with footer_col1:
-    st.markdown('<div class="portal-footer"><div class="footer-text">Crucemundo Hub · Clean version</div></div>', unsafe_allow_html=True)
-with footer_col2:
-    if st.button("Cerrar sesión", key="btnlogout"):
-        do_logout()
+st.markdown(
+    """
+    <div class="portal-footer">
+        <div class="footer-text">Crucemundo Hub</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 st.markdown("</div>", unsafe_allow_html=True)
