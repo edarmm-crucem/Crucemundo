@@ -1511,21 +1511,24 @@ st.markdown(
         filter: saturate(1.04);
     }
 
-    .action-box[data-card] div.stButton button,
-    .action-box[data-card] .done-link {
-        background: var(--card-btn-bg) !important;
-        border: 1.5px solid var(--card-btn-border) !important;
-        color: var(--card-btn-text) !important;
-        box-shadow: 0 6px 14px var(--card-btn-shadow) !important;
-        font-family: 'DM Sans', sans-serif !important;
-    }
+.action-box div.stButton button,
+.action-box .done-link {
+    background: var(--card-btn-bg) !important;
+    border: 1.5px solid var(--card-btn-border) !important;
+    color: var(--card-btn-text) !important;
+    box-shadow: 0 6px 14px var(--card-btn-shadow) !important;
+    font-family: 'DM Sans', sans-serif !important;
+}
 
-    .action-box[data-card] div.stButton button:hover,
-    .action-box[data-card] .done-link:hover {
-        filter: brightness(0.98) saturate(1.06);
-        box-shadow: 0 10px 20px var(--card-btn-shadow) !important;
-    }
-
+.action-box div.stButton button:hover,
+.action-box .done-link:hover {
+    background: var(--card-btn-hover-bg) !important;
+    border-color: var(--card-btn-hover-border) !important;
+    color: var(--card-btn-hover-text) !important;
+    box-shadow: 0 10px 22px var(--card-btn-shadow) !important;
+    transform: translateY(-1px);
+    filter: none !important;
+}
     .panel-inline div.stButton button,
     .panel-inline div[data-testid="stFormSubmitButton"] button,
     .panel-inline .download-btn button,
