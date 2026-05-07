@@ -1193,12 +1193,16 @@ st.markdown(
         background: #FFFFFF !important;
     }
 
-    div.stButton { width: fit-content !important; }
+    div.stButton { width: 100% !important; }
+    div.stButton > button {
+        width: 100% !important;
+    }
 
     div.stButton button,
     div[data-testid="stFormSubmitButton"] button,
     .logout-btn div button,
-    .download-btn button {
+    .download-btn button,
+    .stDownloadButton > button {
         border-radius: 999px !important;
         min-height: 42px !important;
         padding: 0 1.15rem !important;
@@ -1213,7 +1217,8 @@ st.markdown(
 
     div.stButton button:hover,
     div[data-testid="stFormSubmitButton"] button:hover,
-    .download-btn button:hover {
+    .download-btn button:hover,
+    .stDownloadButton > button:hover {
         transform: translateY(-1px);
         box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12) !important;
         filter: saturate(1.04);
@@ -1221,7 +1226,8 @@ st.markdown(
 
     div.stButton button:focus,
     div[data-testid="stFormSubmitButton"] button:focus,
-    .download-btn button:focus {
+    .download-btn button:focus,
+    .stDownloadButton > button:focus {
         box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14), 0 8px 18px rgba(37, 99, 235, 0.10) !important;
     }
 
@@ -1337,114 +1343,76 @@ st.markdown(
         font-size: 1rem !important;
     }
 
+    .action-box {
+        width: 100%;
+        min-height: 168px;
+        border-radius: 22px;
+        padding: 1rem;
+        margin-bottom: 0.85rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 0.9rem;
+        border: 1px solid transparent;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+    }
 
+    .card-es {
+        background: #EAF3FF;
+        border-color: #BFD7FF;
+    }
 
-.action-box {
-    width: 100%;
-    min-height: 20px;
-    border-radius: 22px;
-    padding: 1rem;
-    margin-bottom: 0.85rem;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 0.9rem;
-    border: 1px solid transparent;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
-}
+    .card-grupos {
+        background: #EAF8EE;
+        border-color: #BDE3C7;
+    }
 
-/* TARJETAS + variables de botón del mismo color pero un poco más intenso */
-.card-es {
-    background: #EAF3FF;
-    border-color: #BFD7FF;
-    --card-btn-bg: #BCD8FF;
-    --card-btn-border: #8FBAF7;
-    --card-btn-text: #1F4F95;
-    --card-btn-shadow: rgba(31, 79, 149, 0.18);
-}
+    .card-salida {
+        background: #FFF2E3;
+        border-color: #F1CFA9;
+    }
 
-.card-grupos {
-    background: #EAF8EE;
-    border-color: #BDE3C7;
-    --card-btn-bg: #BFE7CC;
-    --card-btn-border: #8ECC9F;
-    --card-btn-text: #1F6A3A;
-    --card-btn-shadow: rgba(31, 106, 58, 0.18);
-}
+    .card-crucero {
+        background: #F0EAFE;
+        border-color: #D3C4FA;
+    }
 
-.card-salida {
-    background: #FFF2E3;
-    border-color: #F1CFA9;
-    --card-btn-bg: #FFD1A1;
-    --card-btn-border: #F0B16A;
-    --card-btn-text: #8A5318;
-    --card-btn-shadow: rgba(138, 83, 24, 0.18);
-}
+    .card-nueva-agencia {
+        background: #EAF8EF;
+        border-color: #BEE3C9;
+    }
 
-.card-crucero {
-    background: #F0EAFE;
-    border-color: #D3C4FA;
-    --card-btn-bg: #D3C0FF;
-    --card-btn-border: #AE90F0;
-    --card-btn-text: #5A3E9E;
-    --card-btn-shadow: rgba(90, 62, 158, 0.18);
-}
+    .card-buscar-agencia {
+        background: #FFF1E5;
+        border-color: #F1D1B0;
+    }
 
-.card-nueva-agencia {
-    background: #EAF8EF;
-    border-color: #BEE3C9;
-    --card-btn-bg: #BFE8CC;
-    --card-btn-border: #8DCCA1;
-    --card-btn-text: #256245;
-    --card-btn-shadow: rgba(37, 98, 69, 0.18);
-}
+    .card-cvcfit {
+        background: #FDECF3;
+        border-color: #F1C3D6;
+    }
 
-.card-buscar-agencia {
-    background: #FFF1E5;
-    border-color: #F1D1B0;
-    --card-btn-bg: #FFD0A8;
-    --card-btn-border: #EDB27A;
-    --card-btn-text: #8B5620;
-    --card-btn-shadow: rgba(139, 86, 32, 0.18);
-}
+    .card-cvcagencias {
+        background: #EBF8EF;
+        border-color: #BFE1C9;
+    }
 
-.card-cvcfit {
-    background: #FDECF3;
-    border-color: #F1C3D6;
-    --card-btn-bg: #F4C2D7;
-    --card-btn-border: #E593B5;
-    --card-btn-text: #9B3A63;
-    --card-btn-shadow: rgba(155, 58, 99, 0.18);
-}
+    .card-irconfirmacion {
+        background: #F0F3F8;
+        border-color: #CFD8E6;
+    }
 
-.card-cvcagencias {
-    background: #EBF8EF;
-    border-color: #BFE1C9;
-    --card-btn-bg: #BFE8CB;
-    --card-btn-border: #8BC99F;
-    --card-btn-text: #2C6A44;
-    --card-btn-shadow: rgba(44, 106, 68, 0.18);
-}
+    .card-informebarco {
+        background: #EAF7FB;
+        border-color: #BFDDE8;
+    }
 
-.card-irconfirmacion {
-    background: #F0F3F8;
-    border-color: #CFD8E6;
-    --card-btn-bg: #D5DEEC;
-    --card-btn-border: #AEBED6;
-    --card-btn-text: #4A5874;
-    --card-btn-shadow: rgba(74, 88, 116, 0.18);
-}
+    .action-top {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
 
-.card-informebarco {
-    background: #EAF7FB;
-    border-color: #BFDDE8;
-    --card-btn-bg: #BFE6F2;
-    --card-btn-border: #89C5D9;
-    --card-btn-text: #2B6881;
-    --card-btn-shadow: rgba(43, 104, 129, 0.18);
-}
-
-    .action-top { display: flex; align-items: flex-start; gap: 0.75rem; }
     .action-icon {
         width: 40px;
         height: 40px;
@@ -1458,15 +1426,22 @@ st.markdown(
         box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
     }
 
-    .action-text { display: flex; flex-direction: column; gap: 0.12rem; min-width: 0; }
+    .action-text {
+        display: flex;
+        flex-direction: column;
+        gap: 0.12rem;
+        min-width: 0;
+        width: 100%;
+    }
 
     .action-title,
     .action-title-en {
         font-family: 'DM Sans', sans-serif !important;
-        line-height: 1.1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        line-height: 1.15;
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        word-break: break-word;
     }
 
     .action-title {
@@ -1497,9 +1472,10 @@ st.markdown(
     .done-link {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 0.35rem;
         border-radius: 999px;
-        padding: 0.48rem 0.96rem;
+        padding: 0.52rem 1rem;
         font-size: 0.82rem;
         font-weight: 800;
         font-family: 'DM Sans', sans-serif !important;
@@ -1507,6 +1483,7 @@ st.markdown(
         white-space: nowrap;
         box-shadow: 0 5px 14px rgba(15, 23, 42, 0.08);
         transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+        width: 100%;
     }
 
     .done-link:hover {
@@ -1514,36 +1491,87 @@ st.markdown(
         filter: saturate(1.04);
     }
 
-/* BOTONES DE TARJETAS */
-.action-box[data-card] div.stButton button,
-.action-box[data-card] .done-link {
-    background: var(--card-btn-bg) !important;
-    border: 1.5px solid var(--card-btn-border) !important;
-    color: var(--card-btn-text) !important;
-    box-shadow: 0 6px 14px var(--card-btn-shadow) !important;
-    font-family: 'DM Sans', sans-serif !important;
-    font-size: 0.82rem !important;
-    font-weight: 800 !important;
-    letter-spacing: 0.01em !important;
-}
+    /* Colores fiables para botones de cada tarjeta */
+    .btn-card-es div.stButton > button,
+    .btn-card-es .done-link {
+        background: #CFE3FF !important;
+        border: 1.5px solid #94BEFF !important;
+        color: #1E4E93 !important;
+        box-shadow: 0 6px 14px rgba(30, 78, 147, 0.16) !important;
+    }
 
-.action-box[data-card] div.stButton button:hover,
-.action-box[data-card] .done-link:hover {
-    background: color-mix(in srgb, var(--card-btn-bg) 88%, #ffffff 0%) !important;
-    border-color: var(--card-btn-border) !important;
-    color: var(--card-btn-text) !important;
-    box-shadow: 0 10px 20px var(--card-btn-shadow) !important;
-    transform: translateY(-1px);
-    filter: saturate(1.06);
-}
+    .btn-card-grupos div.stButton > button,
+    .btn-card-grupos .done-link {
+        background: #CDEFD7 !important;
+        border: 1.5px solid #93D0A7 !important;
+        color: #1F6A3A !important;
+        box-shadow: 0 6px 14px rgba(31, 106, 58, 0.15) !important;
+    }
 
-.action-box[data-card] div.stButton button:focus,
-.action-box[data-card] .done-link:focus {
-    outline: none !important;
-    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10), 0 10px 20px var(--card-btn-shadow) !important;
-}
+    .btn-card-salida div.stButton > button,
+    .btn-card-salida .done-link {
+        background: #FFDDB8 !important;
+        border: 1.5px solid #F1B97B !important;
+        color: #8A5318 !important;
+        box-shadow: 0 6px 14px rgba(138, 83, 24, 0.16) !important;
+    }
 
-    /* Botones e inputs dentro de paneles: más visibles */
+    .btn-card-crucero div.stButton > button,
+    .btn-card-crucero .done-link {
+        background: #DDD0FF !important;
+        border: 1.5px solid #B9A0F8 !important;
+        color: #5A3E9E !important;
+        box-shadow: 0 6px 14px rgba(90, 62, 158, 0.16) !important;
+    }
+
+    .btn-card-nueva-agencia div.stButton > button,
+    .btn-card-nueva-agencia .done-link {
+        background: #D0EFDA !important;
+        border: 1.5px solid #98D0AA !important;
+        color: #256245 !important;
+        box-shadow: 0 6px 14px rgba(37, 98, 69, 0.16) !important;
+    }
+
+    .btn-card-buscar-agencia div.stButton > button,
+    .btn-card-buscar-agencia .done-link {
+        background: #FFDDBF !important;
+        border: 1.5px solid #F0B77E !important;
+        color: #8B5620 !important;
+        box-shadow: 0 6px 14px rgba(139, 86, 32, 0.16) !important;
+    }
+
+    .btn-card-cvcfit div.stButton > button,
+    .btn-card-cvcfit .done-link {
+        background: #F7D2E2 !important;
+        border: 1.5px solid #E89BBB !important;
+        color: #9B3A63 !important;
+        box-shadow: 0 6px 14px rgba(155, 58, 99, 0.16) !important;
+    }
+
+    .btn-card-cvcagencias div.stButton > button,
+    .btn-card-cvcagencias .done-link {
+        background: #D0EFD8 !important;
+        border: 1.5px solid #97D0A9 !important;
+        color: #2C6A44 !important;
+        box-shadow: 0 6px 14px rgba(44, 106, 68, 0.16) !important;
+    }
+
+    .btn-card-irconfirmacion div.stButton > button,
+    .btn-card-irconfirmacion .done-link {
+        background: #E0E7F1 !important;
+        border: 1.5px solid #B8C6DC !important;
+        color: #4A5874 !important;
+        box-shadow: 0 6px 14px rgba(74, 88, 116, 0.16) !important;
+    }
+
+    .btn-card-informebarco div.stButton > button,
+    .btn-card-informebarco .done-link {
+        background: #D2EDF6 !important;
+        border: 1.5px solid #97CEE0 !important;
+        color: #2B6881 !important;
+        box-shadow: 0 6px 14px rgba(43, 104, 129, 0.16) !important;
+    }
+
     .panel-inline div.stButton button,
     .panel-inline div[data-testid="stFormSubmitButton"] button,
     .panel-inline .download-btn button,
@@ -1759,8 +1787,8 @@ st.markdown(
         <a class="web-chip-green" href="{cvcfit_folder_url}" target="_blank" rel="noopener noreferrer">Abre Folder Sesiones</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER_CABINAS</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre EXCURSIONES</a>
-         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44_WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER CLIENTES</a>
-          <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCR_HJr9TCD7VWrGI6nDhMtwi27cMJL_1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre Ventas FIT</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44_WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER CLIENTES</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCR_HJr9TCD7VWrGI6nDhMtwi27cMJL_1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre Ventas FIT</a>
     </div>
     """,
     unsafe_allow_html=True,
@@ -1776,7 +1804,7 @@ def render_action_card(col, config):
     with col:
         st.markdown(
             f"""
-            <div class="action-box {config['card_class']}" data-card="{config['card_class']}">
+            <div class="action-box {config['card_class']}">
                 <div class="action-top">
                     <div class="action-icon">{config['icon']}</div>
                     <div class="action-text">
@@ -1788,6 +1816,8 @@ def render_action_card(col, config):
             """,
             unsafe_allow_html=True,
         )
+
+        st.markdown(f'<div class="{config["button_style_class"]}">', unsafe_allow_html=True)
 
         if config.get("link"):
             st.markdown(
@@ -1803,12 +1833,14 @@ def render_action_card(col, config):
             elif disabled:
                 st.button(config["button_label"], key=config["key"], disabled=True)
 
+        st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 cards = [
     {
         "card_class": "card-es",
+        "button_style_class": "btn-card-es",
         "icon": "📄",
         "title_es": "Nueva Confirmación",
         "title_en": "New Confirmation",
@@ -1824,6 +1856,7 @@ cards = [
     },
     {
         "card_class": "card-grupos",
+        "button_style_class": "btn-card-grupos",
         "icon": "👥",
         "title_es": "Nueva Confirmación GRUPOS",
         "title_en": "New GROUPS Confirmation",
@@ -1839,6 +1872,7 @@ cards = [
     },
     {
         "card_class": "card-salida",
+        "button_style_class": "btn-card-salida",
         "icon": "🔎",
         "title_es": "Ir a Salida",
         "title_en": "Go to Departure",
@@ -1848,6 +1882,7 @@ cards = [
     },
     {
         "card_class": "card-crucero",
+        "button_style_class": "btn-card-crucero",
         "icon": "🛳️",
         "title_es": "Crear Crucero",
         "title_en": "Create Cruise",
@@ -1857,6 +1892,7 @@ cards = [
     },
     {
         "card_class": "card-nueva-agencia",
+        "button_style_class": "btn-card-nueva-agencia",
         "icon": "🏢",
         "title_es": "Nueva Agencia",
         "title_en": "New Agency",
@@ -1866,6 +1902,7 @@ cards = [
     },
     {
         "card_class": "card-buscar-agencia",
+        "button_style_class": "btn-card-buscar-agencia",
         "icon": "📇",
         "title_es": "Buscar Agencia",
         "title_en": "Find Agency",
@@ -1875,6 +1912,7 @@ cards = [
     },
     {
         "card_class": "card-cvcfit",
+        "button_style_class": "btn-card-cvcfit",
         "icon": "🧾",
         "title_es": "CVC Fit",
         "title_en": "CVC Fit",
@@ -1884,6 +1922,7 @@ cards = [
     },
     {
         "card_class": "card-cvcagencias",
+        "button_style_class": "btn-card-cvcagencias",
         "icon": "🏷️",
         "title_es": "CVC Agencias",
         "title_en": "CVC Agencies",
@@ -1893,6 +1932,7 @@ cards = [
     },
     {
         "card_class": "card-irconfirmacion",
+        "button_style_class": "btn-card-irconfirmacion",
         "icon": "📌",
         "title_es": "Ir a Confirmación",
         "title_en": "Go to Confirmation",
@@ -1902,6 +1942,7 @@ cards = [
     },
     {
         "card_class": "card-informebarco",
+        "button_style_class": "btn-card-informebarco",
         "icon": "💶",
         "title_es": "Informe € por Barco",
         "title_en": "€ Report by Ship",
@@ -1911,7 +1952,7 @@ cards = [
     },
 ]
 
-row1 = st.columns(6, gap="medium")
+row1 = st.columns([1, 1.45, 1, 1, 1, 1], gap="medium")
 for col, card in zip(row1, cards[:6]):
     render_action_card(col, card)
 
