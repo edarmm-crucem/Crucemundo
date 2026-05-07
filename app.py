@@ -1175,7 +1175,7 @@ st.markdown(
 
     .action-box {
         width: 100%;
-        min-height: 40px;
+        min-height: 30px;
         border-radius: 22px;
         padding: 1rem;
         margin-bottom: 0.85rem;
