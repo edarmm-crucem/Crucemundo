@@ -2450,22 +2450,22 @@ if st.session_state.get("openinformebarcoform"):
                 </thead>
                 <tbody>
             """
-            for row in rows:
-                table_html += f"""
-                    <tr>
-                        <td>{row.get('Hoja', '')}</td>
-                        <td>{row.get('Localizador', '')}</td>
-                        <td>{row.get('Agencia', '')}</td>
-                        <td>{row.get('Estado Pago', '')}</td>
-                        <td>{row.get('Total €', 0):,.2f} €</td>
-                        <td>{row.get('Cantidad Deposito', 0):,.2f} €</td>
-                        <td>{row.get('PAX', 0)}</td>
-                        <td>{row.get('Cabinas', 0)}</td>
-                        <td>{row.get('Itinerario', '')}</td>
-                        <td>{row.get('Duracion', '')}</td>
-                        <td>{row.get('Tipo Documento', '')}</td>
-                    </tr>
-                """
+for row in rows:
+    tablehtml += f"""
+    <tr>
+        <td>{row.get('Hoja', '')}</td>
+        <td>{row.get('Localizador', '')}</td>
+        <td>{row.get('Agencia', '')}</td>
+        <td>{row.get('Estado Pago', '')}</td>
+        <td>{row.get('Total', 0):,.2f} €</td>
+        <td>{row.get('Cantidad Deposito', 0):,.2f} €</td>
+        <td>{row.get('PAX', 0)}</td>
+        <td>{row.get('Cabinas', 0)}</td>
+        <td>{row.get('Itinerario', '')}</td>
+        <td>{row.get('Duracion', '')}</td>
+        <td>{row.get('Tipo Documento', '')}</td>
+    </tr>
+    """
             table_html += "</tbody></table></div>"
             st.markdown(table_html, unsafe_allow_html=True)
 
