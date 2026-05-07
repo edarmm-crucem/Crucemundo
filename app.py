@@ -1337,109 +1337,112 @@ st.markdown(
         font-size: 1rem !important;
     }
 
-    .action-box {
-        width: 100%;
-        min-height: 20px;
-        border-radius: 22px;
-        padding: 1rem;
-        margin-bottom: 0.85rem;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        gap: 0.9rem;
-        border: 1px solid transparent;
-        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
-    }
 
-    .card-es {
-        background: #EAF3FF;
-        border-color: #BFD7FF;
-        --card-btn-bg: #CFE3FF;
-        --card-btn-border: #94BEFF;
-        --card-btn-text: #1E4E93;
-        --card-btn-shadow: rgba(30, 78, 147, 0.16);
-    }
 
-    .card-grupos {
-        background: #EAF8EE;
-        border-color: #BDE3C7;
-        --card-btn-bg: #CDEFD7;
-        --card-btn-border: #93D0A7;
-        --card-btn-text: #1F6A3A;
-        --card-btn-shadow: rgba(31, 106, 58, 0.15);
-    }
+.action-box {
+    width: 100%;
+    min-height: 20px;
+    border-radius: 22px;
+    padding: 1rem;
+    margin-bottom: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.9rem;
+    border: 1px solid transparent;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+}
 
-    .card-salida {
-        background: #FFF2E3;
-        border-color: #F1CFA9;
-        --card-btn-bg: #FFDDB8;
-        --card-btn-border: #F1B97B;
-        --card-btn-text: #8A5318;
-        --card-btn-shadow: rgba(138, 83, 24, 0.16);
-    }
+/* TARJETAS + variables de botón del mismo color pero un poco más intenso */
+.card-es {
+    background: #EAF3FF;
+    border-color: #BFD7FF;
+    --card-btn-bg: #BCD8FF;
+    --card-btn-border: #8FBAF7;
+    --card-btn-text: #1F4F95;
+    --card-btn-shadow: rgba(31, 79, 149, 0.18);
+}
 
-    .card-crucero {
-        background: #F0EAFE;
-        border-color: #D3C4FA;
-        --card-btn-bg: #DDD0FF;
-        --card-btn-border: #B9A0F8;
-        --card-btn-text: #5A3E9E;
-        --card-btn-shadow: rgba(90, 62, 158, 0.16);
-    }
+.card-grupos {
+    background: #EAF8EE;
+    border-color: #BDE3C7;
+    --card-btn-bg: #BFE7CC;
+    --card-btn-border: #8ECC9F;
+    --card-btn-text: #1F6A3A;
+    --card-btn-shadow: rgba(31, 106, 58, 0.18);
+}
 
-    .card-nueva-agencia {
-        background: #EAF8EF;
-        border-color: #BEE3C9;
-        --card-btn-bg: #D0EFDA;
-        --card-btn-border: #98D0AA;
-        --card-btn-text: #256245;
-        --card-btn-shadow: rgba(37, 98, 69, 0.16);
-    }
+.card-salida {
+    background: #FFF2E3;
+    border-color: #F1CFA9;
+    --card-btn-bg: #FFD1A1;
+    --card-btn-border: #F0B16A;
+    --card-btn-text: #8A5318;
+    --card-btn-shadow: rgba(138, 83, 24, 0.18);
+}
 
-    .card-buscar-agencia {
-        background: #FFF1E5;
-        border-color: #F1D1B0;
-        --card-btn-bg: #FFDDBF;
-        --card-btn-border: #F0B77E;
-        --card-btn-text: #8B5620;
-        --card-btn-shadow: rgba(139, 86, 32, 0.16);
-    }
+.card-crucero {
+    background: #F0EAFE;
+    border-color: #D3C4FA;
+    --card-btn-bg: #D3C0FF;
+    --card-btn-border: #AE90F0;
+    --card-btn-text: #5A3E9E;
+    --card-btn-shadow: rgba(90, 62, 158, 0.18);
+}
 
-    .card-cvcfit {
-        background: #FDECF3;
-        border-color: #F1C3D6;
-        --card-btn-bg: #F7D2E2;
-        --card-btn-border: #E89BBB;
-        --card-btn-text: #9B3A63;
-        --card-btn-shadow: rgba(155, 58, 99, 0.16);
-    }
+.card-nueva-agencia {
+    background: #EAF8EF;
+    border-color: #BEE3C9;
+    --card-btn-bg: #BFE8CC;
+    --card-btn-border: #8DCCA1;
+    --card-btn-text: #256245;
+    --card-btn-shadow: rgba(37, 98, 69, 0.18);
+}
 
-    .card-cvcagencias {
-        background: #EBF8EF;
-        border-color: #BFE1C9;
-        --card-btn-bg: #D0EFD8;
-        --card-btn-border: #97D0A9;
-        --card-btn-text: #2C6A44;
-        --card-btn-shadow: rgba(44, 106, 68, 0.16);
-    }
+.card-buscar-agencia {
+    background: #FFF1E5;
+    border-color: #F1D1B0;
+    --card-btn-bg: #FFD0A8;
+    --card-btn-border: #EDB27A;
+    --card-btn-text: #8B5620;
+    --card-btn-shadow: rgba(139, 86, 32, 0.18);
+}
 
-    .card-irconfirmacion {
-        background: #F0F3F8;
-        border-color: #CFD8E6;
-        --card-btn-bg: #E0E7F1;
-        --card-btn-border: #B8C6DC;
-        --card-btn-text: #4A5874;
-        --card-btn-shadow: rgba(74, 88, 116, 0.16);
-    }
+.card-cvcfit {
+    background: #FDECF3;
+    border-color: #F1C3D6;
+    --card-btn-bg: #F4C2D7;
+    --card-btn-border: #E593B5;
+    --card-btn-text: #9B3A63;
+    --card-btn-shadow: rgba(155, 58, 99, 0.18);
+}
 
-    .card-informebarco {
-        background: #EAF7FB;
-        border-color: #BFDDE8;
-        --card-btn-bg: #D2EDF6;
-        --card-btn-border: #97CEE0;
-        --card-btn-text: #2B6881;
-        --card-btn-shadow: rgba(43, 104, 129, 0.16);
-    }
+.card-cvcagencias {
+    background: #EBF8EF;
+    border-color: #BFE1C9;
+    --card-btn-bg: #BFE8CB;
+    --card-btn-border: #8BC99F;
+    --card-btn-text: #2C6A44;
+    --card-btn-shadow: rgba(44, 106, 68, 0.18);
+}
+
+.card-irconfirmacion {
+    background: #F0F3F8;
+    border-color: #CFD8E6;
+    --card-btn-bg: #D5DEEC;
+    --card-btn-border: #AEBED6;
+    --card-btn-text: #4A5874;
+    --card-btn-shadow: rgba(74, 88, 116, 0.18);
+}
+
+.card-informebarco {
+    background: #EAF7FB;
+    border-color: #BFDDE8;
+    --card-btn-bg: #BFE6F2;
+    --card-btn-border: #89C5D9;
+    --card-btn-text: #2B6881;
+    --card-btn-shadow: rgba(43, 104, 129, 0.18);
+}
 
     .action-top { display: flex; align-items: flex-start; gap: 0.75rem; }
     .action-icon {
@@ -1511,21 +1514,34 @@ st.markdown(
         filter: saturate(1.04);
     }
 
-    /* Botones de tarjetas: heredan la personalidad cromática de su tarjeta */
-    .action-box[data-card] div.stButton button,
-    .action-box[data-card] .done-link {
-        background: var(--card-btn-bg) !important;
-        border: 1.5px solid var(--card-btn-border) !important;
-        color: var(--card-btn-text) !important;
-        box-shadow: 0 6px 14px var(--card-btn-shadow) !important;
-        font-family: 'DM Sans', sans-serif !important;
-    }
+/* BOTONES DE TARJETAS */
+.action-box[data-card] div.stButton button,
+.action-box[data-card] .done-link {
+    background: var(--card-btn-bg) !important;
+    border: 1.5px solid var(--card-btn-border) !important;
+    color: var(--card-btn-text) !important;
+    box-shadow: 0 6px 14px var(--card-btn-shadow) !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.82rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.01em !important;
+}
 
-    .action-box[data-card] div.stButton button:hover,
-    .action-box[data-card] .done-link:hover {
-        filter: brightness(0.98) saturate(1.06);
-        box-shadow: 0 10px 20px var(--card-btn-shadow) !important;
-    }
+.action-box[data-card] div.stButton button:hover,
+.action-box[data-card] .done-link:hover {
+    background: color-mix(in srgb, var(--card-btn-bg) 88%, #ffffff 0%) !important;
+    border-color: var(--card-btn-border) !important;
+    color: var(--card-btn-text) !important;
+    box-shadow: 0 10px 20px var(--card-btn-shadow) !important;
+    transform: translateY(-1px);
+    filter: saturate(1.06);
+}
+
+.action-box[data-card] div.stButton button:focus,
+.action-box[data-card] .done-link:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10), 0 10px 20px var(--card-btn-shadow) !important;
+}
 
     /* Botones e inputs dentro de paneles: más visibles */
     .panel-inline div.stButton button,
