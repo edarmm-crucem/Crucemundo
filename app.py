@@ -1514,7 +1514,7 @@ st.markdown(
     .action-box[data-card] div.stButton button,
     .action-box[data-card] .done-link {
         background: var(--card-btn-bg) !important;
-        border: 2.5px solid var(--card-btn-border) !important;
+        border: 12.5px solid var(--card-btn-border) !important;
         color: var(--card-btn-text) !important;
         box-shadow: 0 6px 14px var(--card-btn-shadow) !important;
         font-family: 'DM Sans', sans-serif !important;
