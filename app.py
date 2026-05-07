@@ -1425,89 +1425,89 @@ st.markdown(
         margin-top: 0.05rem;
     }
 
-    .action-button-wrap {
-        display: flex !important;
-        justify-content: flex-start !important;
-        align-items: center !important;
-        width: 100% !important;
-        margin-top: 0.1rem;
-    }
+.action-button-wrap {
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    width: 100% !important;
+    margin-top: 0.1rem;
+}
 
-    .action-button-wrap + div.stButton button {
-        border-radius: 999px !important;
-        min-height: 38px !important;
-        padding: 0 1.15rem !important;
-        font-size: 0.76rem !important;
-        font-weight: 700 !important;
-        font-family: 'DM Sans', sans-serif !important;
-        box-shadow: none !important;
-        transition: all 0.2s ease !important;
-    }
+.action-button-wrap + div.stButton button {
+    border-radius: 999px !important;
+    min-height: 38px !important;
+    padding: 0 1.15rem !important;
+    font-size: 0.76rem !important;
+    font-weight: 700 !important;
+    font-family: 'DM Sans', sans-serif !important;
+    box-shadow: none !important;
+    transition: all 0.2s ease !important;
+}
 
-    .action-button-wrap[data-card="card-es"] + div.stButton button {
-        background: #D9E9FF !important;
-        color: #214D92 !important;
-        border: 1px solid #BDD6FF !important;
-    }
+.action-button-wrap[data-card="card-es"] + div.stButton button {
+    background: #D9E9FF !important;
+    color: #214D92 !important;
+    border: 1px solid #BDD6FF !important;
+}
 
-    .action-button-wrap[data-card="card-grupos"] + div.stButton button {
-        background: #E9F8EE !important;
-        color: #1E6B3A !important;
-        border: 1px solid #BEE3C8 !important;
-    }
+.action-button-wrap[data-card="card-grupos"] + div.stButton button {
+    background: #E9F8EE !important;
+    color: #1E6B3A !important;
+    border: 1px solid #BEE3C8 !important;
+}
 
-    .action-button-wrap[data-card="card-salida"] + div.stButton button {
-        background: #FFF1DE !important;
-        color: #9A5B16 !important;
-        border: 1px solid #F1D2A6 !important;
-    }
+.action-button-wrap[data-card="card-salida"] + div.stButton button {
+    background: #FFF1DE !important;
+    color: #9A5B16 !important;
+    border: 1px solid #F1D2A6 !important;
+}
 
-    .action-button-wrap[data-card="card-crucero"] + div.stButton button {
-        background: #EEE8FF !important;
-        color: #6A45B8 !important;
-        border: 1px solid #D8CCF8 !important;
-    }
+.action-button-wrap[data-card="card-crucero"] + div.stButton button {
+    background: #EEE8FF !important;
+    color: #6A45B8 !important;
+    border: 1px solid #D8CCF8 !important;
+}
 
-    .action-button-wrap[data-card="card-nueva-agencia"] + div.stButton button {
-        background: #E6F6EC !important;
-        color: #247A49 !important;
-        border: 1px solid #CBE8D5 !important;
-    }
+.action-button-wrap[data-card="card-nueva-agencia"] + div.stButton button {
+    background: #E6F6EC !important;
+    color: #247A49 !important;
+    border: 1px solid #CBE8D5 !important;
+}
 
-    .action-button-wrap[data-card="card-buscar-agencia"] + div.stButton button {
-        background: #FFF0DE !important;
-        color: #A35A17 !important;
-        border: 1px solid #F2D3AE !important;
-    }
+.action-button-wrap[data-card="card-buscar-agencia"] + div.stButton button {
+    background: #FFF0DE !important;
+    color: #A35A17 !important;
+    border: 1px solid #F2D3AE !important;
+}
 
-    .action-button-wrap[data-card="card-cvcfit"] + div.stButton button {
-        background: #FFE6F0 !important;
-        color: #A53D6D !important;
-        border: 1px solid #F3C8DA !important;
-    }
+.action-button-wrap[data-card="card-cvcfit"] + div.stButton button {
+    background: #FFE6F0 !important;
+    color: #A53D6D !important;
+    border: 1px solid #F3C8DA !important;
+}
 
-    .action-button-wrap[data-card="card-cvcagencias"] + div.stButton button {
-        background: #E5F6EA !important;
-        color: #2A7A49 !important;
-        border: 1px solid #C9E6D2 !important;
-    }
+.action-button-wrap[data-card="card-cvcagencias"] + div.stButton button {
+    background: #E5F6EA !important;
+    color: #2A7A49 !important;
+    border: 1px solid #C9E6D2 !important;
+}
 
-    .action-button-wrap[data-card="card-irconfirmacion"] + div.stButton button {
-        background: #EDEFF5 !important;
-        color: #4F5D75 !important;
-        border: 1px solid #D8DEE9 !important;
-    }
+.action-button-wrap[data-card="card-irconfirmacion"] + div.stButton button {
+    background: #EDEFF5 !important;
+    color: #4F5D75 !important;
+    border: 1px solid #D8DEE9 !important;
+}
 
-    .action-button-wrap[data-card="card-informebarco"] + div.stButton button {
-        background: #E3F4F8 !important;
-        color: #276C80 !important;
-        border: 1px solid #C7E3EA !important;
-    }
+.action-button-wrap[data-card="card-informebarco"] + div.stButton button {
+    background: #E3F4F8 !important;
+    color: #276C80 !important;
+    border: 1px solid #C7E3EA !important;
+}
 
-    .action-button-wrap + div.stButton button:hover {
-        filter: brightness(0.98) !important;
-        transform: translateY(-1px);
-    }
+.action-button-wrap + div.stButton button:hover {
+    filter: brightness(0.98) !important;
+    transform: translateY(-1px);
+}
 
     .panel-inline {
         margin-top: 1rem;
@@ -1743,38 +1743,46 @@ st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe
 # TARJETAS PRINCIPALES
 # ============================================================
 def render_action_card(col, config):
+    cardclass = config.get("cardclass", "")
+    icon = config.get("icon", "")
+    titlees = config.get("titlees", "")
+    titleen = config.get("titleen", "")
+    buttonlabel = config.get("buttonlabel", "Abrir")
+    buttonkey = config.get("key", f"btn_{titlees}_{titleen}".replace(" ", "_").lower())
+    link = config.get("link")
+    disabled = config.get("disabled", False)
+    action = config.get("action")
+
     with col:
         st.markdown(
-    f"""
-    <div class="action-box {config['cardclass']}">
-        <div class="action-top">
-            <div class="action-icon">{config['icon']}</div>
-            <div class="action-text">
-                <div class="action-title">{config['titlees']}</div>
-                <div class="action-title-en">{config['titleen']}</div>
-            </div>
-        </div>
-        <div class="action-button-wrap" data-card="{config['cardclass']}">
-    """,
-    unsafe_allow_html=True,
-)
+            f"""
+            <div class="action-box {cardclass}">
+                <div class="action-top">
+                    <div class="action-icon">{icon}</div>
+                    <div class="action-text">
+                        <div class="action-title">{titlees}</div>
+                        <div class="action-title-en">{titleen}</div>
+                    </div>
+                </div>
+                <div class="action-button-wrap" data-card="{cardclass}">
+            """,
+            unsafe_allow_html=True,
+        )
 
-        if config.get("link"):
+        if link:
             st.markdown(
-                f'<a class="done-link" href="{config["link"]}" target="_blank" rel="noopener noreferrer">{config["button_label"]}</a>',
+                f'<a class="done-link" href="{link}" target="_blank" rel="noopener noreferrer">{buttonlabel}</a>',
                 unsafe_allow_html=True,
             )
         else:
-            disabled = config.get("disabled", False)
-            if not disabled and st.button(config["button_label"], key=config["key"]):
-                action = config.get("action")
-                if action:
-                    action()
-            elif disabled:
-                st.button(config["button_label"], key=config["key"], disabled=True)
+            if not disabled:
+                if st.button(buttonlabel, key=buttonkey):
+                    if action:
+                        action()
+            else:
+                st.button(buttonlabel, key=buttonkey, disabled=True)
 
         st.markdown("</div></div>", unsafe_allow_html=True)
-
 
 cards = [
     {
