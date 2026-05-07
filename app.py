@@ -31,7 +31,6 @@ AGENCY_SHEET_ID = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
 AGENCY_SHEET_NAME = "Datos"
 FOLDER_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
 DRIVE_ROOT_ID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
-GROUPS_ROOT_ID = "1MMNH3y1E3jJIp6uUnxbwV0toAtdr2F2M"
 
 VALID_USERS = {
     "support@crucemundo.com": "Albina",
@@ -63,22 +62,6 @@ AGENCY_FIELDS = [
     "IVA SERVICIO OPCIONAL",
 ]
 
-SHIP_CODE_MAP = {
-    "MS_ALBERTINA": "ALB",
-    "MS_ARENA": "ARN",
-    "MS_CRUCEVITA": "CV",
-    "MS_DOURO_CRUISER": "DC",
-    "MS_FIDELIO": "FID",
-    "MS_LEONORA": "LEO",
-    "MS_RIVER_DIAMOND": "RDA",
-    "MS_RIVER_SAPPHIRE": "RSA",
-    "MS_SWISS_SPLENDOR": "SPL",
-    "MS_VISTA_GRACIA": "VGR",
-    "MS_VISTAMILLA": "VMI",
-    "MS_VISTA_RIO": "VRI",
-}
-SHIP_CODE_TO_NAME = {v: k for k, v in SHIP_CODE_MAP.items()}
-
 STATE_DEFAULTS = {
     "authenticated": False,
     "useremail": "",
@@ -93,8 +76,6 @@ STATE_DEFAULTS = {
     "openbuscaragenciaform": False,
     "opencvcfitform": False,
     "opencvcagenciasform": False,
-    "openirconfirmacionform": False,
-    "openinformebarcoform": False,
     "salidayear": None,
     "salidaboat": None,
     "salidaname": None,
@@ -108,14 +89,6 @@ STATE_DEFAULTS = {
     "cvcagencias_locator": "",
     "cvcagencias_result": None,
     "cvcagencias_log": [],
-    "irconfirmacion_locator": "",
-    "irconfirmacion_result": None,
-    "irconfirmacion_log": [],
-    "informetype": None,
-    "informeyear": None,
-    "informeboat": None,
-    "informesalida": None,
-    "informeresult": None,
     "nombrecopia": "",
     "copyurl": "",
     "processtitle": "",
@@ -143,13 +116,6 @@ STATE_GROUPS = {
     "cvcagencias": [
         "cvcagencias_locator", "cvcagencias_result", "cvcagenciaslocatorwidget", "cvcagencias_log",
     ],
-    "irconfirmacion": [
-        "irconfirmacion_locator", "irconfirmacion_result", "irconfirmacionlocatorwidget", "irconfirmacion_log",
-    ],
-    "informebarco": [
-        "informetype", "informeyear", "informeboat", "informesalida", "informeresult",
-        "informetypewidget", "informeyearwidget", "informeboatwidget", "informesalidawidget",
-    ],
     "process": [
         "nombrecopia", "copyurl", "processtitle", "confirmstate", "sessiontype", "processresult",
     ],
@@ -162,8 +128,6 @@ PANEL_FLAGS = {
     "buscaragencia": "openbuscaragenciaform",
     "cvcfit": "opencvcfitform",
     "cvcagencias": "opencvcagenciasform",
-    "irconfirmacion": "openirconfirmacionform",
-    "informebarco": "openinformebarcoform",
 }
 
 
@@ -269,27 +233,6 @@ def reset_crucero_downstream(level):
         st.session_state.pop("cruceroboatwidget", None)
 
 
-def reset_informe_downstream(level):
-    if level == "type":
-        st.session_state["informeyear"] = None
-        st.session_state["informeboat"] = None
-        st.session_state["informesalida"] = None
-        st.session_state["informeresult"] = None
-        st.session_state.pop("informeyearwidget", None)
-        st.session_state.pop("informeboatwidget", None)
-        st.session_state.pop("informesalidawidget", None)
-    elif level == "year":
-        st.session_state["informeboat"] = None
-        st.session_state["informesalida"] = None
-        st.session_state["informeresult"] = None
-        st.session_state.pop("informeboatwidget", None)
-        st.session_state.pop("informesalidawidget", None)
-    elif level == "boat":
-        st.session_state["informesalida"] = None
-        st.session_state["informeresult"] = None
-        st.session_state.pop("informesalidawidget", None)
-
-
 def on_year_change():
     st.session_state["salidayear"] = st.session_state.get("salidayearwidget")
     reset_salida_downstream("year")
@@ -311,25 +254,6 @@ def on_crucero_year_change():
 
 def on_crucero_boat_change():
     st.session_state["cruceroboat"] = st.session_state.get("cruceroboatwidget")
-
-
-def on_informe_type_change():
-    st.session_state["informetype"] = st.session_state.get("informetypewidget")
-    reset_informe_downstream("type")
-
-
-def on_informe_year_change():
-    st.session_state["informeyear"] = st.session_state.get("informeyearwidget")
-    reset_informe_downstream("year")
-
-
-def on_informe_boat_change():
-    st.session_state["informeboat"] = st.session_state.get("informeboatwidget")
-    reset_informe_downstream("boat")
-
-
-def on_informe_salida_change():
-    st.session_state["informesalida"] = st.session_state.get("informesalidawidget")
 
 
 def render_key_value_grid(css_prefix, fields):
@@ -724,21 +648,6 @@ def get_single_cell(spreadsheet_id, sheet_title, a1):
     return values[0][0] if values and values[0] else ""
 
 
-def get_sheet_cells_batch(spreadsheet_id, sheet_title, a1_list):
-    sheetsservice = get_sheets_service()
-    ranges = [f"'{sheet_title}'!{a1}" for a1 in a1_list]
-    response = sheetsservice.spreadsheets().values().batchGet(
-        spreadsheetId=spreadsheet_id,
-        ranges=ranges,
-        majorDimension="ROWS",
-    ).execute()
-    out = {}
-    for a1, vr in zip(a1_list, response.get("valueRanges", [])):
-        vals = vr.get("values", [])
-        out[a1] = vals[0][0] if vals and vals[0] else ""
-    return out
-
-
 def export_sheet_pdf_bytes(spreadsheet_id, gid):
     creds = get_google_creds().with_scopes([
         "https://www.googleapis.com/auth/drive",
@@ -882,765 +791,101 @@ def run_cvc_search(locator, target_sheet, pdf_prefix, state_key):
 
 
 # ============================================================
-# NUEVOS HELPERS CONFIRMACION / INFORME
-# ============================================================
-def parse_locator_input(locator_raw):
-    locator = str(locator_raw or "").strip().upper()
-    if not locator:
-        raise Exception("Debes introducir un localizador.")
-
-    is_group = locator.endswith("_GROUP")
-    core = locator[:-6] if is_group else locator
-
-    m = re.fullmatch(r"([A-Z]{2,3})(\d{6})-(\d{3})", core)
-    if not m:
-        raise Exception("Formato de localizador no válido. Debe ser CODIGOBARCO+AAMMDD-999 o terminar en _GROUP.")
-
-    ship_code, yymmdd, sequence = m.groups()
-    boat_name = SHIP_CODE_TO_NAME.get(ship_code)
-    if not boat_name:
-        raise Exception(f"Código de barco no reconocido: {ship_code}")
-
-    year_full = f"20{yymmdd[:2]}"
-    file_base = f"{boat_name}_{yymmdd}"
-
-    return {
-        "original": locator,
-        "is_group": is_group,
-        "core": core,
-        "ship_code": ship_code,
-        "boat_name": boat_name,
-        "yymmdd": yymmdd,
-        "sequence": sequence,
-        "year_full": year_full,
-        "year_folder_name": f"{year_full}_GROUP" if is_group else year_full,
-        "file_name": f"{file_base}_GROUP" if is_group else file_base,
-        "sheet_name": f"{core}_GROUP" if is_group else core,
-        "root_id": GROUPS_ROOT_ID if is_group else DRIVE_ROOT_ID,
-    }
-
-
-def build_sheet_tab_url(spreadsheet_id, sheet_gid):
-    return f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit#gid={sheet_gid}"
-
-
-def find_locator_confirmation(locator_raw):
-    parsed = parse_locator_input(locator_raw)
-    log_lines = []
-
-    year_folder = find_child_folder(parsed["root_id"], parsed["year_folder_name"])
-    if not year_folder:
-        log_lines.append(f"❌ No existe la carpeta de año: {parsed['year_folder_name']}")
-        return {
-            "status": "missing_year",
-            "parsed": parsed,
-            "log": log_lines,
-        }
-    log_lines.append(f"✅ Carpeta de año encontrada: {parsed['year_folder_name']}")
-
-    boat_folder = find_child_folder(year_folder["id"], parsed["boat_name"])
-    if not boat_folder:
-        log_lines.append(f"❌ No existe la carpeta del barco: {parsed['boat_name']}")
-        return {
-            "status": "missing_boat",
-            "parsed": parsed,
-            "log": log_lines,
-        }
-    log_lines.append(f"✅ Carpeta de barco encontrada: {parsed['boat_name']}")
-
-    file_obj = find_file_by_name(boat_folder["id"], parsed["file_name"])
-    if not file_obj:
-        log_lines.append(f"❌ No existe el archivo: {parsed['file_name']}")
-        return {
-            "status": "missing_file",
-            "parsed": parsed,
-            "log": log_lines,
-        }
-    log_lines.append(f"✅ Archivo encontrado: {parsed['file_name']}")
-
-    sheets = get_sheet_titles_with_ids(file_obj["id"])
-    target_sheet = next((s for s in sheets if s["title"].strip() == parsed["sheet_name"].strip()), None)
-    if not target_sheet:
-        log_lines.append(f"❌ No existe la pestaña/localizador: {parsed['sheet_name']}")
-        return {
-            "status": "missing_locator",
-            "parsed": parsed,
-            "file": file_obj,
-            "log": log_lines,
-        }
-
-    final_url = build_sheet_tab_url(file_obj["id"], target_sheet["sheetId"])
-    log_lines.append(f"✅ Pestaña encontrada: {parsed['sheet_name']}")
-
-    return {
-        "status": "found",
-        "parsed": parsed,
-        "file": file_obj,
-        "sheet": target_sheet,
-        "url": final_url,
-        "log": log_lines,
-    }
-
-
-@st.cache_data(ttl=300)
-def get_years_by_root(root_id):
-    folders = list_folder_items(root_id, folders_only=True)
-    if root_id == DRIVE_ROOT_ID:
-        years = [f["name"].strip() for f in folders if re.fullmatch(r"\d{4}", f["name"].strip())]
-    else:
-        years = [f["name"].strip() for f in folders if re.fullmatch(r"\d{4}_GROUP", f["name"].strip())]
-    return sorted(years, reverse=True)
-
-
-@st.cache_data(ttl=300)
-def get_year_folder_id_by_root(root_id, yearname):
-    folder = find_child_folder(root_id, yearname)
-    return folder["id"] if folder else None
-
-
-@st.cache_data(ttl=300)
-def get_boats_by_root(root_id, yearname):
-    yearfolderid = get_year_folder_id_by_root(root_id, yearname)
-    if not yearfolderid:
-        return []
-    folders = list_folder_items(yearfolderid, folders_only=True)
-    return sorted([f["name"].strip() for f in folders if f["name"].strip()])
-
-
-@st.cache_data(ttl=300)
-def get_departures_by_root(root_id, yearname, boatname):
-    yearfolderid = get_year_folder_id_by_root(root_id, yearname)
-    if not yearfolderid:
-        return []
-    boatfolder = find_child_folder(yearfolderid, boatname)
-    if not boatfolder:
-        return []
-
-    files = list_folder_items(boatfolder["id"], folders_only=False)
-    if root_id == DRIVE_ROOT_ID:
-        pattern = re.compile(rf"^{re.escape(boatname)}_\d{{6}}$")
-    else:
-        pattern = re.compile(rf"^{re.escape(boatname)}_\d{{6}}_GROUP$")
-
-    departures = []
-    for file in files:
-        name = file["name"].strip()
-        if pattern.match(name):
-            departures.append(
-                {
-                    "nombre": name,
-                    "id": file["id"],
-                    "url": file.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{file['id']}/edit",
-                }
-            )
-    departures.sort(key=lambda x: x["nombre"])
-    return departures
-
-
-def parse_numeric_value(value):
-    text = str(value or "").strip()
-    if not text:
-        return 0.0
-    text = text.replace("€", "").replace("EUR", "").replace("PAX", "").strip()
-    text = text.replace(".", "").replace(",", ".")
-    m = re.search(r"-?\d+(?:\.\d+)?", text)
-    if not m:
-        return 0.0
-    try:
-        return float(m.group(0))
-    except Exception:
-        return 0.0
-
-
-def parse_int_from_text(value):
-    text = str(value or "").strip().upper().replace("PAX", "").strip()
-    m = re.search(r"\d+", text)
-    return int(m.group(0)) if m else 0
-
-
-def get_sheet_title_b2(spreadsheet_id, sheet_title):
-    return get_single_cell(spreadsheet_id, sheet_title, "B2")
-
-
-def extract_informe_por_barco(spreadsheet_id, spreadsheet_name):
-    sheets = get_sheet_titles_with_ids(spreadsheet_id)
-    rows = []
-
-    for sheet in sheets:
-        sheet_title = sheet["title"]
-        try:
-            b2 = str(get_sheet_title_b2(spreadsheet_id, sheet_title) or "").upper()
-            if "CONFIR" not in b2 and "PROFORMA" not in b2:
-                continue
-
-            cells = get_sheet_cells_batch(
-                spreadsheet_id,
-                sheet_title,
-                ["G11", "G5", "G57", "Q55", "P57", "G22", "K22", "N22", "P22", "G20", "K20", "N20", "P20", "G19", "G18"]
-            )
-
-            pax = sum(parse_int_from_text(cells.get(a1, "")) for a1 in ["G22", "K22", "N22", "P22"])
-            cabinas = sum(int(parse_numeric_value(cells.get(a1, ""))) for a1 in ["G20", "K20", "N20", "P20"])
-            total_eur = parse_numeric_value(cells.get("Q55", ""))
-            deposito = parse_numeric_value(cells.get("P57", ""))
-            duracion_num = int(parse_numeric_value(cells.get("G18", "")))
-
-            rows.append({
-                "Hoja": sheet_title,
-                "Localizador": str(cells.get("G11", "")).strip(),
-                "Agencia": str(cells.get("G5", "")).strip(),
-                "Estado Pago": str(cells.get("G57", "")).strip(),
-                "Total €": total_eur,
-                "Cantidad Deposito": deposito,
-                "PAX": pax,
-                "Cabinas": cabinas,
-                "Itinerario": str(cells.get("G19", "")).strip(),
-                "Duracion": f"{duracion_num} Dias" if duracion_num else "",
-                "Tipo Documento": b2,
-                "SheetId": sheet["sheetId"],
-            })
-        except Exception:
-            continue
-
-    total_importe = round(sum(r["Total €"] for r in rows), 2)
-    total_pax = sum(r["PAX"] for r in rows)
-
-    return {
-        "spreadsheet_id": spreadsheet_id,
-        "spreadsheet_name": spreadsheet_name,
-        "rows": rows,
-        "total_importe": total_importe,
-        "total_pax": total_pax,
-    }
-
-
-# ============================================================
 # CSS
 # ============================================================
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
-
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
     * { box-sizing: border-box; }
-
-    html, body, [class*="css"] {
-        font-family: 'DM Sans', sans-serif;
-        background: #FFFFFF !important;
-    }
-
+    html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; background: #FFFFFF !important; }
     [data-testid="stAppViewContainer"] { background: #FFFFFF !important; }
     [data-testid="stHeader"] { background: transparent !important; }
     section[data-testid="stSidebar"] { display: none !important; }
-
     .block-container, section.stMain > .block-container, .stMainBlockContainer, [data-testid="stMainBlockContainer"] {
-        padding-top: 0rem !important;
-        padding-bottom: 1rem !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
-        max-width: 1900px !important;
-        margin: 0 auto !important;
+        padding-top: 0rem !important; padding-bottom: 1rem !important; padding-left: 1rem !important; padding-right: 1rem !important;
+        max-width: 1900px !important; margin: 0 auto !important;
     }
-
-    .login-page {
-        min-height: auto;
-        display: flex;
-        align-items: flex-start;
-        justify-content: center;
-        padding: 0.2rem 1rem 1rem;
-    }
-
+    .login-page { min-height: auto; display: flex; align-items: flex-start; justify-content: center; padding: 0.2rem 1rem 1rem; }
     .login-shell { width: 100%; max-width: 390px; margin: 0 auto; }
     .login-head { text-align: center; margin-bottom: 0.55rem; }
     .login-logo { height: 56px; width: auto; margin: 0 auto 0.65rem auto; display: block; }
-    .login-title { font-size: 1.08rem; font-weight: 800; color: #1F2937; }
-    .login-subtitle { font-size: 0.78rem; color: #667085; margin-top: 0.28rem; }
+    .login-title { font-size: 1.08rem; font-weight: 700; color: #1F2937; }
+    .login-subtitle { font-size: 0.78rem; color: #7C869D; margin-top: 0.28rem; }
     .login-form-box { background: transparent !important; border: none !important; padding: 0 !important; }
     .login-note { margin-top: 0.65rem; text-align: center; font-size: 0.72rem; color: #8A93A5; }
-
-    div[data-testid="stTextInput"] label,
-    div[data-testid="stSelectbox"] label,
-    div[data-testid="stDateInput"] label,
-    div[data-testid="stNumberInput"] label {
-        color: #334155 !important;
-        font-size: 0.80rem !important;
-        font-weight: 700 !important;
-        letter-spacing: 0.01em;
+    div[data-testid="stTextInput"] label, div[data-testid="stSelectbox"] label, div[data-testid="stDateInput"] label, div[data-testid="stNumberInput"] label {
+        color: #4D576D !important; font-size: 0.78rem !important; font-weight: 500 !important;
     }
-
-    div[data-testid="stTextInput"] input,
-    div[data-testid="stDateInput"] input,
-    div[data-testid="stNumberInput"] input,
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-        background: #FFFFFF !important;
-        border: 1.6px solid #CBD5E1 !important;
-        border-radius: 14px !important;
-        color: #1F2937 !important;
-        min-height: 46px !important;
-        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05) !important;
-        font-family: 'DM Sans', sans-serif !important;
-        font-size: 0.90rem !important;
-        font-weight: 600 !important;
-        transition: all 0.18s ease !important;
+    div[data-testid="stTextInput"] input, div[data-testid="stSelectbox"] div[data-baseweb="select"] > div, div[data-testid="stDateInput"] input, div[data-testid="stNumberInput"] input {
+        background: #F8FAFC !important; border: 1px solid #E5EAF2 !important; border-radius: 12px !important; color: #1F2937 !important;
     }
-
-    div[data-testid="stTextInput"] input:focus,
-    div[data-testid="stDateInput"] input:focus,
-    div[data-testid="stNumberInput"] input:focus,
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div:focus-within {
-        border-color: #2563EB !important;
-        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14), 0 8px 18px rgba(37, 99, 235, 0.10) !important;
-        background: #FFFFFF !important;
-    }
-
     div.stButton { width: fit-content !important; }
-
-    div.stButton button,
-    div[data-testid="stFormSubmitButton"] button,
-    .logout-btn div button,
-    .download-btn button {
-        border-radius: 999px !important;
-        min-height: 42px !important;
-        padding: 0 1.15rem !important;
-        font-size: 0.83rem !important;
-        font-weight: 800 !important;
-        box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08) !important;
-        font-family: 'DM Sans', sans-serif !important;
-        letter-spacing: 0.01em !important;
-        transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease !important;
-        border: 4.5px solid transparent !important;
+    div.stButton button, div[data-testid="stFormSubmitButton"] button, .logout-btn div button, .download-btn button {
+        color: #214D92 !important; border: 1px solid rgba(33,77,146,0.14) !important; border-radius: 999px !important;
+        min-height: 38px !important; padding: 0 1.15rem !important; font-size: 0.76rem !important; font-weight: 600 !important; box-shadow: none !important;
     }
-
-    div.stButton button:hover,
-    div[data-testid="stFormSubmitButton"] button:hover,
-    .download-btn button:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12) !important;
-        filter: saturate(1.04);
-    }
-
-    div.stButton button:focus,
-    div[data-testid="stFormSubmitButton"] button:focus,
-    .download-btn button:focus {
-        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14), 0 8px 18px rgba(37, 99, 235, 0.10) !important;
-    }
-
-    .portal-header {
-        padding: 0.1rem 0 0.55rem 0;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        margin-bottom: 0.55rem;
-    }
-
+    .portal-header { padding: 0.1rem 0 0.55rem 0; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.55rem; }
     .portal-header-left { display: flex; align-items: center; gap: 0.9rem; }
     .portal-logo { height: 42px; width: auto; object-fit: contain; display: block; }
-
-    .portal-title, .portal-title-en {
-        font-size: 0.96rem;
-        font-weight: 800;
-        color: #1F2937;
-        line-height: 1.15;
-    }
-
+    .portal-title, .portal-title-en { font-size: 0.96rem; font-weight: 700; color: #1F2937; line-height: 1.15; }
     .portal-title-en { margin-top: 0.12rem; }
-    .portal-subtitle, .portal-subtitle-en { font-size: 0.72rem; color: #667085; line-height: 1.2; }
+    .portal-subtitle, .portal-subtitle-en { font-size: 0.72rem; color: #7C869D; line-height: 1.2; }
     .portal-subtitle { margin-top: 0.12rem; }
     .portal-subtitle-en { margin-top: 0.08rem; }
     .user-top { font-size: 0.72rem; color: #566079; white-space: nowrap; }
     .main-content { padding: 0; }
-
-    .section-head-row, .section-head-row-green {
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        gap: 0.55rem;
-        margin-bottom: 0.75rem;
-        flex-wrap: wrap;
-    }
-
+    .section-head-row, .section-head-row-green { display: flex; align-items: center; justify-content: flex-start; gap: 0.55rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
     .section-head-row-green { margin-top: -0.15rem; }
-
-    .section-eyebrow {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.34rem 0.74rem;
-        border-radius: 999px;
-        background: #E0ECFF;
-        border: 1px solid #BFD4FF;
-        color: #1E4FBF;
-        font-size: 0.66rem;
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        margin-bottom: 0 !important;
-    }
-
-    .web-chip, .web-chip-green {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0.38rem 0.82rem;
-        border-radius: 999px;
-        font-size: 0.71rem;
-        font-weight: 800;
-        line-height: 1;
-        text-decoration: none;
-        white-space: nowrap;
-        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
-    }
-
-    .web-chip {
-        background: #FFE69A;
-        border: 1px solid #F2C94C;
-        color: #7A5900 !important;
-    }
-
-    .web-chip-green {
-        background: #DDF7E6;
-        border: 1px solid #9FDEB4;
-        color: #17663B !important;
-    }
-
-    .user-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        margin: 0.02rem 0 1rem;
-        padding: 0.42rem 0.78rem;
-        border-radius: 999px;
-        background: #fff;
-        border: 1px solid #D9E2EC;
-        font-size: 0.73rem;
-        font-weight: 700;
-        color: #4B5565;
-        max-width: 100%;
-        word-break: break-word;
-        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
-    }
-
-    .panel-inline {
-        background: linear-gradient(180deg, #FFFFFF 0%, #FAFBFD 100%);
-        border: 1px solid #DCE5F0;
-        border-radius: 22px;
-        padding: 1rem 1rem 1.1rem 1rem;
-        margin-top: 0.95rem;
-        box-shadow: 0 8px 28px rgba(15, 23, 42, 0.05);
-    }
-
-    .panel-inline h3 {
-        font-family: 'DM Sans', sans-serif !important;
-        font-weight: 800 !important;
-        color: #1F2937 !important;
-        margin-bottom: 0.65rem !important;
-        font-size: 1rem !important;
-    }
-
-    .action-box {
-        width: 100%;
-        min-height: 20px;
-        border-radius: 22px;
-        padding: 1rem;
-        margin-bottom: 0.85rem;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        gap: 0.9rem;
-        border: 1px solid transparent;
-        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
-    }
-
-    .card-es {
-        background: #EAF3FF;
-        border-color: #BFD7FF;
-        --card-btn-bg: #CFE3FF;
-        --card-btn-border: #94BEFF;
-        --card-btn-text: #1E4E93;
-        --card-btn-shadow: rgba(30, 78, 147, 0.16);
-    }
-
-    .card-grupos {
-        background: #EAF8EE;
-        border-color: #BDE3C7;
-        --card-btn-bg: #CDEFD7;
-        --card-btn-border: #93D0A7;
-        --card-btn-text: #1F6A3A;
-        --card-btn-shadow: rgba(31, 106, 58, 0.15);
-    }
-
-    .card-salida {
-        background: #FFF2E3;
-        border-color: #F1CFA9;
-        --card-btn-bg: #FFDDB8;
-        --card-btn-border: #F1B97B;
-        --card-btn-text: #8A5318;
-        --card-btn-shadow: rgba(138, 83, 24, 0.16);
-    }
-
-    .card-crucero {
-        background: #F0EAFE;
-        border-color: #D3C4FA;
-        --card-btn-bg: #DDD0FF;
-        --card-btn-border: #B9A0F8;
-        --card-btn-text: #5A3E9E;
-        --card-btn-shadow: rgba(90, 62, 158, 0.16);
-    }
-
-    .card-nueva-agencia {
-        background: #EAF8EF;
-        border-color: #BEE3C9;
-        --card-btn-bg: #D0EFDA;
-        --card-btn-border: #98D0AA;
-        --card-btn-text: #256245;
-        --card-btn-shadow: rgba(37, 98, 69, 0.16);
-    }
-
-    .card-buscar-agencia {
-        background: #FFF1E5;
-        border-color: #F1D1B0;
-        --card-btn-bg: #FFDDBF;
-        --card-btn-border: #F0B77E;
-        --card-btn-text: #8B5620;
-        --card-btn-shadow: rgba(139, 86, 32, 0.16);
-    }
-
-    .card-cvcfit {
-        background: #FDECF3;
-        border-color: #F1C3D6;
-        --card-btn-bg: #F7D2E2;
-        --card-btn-border: #E89BBB;
-        --card-btn-text: #9B3A63;
-        --card-btn-shadow: rgba(155, 58, 99, 0.16);
-    }
-
-    .card-cvcagencias {
-        background: #EBF8EF;
-        border-color: #BFE1C9;
-        --card-btn-bg: #D0EFD8;
-        --card-btn-border: #97D0A9;
-        --card-btn-text: #2C6A44;
-        --card-btn-shadow: rgba(44, 106, 68, 0.16);
-    }
-
-    .card-irconfirmacion {
-        background: #F0F3F8;
-        border-color: #CFD8E6;
-        --card-btn-bg: #E0E7F1;
-        --card-btn-border: #B8C6DC;
-        --card-btn-text: #4A5874;
-        --card-btn-shadow: rgba(74, 88, 116, 0.16);
-    }
-
-    .card-informebarco {
-        background: #EAF7FB;
-        border-color: #BFDDE8;
-        --card-btn-bg: #D2EDF6;
-        --card-btn-border: #97CEE0;
-        --card-btn-text: #2B6881;
-        --card-btn-shadow: rgba(43, 104, 129, 0.16);
-    }
-
+    .section-eyebrow { display: inline-flex; align-items: center; padding: 0.34rem 0.74rem; border-radius: 999px; background: #EAF1FF; border: 1px solid #D6E3FF; color: #2E5FB8; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0 !important; }
+    .web-chip, .web-chip-green { display: inline-flex; align-items: center; justify-content: center; padding: 0.34rem 0.74rem; border-radius: 999px; font-size: 0.70rem; font-weight: 700; line-height: 1; text-decoration: none; white-space: nowrap; }
+    .web-chip { background: #FFF3BF; border: 1px solid #F4D35E; color: #7A5900 !important; }
+    .web-chip-green { background: #E9F8EE; border: 1px solid #BEE3C8; color: #1E6B3A !important; }
+    .user-pill { display: inline-flex; align-items: center; gap: 0.4rem; margin: 0.02rem 0 1rem; padding: 0.38rem 0.68rem; border-radius: 999px; background: #fff; border: 1px solid #E4E7EF; font-size: 0.72rem; color: #5D6880; max-width: 100%; word-break: break-word; }
+    .action-box { width: 100%; min-height: 210px; border-radius: 22px; padding: 1rem; margin-bottom: 0.85rem; display: flex; flex-direction: column; justify-content: space-between; gap: 0.9rem; border: 1px solid transparent; }
+    .card-es { background: #F3F7FF; border-color: #D9E5FF; }
+    .card-grupos { background: #F4FBF6; border-color: #D8EEDC; }
+    .card-salida { background: #FFF8F1; border-color: #F1DFC7; }
+    .card-crucero { background: #F7F4FF; border-color: #E4DDF9; }
+    .card-excursiones { background: #EEF8FB; border-color: #D5EAF1; }
+    .card-nueva-agencia { background: #F1FAF4; border-color: #D7EEDC; }
+    .card-buscar-agencia { background: #FFF7EF; border-color: #F4E1CA; }
+    .card-cvcfit { background: #FFF2F7; border-color: #F4D7E3; }
+    .card-cvcagencias { background: #EEF9F1; border-color: #D5EEDB; }
+    .card-nextcard { background: #F6F7FB; border-color: #E1E5EF; }
     .action-top { display: flex; align-items: flex-start; gap: 0.75rem; }
-    .action-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1rem;
-        flex-shrink: 0;
-        background: rgba(255,255,255,0.42);
-        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
+    .action-icon { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+    .action-text { display: flex; flex-direction: column; gap: 0.10rem; min-width: 0; }
+    .action-title, .action-title-en { font-size: 0.95rem; font-weight: 700; color: #1F2937; line-height: 1.1; }
+    .action-title-en { margin-top: 0.05rem; }
+    .action-desc, .action-desc-en { font-size: 0.73rem; color: #6F7B91; line-height: 1.28; }
+    .action-desc { margin-top: 0.18rem; }
+    .action-desc-en { margin-top: 0.04rem; }
+    .action-button-wrap { display: flex !important; justify-content: flex-start !important; align-items: center !important; width: 100% !important; margin-top: 0.1rem; }
+    .panel-inline { margin-top: 1rem; padding-top: 0.2rem; width: 100%; max-width: 1100px; }
+    .done-link { display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 0.65rem; background: #D9E9FF; color: #214D92 !important; border: 1px solid #BDD6FF; border-radius: 999px; padding: 0.42rem 0.88rem; font-size: 0.71rem; font-weight: 600; text-decoration: none; }
+    .agency-card, .cvcfit-card, .cvcfit-status-card, .cvcagencias-card, .cvcagencias-status-card, .process-card {
+        background: #FBFCFF; border: 1px solid #E6EBF3; border-radius: 18px; padding: 1rem; margin-top: 0.75rem;
     }
-
-    .action-text { display: flex; flex-direction: column; gap: 0.12rem; min-width: 0; }
-
-    .action-title,
-    .action-title-en {
-        font-family: 'DM Sans', sans-serif !important;
-        line-height: 1.1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+    .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid {
+        display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem 1rem;
     }
-
-    .action-title {
-        font-size: 0.96rem;
-        font-weight: 800;
-        color: #1F2937;
+    .agency-item-label, .cvcfit-item-label, .cvcagencias-item-label, .process-item-label {
+        font-size: 0.68rem; color: #7E889D; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.16rem;
     }
-
-    .action-title-en {
-        margin-top: 0.08rem;
-        color: #41506B;
-        font-size: 0.83rem;
-        font-weight: 700;
+    .agency-item-value, .cvcfit-item-value, .cvcagencias-item-value, .process-item-value {
+        font-size: 0.8rem; color: #1F2937; line-height: 1.35; word-break: break-word;
     }
-
-    .action-button-wrap {
-        display: flex !important;
-        justify-content: flex-start !important;
-        align-items: center !important;
-        width: 100% !important;
-        margin-top: 0.1rem;
+    .cvcfit-log-line, .cvcagencias-log-line {
+        font-size: 0.74rem; color: #465066; line-height: 1.45; margin-bottom: 0.35rem; word-break: break-word;
     }
-
-    .action-button-wrap a.done-link {
-        margin-top: 0 !important;
-    }
-
-    .done-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        border-radius: 999px;
-        padding: 0.48rem 0.96rem;
-        font-size: 0.82rem;
-        font-weight: 800;
-        font-family: 'DM Sans', sans-serif !important;
-        text-decoration: none;
-        white-space: nowrap;
-        box-shadow: 0 5px 14px rgba(15, 23, 42, 0.08);
-        transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
-    }
-
-    .done-link:hover {
-        transform: translateY(-1px);
-        filter: saturate(1.04);
-    }
-
-.action-box div.stButton button,
-.action-box .done-link {
-    background: var(--card-btn-bg) !important;
-    border: 1.5px solid var(--card-btn-border) !important;
-    color: var(--card-btn-text) !important;
-    box-shadow: 0 6px 14px var(--card-btn-shadow) !important;
-    font-family: 'DM Sans', sans-serif !important;
-}
-
-.action-box div.stButton button:hover,
-.action-box .done-link:hover {
-    background: var(--card-btn-hover-bg) !important;
-    border-color: var(--card-btn-hover-border) !important;
-    color: var(--card-btn-hover-text) !important;
-    box-shadow: 0 10px 22px var(--card-btn-shadow) !important;
-    transform: translateY(-1px);
-    filter: none !important;
-}
-    .panel-inline div.stButton button,
-    .panel-inline div[data-testid="stFormSubmitButton"] button,
-    .panel-inline .download-btn button,
-    .panel-inline .stDownloadButton button {
-        background: linear-gradient(180deg, #2F6DF6 0%, #245FE0 100%) !important;
-        color: #FFFFFF !important;
-        border: 1.5px solid #1E4FC7 !important;
-        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.22) !important;
-        font-family: 'DM Sans', sans-serif !important;
-    }
-
-    .panel-inline div.stButton button:hover,
-    .panel-inline div[data-testid="stFormSubmitButton"] button:hover,
-    .panel-inline .stDownloadButton button:hover {
-        filter: brightness(1.03);
-        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.26) !important;
-    }
-
-    .agency-card, .cvcfit-card, .cvcfit-status-card, .cvcagencias-card, .cvcagencias-status-card, .process-card, .irconfirmacion-card, .informebarco-card {
-        background: #FBFCFF;
-        border: 1px solid #DCE5F0;
-        border-radius: 18px;
-        padding: 1rem;
-        margin-top: 0.75rem;
-        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
-    }
-
-    .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid, .irconfirmacion-grid, .informebarco-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.85rem 1rem;
-    }
-
-    .agency-item-label, .cvcfit-item-label, .cvcagencias-item-label, .process-item-label, .irconfirmacion-item-label, .informebarco-item-label {
-        font-size: 0.68rem;
-        color: #64748B;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        margin-bottom: 0.16rem;
-        font-weight: 700;
-    }
-
-    .agency-item-value, .cvcfit-item-value, .cvcagencias-item-value, .process-item-value, .irconfirmacion-item-value, .informebarco-item-value {
-        font-size: 0.82rem;
-        color: #1F2937;
-        line-height: 1.35;
-        word-break: break-word;
-        font-weight: 600;
-    }
-
-    .cvcfit-log-line, .cvcagencias-log-line, .irconfirmacion-log-line {
-        font-size: 0.74rem;
-        color: #465066;
-        line-height: 1.45;
-        margin-bottom: 0.35rem;
-        word-break: break-word;
-    }
-
-    .report-table-wrap { margin-top: 1rem; overflow-x: auto; }
-
-    .report-table {
-        width: 100%;
-        border-collapse: collapse;
-        background: #fff;
-        border: 1px solid #DCE5F0;
-        border-radius: 16px;
-        overflow: hidden;
-    }
-
-    .report-table th, .report-table td {
-        font-size: 0.76rem;
-        padding: 0.65rem 0.7rem;
-        border-bottom: 1px solid #EEF2F7;
-        text-align: left;
-        vertical-align: top;
-    }
-
-    .report-table th {
-        background: #F5F8FC;
-        color: #334155;
-        font-weight: 800;
-        white-space: nowrap;
-    }
-
-    .report-table td {
-        color: #1F2937;
-        font-weight: 500;
-    }
-
-    .portal-footer {
-        margin-top: 1rem;
-        padding: 0.5rem 0 0 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.8rem;
-        flex-wrap: wrap;
-    }
-
+    .portal-footer { margin-top: 1rem; padding: 0.5rem 0 0 0; display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
     .footer-text { font-size: 0.71rem; color: #A2ABBD; }
-
     @media (max-width: 1600px) {
-        .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid, .irconfirmacion-grid, .informebarco-grid {
-            grid-template-columns: 1fr;
-        }
+        .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid { grid-template-columns: 1fr; }
     }
-
     @media (max-width: 1300px) {
-        .portal-header, .portal-footer {
-            flex-direction: column;
-            align-items: flex-start;
-        }
+        .portal-header, .portal-footer { flex-direction: column; align-items: flex-start; }
     }
     </style>
     """,
@@ -1699,7 +944,6 @@ SALUDO = get_saludo("es")
 SALUDOEN = get_saludo("en")
 excursionesurl = f"https://docs.google.com/spreadsheets/d/{EXCURSIONES_SHEET_ID}/edit"
 drive_root_url = f"https://drive.google.com/drive/folders/{DRIVE_ROOT_ID}"
-groups_root_url = f"https://drive.google.com/drive/folders/{GROUPS_ROOT_ID}"
 cvcfit_folder_url = f"https://drive.google.com/drive/folders/{FOLDER_ID}"
 
 
@@ -1740,12 +984,8 @@ st.markdown(
     f"""
     <div class="section-head-row-green">
         <a class="web-chip-green" href="{drive_root_url}" target="_blank" rel="noopener noreferrer">Abre Drive Root</a>
-        <a class="web-chip-green" href="{groups_root_url}" target="_blank" rel="noopener noreferrer">Abre Drive Groups</a>
         <a class="web-chip-green" href="{cvcfit_folder_url}" target="_blank" rel="noopener noreferrer">Abre Folder Sesiones</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER_CABINAS</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre EXCURSIONES</a>
-         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44_WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER CLIENTES</a>
-          <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCR_HJr9TCD7VWrGI6nDhMtwi27cMJL_1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre Ventas FIT</a>
     </div>
     """,
     unsafe_allow_html=True,
@@ -1761,12 +1001,14 @@ def render_action_card(col, config):
     with col:
         st.markdown(
             f"""
-            <div class="action-box {config['card_class']}" data-card="{config['card_class']}">
+            <div class="action-box {config['card_class']}">
                 <div class="action-top">
                     <div class="action-icon">{config['icon']}</div>
                     <div class="action-text">
                         <div class="action-title">{config['title_es']}</div>
                         <div class="action-title-en">{config['title_en']}</div>
+                        <div class="action-desc">{config['desc_es']}</div>
+                        <div class="action-desc-en">{config['desc_en']}</div>
                     </div>
                 </div>
                 <div class="action-button-wrap">
@@ -1797,6 +1039,8 @@ cards = [
         "icon": "📄",
         "title_es": "Nueva Confirmación",
         "title_en": "New Confirmation",
+        "desc_es": f"Crear sesión MASTER CONFIRMATION para {DISPLAYUSER}",
+        "desc_en": f"Create MASTER CONFIRMATION session for {DISPLAYUSER}",
         "button_label": "Crear Sesión",
         "key": "btncreares",
         "action": lambda: create_master_session(
@@ -1812,6 +1056,8 @@ cards = [
         "icon": "👥",
         "title_es": "Nueva Confirmación GRUPOS",
         "title_en": "New GROUPS Confirmation",
+        "desc_es": f"Crear sesión MASTER GROUPS para {DISPLAYUSER}",
+        "desc_en": f"Create MASTER GROUPS session for {DISPLAYUSER}",
         "button_label": "Crear Sesión GRUPOS",
         "key": "btncreargrupos",
         "action": lambda: create_master_session(
@@ -1827,6 +1073,8 @@ cards = [
         "icon": "🔎",
         "title_es": "Ir a Salida",
         "title_en": "Go to Departure",
+        "desc_es": "Buscar una salida existente por año, barco y código de salida",
+        "desc_en": "Find an existing departure by year, ship and departure code",
         "button_label": "Buscar Salida",
         "key": "btnirsalida",
         "action": lambda: (open_panel("salida"), st.rerun()),
@@ -1834,17 +1082,32 @@ cards = [
     {
         "card_class": "card-crucero",
         "icon": "🛳️",
-        "title_es": "Crear Crucero",
+        "title_es": "Crear crucero",
         "title_en": "Create Cruise",
+        "desc_es": "Crear salida nueva desde plantilla y guardarla en año/barco",
+        "desc_en": "Create a new departure from template and save it in year/ship",
         "button_label": "Nuevo Crucero",
         "key": "btncrearcruceroopen",
         "action": lambda: (open_panel("crucero"), st.rerun()),
+    },
+    {
+        "card_class": "card-excursiones",
+        "icon": "🧭",
+        "title_es": "Excursiones",
+        "title_en": "Excursions",
+        "desc_es": "Abrir la hoja de Excursiones",
+        "desc_en": "Open the Excursions sheet",
+        "button_label": "Abrir Excursiones",
+        "key": "btnexcursioneslink",
+        "link": excursionesurl,
     },
     {
         "card_class": "card-nueva-agencia",
         "icon": "🏢",
         "title_es": "Nueva Agencia",
         "title_en": "New Agency",
+        "desc_es": "Crear una agencia y guardarla en la hoja Datos",
+        "desc_en": "Create an agency and save it in Datos sheet",
         "button_label": "Nueva Agencia",
         "key": "btnnuevaagencia",
         "action": lambda: (open_panel("nuevaagencia"), st.rerun()),
@@ -1854,6 +1117,8 @@ cards = [
         "icon": "📇",
         "title_es": "Buscar Agencia",
         "title_en": "Find Agency",
+        "desc_es": "Buscar por cualquier dato y mostrar la ficha completa",
+        "desc_en": "Search by any known value and show the full record",
         "button_label": "Buscar Agencia",
         "key": "btnbuscaragencia",
         "action": lambda: (open_panel("buscaragencia"), st.rerun()),
@@ -1863,6 +1128,8 @@ cards = [
         "icon": "🧾",
         "title_es": "CVC Fit",
         "title_en": "CVC Fit",
+        "desc_es": "Buscar por localizador y descargar PDF CVC Fit",
+        "desc_en": "Find locator and download the CVC Fit sheet as PDF",
         "button_label": "Abrir CVC Fit",
         "key": "btncvcfitopen",
         "action": lambda: (open_panel("cvcfit"), st.rerun()),
@@ -1872,38 +1139,33 @@ cards = [
         "icon": "🏷️",
         "title_es": "CVC Agencias",
         "title_en": "CVC Agencies",
+        "desc_es": "Buscar por localizador descargar PDF CVC Agencias",
+        "desc_en": "Find locator and download the CVC Agencias sheet as PDF",
         "button_label": "Abrir CVC Agencias",
         "key": "btncvcagenciasopen",
         "action": lambda: (open_panel("cvcagencias"), st.rerun()),
     },
-    {
-        "card_class": "card-irconfirmacion",
-        "icon": "📌",
-        "title_es": "Ir a Confirmación",
-        "title_en": "Go to Confirmation",
-        "button_label": "Buscar Localizador",
-        "key": "btnirconfirmacionopen",
-        "action": lambda: (open_panel("irconfirmacion"), st.rerun()),
-    },
-    {
-        "card_class": "card-informebarco",
-        "icon": "💶",
-        "title_es": "Informe € por Barco",
-        "title_en": "€ Report by Ship",
-        "button_label": "Abrir Informe",
-        "key": "btninformebarcoopen",
-        "action": lambda: (open_panel("informebarco"), st.rerun()),
-    },
 ]
 
-# ANCHOS PERSONALIZADOS
-row1 = st.columns([1.45, 1.45, 1.05, 1.05, 1.10, 1.10], gap="medium")
-for col, card in zip(row1, cards[:6]):
+cols = st.columns(9, gap="medium")
+for col, card in zip(cols, cards):
     render_action_card(col, card)
 
-row2 = st.columns([0.5, 0.5, 0.5, 0.5], gap="medium")
-for col, card in zip(row2, cards[6:10]):
-    render_action_card(col, card)
+row2 = st.columns(9, gap="medium")
+render_action_card(
+    row2[0],
+    {
+        "card_class": "card-nextcard",
+        "icon": "🚀",
+        "title_es": "NextCard",
+        "title_en": "NextCard",
+        "desc_es": "Tarjeta reservada para un uso futuro",
+        "desc_en": "Reserved card for future use",
+        "button_label": "Próximamente",
+        "key": "btnnextcardfuture",
+        "disabled": True,
+    },
+)
 
 
 # ============================================================
@@ -2218,22 +1480,27 @@ if st.session_state.get("opencvcfitform"):
         render_key_value_grid(
             "cvcfit",
             [
-                ("Localizador", result.get("locator", "")),
-                ("Nombre pasajero", result.get("nombre", "")),
-                ("Spreadsheet", result.get("spreadsheet_name", "")),
+                ("Localizador", result["locator"]),
+                ("Nombre pasajero", result["nombre"]),
+                ("Spreadsheet origen", result["spreadsheet_name"]),
+                ("Nombre del PDF", result["filename"]),
             ],
         )
-        st.download_button(
-            "Descargar PDF CVC Fit",
-            data=result["pdf_bytes"],
-            file_name=result["filename"],
-            mime="application/pdf",
-            key="downloadcvcfitpdf",
-        )
-        st.markdown(
-            f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank" rel="noopener noreferrer">Abrir spreadsheet</a>',
-            unsafe_allow_html=True,
-        )
+        cola, colb = st.columns([1, 3], gap="small")
+        with cola:
+            st.download_button(
+                label="⬇ Descargar PDF",
+                data=result["pdf_bytes"],
+                file_name=result["filename"],
+                mime="application/pdf",
+                key="btncvcfitdownload",
+                type="primary",
+            )
+        with colb:
+            st.markdown(
+                f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank" rel="noopener noreferrer">📊 Abrir hoja origen en Drive</a>',
+                unsafe_allow_html=True,
+            )
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -2263,222 +1530,38 @@ if st.session_state.get("opencvcagenciasform"):
         render_key_value_grid(
             "cvcagencias",
             [
-                ("Localizador", result.get("locator", "")),
-                ("Nombre pasajero", result.get("nombre", "")),
-                ("Spreadsheet", result.get("spreadsheet_name", "")),
+                ("Localizador", result["locator"]),
+                ("Nombre pasajero", result["nombre"]),
+                ("Spreadsheet origen", result["spreadsheet_name"]),
+                ("Nombre del PDF", result["filename"]),
             ],
         )
-        st.download_button(
-            "Descargar PDF CVC Agencias",
-            data=result["pdf_bytes"],
-            file_name=result["filename"],
-            mime="application/pdf",
-            key="downloadcvcagenciaspdf",
-        )
-        st.markdown(
-            f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank" rel="noopener noreferrer">Abrir spreadsheet</a>',
-            unsafe_allow_html=True,
-        )
+        cola, colb = st.columns([1, 3], gap="small")
+        with cola:
+            st.download_button(
+                label="⬇ Descargar PDF",
+                data=result["pdf_bytes"],
+                file_name=result["filename"],
+                mime="application/pdf",
+                key="btncvcagenciasdownload",
+                type="primary",
+            )
+        with colb:
+            st.markdown(
+                f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank" rel="noopener noreferrer">📊 Abrir hoja origen en Drive</a>',
+                unsafe_allow_html=True,
+            )
     st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ============================================================
-# PANEL IR A CONFIRMACION
+# FOOTER
 # ============================================================
-if st.session_state.get("openirconfirmacionform"):
-    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    st.markdown("### Ir a Confirmación")
-    locator = st.text_input(
-        "Localizador",
-        key="irconfirmacionlocatorwidget",
-        placeholder="Ej: ALB250601-001 o ALB250601-001_GROUP",
-    )
-    if st.button("Buscar confirmación", key="btnirconfirmacionaction", disabled=not locator):
-        try:
-            result = find_locator_confirmation(locator)
-            st.session_state["irconfirmacion_result"] = result
-            st.session_state["irconfirmacion_log"] = result.get("log", [])
-        except Exception as exc:
-            st.error(str(exc))
-            st.session_state["irconfirmacion_result"] = None
-            st.session_state["irconfirmacion_log"] = []
-
-    log_lines_saved = st.session_state.get("irconfirmacion_log", [])
-    if log_lines_saved:
-        st.markdown('<div class="irconfirmacion-card" style="margin-top:0.75rem;">', unsafe_allow_html=True)
-        st.markdown("**Resultado de la búsqueda:**")
-        st.markdown("<br>".join(f"<div class='irconfirmacion-log-line'>{line}</div>" for line in log_lines_saved), unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    result = st.session_state.get("irconfirmacion_result")
-    if result and result.get("status") == "found":
-        parsed = result.get("parsed", {})
-        render_key_value_grid(
-            "irconfirmacion",
-            [
-                ("Localizador", parsed.get("original", "")),
-                ("Barco", parsed.get("boat_name", "")),
-                ("Archivo", result.get("file", {}).get("name", "")),
-                ("Pestaña", result.get("sheet", {}).get("title", "")),
-            ],
-        )
-        st.markdown(
-            f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir confirmación</a>',
-            unsafe_allow_html=True,
-        )
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-# ============================================================
-# PANEL INFORME BARCO
-# ============================================================
-if st.session_state.get("openinformebarcoform"):
-    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    st.markdown("### Informe € por Barco")
-
-    tipo_options = ["NORMAL", "GROUPS"]
-    current_tipo = st.session_state.get("informetype")
-    if current_tipo not in tipo_options:
-        current_tipo = None
-
-    informetype = st.selectbox(
-        "TIPO",
-        options=tipo_options,
-        index=tipo_options.index(current_tipo) if current_tipo in tipo_options else None,
-        placeholder="Selecciona tipo",
-        key="informetypewidget",
-        on_change=on_informe_type_change,
-    )
-    if informetype != st.session_state.get("informetype"):
-        st.session_state["informetype"] = informetype
-
-    root_id = GROUPS_ROOT_ID if informetype == "GROUPS" else DRIVE_ROOT_ID
-
-    years = get_years_by_root(root_id) if informetype else []
-    current_year = st.session_state.get("informeyear")
-    if current_year not in years:
-        current_year = None
-
-    informeyear = st.selectbox(
-        "AÑO",
-        options=years,
-        index=years.index(current_year) if current_year in years else None,
-        placeholder="Selecciona año",
-        key="informeyearwidget",
-        on_change=on_informe_year_change,
-        disabled=not informetype,
-    )
-    if informeyear != st.session_state.get("informeyear"):
-        st.session_state["informeyear"] = informeyear
-
-    boats = get_boats_by_root(root_id, informeyear) if informetype and informeyear else []
-    current_boat = st.session_state.get("informeboat")
-    if current_boat not in boats:
-        current_boat = None
-
-    informeboat = st.selectbox(
-        "BARCO",
-        options=boats,
-        index=boats.index(current_boat) if current_boat in boats else None,
-        placeholder="Selecciona barco",
-        key="informeboatwidget",
-        on_change=on_informe_boat_change,
-        disabled=not informeyear,
-    )
-    if informeboat != st.session_state.get("informeboat"):
-        st.session_state["informeboat"] = informeboat
-
-    departures = get_departures_by_root(root_id, informeyear, informeboat) if informetype and informeyear and informeboat else []
-    departure_names = [d["nombre"] for d in departures]
-    current_dep = st.session_state.get("informesalida")
-    if current_dep not in departure_names:
-        current_dep = None
-
-    informesalida = st.selectbox(
-        "SALIDA",
-        options=departure_names,
-        index=departure_names.index(current_dep) if current_dep in departure_names else None,
-        placeholder="Selecciona salida",
-        key="informesalidawidget",
-        on_change=on_informe_salida_change,
-        disabled=not informeboat,
-    )
-    if informesalida != st.session_state.get("informesalida"):
-        st.session_state["informesalida"] = informesalida
-
-    if st.button("Generar informe", key="btngenerarinforme", disabled=not informesalida):
-        try:
-            selected = next((d for d in departures if d["nombre"] == informesalida), None)
-            if not selected:
-                st.error("No se ha encontrado la salida seleccionada.")
-            else:
-                st.session_state["informeresult"] = extract_informe_por_barco(selected["id"], selected["nombre"])
-        except Exception as exc:
-            st.exception(exc)
-
-    informeresult = st.session_state.get("informeresult")
-    if informeresult:
-        render_key_value_grid(
-            "informebarco",
-            [
-                ("Spreadsheet", informeresult.get("spreadsheet_name", "")),
-                ("Total Importe", f"{informeresult.get('total_importe', 0):,.2f} €"),
-                ("Total PAX", str(informeresult.get("total_pax", 0))),
-                ("Total Hojas", str(len(informeresult.get("rows", [])))),
-            ],
-        )
-
-        rows = informeresult.get("rows", [])
-        if rows:
-            table_html = """
-            <div class="report-table-wrap">
-            <table class="report-table">
-                <thead>
-                    <tr>
-                        <th>Hoja</th>
-                        <th>Localizador</th>
-                        <th>Agencia</th>
-                        <th>Estado Pago</th>
-                        <th>Total €</th>
-                        <th>Depósito</th>
-                        <th>PAX</th>
-                        <th>Cabinas</th>
-                        <th>Itinerario</th>
-                        <th>Duración</th>
-                        <th>Tipo</th>
-                    </tr>
-                </thead>
-                <tbody>
-            """
-            for row in rows:
-                table_html += f"""
-                    <tr>
-                        <td>{row.get('Hoja', '')}</td>
-                        <td>{row.get('Localizador', '')}</td>
-                        <td>{row.get('Agencia', '')}</td>
-                        <td>{row.get('Estado Pago', '')}</td>
-                        <td>{row.get('Total €', 0):,.2f} €</td>
-                        <td>{row.get('Cantidad Deposito', 0):,.2f} €</td>
-                        <td>{row.get('PAX', 0)}</td>
-                        <td>{row.get('Cabinas', 0)}</td>
-                        <td>{row.get('Itinerario', '')}</td>
-                        <td>{row.get('Duracion', '')}</td>
-                        <td>{row.get('Tipo Documento', '')}</td>
-                    </tr>
-                """
-            table_html += "</tbody></table></div>"
-            st.markdown(table_html, unsafe_allow_html=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-st.markdown(
-    """
-    <div class="portal-footer">
-        <div class="footer-text">Crucemundo Hub</div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+footer_col1, footer_col2 = st.columns([3, 1])
+with footer_col1:
+    st.markdown('<div class="portal-footer"><div class="footer-text">Crucemundo Hub · Clean version</div></div>', unsafe_allow_html=True)
+with footer_col2:
+    if st.button("Cerrar sesión", key="btnlogout"):
+        do_logout()
 
 st.markdown("</div>", unsafe_allow_html=True)
