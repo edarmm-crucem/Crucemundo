@@ -2417,61 +2417,61 @@ if st.session_state.get("openinformebarcoform"):
             st.exception(exc)
 
     informeresult = st.session_state.get("informeresult")
-    if informeresult:
-        render_key_value_grid(
-            "informebarco",
-            [
-                ("Spreadsheet", informeresult.get("spreadsheet_name", "")),
-                ("Total Importe", f"{informeresult.get('total_importe', 0):,.2f} €"),
-                ("Total PAX", str(informeresult.get("total_pax", 0))),
-                ("Total Hojas", str(len(informeresult.get("rows", [])))),
-            ],
-        )
 
-rows = informeresult.get("rows", [])
-if rows:
-    table_html = """
-    <div class="report-table-wrap">
-        <table class="report-table">
-            <thead>
-                <tr>
-                    <th>Hoja</th>
-                    <th>Localizador</th>
-                    <th>Agencia</th>
-                    <th>Estado Pago</th>
-                    <th>Total</th>
-                    <th>Depósito</th>
-                    <th>PAX</th>
-                    <th>Cabinas</th>
-                    <th>Itinerario</th>
-                    <th>Duración</th>
-                    <th>Tipo</th>
-                </tr>
-            </thead>
-            <tbody>
-    """
+if informeresult and isinstance(informeresult, dict):
+    renderkeyvaluegrid(
+        "informebarco",
+        [
+            ("Spreadsheet", informeresult.get("spreadsheetname", "")),
+            ("Total Importe", f"{informeresult.get('totalimporte', 0):,.2f} €"),
+            ("Total PAX", str(informeresult.get("totalpax", 0))),
+            ("Total Hojas", str(len(informeresult.get("rows", [])))),
+        ],
+    )
 
-    for row in rows:
-        table_html += f"""
-                <tr>
-                    <td>{row.get('Hoja', '')}</td>
-                    <td>{row.get('Localizador', '')}</td>
-                    <td>{row.get('Agencia', '')}</td>
-                    <td>{row.get('Estado Pago', '')}</td>
-                    <td>{row.get('Total', 0):,.2f} €</td>
-                    <td>{row.get('Cantidad Deposito', 0):,.2f} €</td>
-                    <td>{row.get('PAX', 0)}</td>
-                    <td>{row.get('Cabinas', 0)}</td>
-                    <td>{row.get('Itinerario', '')}</td>
-                    <td>{row.get('Duracion', '')}</td>
-                    <td>{row.get('Tipo Documento', '')}</td>
-                </tr>
+    rows = informeresult.get("rows", [])
+    if rows:
+        table_html = """
+        <div class="report-table-wrap">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Hoja</th>
+                        <th>Localizador</th>
+                        <th>Agencia</th>
+                        <th>Estado Pago</th>
+                        <th>Total</th>
+                        <th>Depósito</th>
+                        <th>PAX</th>
+                        <th>Cabinas</th>
+                        <th>Itinerario</th>
+                        <th>Duración</th>
+                        <th>Tipo</th>
+                    </tr>
+                </thead>
+                <tbody>
         """
 
-    table_html += """
-            </tbody>
-        </table>
-    </div>
-    """
+        for row in rows:
+            table_html += f"""
+                    <tr>
+                        <td>{row.get('Hoja', '')}</td>
+                        <td>{row.get('Localizador', '')}</td>
+                        <td>{row.get('Agencia', '')}</td>
+                        <td>{row.get('Estado Pago', '')}</td>
+                        <td>{row.get('Total', 0):,.2f} €</td>
+                        <td>{row.get('Cantidad Deposito', 0):,.2f} €</td>
+                        <td>{row.get('PAX', 0)}</td>
+                        <td>{row.get('Cabinas', 0)}</td>
+                        <td>{row.get('Itinerario', '')}</td>
+                        <td>{row.get('Duracion', '')}</td>
+                        <td>{row.get('Tipo Documento', '')}</td>
+                    </tr>
+            """
 
-    st.markdown(table_html, unsafe_allow_html=True)
+        table_html += """
+                </tbody>
+            </table>
+        </div>
+        """
+        st.markdown(table_html, unsafe_allow_html=True)
