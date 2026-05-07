@@ -1318,8 +1318,6 @@ st.markdown(
         <a class="web-chip-green" href="{cvcfit_folder_url}" target="_blank" rel="noopener noreferrer">Abre Folder Sesiones</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER_CABINAS</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre EXCURSIONES</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCR_HJr9TCD7VWrGI6nDhMtwi27cMJL_1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre Ventas FIT</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44_WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER Cliente</a>
     </div>
     """,
     unsafe_allow_html=True,
@@ -2067,40 +2065,46 @@ if st.session_state.get("openinformebarcoform"):
 
         rows = informe_result.get("rows", [])
         if rows:
-            import pandas as pd
-
-            display_rows = []
-            link_rows = []
-
+            st.markdown('<div class="report-table-wrap">', unsafe_allow_html=True)
+            html = """
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Hoja</th>
+                        <th>Localizador</th>
+                        <th>Agencia</th>
+                        <th>Estado Pago</th>
+                        <th>Total €</th>
+                        <th>Deposito</th>
+                        <th>PAX</th>
+                        <th>Cabinas</th>
+                        <th>Itinerario</th>
+                        <th>Duracion</th>
+                    </tr>
+                </thead>
+                <tbody>
+            """
             for row in rows:
                 gid_url = build_sheet_tab_url(informe_result["spreadsheet_id"], row["SheetId"])
                 total_fmt = f"{row['Total €']:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
                 dep_fmt = f"{row['Cantidad Deposito']:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
-
-                display_rows.append({
-                    "Hoja": row["Hoja"],
-                    "Localizador": row["Localizador"],
-                    "Agencia": row["Agencia"],
-                    "Estado Pago": row["Estado Pago"],
-                    "Total €": total_fmt,
-                    "Deposito": dep_fmt,
-                    "PAX": row["PAX"],
-                    "Cabinas": row["Cabinas"],
-                    "Itinerario": row["Itinerario"],
-                    "Duracion": row["Duracion"],
-                })
-
-                link_rows.append((row["Hoja"], gid_url))
-
-            df_report = pd.DataFrame(display_rows)
-            st.dataframe(df_report, use_container_width=True, hide_index=True)
-
-            st.markdown("#### Abrir hojas")
-            for hoja, gid_url in link_rows:
-                st.markdown(
-                    f'<a class="done-link" href="{gid_url}" target="_blank" rel="noopener noreferrer">{hoja}</a>',
-                    unsafe_allow_html=True,
-                )
+                html += f"""
+                    <tr>
+                        <td><a href="{gid_url}" target="_blank" rel="noopener noreferrer">{row['Hoja']}</a></td>
+                        <td>{row['Localizador']}</td>
+                        <td>{row['Agencia']}</td>
+                        <td>{row['Estado Pago']}</td>
+                        <td>{total_fmt}</td>
+                        <td>{dep_fmt}</td>
+                        <td>{row['PAX']}</td>
+                        <td>{row['Cabinas']}</td>
+                        <td>{row['Itinerario']}</td>
+                        <td>{row['Duracion']}</td>
+                    </tr>
+                """
+            html += "</tbody></table>"
+            st.markdown(html, unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
         else:
             st.info("No se han encontrado hojas con CONFIR o PROFORMA en B2.")
 
