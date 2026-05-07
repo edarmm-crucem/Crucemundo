@@ -1352,13 +1352,13 @@ st.markdown(
     }
 
     .card-es {
-        background: #EAF3FF;
-        border-color: #BFD7FF;
-        --card-btn-bg: #CFE3FF;
-        --card-btn-border: #94BEFF;
-        --card-btn-text: #1E4E93;
-        --card-btn-shadow: rgba(30, 78, 147, 0.16);
-    }
+    background: #DCEBFF;
+    border-color: #8FB8FF;
+    --card-btn-bg: #BFD8FF;
+    --card-btn-border: #6FA3FF;
+    --card-btn-text: #123F84;
+    --card-btn-shadow: rgba(18, 63, 132, 0.22);
+}
 
     .card-grupos {
         background: #EAF8EE;
