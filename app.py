@@ -2428,7 +2428,7 @@ if st.session_state.get("openinformebarcoform"):
             ],
         )
 
-        rows = informeresult.get("rows", [])
+rows = informeresult.get("rows", [])
 if rows:
     table_html = """
     <div class="report-table-wrap">
@@ -2473,20 +2473,5 @@ if rows:
         </table>
     </div>
     """
-    """
-            table_html += "</tbody></table></div>"
-            st.markdown(table_html, unsafe_allow_html=True)
 
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-st.markdown(
-    """
-    <div class="portal-footer">
-        <div class="footer-text">Crucemundo Hub</div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown(table_html, unsafe_allow_html=True)
