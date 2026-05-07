@@ -1198,7 +1198,8 @@ st.markdown(
     div.stButton button,
     div[data-testid="stFormSubmitButton"] button,
     .logout-btn div button,
-    .download-btn button {
+    .download-btn button,
+    .stDownloadButton button {
         border-radius: 999px !important;
         min-height: 42px !important;
         padding: 0 1.15rem !important;
@@ -1213,7 +1214,8 @@ st.markdown(
 
     div.stButton button:hover,
     div[data-testid="stFormSubmitButton"] button:hover,
-    .download-btn button:hover {
+    .download-btn button:hover,
+    .stDownloadButton button:hover {
         transform: translateY(-1px);
         box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12) !important;
         filter: saturate(1.04);
@@ -1221,7 +1223,8 @@ st.markdown(
 
     div.stButton button:focus,
     div[data-testid="stFormSubmitButton"] button:focus,
-    .download-btn button:focus {
+    .download-btn button:focus,
+    .stDownloadButton button:focus {
         box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14), 0 8px 18px rgba(37, 99, 235, 0.10) !important;
     }
 
@@ -1741,8 +1744,8 @@ st.markdown(
         <a class="web-chip-green" href="{cvcfit_folder_url}" target="_blank" rel="noopener noreferrer">Abre Folder Sesiones</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER_CABINAS</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre EXCURSIONES</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44_WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER CLIENTES</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCR_HJr9TCD7VWrGI6nDhMtwi27cMJL_1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre Ventas FIT</a>
+         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44_WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER CLIENTES</a>
+          <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCR_HJr9TCD7VWrGI6nDhMtwi27cMJL_1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre Ventas FIT</a>
     </div>
     """,
     unsafe_allow_html=True,
