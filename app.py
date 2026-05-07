@@ -1198,8 +1198,7 @@ st.markdown(
     div.stButton button,
     div[data-testid="stFormSubmitButton"] button,
     .logout-btn div button,
-    .download-btn button,
-    .stDownloadButton button {
+    .download-btn button {
         border-radius: 999px !important;
         min-height: 42px !important;
         padding: 0 1.15rem !important;
@@ -1214,8 +1213,7 @@ st.markdown(
 
     div.stButton button:hover,
     div[data-testid="stFormSubmitButton"] button:hover,
-    .download-btn button:hover,
-    .stDownloadButton button:hover {
+    .download-btn button:hover {
         transform: translateY(-1px);
         box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12) !important;
         filter: saturate(1.04);
@@ -1223,8 +1221,7 @@ st.markdown(
 
     div.stButton button:focus,
     div[data-testid="stFormSubmitButton"] button:focus,
-    .download-btn button:focus,
-    .stDownloadButton button:focus {
+    .download-btn button:focus {
         box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14), 0 8px 18px rgba(37, 99, 235, 0.10) !important;
     }
 
@@ -1446,7 +1443,7 @@ st.markdown(
 
     .action-top { display: flex; align-items: flex-start; gap: 0.75rem; }
     .action-icon {
-        width: 10px;
+        width: 40px;
         height: 40px;
         border-radius: 12px;
         display: flex;
@@ -1896,11 +1893,12 @@ cards = [
     },
 ]
 
-row1 = st.columns(6, gap="medium")
+# ANCHOS PERSONALIZADOS
+row1 = st.columns([1.45, 1.45, 1.05, 1.05, 1.10, 1.10], gap="medium")
 for col, card in zip(row1, cards[:6]):
     render_action_card(col, card)
 
-row2 = st.columns(4, gap="medium")
+row2 = st.columns([1.15, 1.15, 1.05, 1.05], gap="medium")
 for col, card in zip(row2, cards[6:10]):
     render_action_card(col, card)
 
