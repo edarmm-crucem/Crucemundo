@@ -1898,7 +1898,7 @@ row1 = st.columns([1.45, 1.45, 1.05, 1.05, 1.10, 1.10], gap="medium")
 for col, card in zip(row1, cards[:6]):
     render_action_card(col, card)
 
-row2 = st.columns([1, 1, 1, 1], gap="medium")
+row2 = st.columns([0.5, 1, 1, 1], gap="medium")
 for col, card in zip(row2, cards[6:10]):
     render_action_card(col, card)
 
