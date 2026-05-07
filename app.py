@@ -1172,7 +1172,7 @@ st.markdown(
     .web-chip { background: #FFF3BF; border: 1px solid #F4D35E; color: #7A5900 !important; }
     .web-chip-green { background: #E9F8EE; border: 1px solid #BEE3C8; color: #1E6B3A !important; }
     .user-pill { display: inline-flex; align-items: center; gap: 0.4rem; margin: 0.02rem 0 1rem; padding: 0.38rem 0.68rem; border-radius: 999px; background: #fff; border: 1px solid #E4E7EF; font-size: 0.72rem; color: #5D6880; max-width: 100%; word-break: break-word; }
-    .action-box { width: 100%; min-height: 60px; border-radius: 20px; padding: 0.78rem 0.90rem; margin-bottom: 0.70rem; display: flex; flex-direction: column; justify-content: space-between; gap: 0.55rem; border: 1px solid transparent; }
+    .action-box { width: 100%; min-height: 50px; border-radius: 20px; padding: 0.78rem 0.90rem; margin-bottom: 0.70rem; display: flex; flex-direction: column; justify-content: space-between; gap: 0.55rem; border: 1px solid transparent; }
     .card-es { background: #F3F7FF; border-color: #D9E5FF; }
     .card-grupos { background: #F4FBF6; border-color: #D8EEDC; }
     .card-salida { background: #FFF8F1; border-color: #F1DFC7; }
