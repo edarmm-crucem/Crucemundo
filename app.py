@@ -1452,12 +1452,13 @@ div[data-testid="stFormSubmitButton"] button:focus,
 
 .action-box[data-card] div.stButton button:hover,
 .action-box[data-card] .done-link:hover {
-    filter: brightness(0.98) saturate(1.06);
-    box-shadow: 0 10px 20px var(--card-btn-shadow) !important;
+    background: var(--card-btn-hover-bg) !important;
+    border-color: var(--card-btn-hover-border) !important;
+    color: var(--card-btn-hover-text) !important;
+    box-shadow: 0 10px 22px var(--card-btn-shadow) !important;
+    transform: translateY(-1px);
+    filter: none !important;
 }
-por este otro:
-
-css
 .card-es {
     background: #EAF3FF;
     border-color: #BFD7FF;
