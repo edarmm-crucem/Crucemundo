@@ -2472,7 +2472,7 @@ if st.session_state.get("openinformebarcoform"):
             <table class="report-table">
                 <thead>
                     <tr>
-                        <th>Hoja</th>
+                        
                         <th>Localizador</th>
                         <th>Agencia</th>
                         <th>Estado Pago</th>
@@ -2491,7 +2491,7 @@ if st.session_state.get("openinformebarcoform"):
             for row in rows:
                 tablehtml += f"""
                 <tr>
-                    <td>{row.get('Hoja', '')}</td>
+                   
                     <td>{row.get('Localizador', '')}</td>
                     <td>{row.get('Agencia', '')}</td>
                     <td>{row.get('Estado Pago', '')}</td>
