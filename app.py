@@ -1354,7 +1354,7 @@ st.markdown(
     .card-es {
         background: #EAF3FF;
         border-color: #BFD7FF;
-        --card-btn-bg: #CFE3FF;
+        --card-btn-bg: #EAF3FF;
         --card-btn-border: #94BEFF;
         --card-btn-text: #1E4E93;
         --card-btn-shadow: rgba(30, 78, 147, 0.16);
