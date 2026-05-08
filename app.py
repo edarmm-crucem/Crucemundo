@@ -519,36 +519,65 @@ def transfer_ownership(file_id: str, new_owner_email: str) -> None:
 # ============================================================
 # MASTER SESSION
 # ============================================================
-def create_master_session(sessiontype, templateid, prefixname, processtitle):
-    nombre_sugerido = f"{prefixname} - {processtitle}"
-    copy_url = f"https://docs.google.com/spreadsheets/d/{templateid}/copy"
+from googleapiclient.discovery import build
+
+def create_master_session(drive_service, template_id, prefixname, processtitle, user_email):
+    """
+    Crea una copia, le pone el nombre correcto, la mueve a la carpeta 
+    específica y le da acceso al usuario.
+    """
+    target_folder_id = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
+    nombre_final = f"{prefixname} - {processtitle}"
     
     try:
-        # Interfaz simplificada y botones más pequeños
+        # 1. Crear la copia directamente en la carpeta destino
+        file_metadata = {
+            'name': nombre_final,
+            'parents': [target_folder_id]
+        }
+        
+        new_file = drive_service.files().copy(
+            fileId=template_id,
+            body=file_metadata,
+            fields='id, webViewLink'
+        ).execute()
+        
+        new_file_id = new_file.get('id')
+        final_url = new_file.get('webViewLink')
+
+        # 2. Dar permiso de escritura al usuario (necesario para ejecutar scripts)
+        permission = {
+            'type': 'user',
+            'role': 'writer',
+            'emailAddress': user_email
+        }
+        drive_service.permissions().create(fileId=new_file_id, body=permission).execute()
+
+        # 3. Mostrar el botón minimalista en Streamlit
         st.markdown(f"""
-            <div style="margin-top: 20px; padding: 15px; border-left: 4px solid #dee2e6; background-color: #f9f9f9;">
-                <p style="font-size: 0.9em; color: #555; margin-bottom: 10px;">
-                    Haz clic para crear tu copia de trabajo. El archivo se llamará: <b>{nombre_sugerido}</b>
+            <div style="margin-top: 20px; padding: 15px; border-left: 4px solid #28a745; background-color: #f4fdf4;">
+                <p style="font-size: 0.9em; color: #1e4620; margin-bottom: 10px;">
+                    La sesión ha sido preparada en la carpeta compartida.
                 </p>
-                <a href="{copy_url}" target="_blank" style="text-decoration: none;">
+                <a href="{final_url}" target="_blank" style="text-decoration: none;">
                     <div style="
                         display: inline-block;
                         padding: 8px 20px;
-                        background-color: #f0f2f6;
-                        color: #31333F;
-                        border: 1px solid #dcdfe3;
+                        background-color: #ffffff;
+                        color: #28a745;
+                        border: 1px solid #28a745;
                         border-radius: 5px;
                         font-size: 0.85em;
-                        transition: background-color 0.3s;
+                        font-weight: bold;
                         cursor: pointer;">
-                        Crear copia con mis scripts
+                        Abrir sesión de trabajo
                     </div>
                 </a>
             </div>
         """, unsafe_allow_html=True)
 
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"Error al organizar el archivo: {e}")
 # ============================================================
 # SHEETS HELPERS
 # ============================================================
