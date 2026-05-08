@@ -15,16 +15,16 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-FOLDER_SESIONES_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
+FOLDERSESIONESID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
+FOLDERID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
 LOGOID = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
 LOGOURL = f"https://lh3.googleusercontent.com/d/{LOGOID}"
-TEMPLATE_ID_ES = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
-TEMPLATE_ID_GRUPOS = "1Z7ktX3PhVkMibWpzdrDDqAT4aPsmjzSJPf1SgZcL5-w"
+TEMPLATEIDES = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
+TEMPLATEIDGRUPOS = "1Z7ktX3PhVkMibWpzdrDDqAT4aPsmjzSJPf1SgZcL5-w"
 TEMPLATEIDCRUCERO = "1zSJPi6St_Z5Jw1c6eieVnKI4NyEdP7E9n3WTZ9yy3C0"
 EXCURSIONESSHEETID = "1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg"
 AGENCYSHEETID = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
 AGENCYSHEETNAME = "Datos"
-FOLDER_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
 DRIVEROOTID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
 GROUPSROOTID = "1MMNH3y1E3jJIp6uUnxbwV0toAtdr2F2M"
 
@@ -582,8 +582,8 @@ def getyears():
 
 @st.cache_data(ttl=300)
 def getyearFOLDERSESIONESID(yearname):
-    folder = findchildfolder(DRIVEROOTID, yearname)
-    return folder["id"] if folder else None
+    = findchildfolder(DRIVEROOTID, yearname)
+    return folder["id"] if else None
 
 
 @st.cache_data(ttl=300)
@@ -600,7 +600,7 @@ def getdepartures(yearname, boatname):
     yearFOLDERSESIONESID = getyearFOLDERSESIONESID(yearname)
     if not yearFOLDERSESIONESID:
         return []
-    boatfolder = findchildfolder(yearFOLDERSESIONESID, boatname)
+    boat= findchildfolder(yearFOLDERSESIONESID, boatname)
     if not boatfolder:
         return []
     files = listfolderitems(boatfolder["id"], foldersonly=False)
@@ -723,10 +723,10 @@ def buildcvcpdffromlocator(locator, targetsheet, pdfprefix):
     if not locatorclean:
         raise Exception("Debes introducir un localizador.")
 
-    yield {"type": "status", "msg": "Listando spreadsheets en el folder CVC Fit..."}
+    yield {"type": "status", "msg": "Listando spreadsheets en el CVC Fit..."}
     spreadsheets = listspreadsheetsinfolderrecentfirst(FOLDERSESIONESID)
     if not spreadsheets:
-        raise Exception("No se han encontrado Google Sheets en el folder indicado.")
+        raise Exception("No se han encontrado Google Sheets en el indicado.")
     total = len(spreadsheets)
 
     yield {"type": "status", "msg": f"Encontrados {total} spreadsheets. Iniciando búsqueda del localizador {locatorclean}..."}
@@ -877,13 +877,13 @@ def findlocatorconfirmation(locatorraw):
     parsed = parselocatorinput(locatorraw)
     loglines = []
 
-    yearfolder = findchildfolder(parsed["rootid"], parsed["yearfoldername"])
+    year= findchildfolder(parsed["rootid"], parsed["yearfoldername"])
     if not yearfolder:
         loglines.append(f"No existe la carpeta de año {parsed['yearfoldername']}")
         return {"status": "missingyear", "parsed": parsed, "log": loglines}
     loglines.append(f"Carpeta de año encontrada: {parsed['yearfoldername']}")
 
-    boatfolder = findchildfolder(yearfolder["id"], parsed["boatname"])
+    boat= findchildfolder(yearfolder["id"], parsed["boatname"])
     if not boatfolder:
         loglines.append(f"No existe la carpeta del barco {parsed['boatname']}")
         return {"status": "missingboat", "parsed": parsed, "log": loglines}
@@ -926,7 +926,7 @@ def getyearsbyroot(rootid):
 
 @st.cache_data(ttl=300)
 def getyearFOLDERSESIONESIDbyroot(rootid, yearname):
-    folder = findchildfolder(rootid, yearname)
+    = findchildfolder(rootid, yearname)
     return folder["id"] if folder else None
 
 
