@@ -426,9 +426,9 @@ def listfolderitems(parentid, foldersonly=False):
     return results
 
 
-def listspreadsheetsinfolderrecentfirst(folderid):
+def listspreadsheetsinfolderrecentfirst(FOLDERSESIONESID):
     service = getdriveservice()
-    query = f"'{folderid}' in parents and trashed=false and mimeType='application/vnd.google-apps.spreadsheet'"
+    query = f"'{FOLDERSESIONESID}' in parents and trashed=false and mimeType='application/vnd.google-apps.spreadsheet'"
     results = []
     pagetoken = None
     while True:
@@ -479,9 +479,9 @@ def findfilebyname(parentid, filename):
     return None
 
 
-def copyfiletofolder(fileid, newname, parentfolderid, description=None):
+def copyfiletofolder(fileid, newname, parentFOLDERSESIONESID, description=None):
     service = getdriveservice()
-    body = {"name": newname, "parents": [parentfolderid]}
+    body = {"name": newname, "parents": [parentFOLDERSESIONESID]}
     if description:
         body["description"] = description
     return service.files().copy(
@@ -581,26 +581,26 @@ def getyears():
 
 
 @st.cache_data(ttl=300)
-def getyearfolderid(yearname):
+def getyearFOLDERSESIONESID(yearname):
     folder = findchildfolder(DRIVEROOTID, yearname)
     return folder["id"] if folder else None
 
 
 @st.cache_data(ttl=300)
 def getboats(yearname):
-    yearfolderid = getyearfolderid(yearname)
-    if not yearfolderid:
+    yearFOLDERSESIONESID = getyearFOLDERSESIONESID(yearname)
+    if not yearFOLDERSESIONESID:
         return []
-    folders = listfolderitems(yearfolderid, foldersonly=True)
+    folders = listfolderitems(yearFOLDERSESIONESID, foldersonly=True)
     return sorted(f["name"].strip() for f in folders if f["name"].strip())
 
 
 @st.cache_data(ttl=300)
 def getdepartures(yearname, boatname):
-    yearfolderid = getyearfolderid(yearname)
-    if not yearfolderid:
+    yearFOLDERSESIONESID = getyearFOLDERSESIONESID(yearname)
+    if not yearFOLDERSESIONESID:
         return []
-    boatfolder = findchildfolder(yearfolderid, boatname)
+    boatfolder = findchildfolder(yearFOLDERSESIONESID, boatname)
     if not boatfolder:
         return []
     files = listfolderitems(boatfolder["id"], foldersonly=False)
@@ -646,7 +646,7 @@ def createcrucerofile(barco, fechaobj):
     updatecrucerosheet(copia["id"], barco)
 
     getyears.clear()
-    getyearfolderid.clear()
+    getyearFOLDERSESIONESID.clear()
     getboats.clear()
     getdepartures.clear()
 
@@ -724,7 +724,7 @@ def buildcvcpdffromlocator(locator, targetsheet, pdfprefix):
         raise Exception("Debes introducir un localizador.")
 
     yield {"type": "status", "msg": "Listando spreadsheets en el folder CVC Fit..."}
-    spreadsheets = listspreadsheetsinfolderrecentfirst(FOLDERID)
+    spreadsheets = listspreadsheetsinfolderrecentfirst(FOLDERSESIONESID)
     if not spreadsheets:
         raise Exception("No se han encontrado Google Sheets en el folder indicado.")
     total = len(spreadsheets)
@@ -925,26 +925,26 @@ def getyearsbyroot(rootid):
 
 
 @st.cache_data(ttl=300)
-def getyearfolderidbyroot(rootid, yearname):
+def getyearFOLDERSESIONESIDbyroot(rootid, yearname):
     folder = findchildfolder(rootid, yearname)
     return folder["id"] if folder else None
 
 
 @st.cache_data(ttl=300)
 def getboatsbyroot(rootid, yearname):
-    yearfolderid = getyearfolderidbyroot(rootid, yearname)
-    if not yearfolderid:
+    yearFOLDERSESIONESID = getyearFOLDERSESIONESIDbyroot(rootid, yearname)
+    if not yearFOLDERSESIONESID:
         return []
-    folders = listfolderitems(yearfolderid, foldersonly=True)
+    folders = listfolderitems(yearFOLDERSESIONESID, foldersonly=True)
     return sorted(f["name"].strip() for f in folders if f["name"].strip())
 
 
 @st.cache_data(ttl=300)
 def getdeparturesbyroot(rootid, yearname, boatname):
-    yearfolderid = getyearfolderidbyroot(rootid, yearname)
-    if not yearfolderid:
+    yearFOLDERSESIONESID = getyearFOLDERSESIONESIDbyroot(rootid, yearname)
+    if not yearFOLDERSESIONESID:
         return []
-    boatfolder = findchildfolder(yearfolderid, boatname)
+    boatfolder = findchildfolder(yearFOLDERSESIONESID, boatname)
     if not boatfolder:
         return []
 
@@ -1340,7 +1340,7 @@ SALUDOEN = getsaludo("en")
 excursionesurl = f"https://docs.google.com/spreadsheets/d/{EXCURSIONESSHEETID}/edit"
 driverooturl = f"https://drive.google.com/drive/folders/{DRIVEROOTID}"
 groupsrooturl = f"https://drive.google.com/drive/folders/{GROUPSROOTID}"
-cvcfitfolderurl = f"https://drive.google.com/drive/folders/{FOLDERID}"
+cvcfitfolderurl = f"https://drive.google.com/drive/folders/{FOLDERSESIONESID}"
 
 st.markdown(
     f'''
