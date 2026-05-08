@@ -349,53 +349,35 @@ def render_key_value_grid(css_prefix, fields):
 
 
 def create_master_session(sessiontype, templateid, prefixname, processtitle):
-    clear_transient_ui()
-
-    fechastr = datetime.now().strftime("%Y%m%d-%H%M")
-    displayuser = st.session_state.get("displayname", "").strip() or "Sin usuario"
-    nombrecopia = f"SESION - {displayuser} - {prefixname} - {fechastr}"
-    descripcion = (
-        f"Tipo: {sessiontype} | Usuario: {displayuser} | "
-        f"Creado: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
-    )
-
-    st.session_state["confirmstate"] = "running"
-    st.session_state["sessiontype"] = sessiontype
-    st.session_state["nombrecopia"] = nombrecopia
-    st.session_state["processtitle"] = processtitle
-    st.session_state["activepanel"] = "process"
-
-    progress_bar = st.progress(0.0, text="Iniciando...")
-    status_box = st.empty()
-
+    nombre_sugerido = f"{prefixname} - {processtitle}"
+    copy_url = f"https://docs.google.com/spreadsheets/d/{templateid}/copy"
+    
     try:
-        progress_bar.progress(0.2, text="Preparando sesión...")
-        status_box.info("Preparando copia en Drive...")
+        # Interfaz simplificada y botones más pequeños
+        st.markdown(f"""
+            <div style="margin-top: 20px; padding: 15px; border-left: 4px solid #dee2e6; background-color: #f9f9f9;">
+                <p style="font-size: 0.9em; color: #555; margin-bottom: 10px;">
+                    Haz clic para crear tu copia de trabajo. El archivo se llamará: <b>{nombre_sugerido}</b>
+                </p>
+                <a href="{copy_url}" target="_blank" style="text-decoration: none;">
+                    <div style="
+                        display: inline-block;
+                        padding: 8px 20px;
+                        background-color: #f0f2f6;
+                        color: #31333F;
+                        border: 1px solid #dcdfe3;
+                        border-radius: 5px;
+                        font-size: 0.85em;
+                        transition: background-color 0.3s;
+                        cursor: pointer;">
+                        Crear copia con mis scripts
+                    </div>
+                </a>
+            </div>
+        """, unsafe_allow_html=True)
 
-        progress_bar.progress(0.55, text="Creando copia en Drive...")
-        copia = copy_file_to_folder(templateid, nombrecopia, FOLDER_ID, descripcion)
-
-        final_url = copia.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{copia['id']}/edit"
-
-        progress_bar.progress(1.0, text="Ok")
-        status_box.success("Ok")
-
-        st.session_state["copyurl"] = final_url
-        st.session_state["processresult"] = {
-            "status": "created",
-            "name": copia.get("name", nombrecopia),
-            "url": final_url,
-            "id": copia.get("id", ""),
-        }
-        st.session_state["confirmstate"] = "done"
-        st.rerun()
-
-    except Exception as exc:
-        progress_bar.empty()
-        status_box.empty()
-        st.session_state["confirmstate"] = "error"
-        st.session_state["processresult"] = {"status": "error", "message": str(exc)}
-        st.rerun()
+    except Exception as e:
+        st.error(f"Error: {e}")
 
 
 # ============================================================
