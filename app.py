@@ -584,13 +584,13 @@ def getyearfolderid(yearname):
     folder = findchildfolder(DRIVEROOTID, yearname)
     return folder["id"] if folder else None
 @st.cache_data(ttl=300)
+@st.cache_data(ttl=300)
 def getboats(yearname):
-    year = getyear(yearname)
-    if not year:
+    yearfolderid = getyearfolderid(yearname)
+    if not yearfolderid:
         return []
-    folders = listfolderitems(year, foldersonly=True)
+    folders = listfolderitems(yearfolderid, foldersonly=True)
     return sorted(f["name"].strip() for f in folders if f["name"].strip())
-
 
 @st.cache_data(ttl=300)
 def getdepartures(yearname, boatname):
