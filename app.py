@@ -848,7 +848,7 @@ def parselocatorinput(locatorraw):
         raise Exception(f"Código de barco no reconocido: {shipcode}")
 
     yearfull = f"20{yymmdd[:2]}"
-    filebase = f"{boatname}{yymmdd}"
+    filebase = f"{boatname}_{yymmdd}"
 
     return {
         "original": locator,
