@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 
 st.set_page_config(
     page_title="Crucemundo Hub",
-    page_icon="https://raw.githubusercontent.com/edarmm-crucem/Crucemundo/0d1799703b6870a12c2a73d01e0ccdcbd6f9f275/favicon.png",
+    page_icon="https://raw.githubusercontent.com/edarmm-crucem/Crucemundo/0d1799703b6870a12c2a73d01e0ccdcbd6f9f275/favicon1.png",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
