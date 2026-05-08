@@ -1058,14 +1058,6 @@ def parse_int_from_text(value):
     return int(m.group(0)) if m else 0
 
 
-def format_eur_es(value):
-    try:
-        number = float(value or 0)
-        return f"{number:,.2f}".replace(",", "__").replace(".", ",").replace("__", ".") + " €"
-    except Exception:
-        return "0,00 €"
-
-
 def get_sheet_title_b2(spreadsheet_id, sheet_title):
     return get_single_cell(spreadsheet_id, sheet_title, "B2")
 
@@ -1216,7 +1208,7 @@ st.markdown(
         font-family: 'DM Sans', sans-serif !important;
         letter-spacing: 0.01em !important;
         transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease !important;
-        border: 4.5px solid transparent !important;
+        border: 1.5px solid transparent !important;
     }
 
     div.stButton button:hover,
@@ -1345,227 +1337,214 @@ st.markdown(
         font-size: 1rem !important;
     }
 
-    .action-box {
-        width: 100%;
-        min-height: 20px;
-        border-radius: 22px;
-        padding: 1rem;
-        margin-bottom: 0.85rem;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        gap: 0.9rem;
-        border: 1px solid transparent;
-        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
-    }
+.action-box {
+    width: 100%;
+    min-height: 20px;
+    border-radius: 22px;
+    padding: 1rem;
+    margin-bottom: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.9rem;
+    border: 1px solid transparent;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+}
 
-    .card-es {
-        background: #EAF3FF;
-        border-color: #BFD7FF;
-        --card-btn-bg: #CFE3FF;
-        --card-btn-border: #94BEFF;
-        --card-btn-text: #1E4E93;
-        --card-btn-shadow: rgba(30, 78, 147, 0.16);
-        --card-btn-hover-bg: #BBD8FF;
-        --card-btn-hover-border: #80AEF8;
-        --card-btn-hover-text: #173E75;
-    }
+.card-es {
+    background: #EAF3FF;
+    border-color: #BFD7FF;
+    --card-btn-bg: #CFE3FF;
+    --card-btn-border: #94BEFF;
+    --card-btn-text: #1E4E93;
+    --card-btn-shadow: rgba(30, 78, 147, 0.16);
+}
 
-    .card-grupos {
-        background: #EAF8EE;
-        border-color: #BDE3C7;
-        --card-btn-bg: #CDEFD7;
-        --card-btn-border: #93D0A7;
-        --card-btn-text: #1F6A3A;
-        --card-btn-shadow: rgba(31, 106, 58, 0.15);
-        --card-btn-hover-bg: #BAE8C7;
-        --card-btn-hover-border: #7DC694;
-        --card-btn-hover-text: #17512C;
-    }
+.card-grupos {
+    background: #EAF8EE;
+    border-color: #BDE3C7;
+    --card-btn-bg: #CDEFD7;
+    --card-btn-border: #93D0A7;
+    --card-btn-text: #1F6A3A;
+    --card-btn-shadow: rgba(31, 106, 58, 0.15);
+}
 
-    .card-salida {
-        background: #FFF2E3;
-        border-color: #F1CFA9;
-        --card-btn-bg: #FFDDB8;
-        --card-btn-border: #F1B97B;
-        --card-btn-text: #8A5318;
-        --card-btn-shadow: rgba(138, 83, 24, 0.16);
-        --card-btn-hover-bg: #FFD1A0;
-        --card-btn-hover-border: #E8A85C;
-        --card-btn-hover-text: #6E3E0E;
-    }
+.card-salida {
+    background: #FFF2E3;
+    border-color: #F1CFA9;
+    --card-btn-bg: #FFDDB8;
+    --card-btn-border: #F1B97B;
+    --card-btn-text: #8A5318;
+    --card-btn-shadow: rgba(138, 83, 24, 0.16);
+}
 
-    .card-crucero {
-        background: #F0EAFE;
-        border-color: #D3C4FA;
-        --card-btn-bg: #DDD0FF;
-        --card-btn-border: #B9A0F8;
-        --card-btn-text: #5A3E9E;
-        --card-btn-shadow: rgba(90, 62, 158, 0.16);
-        --card-btn-hover-bg: #D0BEFF;
-        --card-btn-hover-border: #A88AF1;
-        --card-btn-hover-text: #412A7B;
-    }
+.card-crucero {
+    background: #F0EAFE;
+    border-color: #D3C4FA;
+    --card-btn-bg: #DDD0FF;
+    --card-btn-border: #B9A0F8;
+    --card-btn-text: #5A3E9E;
+    --card-btn-shadow: rgba(90, 62, 158, 0.16);
+}
 
-    .card-nueva-agencia {
-        background: #EAF8EF;
-        border-color: #BEE3C9;
-        --card-btn-bg: #D0EFDA;
-        --card-btn-border: #98D0AA;
-        --card-btn-text: #256245;
-        --card-btn-shadow: rgba(37, 98, 69, 0.16);
-        --card-btn-hover-bg: #BFE7CC;
-        --card-btn-hover-border: #79C08F;
-        --card-btn-hover-text: #17442E;
-    }
+.card-nueva-agencia {
+    background: #EAF8EF;
+    border-color: #BEE3C9;
+    --card-btn-bg: #D0EFDA;
+    --card-btn-border: #98D0AA;
+    --card-btn-text: #256245;
+    --card-btn-shadow: rgba(37, 98, 69, 0.16);
+}
 
-    .card-buscar-agencia {
-        background: #FFF1E5;
-        border-color: #F1D1B0;
-        --card-btn-bg: #FFDDBF;
-        --card-btn-border: #F0B77E;
-        --card-btn-text: #8B5620;
-        --card-btn-shadow: rgba(139, 86, 32, 0.16);
-        --card-btn-hover-bg: #FFD1A6;
-        --card-btn-hover-border: #E9A761;
-        --card-btn-hover-text: #6E4011;
-    }
+.card-buscar-agencia {
+    background: #FFF1E5;
+    border-color: #F1D1B0;
+    --card-btn-bg: #FFDDBF;
+    --card-btn-border: #F0B77E;
+    --card-btn-text: #8B5620;
+    --card-btn-shadow: rgba(139, 86, 32, 0.16);
+}
 
-    .card-cvcfit {
-        background: #FDECF3;
-        border-color: #F1C3D6;
-        --card-btn-bg: #F7D2E2;
-        --card-btn-border: #E89BBB;
-        --card-btn-text: #9B3A63;
-        --card-btn-shadow: rgba(155, 58, 99, 0.16);
-        --card-btn-hover-bg: #F2BDD4;
-        --card-btn-hover-border: #DE82A6;
-        --card-btn-hover-text: #7B2247;
-    }
+.card-cvcfit {
+    background: #FDECF3;
+    border-color: #F1C3D6;
+    --card-btn-bg: #F7D2E2;
+    --card-btn-border: #E89BBB;
+    --card-btn-text: #9B3A63;
+    --card-btn-shadow: rgba(155, 58, 99, 0.16);
+}
 
-    .card-cvcagencias {
-        background: #EBF8EF;
-        border-color: #BFE1C9;
-        --card-btn-bg: #D0EFD8;
-        --card-btn-border: #97D0A9;
-        --card-btn-text: #2C6A44;
-        --card-btn-shadow: rgba(44, 106, 68, 0.16);
-        --card-btn-hover-bg: #C0E7CB;
-        --card-btn-hover-border: #7FBF93;
-        --card-btn-hover-text: #1E4E30;
-    }
+.card-cvcagencias {
+    background: #EBF8EF;
+    border-color: #BFE1C9;
+    --card-btn-bg: #D0EFD8;
+    --card-btn-border: #97D0A9;
+    --card-btn-text: #2C6A44;
+    --card-btn-shadow: rgba(44, 106, 68, 0.16);
+}
 
-    .card-irconfirmacion {
-        background: #F0F3F8;
-        border-color: #CFD8E6;
-        --card-btn-bg: #E0E7F1;
-        --card-btn-border: #B8C6DC;
-        --card-btn-text: #4A5874;
-        --card-btn-shadow: rgba(74, 88, 116, 0.16);
-        --card-btn-hover-bg: #D2DDEB;
-        --card-btn-hover-border: #A8BAD6;
-        --card-btn-hover-text: #33415E;
-    }
+.card-irconfirmacion {
+    background: #F0F3F8;
+    border-color: #CFD8E6;
+    --card-btn-bg: #E0E7F1;
+    --card-btn-border: #B8C6DC;
+    --card-btn-text: #4A5874;
+    --card-btn-shadow: rgba(74, 88, 116, 0.16);
+}
 
-    .card-informebarco {
-        background: #EAF7FB;
-        border-color: #BFDDE8;
-        --card-btn-bg: #D2EDF6;
-        --card-btn-border: #97CEE0;
-        --card-btn-text: #2B6881;
-        --card-btn-shadow: rgba(43, 104, 129, 0.16);
-        --card-btn-hover-bg: #BFE4F0;
-        --card-btn-hover-border: #7FBED5;
-        --card-btn-hover-text: #174B63;
-    }
+.card-informebarco {
+    background: #EAF7FB;
+    border-color: #BFDDE8;
+    --card-btn-bg: #D2EDF6;
+    --card-btn-border: #97CEE0;
+    --card-btn-text: #2B6881;
+    --card-btn-shadow: rgba(43, 104, 129, 0.16);
+}
 
-    .action-top { display: flex; align-items: flex-start; gap: 0.75rem; }
-    .action-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1rem;
-        flex-shrink: 0;
-        background: rgba(255,255,255,0.42);
-        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
-    }
+.action-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
 
-    .action-text { display: flex; flex-direction: column; gap: 0.12rem; min-width: 0; }
+.action-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.42);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
+}
 
-    .action-title,
-    .action-title-en {
-        font-family: 'DM Sans', sans-serif !important;
-        line-height: 1.1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
+.action-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+    min-width: 0;
+}
 
-    .action-title {
-        font-size: 0.96rem;
-        font-weight: 800;
-        color: #1F2937;
-    }
+.action-title,
+.action-title-en {
+    font-family: 'DM Sans', sans-serif !important;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
-    .action-title-en {
-        margin-top: 0.08rem;
-        color: #41506B;
-        font-size: 0.83rem;
-        font-weight: 700;
-    }
+.action-title {
+    font-size: 0.96rem;
+    font-weight: 800;
+    color: #1F2937;
+}
 
-    .action-button-wrap {
-        display: flex !important;
-        justify-content: flex-start !important;
-        align-items: center !important;
-        width: 100% !important;
-        margin-top: 0.1rem;
-    }
+.action-title-en {
+    margin-top: 0.08rem;
+    color: #41506B;
+    font-size: 0.83rem;
+    font-weight: 700;
+}
 
-    .action-button-wrap a.done-link {
-        margin-top: 0 !important;
-    }
+.action-button-wrap {
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    width: 100% !important;
+    margin-top: 0.1rem;
+}
 
-    .done-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        border-radius: 999px;
-        padding: 0.48rem 0.96rem;
-        font-size: 0.82rem;
-        font-weight: 800;
-        font-family: 'DM Sans', sans-serif !important;
-        text-decoration: none;
-        white-space: nowrap;
-        box-shadow: 0 5px 14px rgba(15, 23, 42, 0.08);
-        transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
-    }
+.action-button-wrap a.done-link {
+    margin-top: 0 !important;
+}
 
-    .done-link:hover {
-        transform: translateY(-1px);
-        filter: saturate(1.04);
-    }
+.done-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    padding: 0.48rem 0.96rem;
+    font-size: 0.82rem;
+    font-weight: 800;
+    font-family: 'DM Sans', sans-serif !important;
+    text-decoration: none;
+    white-space: nowrap;
+    box-shadow: 0 5px 14px rgba(15, 23, 42, 0.08);
+    transition: transform 0.15s ease,
+                box-shadow 0.15s ease,
+                filter 0.15s ease;
+}
 
-    .action-box div.stButton button,
-    .action-box .done-link {
-        background: var(--card-btn-bg) !important;
-        border: 1.5px solid var(--card-btn-border) !important;
-        color: var(--card-btn-text) !important;
-        box-shadow: 0 6px 14px var(--card-btn-shadow) !important;
-        font-family: 'DM Sans', sans-serif !important;
-    }
+.done-link:hover {
+    transform: translateY(-1px);
+    filter: saturate(1.04);
+}
 
-    .action-box div.stButton button:hover,
-    .action-box .done-link:hover {
-        background: var(--card-btn-hover-bg) !important;
-        border-color: var(--card-btn-hover-border) !important;
-        color: var(--card-btn-hover-text) !important;
-        box-shadow: 0 10px 22px var(--card-btn-shadow) !important;
-        transform: translateY(-1px);
-        filter: none !important;
+/* =========================================================
+   BOTONES DINÁMICOS POR TARJETA
+========================================================= */
+
+.action-box div.stButton button,
+.action-box .done-link {
+    background: var(--card-btn-bg) !important;
+    border: 1.5px solid var(--card-btn-border) !important;
+    color: var(--card-btn-text) !important;
+    box-shadow: 0 6px 14px var(--card-btn-shadow) !important;
+    font-family: 'DM Sans', sans-serif !important;
+}
+
+.action-box div.stButton button:hover,
+.action-box .done-link:hover {
+    filter: brightness(0.98) saturate(1.06);
+    box-shadow: 0 10px 20px var(--card-btn-shadow) !important;
+}
+    .action-box[data-card] div.stButton button:hover,
+    .action-box[data-card] .done-link:hover {
+        filter: brightness(0.98) saturate(1.06);
+        box-shadow: 0 10px 20px var(--card-btn-shadow) !important;
     }
 
     .panel-inline div.stButton button,
@@ -1783,8 +1762,8 @@ st.markdown(
         <a class="web-chip-green" href="{cvcfit_folder_url}" target="_blank" rel="noopener noreferrer">Abre Folder Sesiones</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER_CABINAS</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre EXCURSIONES</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44_WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER CLIENTES</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCR_HJr9TCD7VWrGI6nDhMtwi27cMJL_1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre Ventas FIT</a>
+         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44_WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER CLIENTES</a>
+          <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCR_HJr9TCD7VWrGI6nDhMtwi27cMJL_1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre Ventas FIT</a>
     </div>
     """,
     unsafe_allow_html=True,
@@ -1935,11 +1914,11 @@ cards = [
     },
 ]
 
-row1 = st.columns([1.45, 1.45, 1.05, 1.05, 1.10, 1.10], gap="medium")
+row1 = st.columns(6, gap="medium")
 for col, card in zip(row1, cards[:6]):
     render_action_card(col, card)
 
-row2 = st.columns([0.5, 0.5, 0.5, 0.5], gap="medium")
+row2 = st.columns(4, gap="medium")
 for col, card in zip(row2, cards[6:10]):
     render_action_card(col, card)
 
@@ -2374,15 +2353,15 @@ if st.session_state.get("openinformebarcoform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### Informe € por Barco")
 
-    tipooptions = ["NORMAL", "GROUPS"]
-    currenttipo = st.session_state.get("informetype")
-    if currenttipo not in tipooptions:
-        currenttipo = None
+    tipo_options = ["NORMAL", "GROUPS"]
+    current_tipo = st.session_state.get("informetype")
+    if current_tipo not in tipo_options:
+        current_tipo = None
 
     informetype = st.selectbox(
         "TIPO",
-        options=tipooptions,
-        index=tipooptions.index(currenttipo) if currenttipo in tipooptions else None,
+        options=tipo_options,
+        index=tipo_options.index(current_tipo) if current_tipo in tipo_options else None,
         placeholder="Selecciona tipo",
         key="informetypewidget",
         on_change=on_informe_type_change,
@@ -2390,16 +2369,17 @@ if st.session_state.get("openinformebarcoform"):
     if informetype != st.session_state.get("informetype"):
         st.session_state["informetype"] = informetype
 
-    rootid = GROUPS_ROOT_ID if informetype == "GROUPS" else DRIVE_ROOT_ID
-    years = get_years_by_root(rootid) if informetype else []
-    currentyear = st.session_state.get("informeyear")
-    if currentyear not in years:
-        currentyear = None
+    root_id = GROUPS_ROOT_ID if informetype == "GROUPS" else DRIVE_ROOT_ID
+
+    years = get_years_by_root(root_id) if informetype else []
+    current_year = st.session_state.get("informeyear")
+    if current_year not in years:
+        current_year = None
 
     informeyear = st.selectbox(
         "AÑO",
         options=years,
-        index=years.index(currentyear) if currentyear in years else None,
+        index=years.index(current_year) if current_year in years else None,
         placeholder="Selecciona año",
         key="informeyearwidget",
         on_change=on_informe_year_change,
@@ -2408,15 +2388,15 @@ if st.session_state.get("openinformebarcoform"):
     if informeyear != st.session_state.get("informeyear"):
         st.session_state["informeyear"] = informeyear
 
-    boats = get_boats_by_root(rootid, informeyear) if informetype and informeyear else []
-    currentboat = st.session_state.get("informeboat")
-    if currentboat not in boats:
-        currentboat = None
+    boats = get_boats_by_root(root_id, informeyear) if informetype and informeyear else []
+    current_boat = st.session_state.get("informeboat")
+    if current_boat not in boats:
+        current_boat = None
 
     informeboat = st.selectbox(
         "BARCO",
         options=boats,
-        index=boats.index(currentboat) if currentboat in boats else None,
+        index=boats.index(current_boat) if current_boat in boats else None,
         placeholder="Selecciona barco",
         key="informeboatwidget",
         on_change=on_informe_boat_change,
@@ -2425,16 +2405,16 @@ if st.session_state.get("openinformebarcoform"):
     if informeboat != st.session_state.get("informeboat"):
         st.session_state["informeboat"] = informeboat
 
-    departures = get_departures_by_root(rootid, informeyear, informeboat) if informetype and informeyear and informeboat else []
-    departurenames = [d["nombre"] for d in departures]
-    currentdep = st.session_state.get("informesalida")
-    if currentdep not in departurenames:
-        currentdep = None
+    departures = get_departures_by_root(root_id, informeyear, informeboat) if informetype and informeyear and informeboat else []
+    departure_names = [d["nombre"] for d in departures]
+    current_dep = st.session_state.get("informesalida")
+    if current_dep not in departure_names:
+        current_dep = None
 
     informesalida = st.selectbox(
         "SALIDA",
-        options=departurenames,
-        index=departurenames.index(currentdep) if currentdep in departurenames else None,
+        options=departure_names,
+        index=departure_names.index(current_dep) if current_dep in departure_names else None,
         placeholder="Selecciona salida",
         key="informesalidawidget",
         on_change=on_informe_salida_change,
@@ -2459,7 +2439,7 @@ if st.session_state.get("openinformebarcoform"):
             "informebarco",
             [
                 ("Spreadsheet", informeresult.get("spreadsheet_name", "")),
-                ("Total Importe", format_eur_es(informeresult.get("total_importe", 0))),
+                ("Total Importe", f"{informeresult.get('total_importe', 0):,.2f} €"),
                 ("Total PAX", str(informeresult.get("total_pax", 0))),
                 ("Total Hojas", str(len(informeresult.get("rows", [])))),
             ],
@@ -2467,12 +2447,12 @@ if st.session_state.get("openinformebarcoform"):
 
         rows = informeresult.get("rows", [])
         if rows:
-            tablehtml = """
+            table_html = """
             <div class="report-table-wrap">
             <table class="report-table">
                 <thead>
                     <tr>
-                        
+                        <th>Hoja</th>
                         <th>Localizador</th>
                         <th>Agencia</th>
                         <th>Estado Pago</th>
@@ -2487,30 +2467,24 @@ if st.session_state.get("openinformebarcoform"):
                 </thead>
                 <tbody>
             """
-
             for row in rows:
-                tablehtml += f"""
-                <tr>
-                   
-                    <td>{row.get('Localizador', '')}</td>
-                    <td>{row.get('Agencia', '')}</td>
-                    <td>{row.get('Estado Pago', '')}</td>
-                    <td>{format_eur_es(row.get('Total €', 0))}</td>
-                    <td>{format_eur_es(row.get('Cantidad Deposito', 0))}</td>
-                    <td>{row.get('PAX', 0)}</td>
-                    <td>{row.get('Cabinas', 0)}</td>
-                    <td>{row.get('Itinerario', '')}</td>
-                    <td>{row.get('Duracion', '')}</td>
-                    <td>{row.get('Tipo Documento', '')}</td>
-                </tr>
+                table_html += f"""
+                    <tr>
+                        <td>{row.get('Hoja', '')}</td>
+                        <td>{row.get('Localizador', '')}</td>
+                        <td>{row.get('Agencia', '')}</td>
+                        <td>{row.get('Estado Pago', '')}</td>
+                        <td>{row.get('Total €', 0):,.2f} €</td>
+                        <td>{row.get('Cantidad Deposito', 0):,.2f} €</td>
+                        <td>{row.get('PAX', 0)}</td>
+                        <td>{row.get('Cabinas', 0)}</td>
+                        <td>{row.get('Itinerario', '')}</td>
+                        <td>{row.get('Duracion', '')}</td>
+                        <td>{row.get('Tipo Documento', '')}</td>
+                    </tr>
                 """
-
-            tablehtml += """
-                </tbody>
-            </table>
-            </div>
-            """
-            st.html(tablehtml)
+            table_html += "</tbody></table></div>"
+            st.markdown(table_html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -2523,4 +2497,5 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
 st.markdown("</div>", unsafe_allow_html=True)
