@@ -348,33 +348,6 @@ def render_key_value_grid(css_prefix, fields):
     st.markdown("</div></div>", unsafe_allow_html=True)
 
 
-def create_master_session(sessiontype, templateid, prefixname, processtitle):
-    # ... (código previo sin cambios)
-    try:
-        progress_bar.progress(0.2, text="Preparando sesión...")
-        status_box.info("Preparando copia en Drive...")
-
-        progress_bar.progress(0.55, text="Creando copia en Drive...")
-        copia = copy_file_to_folder(templateid, nombrecopia, FOLDER_ID, descripcion)
-        
-        # --- NUEVA LÓGICA DE TRANSFERENCIA ---
-        service = get_drive_service()
-        user_email = st.session_state.get("useremail")
-        if user_email:
-            try:
-                service.permissions().create(
-                    fileId=copia['id'],
-                    body={'type': 'user', 'role': 'owner', 'emailAddress': user_email},
-                    transferOwnership=True,
-                    supportsAllDrives=True
-                ).execute()
-            except Exception as e:
-                st.warning(f"No se pudo transferir la propiedad: {e}")
-        # -------------------------------------
-
-        final_url = copia.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{copia['id']}/edit"
-        # ... (resto de la función)
-
 # ============================================================
 # GOOGLE AUTH / SERVICES
 # ============================================================
@@ -501,6 +474,114 @@ def copy_file_to_folder(fileid, newname, parentfolderid, description=None):
     ).execute()
 
 
+# ============================================================
+# TRANSFER OWNERSHIP — dos pasos obligatorios
+# ============================================================
+def transfer_ownership(file_id: str, new_owner_email: str) -> None:
+    """
+    Transfiere la propiedad del archivo al usuario logado en DOS pasos.
+
+    La API de Drive exige que el destinatario ya tenga permiso 'writer'
+    ANTES de poder promocionarlo a 'owner'. Sin el paso 1 la llamada
+    del paso 2 falla aunque el dominio sea el mismo (@crucemundo.com).
+    """
+    service = get_drive_service()
+
+    # Paso 1 — añadir como writer (requisito previo de la API)
+    service.permissions().create(
+        fileId=file_id,
+        body={
+            "type": "user",
+            "role": "writer",
+            "emailAddress": new_owner_email,
+        },
+        sendNotificationEmail=False,
+        supportsAllDrives=True,
+        fields="id",
+    ).execute()
+
+    # Paso 2 — promover a owner
+    service.permissions().create(
+        fileId=file_id,
+        body={
+            "type": "user",
+            "role": "owner",
+            "emailAddress": new_owner_email,
+        },
+        transferOwnership=True,
+        moveToNewOwnersRoot=False,   # mantiene el archivo en la carpeta actual
+        sendNotificationEmail=False,
+        supportsAllDrives=True,
+        fields="id",
+    ).execute()
+
+
+# ============================================================
+# MASTER SESSION
+# ============================================================
+def create_master_session(sessiontype, templateid, prefixname, processtitle):
+    clear_transient_ui()
+
+    fechastr = datetime.now().strftime("%Y%m%d-%H%M")
+    displayuser = st.session_state.get("displayname", "").strip() or "Sin usuario"
+    useremail = st.session_state.get("useremail", "").strip()
+    nombrecopia = f"SESION - {displayuser} - {prefixname} - {fechastr}"
+    descripcion = (
+        f"Tipo: {sessiontype} | Usuario: {displayuser} | "
+        f"Creado: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
+    )
+
+    st.session_state["confirmstate"] = "running"
+    st.session_state["sessiontype"] = sessiontype
+    st.session_state["nombrecopia"] = nombrecopia
+    st.session_state["processtitle"] = processtitle
+    st.session_state["activepanel"] = "process"
+
+    progress_bar = st.progress(0.0, text="Iniciando...")
+    status_box = st.empty()
+
+    try:
+        progress_bar.progress(0.2, text="Preparando sesión...")
+        status_box.info("Preparando copia en Drive...")
+
+        progress_bar.progress(0.55, text="Creando copia en Drive...")
+        copia = copy_file_to_folder(templateid, nombrecopia, FOLDER_ID, descripcion)
+
+        # Transferir propiedad al usuario logado para que Apps Script funcione
+        if useremail:
+            progress_bar.progress(0.75, text="Transfiriendo propiedad...")
+            status_box.info("Transfiriendo propiedad del archivo...")
+            try:
+                transfer_ownership(copia["id"], useremail)
+            except Exception as exc_transfer:
+                st.warning(f"Archivo creado pero no se pudo transferir la propiedad: {exc_transfer}")
+
+        final_url = copia.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{copia['id']}/edit"
+
+        progress_bar.progress(1.0, text="Ok")
+        status_box.success("Ok")
+
+        st.session_state["copyurl"] = final_url
+        st.session_state["processresult"] = {
+            "status": "created",
+            "name": copia.get("name", nombrecopia),
+            "url": final_url,
+            "id": copia.get("id", ""),
+        }
+        st.session_state["confirmstate"] = "done"
+        st.rerun()
+
+    except Exception as exc:
+        progress_bar.empty()
+        status_box.empty()
+        st.session_state["confirmstate"] = "error"
+        st.session_state["processresult"] = {"status": "error", "message": str(exc)}
+        st.rerun()
+
+
+# ============================================================
+# SHEETS HELPERS
+# ============================================================
 def update_crucero_sheet(spreadsheetid, barco):
     sheetsservice = get_sheets_service()
     spreadsheet = sheetsservice.spreadsheets().get(spreadsheetId=spreadsheetid).execute()
@@ -636,29 +717,53 @@ def get_departures(yearname, boatname):
 
 
 def create_crucero_file(barco, fechaobj):
-    # ... (código previo de validación y creación de carpetas)
-    
+    if not barco or not fechaobj:
+        raise Exception("Faltan datos de barco o fecha.")
+
+    anio = str(fechaobj.year)
+    nombrenuevo = f"{barco}_{fechaobj.strftime('%y%m%d')}"
+    fechaes = fechaobj.strftime("%d/%m/%Y")
+    useremail = st.session_state.get("useremail", "").strip()
+
+    carpetaanio = get_or_create_folder(DRIVE_ROOT_ID, anio)
+    carpetabarco = get_or_create_folder(carpetaanio["id"], barco)
+
+    duplicado = find_file_by_name(carpetabarco["id"], nombrenuevo)
+    if duplicado:
+        return {
+            "status": "duplicate",
+            "name": nombrenuevo,
+            "url": duplicado.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{duplicado['id']}/edit",
+        }
+
+    descripcion = (
+        f"Barco: {barco} | Salida: {fechaes} | "
+        f"Creado: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} | "
+        f"Los archivos de sesión deben borrarse a los 30 días."
+    )
     copia = copy_file_to_folder(TEMPLATE_ID_CRUCERO, nombrenuevo, carpetabarco["id"], descripcion)
     update_crucero_sheet(copia["id"], barco)
 
-    # --- NUEVA LÓGICA DE TRANSFERENCIA ---
-    service = get_drive_service()
-    user_email = st.session_state.get("useremail")
-    if user_email:
+    # Transferir propiedad al usuario logado para que Apps Script funcione
+    if useremail:
         try:
-            service.permissions().create(
-                fileId=copia["id"],
-                body={'type': 'user', 'role': 'owner', 'emailAddress': user_email},
-                transferOwnership=True,
-                supportsAllDrives=True
-            ).execute()
-        except Exception as e:
-            # Silenciamos o registramos el error según prefieras
-            pass
-    # -------------------------------------
+            transfer_ownership(copia["id"], useremail)
+        except Exception as exc_transfer:
+            st.warning(f"Crucero creado pero no se pudo transferir la propiedad: {exc_transfer}")
 
     get_years.clear()
-    # ... (resto de la función)
+    get_year_folder_id.clear()
+    get_boats.clear()
+    get_departures.clear()
+
+    return {
+        "status": "created",
+        "name": nombrenuevo,
+        "url": copia.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{copia['id']}/edit",
+        "year": anio,
+        "boat": barco,
+    }
+
 
 # ============================================================
 # CVC HELPERS
@@ -843,7 +948,7 @@ def run_cvc_search(locator, target_sheet, pdf_prefix, state_key):
 
 
 # ============================================================
-# NUEVOS HELPERS CONFIRMACION / INFORME
+# HELPERS CONFIRMACION / INFORME
 # ============================================================
 def parse_locator_input(locator_raw):
     locator = str(locator_raw or "").strip().upper()
@@ -892,43 +997,26 @@ def find_locator_confirmation(locator_raw):
     year_folder = find_child_folder(parsed["root_id"], parsed["year_folder_name"])
     if not year_folder:
         log_lines.append(f"❌ No existe la carpeta de año: {parsed['year_folder_name']}")
-        return {
-            "status": "missing_year",
-            "parsed": parsed,
-            "log": log_lines,
-        }
+        return {"status": "missing_year", "parsed": parsed, "log": log_lines}
     log_lines.append(f"✅ Carpeta de año encontrada: {parsed['year_folder_name']}")
 
     boat_folder = find_child_folder(year_folder["id"], parsed["boat_name"])
     if not boat_folder:
         log_lines.append(f"❌ No existe la carpeta del barco: {parsed['boat_name']}")
-        return {
-            "status": "missing_boat",
-            "parsed": parsed,
-            "log": log_lines,
-        }
+        return {"status": "missing_boat", "parsed": parsed, "log": log_lines}
     log_lines.append(f"✅ Carpeta de barco encontrada: {parsed['boat_name']}")
 
     file_obj = find_file_by_name(boat_folder["id"], parsed["file_name"])
     if not file_obj:
         log_lines.append(f"❌ No existe el archivo: {parsed['file_name']}")
-        return {
-            "status": "missing_file",
-            "parsed": parsed,
-            "log": log_lines,
-        }
+        return {"status": "missing_file", "parsed": parsed, "log": log_lines}
     log_lines.append(f"✅ Archivo encontrado: {parsed['file_name']}")
 
     sheets = get_sheet_titles_with_ids(file_obj["id"])
     target_sheet = next((s for s in sheets if s["title"].strip() == parsed["sheet_name"].strip()), None)
     if not target_sheet:
         log_lines.append(f"❌ No existe la pestaña/localizador: {parsed['sheet_name']}")
-        return {
-            "status": "missing_locator",
-            "parsed": parsed,
-            "file": file_obj,
-            "log": log_lines,
-        }
+        return {"status": "missing_locator", "parsed": parsed, "file": file_obj, "log": log_lines}
 
     final_url = build_sheet_tab_url(file_obj["id"], target_sheet["sheetId"])
     log_lines.append(f"✅ Pestaña encontrada: {parsed['sheet_name']}")
@@ -1630,10 +1718,7 @@ st.markdown(
         white-space: nowrap;
     }
 
-    .report-table td {
-        color: #1F2937;
-        font-weight: 500;
-    }
+    .report-table td { color: #1F2937; font-weight: 500; }
 
     .report-table a {
         color: #1E4FBF !important;
@@ -1641,9 +1726,7 @@ st.markdown(
         text-decoration: none;
     }
 
-    .report-table a:hover {
-        text-decoration: underline;
-    }
+    .report-table a:hover { text-decoration: underline; }
 
     .portal-footer {
         margin-top: 1rem;
@@ -1828,10 +1911,7 @@ cards = [
         "button_label": "Crear Sesión",
         "key": "btncreares",
         "action": lambda: create_master_session(
-            "es",
-            TEMPLATE_ID_ES,
-            "MASTER",
-            "Crear Sesión MASTER / CONFIRMATION"
+            "es", TEMPLATE_ID_ES, "MASTER", "Crear Sesión MASTER / CONFIRMATION"
         ),
         "disabled": False,
     },
@@ -1843,10 +1923,7 @@ cards = [
         "button_label": "Crear Sesión GRUPOS",
         "key": "btncreargrupos",
         "action": lambda: create_master_session(
-            "grupos",
-            TEMPLATE_ID_GRUPOS,
-            "MASTER GRUPOS",
-            "Crear Sesión MASTER / GROUPS"
+            "grupos", TEMPLATE_ID_GRUPOS, "MASTER GRUPOS", "Crear Sesión MASTER / GROUPS"
         ),
         "disabled": False,
     },
@@ -1952,7 +2029,6 @@ if st.session_state.get("confirmstate") in ["done", "error"]:
 
     if st.session_state.get("confirmstate") == "done":
         st.success("Ok")
-
         render_key_value_grid(
             "process",
             [
@@ -1962,14 +2038,12 @@ if st.session_state.get("confirmstate") in ["done", "error"]:
                 ("Estado", "Creada correctamente"),
             ],
         )
-
         final_url = process_result.get("url", "")
         if final_url:
             st.markdown(
                 f'<a class="done-link" href="{final_url}" target="_blank" rel="noopener noreferrer">Abrir sesión creada</a>',
                 unsafe_allow_html=True,
             )
-
     elif st.session_state.get("confirmstate") == "error":
         st.error(f"No se pudo crear la sesión: {process_result.get('message', 'Error desconocido')}")
 
@@ -1988,12 +2062,10 @@ if st.session_state.get("opensalidaform"):
         if currentyear not in years:
             currentyear = None
         selectedyear = st.selectbox(
-            "AÑO / YEAR",
-            options=years,
+            "AÑO / YEAR", options=years,
             index=years.index(currentyear) if currentyear in years else None,
             placeholder="Selecciona un año / Select a year",
-            key="salidayearwidget",
-            on_change=on_year_change,
+            key="salidayearwidget", on_change=on_year_change,
         )
         if selectedyear != st.session_state.get("salidayear"):
             st.session_state["salidayear"] = selectedyear
@@ -2003,12 +2075,10 @@ if st.session_state.get("opensalidaform"):
         if currentboat not in boats:
             currentboat = None
         selectedboat = st.selectbox(
-            "BARCO / SHIP",
-            options=boats,
+            "BARCO / SHIP", options=boats,
             index=boats.index(currentboat) if currentboat in boats else None,
             placeholder="Selecciona un barco / Select a ship",
-            key="salidaboatwidget",
-            on_change=on_boat_change,
+            key="salidaboatwidget", on_change=on_boat_change,
             disabled=not selectedyear,
         )
         if selectedboat != st.session_state.get("salidaboat"):
@@ -2020,12 +2090,10 @@ if st.session_state.get("opensalidaform"):
         if currentdeparture not in departurenames:
             currentdeparture = None
         selecteddeparture = st.selectbox(
-            "SALIDA / DEPARTURE",
-            options=departurenames,
+            "SALIDA / DEPARTURE", options=departurenames,
             index=departurenames.index(currentdeparture) if currentdeparture in departurenames else None,
             placeholder="Selecciona una salida / Select a departure",
-            key="salidanamewidget",
-            on_change=on_salida_change,
+            key="salidanamewidget", on_change=on_salida_change,
             disabled=not selectedboat,
         )
         if selecteddeparture != st.session_state.get("salidaname"):
@@ -2055,12 +2123,10 @@ if st.session_state.get("opencruceroform"):
         if currentcyear not in years:
             currentcyear = None
         cruceroyear = st.selectbox(
-            "AÑO DESTINO / TARGET YEAR",
-            options=years,
+            "AÑO DESTINO / TARGET YEAR", options=years,
             index=years.index(currentcyear) if currentcyear in years else None,
             placeholder="Selecciona un año / Select a year",
-            key="cruceroyearwidget",
-            on_change=on_crucero_year_change,
+            key="cruceroyearwidget", on_change=on_crucero_year_change,
         )
         if cruceroyear != st.session_state.get("cruceroyear"):
             st.session_state["cruceroyear"] = cruceroyear
@@ -2070,12 +2136,10 @@ if st.session_state.get("opencruceroform"):
         if currentcboat not in cruceroboats:
             currentcboat = None
         cruceroboat = st.selectbox(
-            "BARCO / SHIP",
-            options=cruceroboats,
+            "BARCO / SHIP", options=cruceroboats,
             index=cruceroboats.index(currentcboat) if currentcboat in cruceroboats else None,
             placeholder="Selecciona un barco / Select a ship",
-            key="cruceroboatwidget",
-            on_change=on_crucero_boat_change,
+            key="cruceroboatwidget", on_change=on_crucero_boat_change,
             disabled=not cruceroyear,
         )
         if cruceroboat != st.session_state.get("cruceroboat"):
@@ -2206,9 +2270,7 @@ if st.session_state.get("openbuscaragenciaform"):
         st.warning(f"Hay {len(matches)} coincidencias. Selecciona la correcta.")
         options = [f"{i+1}. {ag['Nombre']} · {ag['CODIGO']} · {ag['Telefono']} · {ag['Email']}" for i, ag in enumerate(matches)]
         selectedlabel = st.selectbox(
-            "Elige la agencia correcta",
-            options=options,
-            index=None,
+            "Elige la agencia correcta", options=options, index=None,
             placeholder="Selecciona una coincidencia",
         )
         if selectedlabel:
@@ -2226,8 +2288,7 @@ if st.session_state.get("opencvcfitform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### CVC Fit")
     locator = st.text_input(
-        "Localizador",
-        key="cvcfitlocatorwidget",
+        "Localizador", key="cvcfitlocatorwidget",
         placeholder="Introduce el localizador exacto de Booking ES!G11",
     )
     if st.button("Generar PDF CVC Fit", key="btncvcfitaction", disabled=not locator):
@@ -2251,10 +2312,8 @@ if st.session_state.get("opencvcfitform"):
             ],
         )
         st.download_button(
-            "Descargar PDF CVC Fit",
-            data=result["pdf_bytes"],
-            file_name=result["filename"],
-            mime="application/pdf",
+            "Descargar PDF CVC Fit", data=result["pdf_bytes"],
+            file_name=result["filename"], mime="application/pdf",
             key="downloadcvcfitpdf",
         )
         st.markdown(
@@ -2271,8 +2330,7 @@ if st.session_state.get("opencvcagenciasform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### CVC Agencias")
     locator = st.text_input(
-        "Localizador",
-        key="cvcagenciaslocatorwidget",
+        "Localizador", key="cvcagenciaslocatorwidget",
         placeholder="Introduce el localizador exacto de Booking ES!G11",
     )
     if st.button("Generar PDF CVC Agencias", key="btncvcagenciasaction", disabled=not locator):
@@ -2296,10 +2354,8 @@ if st.session_state.get("opencvcagenciasform"):
             ],
         )
         st.download_button(
-            "Descargar PDF CVC Agencias",
-            data=result["pdf_bytes"],
-            file_name=result["filename"],
-            mime="application/pdf",
+            "Descargar PDF CVC Agencias", data=result["pdf_bytes"],
+            file_name=result["filename"], mime="application/pdf",
             key="downloadcvcagenciaspdf",
         )
         st.markdown(
@@ -2316,8 +2372,7 @@ if st.session_state.get("openirconfirmacionform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### Ir a Confirmación")
     locator = st.text_input(
-        "Localizador",
-        key="irconfirmacionlocatorwidget",
+        "Localizador", key="irconfirmacionlocatorwidget",
         placeholder="Ej: ALB250601-001 o ALB250601-001_GROUP",
     )
     if st.button("Buscar confirmación", key="btnirconfirmacionaction", disabled=not locator):
@@ -2369,11 +2424,9 @@ if st.session_state.get("openinformebarcoform"):
         currenttipo = None
 
     informetype = st.selectbox(
-        "TIPO",
-        options=tipooptions,
+        "TIPO", options=tipooptions,
         index=tipooptions.index(currenttipo) if currenttipo in tipooptions else None,
-        placeholder="Selecciona tipo",
-        key="informetypewidget",
+        placeholder="Selecciona tipo", key="informetypewidget",
         on_change=on_informe_type_change,
     )
     if informetype != st.session_state.get("informetype"):
@@ -2386,13 +2439,10 @@ if st.session_state.get("openinformebarcoform"):
         currentyear = None
 
     informeyear = st.selectbox(
-        "AÑO",
-        options=years,
+        "AÑO", options=years,
         index=years.index(currentyear) if currentyear in years else None,
-        placeholder="Selecciona año",
-        key="informeyearwidget",
-        on_change=on_informe_year_change,
-        disabled=not informetype,
+        placeholder="Selecciona año", key="informeyearwidget",
+        on_change=on_informe_year_change, disabled=not informetype,
     )
     if informeyear != st.session_state.get("informeyear"):
         st.session_state["informeyear"] = informeyear
@@ -2403,13 +2453,10 @@ if st.session_state.get("openinformebarcoform"):
         currentboat = None
 
     informeboat = st.selectbox(
-        "BARCO",
-        options=boats,
+        "BARCO", options=boats,
         index=boats.index(currentboat) if currentboat in boats else None,
-        placeholder="Selecciona barco",
-        key="informeboatwidget",
-        on_change=on_informe_boat_change,
-        disabled=not informeyear,
+        placeholder="Selecciona barco", key="informeboatwidget",
+        on_change=on_informe_boat_change, disabled=not informeyear,
     )
     if informeboat != st.session_state.get("informeboat"):
         st.session_state["informeboat"] = informeboat
@@ -2421,13 +2468,10 @@ if st.session_state.get("openinformebarcoform"):
         currentdep = None
 
     informesalida = st.selectbox(
-        "SALIDA",
-        options=departurenames,
+        "SALIDA", options=departurenames,
         index=departurenames.index(currentdep) if currentdep in departurenames else None,
-        placeholder="Selecciona salida",
-        key="informesalidawidget",
-        on_change=on_informe_salida_change,
-        disabled=not informeboat,
+        placeholder="Selecciona salida", key="informesalidawidget",
+        on_change=on_informe_salida_change, disabled=not informeboat,
     )
     if informesalida != st.session_state.get("informesalida"):
         st.session_state["informesalida"] = informesalida
@@ -2459,35 +2503,19 @@ if st.session_state.get("openinformebarcoform"):
             tablehtml = """
             <div class="report-table-wrap">
             <table class="report-table">
-                <thead>
-                    <tr>
-                        <th>Localizador</th>
-                        <th>Agencia</th>
-                        <th>Estado Pago</th>
-                        <th>Estado de Reserva</th>
-                        <th>Total €</th>
-                        <th>Depósito</th>
-                        <th>PAX</th>
-                        <th>Cabinas</th>
-                        <th>Itinerario</th>
-                        <th>Duración</th>
-                        <th>Idioma</th>
-                    </tr>
-                </thead>
+                <thead><tr>
+                    <th>Localizador</th><th>Agencia</th><th>Estado Pago</th>
+                    <th>Estado de Reserva</th><th>Total €</th><th>Depósito</th>
+                    <th>PAX</th><th>Cabinas</th><th>Itinerario</th><th>Duración</th><th>Idioma</th>
+                </tr></thead>
                 <tbody>
             """
-
             for row in rows:
-                localizador = row.get("Localizador", "")
-                localizador_url = row.get("Localizador URL", "")
-                if localizador_url:
-                    localizador_html = f'<a href="{localizador_url}" target="_blank" rel="noopener noreferrer">{localizador}</a>'
-                else:
-                    localizador_html = localizador
-
-                tablehtml += f"""
-                <tr>
-                    <td>{localizador_html}</td>
+                loc = row.get("Localizador", "")
+                loc_url = row.get("Localizador URL", "")
+                loc_html = f'<a href="{loc_url}" target="_blank" rel="noopener noreferrer">{loc}</a>' if loc_url else loc
+                tablehtml += f"""<tr>
+                    <td>{loc_html}</td>
                     <td>{row.get('Agencia', '')}</td>
                     <td>{row.get('Estado Pago', '')}</td>
                     <td>{row.get('Estado de Reserva', '')}</td>
@@ -2498,14 +2526,8 @@ if st.session_state.get("openinformebarcoform"):
                     <td>{row.get('Itinerario', '')}</td>
                     <td>{row.get('Duracion', '')}</td>
                     <td>{row.get('Idioma', '')}</td>
-                </tr>
-                """
-
-            tablehtml += """
-                </tbody>
-            </table>
-            </div>
-            """
+                </tr>"""
+            tablehtml += "</tbody></table></div>"
             st.html(tablehtml)
 
     st.markdown("</div>", unsafe_allow_html=True)
