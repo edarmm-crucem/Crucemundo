@@ -928,7 +928,7 @@ def getdeparturesbyroot(rootid, yearname, boatname):
     if not boatfolder:
         return []
     files = listfolderitems(boatfolder["id"], foldersonly=False)
-    pattern = re.compile(rf"^{re.escape(boatname)}\d{{6}}GROUP?$")
+    pattern = re.compile(rf"^{re.escape(boatname)}_?\d{{6}}(GROUP)?$")
     departures = []
     for file in files:
         name = file["name"].strip()
