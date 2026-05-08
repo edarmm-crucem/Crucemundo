@@ -15,13 +15,13 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-FOLDERSESIONESID = "1MxMdeBlUG6v5n2upobsjNbQNQ8FCsO"
-LOGOID = "1N7eaCKP1Jeg8KuDXRjJ8tZLhnKStMZ8"
+FOLDER_SESIONES_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
+LOGOID = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
 LOGOURL = f"https://lh3.googleusercontent.com/d/{LOGOID}"
 TEMPLATE_ID_ES = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
 TEMPLATE_ID_GRUPOS = "1Z7ktX3PhVkMibWpzdrDDqAT4aPsmjzSJPf1SgZcL5-w"
-TEMPLATEIDCRUCERO = "1zSJPi6StZ5Jw1c6eieVnKI4NyEdP7E9n3WTZ9yy3C0"
-EXCURSIONESSHEETID = "1ojMHeoosUyel8BA2XTmDsmyDJfvvJrrJNOyxn2u1jg"
+TEMPLATEIDCRUCERO = "1zSJPi6St_Z5Jw1c6eieVnKI4NyEdP7E9n3WTZ9yy3C0"
+EXCURSIONESSHEETID = "1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg"
 AGENCYSHEETID = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
 AGENCYSHEETNAME = "Datos"
 FOLDER_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
@@ -1380,7 +1380,7 @@ st.markdown(
         <a class="web-chip-green" href="{groupsrooturl}" target="_blank" rel="noopener noreferrer">Abre Drive Groups</a>
         <a class="web-chip-green" href="{cvcfitfolderurl}" target="_blank" rel="noopener noreferrer">Abre Folder Sesiones</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-TnE3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTERCABINAS</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJfvvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre EXCURSIONES</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre EXCURSIONES</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER CLIENTES</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCRHJr9TCD7VWrGI6nDhMtwi27cMJL1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre Ventas FIT</a>
     </div>
