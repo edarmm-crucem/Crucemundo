@@ -1,10 +1,21 @@
 import streamlit as st
 
+LOGOID = "1N7eaCKP1Jeg8KuDXRjJ8tZLhnKStMZ8"
+LOGOURL = f"https://lh3.googleusercontent.com/d/{LOGOID}"
+FAVICON_URL = "https://raw.githubusercontent.com/edarmm-crucem/Crucemundo/0d1799703b6870a12c2a73d01e0ccdcbd6f9f275/favicon.png"
+
+
+def do_logout():
+    for key in list(st.session_state.keys()):
+        st.session_state.pop(key, None)
+    st.switch_page("app.py")
+
+
 st.set_page_config(
     page_title="Crucemundo",
-    page_icon="🟡",
+    page_icon=FAVICON_URL,
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="collapsed",
 )
 
 if "authenticated" not in st.session_state:
@@ -13,65 +24,347 @@ if "authenticated" not in st.session_state:
 if not st.session_state.get("authenticated", False):
     st.switch_page("app.py")
 
-DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Usuario"
 USEREMAIL = st.session_state.get("useremail", "").strip()
+DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Sin usuario"
 
-st.markdown("""
+st.markdown(
+    """
 <style>
-    [data-testid="stSidebar"] {display: none !important;}
-    .block-container {padding-top: 1rem !important; padding-bottom: 1rem !important;}
-    .topbar {
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        gap:1rem;
-        margin-bottom:1rem;
-        padding:0.75rem 1rem;
-        border:1px solid #E5E7EB;
-        border-radius:18px;
-        background:#FFFFFF;
-        box-shadow:0 4px 18px rgba(15,23,42,0.05);
-    }
-    .title {
-        font-size:1.1rem;
-        font-weight:800;
-        color:#1F2937;
-    }
-    .subtitle {
-        font-size:0.82rem;
-        color:#667085;
-        margin-top:0.2rem;
-    }
-    .userpill {
-        display:inline-flex;
-        align-items:center;
-        gap:0.4rem;
-        padding:0.42rem 0.78rem;
-        border-radius:999px;
-        background:#FFFBEA;
-        border:1px solid #F2C94C;
-        font-size:0.73rem;
-        font-weight:700;
-        color:#7A5900;
-    }
-</style>
-""", unsafe_allow_html=True)
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
 
-col1, col2 = st.columns([1, 0.25])
+* { box-sizing: border-box; }
+
+html, body, [class*="css"] {
+    font-family: 'DM Sans', sans-serif;
+    background: #FFFFFF !important;
+}
+
+[data-testid="stAppViewContainer"] {
+    background: #FFFFFF !important;
+}
+
+[data-testid="stHeader"] {
+    background: transparent !important;
+}
+
+section[data-testid="stSidebar"] {
+    display: none !important;
+}
+
+.block-container,
+section.stMain .block-container,
+.stMainBlockContainer,
+[data-testid="stMainBlockContainer"] {
+    padding-top: 0.7rem !important;
+    padding-bottom: 1rem !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    max-width: 1900px !important;
+    margin: 0 auto !important;
+}
+
+.portal-header {
+    padding: 0.1rem 0 0.55rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.55rem;
+    flex-wrap: wrap;
+}
+
+.portal-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+}
+
+.portal-logo {
+    height: 42px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+}
+
+.portal-title {
+    font-size: 0.98rem;
+    font-weight: 800;
+    color: #1F2937;
+    line-height: 1.15;
+}
+
+.portal-subtitle {
+    font-size: 0.72rem;
+    color: #667085;
+    line-height: 1.2;
+    margin-top: 0.12rem;
+}
+
+.user-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0.02rem 0 1rem;
+    padding: 0.42rem 0.78rem;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid #D9E2EC;
+    font-size: 0.73rem;
+    font-weight: 700;
+    color: #4B5565;
+    max-width: 100%;
+    word-break: break-word;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.section-head-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.55rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.section-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.34rem 0.74rem;
+    border-radius: 999px;
+    background: #E0ECFF;
+    border: 1px solid #BFD4FF;
+    color: #1E4FBF;
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0 !important;
+}
+
+.panel-inline {
+    background: linear-gradient(180deg, #FFFFFF 0%, #FAFBFD 100%);
+    border: 1px solid #DCE5F0;
+    border-radius: 22px;
+    padding: 1rem 1rem 1.1rem 1rem;
+    margin-top: 0.55rem;
+    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.05);
+}
+
+.panel-inline h3 {
+    font-family: 'DM Sans', sans-serif !important;
+    font-weight: 800 !important;
+    color: #1F2937 !important;
+    margin-bottom: 0.65rem !important;
+    font-size: 1rem !important;
+}
+
+.page-copy {
+    font-size: 0.84rem;
+    color: #475467;
+    line-height: 1.55;
+    margin-bottom: 0.85rem;
+}
+
+.info-card {
+    background: #FBFCFF;
+    border: 1px solid #DCE5F0;
+    border-radius: 18px;
+    padding: 1rem;
+    margin-top: 0.75rem;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem 1rem;
+}
+
+.info-item-label {
+    font-size: 0.68rem;
+    color: #64748B;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.16rem;
+    font-weight: 700;
+}
+
+.info-item-value {
+    font-size: 0.82rem;
+    color: #1F2937;
+    line-height: 1.35;
+    word-break: break-word;
+    font-weight: 600;
+}
+
+div.stButton {
+    width: fit-content !important;
+}
+
+div.stButton button {
+    border-radius: 999px !important;
+    min-height: 42px !important;
+    padding: 0 1.15rem !important;
+    font-size: 0.83rem !important;
+    font-weight: 800 !important;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08) !important;
+    font-family: 'DM Sans', sans-serif !important;
+    letter-spacing: 0.01em !important;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease !important;
+    border: 1.5px solid transparent !important;
+}
+
+div.stButton button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12) !important;
+    filter: saturate(1.04);
+}
+
+div.stButton button:focus {
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14), 0 8px 18px rgba(37, 99, 235, 0.10) !important;
+}
+
+.primary-nav div.stButton button {
+    background: #FFE69A !important;
+    border: 1px solid #F2C94C !important;
+    color: #7A5900 !important;
+}
+
+.secondary-nav div.stButton button {
+    background: #EAF3FF !important;
+    border: 1px solid #BFD7FF !important;
+    color: #1E4E93 !important;
+}
+
+.logout-wrap div.stButton button {
+    background: #FDECF3 !important;
+    border: 1px solid #E89BBB !important;
+    color: #9B3A63 !important;
+}
+
+.portal-footer {
+    margin-top: 1rem;
+    padding: 0.5rem 0 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.footer-text {
+    font-size: 0.71rem;
+    color: #A2ABBD;
+}
+
+@media (max-width: 1300px) {
+    .portal-header, .portal-footer {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    f"""
+    <div class="portal-header">
+        <div class="portal-header-left">
+            <img class="portal-logo" src="{LOGOURL}" alt="Logo">
+            <div>
+                <div class="portal-title">Crucemundo · Página 01</div>
+                <div class="portal-subtitle">Sesión heredada desde el Hub principal</div>
+            </div>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>',
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    """
+    <div class="section-head-row">
+        <div class="section-eyebrow">PÁGINA INTERNA · INTERNAL PAGE</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
+st.markdown("### Área privada")
+st.markdown(
+    """
+    <div class="page-copy">
+        Esta página usa la sesión ya iniciada en <b>app.py</b>.  
+        Si has entrado aquí sin volver al formulario de acceso, la navegación multipágina está funcionando correctamente.
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    """
+    <div class="info-card">
+        <div class="info-grid">
+            <div>
+                <div class="info-item-label">Estado de sesión</div>
+                <div class="info-item-value">Autenticado</div>
+            </div>
+            <div>
+                <div class="info-item-label">Usuario</div>
+                <div class="info-item-value">%s</div>
+            </div>
+            <div>
+                <div class="info-item-label">Email</div>
+                <div class="info-item-value">%s</div>
+            </div>
+            <div>
+                <div class="info-item-label">Página</div>
+                <div class="info-item-value">pages/01_page.py</div>
+            </div>
+        </div>
+    </div>
+    """ % (DISPLAYUSER, USEREMAIL),
+    unsafe_allow_html=True,
+)
+
+col1, col2, col3 = st.columns([0.18, 0.18, 0.18])
 
 with col1:
-    st.markdown(f"""
-    <div class="topbar">
-        <div>
-            <div class="title">Página interna Crucemundo</div>
-            <div class="subtitle">Sesión iniciada correctamente</div>
-        </div>
-        <div class="userpill">{DISPLAYUSER} · {USEREMAIL}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="primary-nav">', unsafe_allow_html=True)
+    if st.button("Volver al Hub", key="btn_back_to_hub"):
+        st.switch_page("app.py")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 with col2:
-    if st.button("Volver al Hub", key="btn_back_hub"):
-        st.switch_page("app.py")
+    st.markdown('<div class="secondary-nav">', unsafe_allow_html=True)
+    if st.button("Recargar", key="btn_reload_01"):
+        st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
-st.write("Contenido de la página 01.")
+with col3:
+    st.markdown('<div class="logout-wrap">', unsafe_allow_html=True)
+    if st.button("Cerrar sesión", key="btn_logout_01"):
+        do_logout()
+    st.markdown("</div>", unsafe_allow_html=True)
+
+st.markdown("</div>", unsafe_allow_html=True)
+
+st.markdown(
+    """
+    <div class="portal-footer">
+        <div class="footer-text">Crucemundo Hub</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
