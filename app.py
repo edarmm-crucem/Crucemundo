@@ -922,10 +922,9 @@ def getyearsbyroot(rootid):
 
 
 @st.cache_data(ttl=300)
-def getyearFOLDERSESIONESIDbyroot(rootid, yearname):
-    = findchildfolder(rootid, yearname)
+def getyearfolderidbyroot(rootid, yearname):
+    folder = findchildfolder(rootid, yearname)
     return folder["id"] if folder else None
-
 
 @st.cache_data(ttl=300)
 def getboatsbyroot(rootid, yearname):
