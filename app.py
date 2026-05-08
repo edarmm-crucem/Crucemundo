@@ -920,14 +920,9 @@ def getyearsbyroot(rootid):
         years = [f["name"].strip() for f in folders if re.fullmatch(r"\d{4}GROUP", f["name"].strip())]
     return sorted(years, reverse=True)
 
-
-@st.cache_data(ttl=300)
 def getyearfolderidbyroot(rootid, yearname):
     folder = findchildfolder(rootid, yearname)
     return folder["id"] if folder else None
-
-@st.cache_data(ttl=300)
-@st.cache_data(ttl=300)
 def getboatsbyroot(rootid, yearname):
     yearfolderid = getyearfolderidbyroot(rootid, yearname)
     if not yearfolderid:
