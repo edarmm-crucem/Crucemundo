@@ -1,245 +1,77 @@
 import streamlit as st
-from datetime import datetime
 
 st.set_page_config(
-    page_title="Crucemundo Hub · 01 Page",
-    page_icon="🛳️",
+    page_title="Crucemundo",
+    page_icon="🟡",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="collapsed"
 )
 
-LOGO_ID = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
-LOGO_URL = f"https://lh3.googleusercontent.com/d/{LOGO_ID}"
+if "authenticated" not in st.session_state:
+    st.switch_page("app.py")
 
-DRIVE_ROOT_ID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
-GROUPS_ROOT_ID = "1MMNH3y1E3jJIp6uUnxbwV0toAtdr2F2M"
-FOLDER_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
-EXCURSIONES_SHEET_ID = "1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg"
+if not st.session_state.get("authenticated", False):
+    st.switch_page("app.py")
 
-drive_root_url = f"https://drive.google.com/drive/folders/{DRIVE_ROOT_ID}"
-groups_root_url = f"https://drive.google.com/drive/folders/{GROUPS_ROOT_ID}"
-cvcfit_folder_url = f"https://drive.google.com/drive/folders/{FOLDER_ID}"
-excursiones_url = f"https://docs.google.com/spreadsheets/d/{EXCURSIONES_SHEET_ID}/edit"
+DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Usuario"
+USEREMAIL = st.session_state.get("useremail", "").strip()
 
-DISPLAYUSER = "Esteban"
-USEREMAIL = "edarmm@gmail.com"
-
-
-def get_saludo(lang="es"):
-    hour = datetime.now().hour
-    if lang == "en":
-        if 6 <= hour < 14:
-            return "Good morning"
-        if 14 <= hour < 21:
-            return "Good afternoon"
-        return "Good evening"
-    if 6 <= hour < 14:
-        return "Buenos días"
-    if 14 <= hour < 21:
-        return "Buenas tardes"
-    return "Buenas noches"
-
-
-SALUDO = get_saludo("es")
-SALUDOEN = get_saludo("en")
-
-st.markdown(
-    """
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
-
-    html, body, [class*="css"] {
-        font-family: 'DM Sans', sans-serif;
-        background: #FFFFFF !important;
+st.markdown("""
+<style>
+    [data-testid="stSidebar"] {display: none !important;}
+    .block-container {padding-top: 1rem !important; padding-bottom: 1rem !important;}
+    .topbar {
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:1rem;
+        margin-bottom:1rem;
+        padding:0.75rem 1rem;
+        border:1px solid #E5E7EB;
+        border-radius:18px;
+        background:#FFFFFF;
+        box-shadow:0 4px 18px rgba(15,23,42,0.05);
     }
-
-    [data-testid="stAppViewContainer"] { background: #FFFFFF !important; }
-    [data-testid="stHeader"] { background: transparent !important; }
-    section[data-testid="stSidebar"] { display: none !important; }
-
-    .block-container, section.stMain > .block-container, .stMainBlockContainer, [data-testid="stMainBlockContainer"] {
-        padding-top: 0.15rem !important;
-        padding-bottom: 1rem !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
-        max-width: 1600px !important;
-        margin: 0 auto !important;
+    .title {
+        font-size:1.1rem;
+        font-weight:800;
+        color:#1F2937;
     }
-
-    .portal-header {
-        padding: 0.1rem 0 0.55rem 0;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        margin-bottom: 0.55rem;
+    .subtitle {
+        font-size:0.82rem;
+        color:#667085;
+        margin-top:0.2rem;
     }
-
-    .portal-header-left {
-        display: flex;
-        align-items: center;
-        gap: 0.9rem;
+    .userpill {
+        display:inline-flex;
+        align-items:center;
+        gap:0.4rem;
+        padding:0.42rem 0.78rem;
+        border-radius:999px;
+        background:#FFFBEA;
+        border:1px solid #F2C94C;
+        font-size:0.73rem;
+        font-weight:700;
+        color:#7A5900;
     }
+</style>
+""", unsafe_allow_html=True)
 
-    .portal-logo {
-        height: 42px;
-        width: auto;
-        object-fit: contain;
-        display: block;
-    }
+col1, col2 = st.columns([1, 0.25])
 
-    .portal-title, .portal-title-en {
-        font-size: 0.96rem;
-        font-weight: 800;
-        color: #1F2937;
-        line-height: 1.15;
-    }
-
-    .portal-title-en { margin-top: 0.12rem; }
-
-    .portal-subtitle, .portal-subtitle-en {
-        font-size: 0.72rem;
-        color: #667085;
-        line-height: 1.2;
-    }
-
-    .portal-subtitle { margin-top: 0.12rem; }
-    .portal-subtitle-en { margin-top: 0.08rem; }
-
-    .user-top {
-        font-size: 0.72rem;
-        color: #566079;
-        white-space: nowrap;
-    }
-
-    .section-head-row, .section-head-row-green {
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        gap: 0.55rem;
-        margin-bottom: 0.75rem;
-        flex-wrap: wrap;
-    }
-
-    .section-head-row-green { margin-top: -0.15rem; }
-
-    .section-eyebrow {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.34rem 0.74rem;
-        border-radius: 999px;
-        background: #E0ECFF;
-        border: 1px solid #BFD4FF;
-        color: #1E4FBF;
-        font-size: 0.66rem;
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        margin-bottom: 0 !important;
-    }
-
-    .web-chip, .web-chip-green {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0.38rem 0.82rem;
-        border-radius: 999px;
-        font-size: 0.71rem;
-        font-weight: 800;
-        line-height: 1;
-        text-decoration: none;
-        white-space: nowrap;
-        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
-    }
-
-    .web-chip {
-        background: #FFE69A;
-        border: 1px solid #F2C94C;
-        color: #7A5900 !important;
-    }
-
-    .web-chip-green {
-        background: #DDF7E6;
-        border: 1px solid #9FDEB4;
-        color: #17663B !important;
-    }
-
-    .user-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        margin: 0.02rem 0 1rem;
-        padding: 0.42rem 0.78rem;
-        border-radius: 999px;
-        background: #fff;
-        border: 1px solid #D9E2EC;
-        font-size: 0.73rem;
-        font-weight: 700;
-        color: #4B5565;
-        max-width: 100%;
-        word-break: break-word;
-        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
-    }
-
-    .page-placeholder {
-        min-height: 30px;
-    }
-
-    @media (max-width: 900px) {
-        .portal-header {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    f"""
-    <div class="portal-header">
-        <div class="portal-header-left">
-            <img class="portal-logo" src="{LOGO_URL}" alt="Logo">
-            <div>
-                <div class="portal-title">{SALUDO}, {DISPLAYUSER}. ¿Qué hacemos hoy?</div>
-                <div class="portal-title-en">{SALUDOEN}, {DISPLAYUSER}. What are we doing today?</div>
-                <div class="portal-subtitle">Herramientas y automatizaciones · Backend Google Drive</div>
-                <div class="portal-subtitle-en">Tools and automations · Google Drive backend</div>
-            </div>
+with col1:
+    st.markdown(f"""
+    <div class="topbar">
+        <div>
+            <div class="title">Página interna Crucemundo</div>
+            <div class="subtitle">Sesión iniciada correctamente</div>
         </div>
-        <div class="user-top">{DISPLAYUSER}</div>
+        <div class="userpill">{DISPLAYUSER} · {USEREMAIL}</div>
     </div>
-    """,
-    unsafe_allow_html=True,
-)
+    """, unsafe_allow_html=True)
 
-st.markdown(
-    """
-    <div class="section-head-row">
-        <div class="section-eyebrow">ACCIONES RÁPIDAS · QUICK ACTIONS</div>
-        <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">Ir a Crucemundo</a>
-        <a class="web-chip" href="https://mail.google.com" target="_blank" rel="noopener noreferrer">Gmail</a>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+with col2:
+    if st.button("Volver al Hub", key="btn_back_hub"):
+        st.switch_page("app.py")
 
-st.markdown(
-    f"""
-    <div class="section-head-row-green">
-        <a class="web-chip-green" href="{drive_root_url}" target="_blank" rel="noopener noreferrer">Abre Drive Root</a>
-        <a class="web-chip-green" href="{groups_root_url}" target="_blank" rel="noopener noreferrer">Abre Drive Groups</a>
-        <a class="web-chip-green" href="{cvcfit_folder_url}" target="_blank" rel="noopener noreferrer">Abre Folder Sesiones</a>
-        <a class="web-chip-green" href="{excursiones_url}" target="_blank" rel="noopener noreferrer">Abre EXCURSIONES</a>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>',
-    unsafe_allow_html=True,
-)
-
-st.markdown('<div class="page-placeholder"></div>', unsafe_allow_html=True)
+st.write("Contenido de la página 01.")
