@@ -8,22 +8,12 @@ from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
-ahora = datetime.now()
-fecha_hora = ahora.strftime("%d/%m/%Y %H:%M")
-usuario_actual = st.session_state.get('user_email', 'Usuario')
-
 st.set_page_config(
     page_title="Crucemundo Hub",
     page_icon="🛳️",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
-url_copia_master = (
-    f"https://docs.google.com/spreadsheets/d/{TEMPLATEIDES}/copy"
-    f"?title={nombre_codificado}"
-    f"&copyDestination={FOLDERSESIONESID}"
-)
-
 
 FOLDERSESIONESID = "1MxMdeBlUG6v5n2upobsjNbQNQ8FCsO"
 LOGOID = "1N7eaCKP1Jeg8KuDXRjJ8tZLhnKStMZ8"
