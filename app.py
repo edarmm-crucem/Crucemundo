@@ -4,7 +4,7 @@ from datetime import date, datetime
 import requests
 import streamlit as st
 from google.auth.transport.requests import Request
-from google.oauth2 import service_account
+from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 
 
@@ -348,37 +348,49 @@ def render_key_value_grid(css_prefix, fields):
     st.markdown("</div></div>", unsafe_allow_html=True)
 
 
+from google.oauth2.service_account import Credentials
+from googleapiclient.discovery import build
+
+SCOPES = [
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/spreadsheets"
+]
+
+SERVICE_ACCOUNT_FILE = "credentials.json"
+FOLDER_SESIONES_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
+
 def create_master_session(sessiontype, templateid, prefixname, processtitle):
     nombre_sugerido = f"{prefixname} - {processtitle}"
-    copy_url = f"https://docs.google.com/spreadsheets/d/{templateid}/copy"
-    
+
     try:
-        # Interfaz simplificada y botones más pequeños
-        st.markdown(f"""
-            <div style="margin-top: 20px; padding: 15px; border-left: 4px solid #dee2e6; background-color: #f9f9f9;">
-                <p style="font-size: 0.9em; color: #555; margin-bottom: 10px;">
-                    Haz clic para crear tu copia de trabajo. El archivo se llamará: <b>{nombre_sugerido}</b>
-                </p>
-                <a href="{copy_url}" target="_blank" style="text-decoration: none;">
-                    <div style="
-                        display: inline-block;
-                        padding: 8px 20px;
-                        background-color: #f0f2f6;
-                        color: #31333F;
-                        border: 1px solid #dcdfe3;
-                        border-radius: 5px;
-                        font-size: 0.85em;
-                        transition: background-color 0.3s;
-                        cursor: pointer;">
-                        Crear copia con mis scripts
-                    </div>
-                </a>
-            </div>
-        """, unsafe_allow_html=True)
+        creds = Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_FILE,
+            scopes=SCOPES
+        )
+        drive_service = build("drive", "v3", credentials=creds)
+
+        file_metadata = {
+            "name": nombre_sugerido,
+            "parents": [FOLDER_SESIONES_ID]
+        }
+
+        copied_file = drive_service.files().copy(
+            fileId=templateid,
+            body=file_metadata,
+            fields="id, name, webViewLink, parents"
+        ).execute()
+
+        st.success(f"Sesión creada: {copied_file['name']}")
+        st.markdown(
+            f"[Abrir hoja]({copied_file['webViewLink']})",
+            unsafe_allow_html=True
+        )
+
+        return copied_file["id"]
 
     except Exception as e:
         st.error(f"Error: {e}")
-
+        return None
 
 # ============================================================
 # GOOGLE AUTH / SERVICES
