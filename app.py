@@ -363,10 +363,10 @@ def create_master_session(sessiontype, templateid, prefixname, processtitle):
     nombre_sugerido = f"{prefixname} - {processtitle}"
 
     try:
-        creds = Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE,
-            scopes=SCOPES
-        )
+        creds = Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"],
+    scopes=SCOPES
+)
         drive_service = build("drive", "v3", credentials=creds)
 
         file_metadata = {
