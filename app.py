@@ -519,65 +519,53 @@ def transfer_ownership(file_id: str, new_owner_email: str) -> None:
 # ============================================================
 # MASTER SESSION
 # ============================================================
-def create_master_session(sessiontype, templateid, prefixname, processtitle):
-    clear_transient_ui()
-
-    fechastr = datetime.now().strftime("%Y%m%d-%H%M")
-    displayuser = st.session_state.get("displayname", "").strip() or "Sin usuario"
-    useremail = st.session_state.get("useremail", "").strip()
-    nombrecopia = f"SESION - {displayuser} - {prefixname} - {fechastr}"
-    descripcion = (
-        f"Tipo: {sessiontype} | Usuario: {displayuser} | "
-        f"Creado: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
-    )
-
-    st.session_state["confirmstate"] = "running"
-    st.session_state["sessiontype"] = sessiontype
-    st.session_state["nombrecopia"] = nombrecopia
-    st.session_state["processtitle"] = processtitle
-    st.session_state["activepanel"] = "process"
-
-    progress_bar = st.progress(0.0, text="Iniciando...")
-    status_box = st.empty()
-
+dedef create_master_session(sessiontype, templateid, prefixname, processtitle):
+    # ... (tus validaciones de nombre y fecha)
+    
     try:
-        progress_bar.progress(0.2, text="Preparando sesión...")
-        status_box.info("Preparando copia en Drive...")
-
-        progress_bar.progress(0.55, text="Creando copia en Drive...")
+        # 1. Crear la copia en la carpeta de sesiones (FOLDER_ID)
+        # La cuenta de servicio es la creadora inicial
         copia = copy_file_to_folder(templateid, nombrecopia, FOLDER_ID, descripcion)
-
-        # Transferir propiedad al usuario logado para que Apps Script funcione
-        if useremail:
-            progress_bar.progress(0.75, text="Transfiriendo propiedad...")
-            status_box.info("Transfiriendo propiedad del archivo...")
+        file_id = copia['id']
+        
+        # 2. Obtener el servicio de Drive y el email del usuario
+        service = get_drive_service()
+        user_email = st.session_state.get("useremail")
+        
+        if user_email:
             try:
-                transfer_ownership(copia["id"], useremail)
-            except Exception as exc_transfer:
-                st.warning(f"Archivo creado pero no se pudo transferir la propiedad: {exc_transfer}")
+                # 3. TRANSFERENCIA DE PROPIEDAD
+                # Esto es lo que hace que aparezca el menú de scripts
+                service.permissions().create(
+                    fileId=file_id,
+                    body={
+                        'type': 'user', 
+                        'role': 'owner', 
+                        'emailAddress': user_email
+                    },
+                    transferOwnership=True, # PASO CLAVE
+                    supportsAllDrives=True
+                ).execute()
+                
+                st.success("✅ Sesión creada y configurada correctamente.")
+            except Exception as e_perm:
+                # Si falla aquí, es por restricción de dominio (Gmail vs Workspace)
+                st.error(f"Error al transferir propiedad: {e_perm}")
+                st.info("El archivo se creó, pero es posible que el menú de scripts no aparezca.")
 
-        final_url = copia.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{copia['id']}/edit"
+        # 4. Mostrar el enlace para que el usuario lo abra
+        final_url = copia.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
+        
+        st.markdown(f"""
+            <a href="{final_url}" target="_blank" style="text-decoration: none;">
+                <div style="background-color: #28a745; color: white; text-align: center; padding: 15px; border-radius: 8px; font-weight: bold; font-size: 1.2em;">
+                    📂 ABRIR SESIÓN AHORA
+                </div>
+            </a>
+        """, unsafe_allow_html=True)
 
-        progress_bar.progress(1.0, text="Ok")
-        status_box.success("Ok")
-
-        st.session_state["copyurl"] = final_url
-        st.session_state["processresult"] = {
-            "status": "created",
-            "name": copia.get("name", nombrecopia),
-            "url": final_url,
-            "id": copia.get("id", ""),
-        }
-        st.session_state["confirmstate"] = "done"
-        st.rerun()
-
-    except Exception as exc:
-        progress_bar.empty()
-        status_box.empty()
-        st.session_state["confirmstate"] = "error"
-        st.session_state["processresult"] = {"status": "error", "message": str(exc)}
-        st.rerun()
-
+    except Exception as e:
+        st.error(f"Error en la creación: {e}")
 
 # ============================================================
 # SHEETS HELPERS
