@@ -1311,7 +1311,7 @@ if not st.session_state.authenticated:
                 st.error("Debes introducir mail y contraseña / Please enter email and password.")
             elif emailclean not in VALIDUSERS:
                 st.error("Usuario no autorizado / Unauthorized user.")
-            elif password != VALIDPASSWORD:
+            elif password.strip() != str(VALIDPASSWORD).strip():
                 st.error("Contraseña incorrecta / Incorrect password.")
             else:
                 st.session_state.authenticated = True
