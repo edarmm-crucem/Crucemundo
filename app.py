@@ -357,30 +357,26 @@ def panelheader(title, closekey):
 def iniciarproceso(sessiontype, templateid, prefixname, processtitle):
     try:
         cleartransientui()
-
         fechastr = datetime.now().strftime("%Y%m%d-%H%M")
         displayuser = st.session_state.get("displayname", "").strip() or "Sin usuario"
-
         nombrecopia = f"SESION - {displayuser} - {prefixname} - {fechastr}"
 
-        copia = copyfiletofolder(
-            templateid,
-            nombrecopia,
-            FOLDERSESIONESID
+        copyurl = (
+            f"https://docs.google.com/spreadsheets/d/{templateid}/copy"
+            f"?copyDestination={FOLDERSESIONESID}"
+            f"&title={urllib.parse.quote(nombrecopia)}"
         )
 
-        st.session_state.confirmstate = "done"
+        st.session_state.confirmstate = "step1"
         st.session_state.sessiontype = sessiontype
         st.session_state.nombrecopia = nombrecopia
-        st.session_state.copyurl = copia.get("webViewLink")
+        st.session_state.copyurl = copyurl
         st.session_state.processtitle = processtitle
         st.session_state.activepanel = "process"
-
         st.rerun()
 
     except Exception as e:
         st.error(str(e))
-
 
 @st.cache_resource
 def getgooglecreds():
