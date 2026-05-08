@@ -520,22 +520,29 @@ def transfer_ownership(file_id: str, new_owner_email: str) -> None:
 # MASTER SESSION
 # ============================================================
 def create_master_session(sessiontype, templateid, prefixname, processtitle):
-    # ... (tus validaciones de nombre y fecha)
+    # Definimos el nombre de la copia primero
+    nombrecopia = f"{prefixname} - {processtitle}"
+    descripcion = f"Sesión creada desde Hub el {datetime.now().strftime('%d/%m/%Y %H:%M')}"
     
     try:
-        # 1. Crear la copia en la carpeta de sesiones (FOLDER_ID)
-        # La cuenta de servicio es la creadora inicial
+        progress_bar = st.progress(0, text="Iniciando proceso...")
+        status_box = st.empty()
+        
+        status_box.info("Preparando copia en Drive...")
+        progress_bar.progress(0.2, text="Conectando con Google Drive...")
+
+        # 1. Crear la copia directamente en la carpeta de sesiones
         copia = copy_file_to_folder(templateid, nombrecopia, FOLDER_ID, descripcion)
         file_id = copia['id']
         
-        # 2. Obtener el servicio de Drive y el email del usuario
+        progress_bar.progress(0.6, text="Transfiriendo propiedad...")
+        
+        # 2. Intentar transferencia de propiedad para activar el menú de scripts
         service = get_drive_service()
         user_email = st.session_state.get("useremail")
         
         if user_email:
             try:
-                # 3. TRANSFERENCIA DE PROPIEDAD
-                # Esto es lo que hace que aparezca el menú de scripts
                 service.permissions().create(
                     fileId=file_id,
                     body={
@@ -543,30 +550,31 @@ def create_master_session(sessiontype, templateid, prefixname, processtitle):
                         'role': 'owner', 
                         'emailAddress': user_email
                     },
-                    transferOwnership=True, # PASO CLAVE
+                    transferOwnership=True,
                     supportsAllDrives=True
                 ).execute()
-                
-                st.success("✅ Sesión creada y configurada correctamente.")
+                status_box.success("✅ Sesión creada y propiedad transferida con éxito.")
             except Exception as e_perm:
-                # Si falla aquí, es por restricción de dominio (Gmail vs Workspace)
-                st.error(f"Error al transferir propiedad: {e_perm}")
-                st.info("El archivo se creó, pero es posible que el menú de scripts no aparezca.")
+                # Si esto falla, el archivo existe pero el menú onOpen podría no salir
+                st.warning(f"Archivo creado, pero hubo un problema de permisos: {e_perm}")
+        
+        progress_bar.progress(1.0, text="Proceso finalizado")
 
-        # 4. Mostrar el enlace para que el usuario lo abra
+        # 3. Mostrar botón para abrir
         final_url = copia.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
         
         st.markdown(f"""
-            <a href="{final_url}" target="_blank" style="text-decoration: none;">
-                <div style="background-color: #28a745; color: white; text-align: center; padding: 15px; border-radius: 8px; font-weight: bold; font-size: 1.2em;">
-                    📂 ABRIR SESIÓN AHORA
-                </div>
-            </a>
+            <div style="margin-top: 20px;">
+                <a href="{final_url}" target="_blank" style="text-decoration: none;">
+                    <div style="background-color: #28a745; color: white; text-align: center; padding: 15px; border-radius: 8px; font-weight: bold; font-size: 1.2em; cursor: pointer;">
+                        📂 ABRIR SESIÓN Y CARGAR MENÚ
+                    </div>
+                </a>
+            </div>
         """, unsafe_allow_html=True)
 
     except Exception as e:
         st.error(f"Error en la creación: {e}")
-
 # ============================================================
 # SHEETS HELPERS
 # ============================================================
