@@ -873,34 +873,28 @@ def buildsheettaburl(spreadsheetid, sheetgid):
 def findlocatorconfirmation(locatorraw):
     parsed = parselocatorinput(locatorraw)
     loglines = []
-
-    year= findchildfolder(parsed["rootid"], parsed["yearfoldername"])
+    yearfolder = findchildfolder(parsed["rootid"], parsed["yearfoldername"])
     if not yearfolder:
         loglines.append(f"No existe la carpeta de año {parsed['yearfoldername']}")
         return {"status": "missingyear", "parsed": parsed, "log": loglines}
     loglines.append(f"Carpeta de año encontrada: {parsed['yearfoldername']}")
-
-    boat= findchildfolder(yearfolder["id"], parsed["boatname"])
+    boatfolder = findchildfolder(yearfolder["id"], parsed["boatname"])
     if not boatfolder:
         loglines.append(f"No existe la carpeta del barco {parsed['boatname']}")
         return {"status": "missingboat", "parsed": parsed, "log": loglines}
     loglines.append(f"Carpeta de barco encontrada: {parsed['boatname']}")
-
     fileobj = findfilebyname(boatfolder["id"], parsed["filename"])
     if not fileobj:
         loglines.append(f"No existe el archivo {parsed['filename']}")
         return {"status": "missingfile", "parsed": parsed, "log": loglines}
     loglines.append(f"Archivo encontrado: {parsed['filename']}")
-
     sheets = getsheettitleswithids(fileobj["id"])
     targetsheet = next((s for s in sheets if s["title"].strip() == parsed["sheetname"].strip()), None)
     if not targetsheet:
         loglines.append(f"No existe la pestaña {parsed['sheetname']}")
         return {"status": "missinglocator", "parsed": parsed, "file": fileobj, "log": loglines}
-
     finalurl = buildsheettaburl(fileobj["id"], targetsheet["sheetId"])
     loglines.append(f"Pestaña encontrada: {parsed['sheetname']}")
-
     return {
         "status": "found",
         "parsed": parsed,
@@ -909,9 +903,6 @@ def findlocatorconfirmation(locatorraw):
         "url": finalurl,
         "log": loglines,
     }
-
-
-@st.cache_data(ttl=300)
 def getyearsbyroot(rootid):
     folders = listfolderitems(rootid, foldersonly=True)
     if rootid == DRIVEROOTID:
