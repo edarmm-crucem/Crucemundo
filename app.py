@@ -593,11 +593,12 @@ def getboats(yearname):
     return sorted(f["name"].strip() for f in folders if f["name"].strip())
 
 @st.cache_data(ttl=300)
+@st.cache_data(ttl=300)
 def getdepartures(yearname, boatname):
-    year = getyear(yearname)
-    if not year:
+    yearfolderid = getyearfolderid(yearname)
+    if not yearfolderid:
         return []
-    boat= findchildfolder(year, boatname)
+    boatfolder = findchildfolder(yearfolderid, boatname)
     if not boatfolder:
         return []
     files = listfolderitems(boatfolder["id"], foldersonly=False)
@@ -613,7 +614,6 @@ def getdepartures(yearname, boatname):
             })
     departures.sort(key=lambda x: x["nombre"])
     return departures
-
 
 def createcrucerofile(barco, fechaobj):
     if not barco or not fechaobj:
