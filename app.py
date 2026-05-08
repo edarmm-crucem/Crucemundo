@@ -619,7 +619,7 @@ def createcrucerofile(barco, fechaobj):
     if not barco or not fechaobj:
         raise Exception("Faltan datos de barco o fecha.")
     anio = str(fechaobj.year)
-    nombrenuevo = f"{barco}{fechaobj.strftime('%y%m%d')}"
+    nombrenuevo = f"{barco}_{fechaobj.strftime('%y%m%d')}"
     fechaes = fechaobj.strftime("%d/%m/%Y")
 
     carpetaanio = getorcreatefolder(DRIVEROOTID, anio)
@@ -642,8 +642,7 @@ def createcrucerofile(barco, fechaobj):
     copia = copyfiletofolder(TEMPLATEIDCRUCERO, nombrenuevo, carpetabarco["id"], descripcion)
     updatecrucerosheet(copia["id"], barco)
 
-    getyears.clear()
-    getyear.clear()
+    getyears.clear()    
     getboats.clear()
     getdepartures.clear()
 
