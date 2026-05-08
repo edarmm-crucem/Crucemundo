@@ -1613,7 +1613,7 @@ if st.session_state.get("opensalidaform"):
             index=years.index(currentyear) if currentyear in years else None,
             placeholder="Selecciona un año / Select a year",
             key="salidayearwidget",
-            onchange=onyearchange,
+            on_change=onyearchange,
         )
         if selectedyear != st.session_state.get("salidayear"):
             st.session_state.salidayear = selectedyear
@@ -1629,7 +1629,7 @@ if st.session_state.get("opensalidaform"):
             index=boats.index(currentboat) if currentboat in boats else None,
             placeholder="Selecciona un barco / Select a ship",
             key="salidaboatwidget",
-            onchange=onboatchange,
+            on_change=onboatchange,
             disabled=not selectedyear,
         )
         if selectedboat != st.session_state.get("salidaboat"):
@@ -1647,7 +1647,7 @@ if st.session_state.get("opensalidaform"):
             index=departurenames.index(currentdeparture) if currentdeparture in departurenames else None,
             placeholder="Selecciona una salida / Select a departure",
             key="salidanamewidget",
-            onchange=onsalidachange,
+            on_change=onsalidachange,
             disabled=not selectedboat,
         )
         if selecteddeparture != st.session_state.get("salidaname"):
@@ -1679,7 +1679,7 @@ if st.session_state.get("opencruceroform"):
             index=years.index(currentcyear) if currentcyear in years else None,
             placeholder="Selecciona un año / Select a year",
             key="cruceroyearwidget",
-            onchange=oncruceroyearchange,
+            on_change=oncruceroyearchange,
         )
         if cruceroyear != st.session_state.get("cruceroyear"):
             st.session_state.cruceroyear = cruceroyear
@@ -1695,7 +1695,7 @@ if st.session_state.get("opencruceroform"):
             index=cruceroboats.index(currentcboat) if currentcboat in cruceroboats else None,
             placeholder="Selecciona un barco / Select a ship",
             key="cruceroboatwidget",
-            onchange=oncruceroboatchange,
+            on_change=oncruceroboatchange,
             disabled=not cruceroyear,
         )
         if cruceroboat != st.session_state.get("cruceroboat"):
@@ -1980,7 +1980,7 @@ if st.session_state.get("openinformebarcoform"):
         index=tipooptions.index(currenttipo) if currenttipo in tipooptions else None,
         placeholder="Selecciona tipo",
         key="informetypewidget",
-        onchange=oninformetypechange,
+        on_change=oninformetypechange,
     )
     if informetype != st.session_state.get("informetype"):
         st.session_state.informetype = informetype
@@ -1998,7 +1998,7 @@ if st.session_state.get("openinformebarcoform"):
         index=years.index(currentyear) if currentyear in years else None,
         placeholder="Selecciona año",
         key="informeyearwidget",
-        onchange=oninformeyearchange,
+        on_change=oninformeyearchange,
         disabled=not informetype,
     )
     if informeyear != st.session_state.get("informeyear"):
@@ -2015,7 +2015,7 @@ if st.session_state.get("openinformebarcoform"):
         index=boats.index(currentboat) if currentboat in boats else None,
         placeholder="Selecciona barco",
         key="informeboatwidget",
-        onchange=oninformeboatchange,
+        on_change=oninformeboatchange,
         disabled=not informeyear,
     )
     if informeboat != st.session_state.get("informeboat"):
@@ -2033,7 +2033,7 @@ if st.session_state.get("openinformebarcoform"):
         index=departurenames.index(currentdep) if currentdep in departurenames else None,
         placeholder="Selecciona salida",
         key="informesalidawidget",
-        onchange=oninformesalidachange,
+        on_change=oninformesalidachange,
         disabled=not informeboat,
     )
     if informesalida != st.session_state.get("informesalida"):
