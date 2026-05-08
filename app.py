@@ -4,7 +4,7 @@ from datetime import date, datetime
 import requests
 import streamlit as st
 from google.auth.transport.requests import Request
-from google.oauth2 import service_account
+from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 
 
@@ -348,56 +348,47 @@ def render_key_value_grid(css_prefix, fields):
     st.markdown("</div></div>", unsafe_allow_html=True)
 
 
+from google.oauth2.service_account import Credentials
+from googleapiclient.discovery import build
+
+SCOPES = [
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/spreadsheets"
+]
+
+SERVICE_ACCOUNT_FILE = "credentials.json"
+FOLDER_SESIONES_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
+
 def create_master_session(sessiontype, templateid, prefixname, processtitle):
-    clear_transient_ui()
-
-    fechastr = datetime.now().strftime("%Y%m%d-%H%M")
-    displayuser = st.session_state.get("displayname", "").strip() or "Sin usuario"
-    nombrecopia = f"SESION - {displayuser} - {prefixname} - {fechastr}"
-    descripcion = (
-        f"Tipo: {sessiontype} | Usuario: {displayuser} | "
-        f"Creado: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
-    )
-
-    st.session_state["confirmstate"] = "running"
-    st.session_state["sessiontype"] = sessiontype
-    st.session_state["nombrecopia"] = nombrecopia
-    st.session_state["processtitle"] = processtitle
-    st.session_state["activepanel"] = "process"
-
-    progress_bar = st.progress(0.0, text="Iniciando...")
-    status_box = st.empty()
+    nombre_sugerido = f"{prefixname} - {processtitle}"
 
     try:
-        progress_bar.progress(0.2, text="Preparando sesión...")
-        status_box.info("Preparando copia en Drive...")
+        creds = Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"],
+            scopes=SCOPES
+        )
 
-        progress_bar.progress(0.55, text="Creando copia en Drive...")
-        copia = copy_file_to_folder(templateid, nombrecopia, FOLDER_ID, descripcion)
+        drive_service = build("drive", "v3", credentials=creds)
 
-        final_url = copia.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{copia['id']}/edit"
-
-        progress_bar.progress(1.0, text="Ok")
-        status_box.success("Ok")
-
-        st.session_state["copyurl"] = final_url
-        st.session_state["processresult"] = {
-            "status": "created",
-            "name": copia.get("name", nombrecopia),
-            "url": final_url,
-            "id": copia.get("id", ""),
+        file_metadata = {
+            "name": nombre_sugerido,
+            "parents": [FOLDER_SESIONES_ID]
         }
-        st.session_state["confirmstate"] = "done"
-        st.rerun()
 
-    except Exception as exc:
-        progress_bar.empty()
-        status_box.empty()
-        st.session_state["confirmstate"] = "error"
-        st.session_state["processresult"] = {"status": "error", "message": str(exc)}
-        st.rerun()
+        copied_file = drive_service.files().copy(
+            fileId=templateid,
+            body=file_metadata,
+            fields="id,name,webViewLink"
+        ).execute()
 
+        st.success(f"Sesión creada: {copied_file['name']}")
+        st.markdown(f"[Abrir hoja]({copied_file['webViewLink']})")
 
+        return copied_file["id"]
+
+    except Exception as e:
+        st.error(f"Error: {e}")
+        return None
 # ============================================================
 # GOOGLE AUTH / SERVICES
 # ============================================================
@@ -416,13 +407,15 @@ def get_google_creds():
 
 @st.cache_resource
 def get_drive_service():
-    return build("drive", "v3", credentials=get_google_creds())
-
-
-@st.cache_resource
-def get_sheets_service():
-    return build("sheets", "v4", credentials=get_google_creds())
-
+    """Inicializa el servicio de Drive usando los Secrets de Streamlit"""
+    # Cargamos la info directamente desde el diccionario de Secrets
+    creds_info = st.secrets["gcp_service_account"]
+    
+    creds = Credentials.from_service_account_info(
+        creds_info, 
+        scopes=SCOPES
+    )
+    return build('drive', 'v3', credentials=creds)
 
 # ============================================================
 # DRIVE / SHEETS HELPERS
@@ -1058,14 +1051,6 @@ def parse_int_from_text(value):
     return int(m.group(0)) if m else 0
 
 
-def format_eur_es(value):
-    try:
-        number = float(value or 0)
-        return f"{number:,.2f}".replace(",", "__").replace(".", ",").replace("__", ".") + " €"
-    except Exception:
-        return "0,00 €"
-
-
 def get_sheet_title_b2(spreadsheet_id, sheet_title):
     return get_single_cell(spreadsheet_id, sheet_title, "B2")
 
@@ -1366,9 +1351,6 @@ st.markdown(
         --card-btn-border: #94BEFF;
         --card-btn-text: #1E4E93;
         --card-btn-shadow: rgba(30, 78, 147, 0.16);
-        --card-btn-hover-bg: #BBD8FF;
-        --card-btn-hover-border: #80AEF8;
-        --card-btn-hover-text: #173E75;
     }
 
     .card-grupos {
@@ -1378,9 +1360,6 @@ st.markdown(
         --card-btn-border: #93D0A7;
         --card-btn-text: #1F6A3A;
         --card-btn-shadow: rgba(31, 106, 58, 0.15);
-        --card-btn-hover-bg: #BAE8C7;
-        --card-btn-hover-border: #7DC694;
-        --card-btn-hover-text: #17512C;
     }
 
     .card-salida {
@@ -1390,9 +1369,6 @@ st.markdown(
         --card-btn-border: #F1B97B;
         --card-btn-text: #8A5318;
         --card-btn-shadow: rgba(138, 83, 24, 0.16);
-        --card-btn-hover-bg: #FFD1A0;
-        --card-btn-hover-border: #E8A85C;
-        --card-btn-hover-text: #6E3E0E;
     }
 
     .card-crucero {
@@ -1402,9 +1378,6 @@ st.markdown(
         --card-btn-border: #B9A0F8;
         --card-btn-text: #5A3E9E;
         --card-btn-shadow: rgba(90, 62, 158, 0.16);
-        --card-btn-hover-bg: #D0BEFF;
-        --card-btn-hover-border: #A88AF1;
-        --card-btn-hover-text: #412A7B;
     }
 
     .card-nueva-agencia {
@@ -1414,9 +1387,6 @@ st.markdown(
         --card-btn-border: #98D0AA;
         --card-btn-text: #256245;
         --card-btn-shadow: rgba(37, 98, 69, 0.16);
-        --card-btn-hover-bg: #BFE7CC;
-        --card-btn-hover-border: #79C08F;
-        --card-btn-hover-text: #17442E;
     }
 
     .card-buscar-agencia {
@@ -1426,9 +1396,6 @@ st.markdown(
         --card-btn-border: #F0B77E;
         --card-btn-text: #8B5620;
         --card-btn-shadow: rgba(139, 86, 32, 0.16);
-        --card-btn-hover-bg: #FFD1A6;
-        --card-btn-hover-border: #E9A761;
-        --card-btn-hover-text: #6E4011;
     }
 
     .card-cvcfit {
@@ -1438,9 +1405,6 @@ st.markdown(
         --card-btn-border: #E89BBB;
         --card-btn-text: #9B3A63;
         --card-btn-shadow: rgba(155, 58, 99, 0.16);
-        --card-btn-hover-bg: #F2BDD4;
-        --card-btn-hover-border: #DE82A6;
-        --card-btn-hover-text: #7B2247;
     }
 
     .card-cvcagencias {
@@ -1450,9 +1414,6 @@ st.markdown(
         --card-btn-border: #97D0A9;
         --card-btn-text: #2C6A44;
         --card-btn-shadow: rgba(44, 106, 68, 0.16);
-        --card-btn-hover-bg: #C0E7CB;
-        --card-btn-hover-border: #7FBF93;
-        --card-btn-hover-text: #1E4E30;
     }
 
     .card-irconfirmacion {
@@ -1462,9 +1423,6 @@ st.markdown(
         --card-btn-border: #B8C6DC;
         --card-btn-text: #4A5874;
         --card-btn-shadow: rgba(74, 88, 116, 0.16);
-        --card-btn-hover-bg: #D2DDEB;
-        --card-btn-hover-border: #A8BAD6;
-        --card-btn-hover-text: #33415E;
     }
 
     .card-informebarco {
@@ -1474,9 +1432,6 @@ st.markdown(
         --card-btn-border: #97CEE0;
         --card-btn-text: #2B6881;
         --card-btn-shadow: rgba(43, 104, 129, 0.16);
-        --card-btn-hover-bg: #BFE4F0;
-        --card-btn-hover-border: #7FBED5;
-        --card-btn-hover-text: #174B63;
     }
 
     .action-top { display: flex; align-items: flex-start; gap: 0.75rem; }
@@ -1549,25 +1504,24 @@ st.markdown(
         filter: saturate(1.04);
     }
 
-    .action-box div.stButton button,
-    .action-box .done-link {
-        background: var(--card-btn-bg) !important;
-        border: 1.5px solid var(--card-btn-border) !important;
-        color: var(--card-btn-text) !important;
-        box-shadow: 0 6px 14px var(--card-btn-shadow) !important;
-        font-family: 'DM Sans', sans-serif !important;
-    }
+.action-box div.stButton button,
+.action-box .done-link {
+    background: var(--card-btn-bg) !important;
+    border: 1.5px solid var(--card-btn-border) !important;
+    color: var(--card-btn-text) !important;
+    box-shadow: 0 6px 14px var(--card-btn-shadow) !important;
+    font-family: 'DM Sans', sans-serif !important;
+}
 
-    .action-box div.stButton button:hover,
-    .action-box .done-link:hover {
-        background: var(--card-btn-hover-bg) !important;
-        border-color: var(--card-btn-hover-border) !important;
-        color: var(--card-btn-hover-text) !important;
-        box-shadow: 0 10px 22px var(--card-btn-shadow) !important;
-        transform: translateY(-1px);
-        filter: none !important;
-    }
-
+.action-box div.stButton button:hover,
+.action-box .done-link:hover {
+    background: var(--card-btn-hover-bg) !important;
+    border-color: var(--card-btn-hover-border) !important;
+    color: var(--card-btn-hover-text) !important;
+    box-shadow: 0 10px 22px var(--card-btn-shadow) !important;
+    transform: translateY(-1px);
+    filter: none !important;
+}
     .panel-inline div.stButton button,
     .panel-inline div[data-testid="stFormSubmitButton"] button,
     .panel-inline .download-btn button,
@@ -1783,8 +1737,8 @@ st.markdown(
         <a class="web-chip-green" href="{cvcfit_folder_url}" target="_blank" rel="noopener noreferrer">Abre Folder Sesiones</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER_CABINAS</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre EXCURSIONES</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44_WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER CLIENTES</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCR_HJr9TCD7VWrGI6nDhMtwi27cMJL_1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre Ventas FIT</a>
+         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44_WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER CLIENTES</a>
+          <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCR_HJr9TCD7VWrGI6nDhMtwi27cMJL_1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre Ventas FIT</a>
     </div>
     """,
     unsafe_allow_html=True,
@@ -1935,6 +1889,7 @@ cards = [
     },
 ]
 
+# ANCHOS PERSONALIZADOS
 row1 = st.columns([1.45, 1.45, 1.05, 1.05, 1.10, 1.10], gap="medium")
 for col, card in zip(row1, cards[:6]):
     render_action_card(col, card)
@@ -2374,15 +2329,15 @@ if st.session_state.get("openinformebarcoform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### Informe € por Barco")
 
-    tipooptions = ["NORMAL", "GROUPS"]
-    currenttipo = st.session_state.get("informetype")
-    if currenttipo not in tipooptions:
-        currenttipo = None
+    tipo_options = ["NORMAL", "GROUPS"]
+    current_tipo = st.session_state.get("informetype")
+    if current_tipo not in tipo_options:
+        current_tipo = None
 
     informetype = st.selectbox(
         "TIPO",
-        options=tipooptions,
-        index=tipooptions.index(currenttipo) if currenttipo in tipooptions else None,
+        options=tipo_options,
+        index=tipo_options.index(current_tipo) if current_tipo in tipo_options else None,
         placeholder="Selecciona tipo",
         key="informetypewidget",
         on_change=on_informe_type_change,
@@ -2390,16 +2345,17 @@ if st.session_state.get("openinformebarcoform"):
     if informetype != st.session_state.get("informetype"):
         st.session_state["informetype"] = informetype
 
-    rootid = GROUPS_ROOT_ID if informetype == "GROUPS" else DRIVE_ROOT_ID
-    years = get_years_by_root(rootid) if informetype else []
-    currentyear = st.session_state.get("informeyear")
-    if currentyear not in years:
-        currentyear = None
+    root_id = GROUPS_ROOT_ID if informetype == "GROUPS" else DRIVE_ROOT_ID
+
+    years = get_years_by_root(root_id) if informetype else []
+    current_year = st.session_state.get("informeyear")
+    if current_year not in years:
+        current_year = None
 
     informeyear = st.selectbox(
         "AÑO",
         options=years,
-        index=years.index(currentyear) if currentyear in years else None,
+        index=years.index(current_year) if current_year in years else None,
         placeholder="Selecciona año",
         key="informeyearwidget",
         on_change=on_informe_year_change,
@@ -2408,15 +2364,15 @@ if st.session_state.get("openinformebarcoform"):
     if informeyear != st.session_state.get("informeyear"):
         st.session_state["informeyear"] = informeyear
 
-    boats = get_boats_by_root(rootid, informeyear) if informetype and informeyear else []
-    currentboat = st.session_state.get("informeboat")
-    if currentboat not in boats:
-        currentboat = None
+    boats = get_boats_by_root(root_id, informeyear) if informetype and informeyear else []
+    current_boat = st.session_state.get("informeboat")
+    if current_boat not in boats:
+        current_boat = None
 
     informeboat = st.selectbox(
         "BARCO",
         options=boats,
-        index=boats.index(currentboat) if currentboat in boats else None,
+        index=boats.index(current_boat) if current_boat in boats else None,
         placeholder="Selecciona barco",
         key="informeboatwidget",
         on_change=on_informe_boat_change,
@@ -2425,16 +2381,16 @@ if st.session_state.get("openinformebarcoform"):
     if informeboat != st.session_state.get("informeboat"):
         st.session_state["informeboat"] = informeboat
 
-    departures = get_departures_by_root(rootid, informeyear, informeboat) if informetype and informeyear and informeboat else []
-    departurenames = [d["nombre"] for d in departures]
-    currentdep = st.session_state.get("informesalida")
-    if currentdep not in departurenames:
-        currentdep = None
+    departures = get_departures_by_root(root_id, informeyear, informeboat) if informetype and informeyear and informeboat else []
+    departure_names = [d["nombre"] for d in departures]
+    current_dep = st.session_state.get("informesalida")
+    if current_dep not in departure_names:
+        current_dep = None
 
     informesalida = st.selectbox(
         "SALIDA",
-        options=departurenames,
-        index=departurenames.index(currentdep) if currentdep in departurenames else None,
+        options=departure_names,
+        index=departure_names.index(current_dep) if current_dep in departure_names else None,
         placeholder="Selecciona salida",
         key="informesalidawidget",
         on_change=on_informe_salida_change,
@@ -2459,7 +2415,7 @@ if st.session_state.get("openinformebarcoform"):
             "informebarco",
             [
                 ("Spreadsheet", informeresult.get("spreadsheet_name", "")),
-                ("Total Importe", format_eur_es(informeresult.get("total_importe", 0))),
+                ("Total Importe", f"{informeresult.get('total_importe', 0):,.2f} €"),
                 ("Total PAX", str(informeresult.get("total_pax", 0))),
                 ("Total Hojas", str(len(informeresult.get("rows", [])))),
             ],
@@ -2467,12 +2423,12 @@ if st.session_state.get("openinformebarcoform"):
 
         rows = informeresult.get("rows", [])
         if rows:
-            tablehtml = """
+            table_html = """
             <div class="report-table-wrap">
             <table class="report-table">
                 <thead>
                     <tr>
-                        
+                        <th>Hoja</th>
                         <th>Localizador</th>
                         <th>Agencia</th>
                         <th>Estado Pago</th>
@@ -2487,30 +2443,24 @@ if st.session_state.get("openinformebarcoform"):
                 </thead>
                 <tbody>
             """
-
             for row in rows:
-                tablehtml += f"""
-                <tr>
-                   
-                    <td>{row.get('Localizador', '')}</td>
-                    <td>{row.get('Agencia', '')}</td>
-                    <td>{row.get('Estado Pago', '')}</td>
-                    <td>{format_eur_es(row.get('Total €', 0))}</td>
-                    <td>{format_eur_es(row.get('Cantidad Deposito', 0))}</td>
-                    <td>{row.get('PAX', 0)}</td>
-                    <td>{row.get('Cabinas', 0)}</td>
-                    <td>{row.get('Itinerario', '')}</td>
-                    <td>{row.get('Duracion', '')}</td>
-                    <td>{row.get('Tipo Documento', '')}</td>
-                </tr>
+                table_html += f"""
+                    <tr>
+                        <td>{row.get('Hoja', '')}</td>
+                        <td>{row.get('Localizador', '')}</td>
+                        <td>{row.get('Agencia', '')}</td>
+                        <td>{row.get('Estado Pago', '')}</td>
+                        <td>{row.get('Total €', 0):,.2f} €</td>
+                        <td>{row.get('Cantidad Deposito', 0):,.2f} €</td>
+                        <td>{row.get('PAX', 0)}</td>
+                        <td>{row.get('Cabinas', 0)}</td>
+                        <td>{row.get('Itinerario', '')}</td>
+                        <td>{row.get('Duracion', '')}</td>
+                        <td>{row.get('Tipo Documento', '')}</td>
+                    </tr>
                 """
-
-            tablehtml += """
-                </tbody>
-            </table>
-            </div>
-            """
-            st.html(tablehtml)
+            table_html += "</tbody></table></div>"
+            st.markdown(table_html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -2523,4 +2473,5 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
 st.markdown("</div>", unsafe_allow_html=True)
