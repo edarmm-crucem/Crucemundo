@@ -426,9 +426,9 @@ def listfolderitems(parentid, foldersonly=False):
     return results
 
 
-def listspreadsheetsinfolderrecentfirst(FOLDERSESIONESID):
+def listspreadsheetsinfolderrecentfirst(folderid):
     service = getdriveservice()
-    query = f"'{FOLDERSESIONESID}' in parents and trashed=false and mimeType='application/vnd.google-apps.spreadsheet'"
+    query = f"'{folderid}' in parents and trashed=false and mimeType='application/vnd.google-apps.spreadsheet'"
     results = []
     pagetoken = None
     while True:
@@ -479,9 +479,9 @@ def findfilebyname(parentid, filename):
     return None
 
 
-def copyfiletofolder(fileid, newname, parentFOLDERSESIONESID, description=None):
+def copyfiletofolder(fileid, newname, parent, description=None):
     service = getdriveservice()
-    body = {"name": newname, "parents": [parentFOLDERSESIONESID]}
+    body = {"name": newname, "parents": [parent]}
     if description:
         body["description"] = description
     return service.files().copy(
@@ -585,19 +585,19 @@ def getyearfolderid(yearname):
     return folder["id"] if folder else None
 @st.cache_data(ttl=300)
 def getboats(yearname):
-    yearFOLDERSESIONESID = getyearFOLDERSESIONESID(yearname)
-    if not yearFOLDERSESIONESID:
+    year = getyear(yearname)
+    if not year:
         return []
-    folders = listfolderitems(yearFOLDERSESIONESID, foldersonly=True)
+    folders = listfolderitems(year, foldersonly=True)
     return sorted(f["name"].strip() for f in folders if f["name"].strip())
 
 
 @st.cache_data(ttl=300)
 def getdepartures(yearname, boatname):
-    yearFOLDERSESIONESID = getyearFOLDERSESIONESID(yearname)
-    if not yearFOLDERSESIONESID:
+    year = getyear(yearname)
+    if not year:
         return []
-    boat= findchildfolder(yearFOLDERSESIONESID, boatname)
+    boat= findchildfolder(year, boatname)
     if not boatfolder:
         return []
     files = listfolderitems(boatfolder["id"], foldersonly=False)
@@ -643,7 +643,7 @@ def createcrucerofile(barco, fechaobj):
     updatecrucerosheet(copia["id"], barco)
 
     getyears.clear()
-    getyearFOLDERSESIONESID.clear()
+    getyear.clear()
     getboats.clear()
     getdepartures.clear()
 
@@ -721,7 +721,7 @@ def buildcvcpdffromlocator(locator, targetsheet, pdfprefix):
         raise Exception("Debes introducir un localizador.")
 
     yield {"type": "status", "msg": "Listando spreadsheets en el CVC Fit..."}
-    spreadsheets = listspreadsheetsinfolderrecentfirst(FOLDERSESIONESID)
+    spreadsheets = listspreadsheetsinfolderrecentfirst(FOLDERID)
     if not spreadsheets:
         raise Exception("No se han encontrado Google Sheets en el indicado.")
     total = len(spreadsheets)
@@ -928,19 +928,19 @@ def getyearfolderidbyroot(rootid, yearname):
 
 @st.cache_data(ttl=300)
 def getboatsbyroot(rootid, yearname):
-    yearFOLDERSESIONESID = getyearFOLDERSESIONESIDbyroot(rootid, yearname)
-    if not yearFOLDERSESIONESID:
+    year = getyearDbyroot(rootid, yearname)
+    if not year:
         return []
-    folders = listfolderitems(yearFOLDERSESIONESID, foldersonly=True)
+    folders = listfolderitems(year, foldersonly=True)
     return sorted(f["name"].strip() for f in folders if f["name"].strip())
 
 
 @st.cache_data(ttl=300)
 def getdeparturesbyroot(rootid, yearname, boatname):
-    yearFOLDERSESIONESID = getyearFOLDERSESIONESIDbyroot(rootid, yearname)
-    if not yearFOLDERSESIONESID:
+    year = getyearbyroot(rootid, yearname)
+    if not year:
         return []
-    boatfolder = findchildfolder(yearFOLDERSESIONESID, boatname)
+    boatfolder = findchildfolder(year, boatname)
     if not boatfolder:
         return []
 
@@ -1336,7 +1336,7 @@ SALUDOEN = getsaludo("en")
 excursionesurl = f"https://docs.google.com/spreadsheets/d/{EXCURSIONESSHEETID}/edit"
 driverooturl = f"https://drive.google.com/drive/folders/{DRIVEROOTID}"
 groupsrooturl = f"https://drive.google.com/drive/folders/{GROUPSROOTID}"
-cvcfitfolderurl = f"https://drive.google.com/drive/folders/{FOLDERSESIONESID}"
+cvcfitfolderurl = f"https://drive.google.com/drive/folders/{FOLDERID}"
 
 st.markdown(
     f'''
