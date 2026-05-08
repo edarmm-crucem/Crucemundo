@@ -364,9 +364,10 @@ def create_master_session(sessiontype, templateid, prefixname, processtitle):
 
     try:
         creds = Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"],
-    scopes=SCOPES
-)
+            st.secrets["gcp_service_account"],
+            scopes=SCOPES
+        )
+
         drive_service = build("drive", "v3", credentials=creds)
 
         file_metadata = {
@@ -377,21 +378,17 @@ def create_master_session(sessiontype, templateid, prefixname, processtitle):
         copied_file = drive_service.files().copy(
             fileId=templateid,
             body=file_metadata,
-            fields="id, name, webViewLink, parents"
+            fields="id,name,webViewLink"
         ).execute()
 
         st.success(f"Sesión creada: {copied_file['name']}")
-        st.markdown(
-            f"[Abrir hoja]({copied_file['webViewLink']})",
-            unsafe_allow_html=True
-        )
+        st.markdown(f"[Abrir hoja]({copied_file['webViewLink']})")
 
         return copied_file["id"]
 
     except Exception as e:
         st.error(f"Error: {e}")
         return None
-
 # ============================================================
 # GOOGLE AUTH / SERVICES
 # ============================================================
