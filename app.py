@@ -934,14 +934,14 @@ def getboatsbyroot(rootid, yearname):
         return []
     folders = listfolderitems(yearfolderid, foldersonly=True)
     return sorted(f["name"].strip() for f in folders if f["name"].strip())
+@st.cache_data(ttl=300)
 def getdeparturesbyroot(rootid, yearname, boatname):
-    year = getyearbyroot(rootid, yearname)
-    if not year:
+    yearfolderid = getyearfolderidbyroot(rootid, yearname)
+    if not yearfolderid:
         return []
-    boatfolder = findchildfolder(year, boatname)
+    boatfolder = findchildfolder(yearfolderid, boatname)
     if not boatfolder:
         return []
-
     files = listfolderitems(boatfolder["id"], foldersonly=False)
     pattern = re.compile(rf"^{re.escape(boatname)}\d{{6}}GROUP?$")
     departures = []
@@ -955,7 +955,6 @@ def getdeparturesbyroot(rootid, yearname, boatname):
             })
     departures.sort(key=lambda x: x["nombre"])
     return departures
-
 
 def parsenumericvalue(value):
     text = str(value or "").strip()
