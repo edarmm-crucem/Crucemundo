@@ -1770,6 +1770,7 @@ st.markdown(
         <div class="section-eyebrow">ACCIONES RÁPIDAS · QUICK ACTIONS</div>
         <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">Ir a Crucemundo</a>
         <a class="web-chip" href="https://mail.google.com" target="_blank" rel="noopener noreferrer">Gmail</a>
+        <a class="web-chip" href="/01_page" target="_self">Abrir 01 Page</a>
     </div>
     """,
     unsafe_allow_html=True,
