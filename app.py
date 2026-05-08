@@ -1,13 +1,24 @@
-import re
-from datetime import date, datetime
-
-import requests
+# ************************************************************
+# ******************** 1. IMPORTS ****************************
+# ************************************************************
 import streamlit as st
-from google.auth.transport.requests import Request
+from datetime import datetime, date, timedelta
+import urllib.parse
+import time
+import re
+import io
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from docx import Document
+from docx.shared import Pt, Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 
 
+# ************************************************************
+# **************** 2. CONFIGURACION APP **********************
+# ************************************************************
 st.set_page_config(
     page_title="Crucemundo Hub",
     page_icon="🛳️",
@@ -16,10 +27,10 @@ st.set_page_config(
 )
 
 
-# ============================================================
-# CONSTANTES
-# ============================================================
-LOGO_ID = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
+# ************************************************************
+# *************** 3. CONSTANTES Y IDS ************************
+# ************************************************************
+LOGO_ID = "1N7eaCKP1Jeg8KuDXRjJ8tZLhnKStMZ8"
 LOGO_URL = f"https://lh3.googleusercontent.com/d/{LOGO_ID}"
 
 TEMPLATE_ID_ES = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
@@ -29,22 +40,16 @@ TEMPLATE_ID_CRUCERO = "1zSJPi6St_Z5Jw1c6eieVnKI4NyEdP7E9n3WTZ9yy3C0"
 EXCURSIONES_SHEET_ID = "1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg"
 AGENCY_SHEET_ID = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
 AGENCY_SHEET_NAME = "Datos"
-FOLDER_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
+FOLDER_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8FCsO"
 DRIVE_ROOT_ID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
-GROUPS_ROOT_ID = "1MMNH3y1E3jJIp6uUnxbwV0toAtdr2F2M"
 
 VALID_USERS = {
     "support@crucemundo.com": "Albina",
-    "sales@crucemundo.com": "Kristina",
-    "cruise@crucemundo.com": "Malvina",
-    "tania@crucemundo.com": "Tania Bondar",
-    "incoming@crucemundo.com": "Tatiana",
-    "operations@crucemundo.com": "Anton",
-    "reservations@crucemundo.com": "Serge",
-    "marketing@crucemundo.com": "Asel",
-    "alexei@crucemundo.com": "Alexei",
-    "anton@crucemundo.com": "Anton",
-    "finance@crucemundo.com": "Aleksandr",
+    "sales@crucemundo.com": "Sales",
+    "cruise@crucemundo.com": "Cruise",
+    "tania@crucemundo.com": "Tania",
+    "incoming@crucemundo.com": "Incoming",
+    "operations@crucemundo.com": "Operations",
     "edarmm@gmail.com": "Esteban",
 }
 VALID_PASSWORD = st.secrets["app_password"]
@@ -63,23 +68,26 @@ AGENCY_FIELDS = [
     "IVA SERVICIO OPCIONAL",
 ]
 
-SHIP_CODE_MAP = {
-    "MS_ALBERTINA": "ALB",
-    "MS_ARENA": "ARN",
-    "MS_CRUCEVITA": "CV",
-    "MS_DOURO_CRUISER": "DC",
-    "MS_FIDELIO": "FID",
-    "MS_LEONORA": "LEO",
-    "MS_RIVER_DIAMOND": "RDA",
-    "MS_RIVER_SAPPHIRE": "RSA",
-    "MS_SWISS_SPLENDOR": "SPL",
-    "MS_VISTA_GRACIA": "VGR",
-    "MS_VISTAMILLA": "VMI",
-    "MS_VISTA_RIO": "VRI",
+BARCOS_MAP = {
+    "ALB": "MS_ALBERTINA",
+    "ARN": "MS_ARENA",
+    "CV": "MS_CRUCEVITA",
+    "DC": "MS_DOURO_CRUISER",
+    "FID": "MS_FIDELIO",
+    "LEO": "MS_LEONORA",
+    "RDA": "MS_RIVER_DIAMOND",
+    "RSA": "MS_RIVER_SAPPHIRE",
+    "SPL": "MS_SWISS_SPLENDOR",
+    "VGR": "MS_VISTA_GRACIA",
+    "VMI": "MS_VISTAMILLA",
+    "VRI": "MS_VISTAR_IO",
 }
-SHIP_CODE_TO_NAME = {v: k for k, v in SHIP_CODE_MAP.items()}
 
-STATE_DEFAULTS = {
+
+# ************************************************************
+# *************** 4. SESSION STATE ***************************
+# ************************************************************
+defaults = {
     "authenticated": False,
     "useremail": "",
     "displayname": "",
@@ -92,9 +100,6 @@ STATE_DEFAULTS = {
     "opennuevaagenciaform": False,
     "openbuscaragenciaform": False,
     "opencvcfitform": False,
-    "opencvcagenciasform": False,
-    "openirconfirmacionform": False,
-    "openinformebarcoform": False,
     "salidayear": None,
     "salidaboat": None,
     "salidaname": None,
@@ -104,151 +109,168 @@ STATE_DEFAULTS = {
     "agencyselectedidx": None,
     "cvcfit_locator": "",
     "cvcfit_result": None,
-    "cvcfit_log": [],
-    "cvcagencias_locator": "",
-    "cvcagencias_result": None,
-    "cvcagencias_log": [],
-    "irconfirmacion_locator": "",
-    "irconfirmacion_result": None,
-    "irconfirmacion_log": [],
-    "informetype": None,
-    "informeyear": None,
-    "informeboat": None,
-    "informesalida": None,
-    "informeresult": None,
-    "nombrecopia": "",
-    "copyurl": "",
-    "processtitle": "",
-    "processresult": None,
 }
-
-STATE_GROUPS = {
-    "salida": [
-        "salidayear", "salidaboat", "salidaname",
-        "salidayearwidget", "salidaboatwidget", "salidanamewidget",
-    ],
-    "crucero": [
-        "cruceroyear", "cruceroboat",
-        "cruceroyearwidget", "cruceroboatwidget",
-    ],
-    "agencia": [
-        "agencymatches", "agencyselectedidx", "agencysearchquery",
-        "agnombre", "agcodigo", "aggrupogest", "agtelefono", "agemail",
-        "agdireccion", "agcomision", "agcomisionoferta", "agcomision2x1",
-        "agiva", "agivaservicioopcional",
-    ],
-    "cvcfit": [
-        "cvcfit_locator", "cvcfit_result", "cvcfitlocatorwidget", "cvcfit_log",
-    ],
-    "cvcagencias": [
-        "cvcagencias_locator", "cvcagencias_result", "cvcagenciaslocatorwidget", "cvcagencias_log",
-    ],
-    "irconfirmacion": [
-        "irconfirmacion_locator", "irconfirmacion_result", "irconfirmacionlocatorwidget", "irconfirmacion_log",
-    ],
-    "informebarco": [
-        "informetype", "informeyear", "informeboat", "informesalida", "informeresult",
-        "informetypewidget", "informeyearwidget", "informeboatwidget", "informesalidawidget",
-    ],
-    "process": [
-        "nombrecopia", "copyurl", "processtitle", "confirmstate", "sessiontype", "processresult",
-    ],
-}
-
-PANEL_FLAGS = {
-    "salida": "opensalidaform",
-    "crucero": "opencruceroform",
-    "nuevaagencia": "opennuevaagenciaform",
-    "buscaragencia": "openbuscaragenciaform",
-    "cvcfit": "opencvcfitform",
-    "cvcagencias": "opencvcagenciasform",
-    "irconfirmacion": "openirconfirmacionform",
-    "informebarco": "openinformebarcoform",
-}
+for k, v in defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
 
-# ============================================================
-# SESSION STATE
-# ============================================================
-for key, value in STATE_DEFAULTS.items():
-    if key not in st.session_state:
-        st.session_state[key] = value
-
-
-# ============================================================
-# HELPERS GENERALES
-# ============================================================
-def get_saludo(lang="es"):
-    hour = datetime.now().hour
-    if lang == "en":
-        if 6 <= hour < 14:
-            return "Good morning"
-        if 14 <= hour < 21:
-            return "Good afternoon"
-        return "Good evening"
-    if 6 <= hour < 14:
+# ************************************************************
+# *************** 5. HELPERS GENERALES ***********************
+# ************************************************************
+def get_saludo():
+    hora = datetime.now().hour
+    if 6 <= hora < 14:
         return "Buenos días"
-    if 14 <= hour < 21:
+    elif 14 <= hora < 21:
         return "Buenas tardes"
     return "Buenas noches"
 
 
-def normalize_text(value):
-    return "" if value is None else str(value).strip().lower()
+def get_saludo_en():
+    hora = datetime.now().hour
+    if 6 <= hora < 14:
+        return "Good morning"
+    elif 14 <= hora < 21:
+        return "Good afternoon"
+    return "Good evening"
 
 
-def normalize_phone(value):
-    return "" if value is None else re.sub(r"\D", "", str(value))
+def clear_salida_state():
+    for k in [
+        "salidayear", "salidaboat", "salidaname",
+        "salidayearwidget", "salidaboatwidget", "salidanamewidget"
+    ]:
+        st.session_state.pop(k, None)
 
 
-def percent_to_sheet_decimal(value):
-    return "" if value is None else round(float(value) / 100, 4)
+def clear_crucero_state():
+    for k in [
+        "cruceroyear", "cruceroboat",
+        "cruceroyearwidget", "cruceroboatwidget"
+    ]:
+        st.session_state.pop(k, None)
 
 
-def safe_filename(text):
-    text = re.sub(r'[\\/:*?"<>|]', "", str(text))
-    return re.sub(r"\s+", " ", text).strip()
+def clear_agencia_state():
+    for k in [
+        "agencymatches", "agencyselectedidx", "agencysearchquery",
+        "agnombre", "agcodigo", "aggrupogest", "agtelefono", "agemail",
+        "agdireccion", "agcomision", "agcomisionoferta", "agcomision2x1",
+        "agiva", "agivaservicioopcional"
+    ]:
+        st.session_state.pop(k, None)
 
 
-def first_line(value):
-    return "" if value is None else str(value).splitlines()[0].strip()
-
-
-def clear_state_group(group_name):
-    for key in STATE_GROUPS.get(group_name, []):
-        st.session_state.pop(key, None)
+def clear_cvcfit_state():
+    for k in ["cvcfit_locator", "cvcfit_result", "cvcfitlocatorwidget"]:
+        st.session_state.pop(k, None)
 
 
 def close_all_panels():
-    for flag in PANEL_FLAGS.values():
-        st.session_state[flag] = False
+    st.session_state["opensalidaform"] = False
+    st.session_state["opencruceroform"] = False
+    st.session_state["opennuevaagenciaform"] = False
+    st.session_state["openbuscaragenciaform"] = False
+    st.session_state["opencvcfitform"] = False
 
 
-def clear_transient_ui():
-    for group_name in STATE_GROUPS.keys():
-        clear_state_group(group_name)
+def open_panel(panelname):
     close_all_panels()
-    st.session_state["activepanel"] = None
-    st.session_state["confirmstate"] = "idle"
-    st.session_state["sessiontype"] = ""
-    st.session_state["processresult"] = None
+    if panelname == "salida":
+        clear_crucero_state()
+        clear_agencia_state()
+        clear_cvcfit_state()
+        st.session_state["opensalidaform"] = True
+    elif panelname == "crucero":
+        clear_salida_state()
+        clear_agencia_state()
+        clear_cvcfit_state()
+        st.session_state["opencruceroform"] = True
+    elif panelname == "nuevaagencia":
+        clear_salida_state()
+        clear_crucero_state()
+        clear_agencia_state()
+        clear_cvcfit_state()
+        st.session_state["opennuevaagenciaform"] = True
+    elif panelname == "buscaragencia":
+        clear_salida_state()
+        clear_crucero_state()
+        clear_agencia_state()
+        clear_cvcfit_state()
+        st.session_state["openbuscaragenciaform"] = True
+    elif panelname == "cvcfit":
+        clear_salida_state()
+        clear_crucero_state()
+        clear_agencia_state()
+        clear_cvcfit_state()
+        st.session_state["opencvcfitform"] = True
+    st.session_state["activepanel"] = panelname
 
 
 def clear_all_selectors():
-    clear_transient_ui()
-
-
-def open_panel(panel_name):
-    clear_transient_ui()
-    flag = PANEL_FLAGS.get(panel_name)
-    if flag:
-        st.session_state[flag] = True
-        st.session_state["activepanel"] = panel_name
+    clear_salida_state()
+    clear_crucero_state()
+    clear_agencia_state()
+    clear_cvcfit_state()
+    close_all_panels()
+    st.session_state["activepanel"] = None
 
 
 def do_logout():
-    for key in list(st.session_state.keys()):
-        st.session_state.pop(key, None)
+    keys_to_delete = [
+        "authenticated", "useremail", "displayname", "confirmstate", "sessiontype",
+        "activepanel", "opensalidaform", "opencruceroform", "opennuevaagenciaform",
+        "openbuscaragenciaform", "opencvcfitform",
+        "salidayear", "salidaboat", "salidaname", "cruceroyear", "cruceroboat",
+        "salidayearwidget", "salidaboatwidget", "salidanamewidget",
+        "cruceroyearwidget", "cruceroboatwidget",
+        "nombrecopia", "copyurl", "processtitle",
+        "agencymatches", "agencyselectedidx", "agencysearchquery",
+        "agnombre", "agcodigo", "aggrupogest", "agtelefono", "agemail",
+        "agdireccion", "agcomision", "agcomisionoferta", "agcomision2x1",
+        "agiva", "agivaservicioopcional",
+        "cvcfit_locator", "cvcfit_result", "cvcfitlocatorwidget"
+    ]
+    for k in keys_to_delete:
+        st.session_state.pop(k, None)
+    st.rerun()
+
+
+def render_step(label, detail, state):
+    dot_class = {"done": "sd-done", "active": "sd-active", "wait": "sd-wait"}[state]
+    text_class = {"done": "st-done", "active": "st-active", "wait": "st-wait"}[state]
+    symbol = {"done": "✓", "active": "•", "wait": "•"}[state]
+    st.markdown(
+        f"""
+        <div class="step">
+            <div class="step-dot {dot_class}">{symbol}</div>
+            <div class="step-content">
+                <div class="{text_class}">{label}</div>
+                <div class="step-detail">{detail}</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def iniciar_proceso(sessiontype, templateid, prefixname, processtitle):
+    clear_all_selectors()
+    now = datetime.now()
+    fechastr = now.strftime("%Y%m%d-%H%M")
+    displayuser = st.session_state.get("displayname", "").strip() or "Sin usuario"
+    nombrecopia = f"SESION - {displayuser} - {prefixname} - {fechastr}"
+    copyurl = (
+        f"https://docs.google.com/spreadsheets/d/{templateid}/copy"
+        f"?copyDestination={FOLDER_ID}"
+        f"&title={urllib.parse.quote(nombrecopia)}"
+    )
+    st.session_state["confirmstate"] = "step1"
+    st.session_state["sessiontype"] = sessiontype
+    st.session_state["nombrecopia"] = nombrecopia
+    st.session_state["copyurl"] = copyurl
+    st.session_state["processtitle"] = processtitle
     st.rerun()
 
 
@@ -261,33 +283,6 @@ def reset_salida_downstream(level):
     elif level == "boat":
         st.session_state["salidaname"] = None
         st.session_state.pop("salidanamewidget", None)
-
-
-def reset_crucero_downstream(level):
-    if level == "year":
-        st.session_state["cruceroboat"] = None
-        st.session_state.pop("cruceroboatwidget", None)
-
-
-def reset_informe_downstream(level):
-    if level == "type":
-        st.session_state["informeyear"] = None
-        st.session_state["informeboat"] = None
-        st.session_state["informesalida"] = None
-        st.session_state["informeresult"] = None
-        st.session_state.pop("informeyearwidget", None)
-        st.session_state.pop("informeboatwidget", None)
-        st.session_state.pop("informesalidawidget", None)
-    elif level == "year":
-        st.session_state["informeboat"] = None
-        st.session_state["informesalida"] = None
-        st.session_state["informeresult"] = None
-        st.session_state.pop("informeboatwidget", None)
-        st.session_state.pop("informesalidawidget", None)
-    elif level == "boat":
-        st.session_state["informesalida"] = None
-        st.session_state["informeresult"] = None
-        st.session_state.pop("informesalidawidget", None)
 
 
 def on_year_change():
@@ -304,6 +299,12 @@ def on_salida_change():
     st.session_state["salidaname"] = st.session_state.get("salidanamewidget")
 
 
+def reset_crucero_downstream(level):
+    if level == "year":
+        st.session_state["cruceroboat"] = None
+        st.session_state.pop("cruceroboatwidget", None)
+
+
 def on_crucero_year_change():
     st.session_state["cruceroyear"] = st.session_state.get("cruceroyearwidget")
     reset_crucero_downstream("year")
@@ -313,94 +314,54 @@ def on_crucero_boat_change():
     st.session_state["cruceroboat"] = st.session_state.get("cruceroboatwidget")
 
 
-def on_informe_type_change():
-    st.session_state["informetype"] = st.session_state.get("informetypewidget")
-    reset_informe_downstream("type")
+def normalize_text(value):
+    if value is None:
+        return ""
+    return str(value).strip().lower()
 
 
-def on_informe_year_change():
-    st.session_state["informeyear"] = st.session_state.get("informeyearwidget")
-    reset_informe_downstream("year")
+def normalize_phone(value):
+    if value is None:
+        return ""
+    return re.sub(r"\D", "", str(value))
 
 
-def on_informe_boat_change():
-    st.session_state["informeboat"] = st.session_state.get("informeboatwidget")
-    reset_informe_downstream("boat")
+def percent_to_sheet_decimal(value):
+    if value is None:
+        return ""
+    return round(float(value) / 100, 4)
 
 
-def on_informe_salida_change():
-    st.session_state["informesalida"] = st.session_state.get("informesalidawidget")
+def extract_first_number(value):
+    if value is None:
+        return 0
+    m = re.search(r"(\d+)", str(value))
+    return int(m.group(1)) if m else 0
 
 
-def render_key_value_grid(css_prefix, fields):
-    st.markdown(f'<div class="{css_prefix}-card"><div class="{css_prefix}-grid">', unsafe_allow_html=True)
-    for label, value in fields:
-        safe_value = value if value not in [None, ""] else "-"
-        st.markdown(
-            f"""
-            <div>
-                <div class="{css_prefix}-item-label">{label}</div>
-                <div class="{css_prefix}-item-value">{safe_value}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    st.markdown("</div></div>", unsafe_allow_html=True)
+def safe_filename(text):
+    text = re.sub(r'[\\/:*?"<>|]', "", str(text))
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
 
 
-def create_master_session(sessiontype, templateid, prefixname, processtitle):
-    clear_transient_ui()
-
-    fechastr = datetime.now().strftime("%Y%m%d-%H%M")
-    displayuser = st.session_state.get("displayname", "").strip() or "Sin usuario"
-    nombrecopia = f"SESION - {displayuser} - {prefixname} - {fechastr}"
-    descripcion = (
-        f"Tipo: {sessiontype} | Usuario: {displayuser} | "
-        f"Creado: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
-    )
-
-    st.session_state["confirmstate"] = "running"
-    st.session_state["sessiontype"] = sessiontype
-    st.session_state["nombrecopia"] = nombrecopia
-    st.session_state["processtitle"] = processtitle
-    st.session_state["activepanel"] = "process"
-
-    progress_bar = st.progress(0.0, text="Iniciando...")
-    status_box = st.empty()
-
-    try:
-        progress_bar.progress(0.2, text="Preparando sesión...")
-        status_box.info("Preparando copia en Drive...")
-
-        progress_bar.progress(0.55, text="Creando copia en Drive...")
-        copia = copy_file_to_folder(templateid, nombrecopia, FOLDER_ID, descripcion)
-
-        final_url = copia.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{copia['id']}/edit"
-
-        progress_bar.progress(1.0, text="Ok")
-        status_box.success("Ok")
-
-        st.session_state["copyurl"] = final_url
-        st.session_state["processresult"] = {
-            "status": "created",
-            "name": copia.get("name", nombrecopia),
-            "url": final_url,
-            "id": copia.get("id", ""),
-        }
-        st.session_state["confirmstate"] = "done"
-        st.rerun()
-
-    except Exception as exc:
-        progress_bar.empty()
-        status_box.empty()
-        st.session_state["confirmstate"] = "error"
-        st.session_state["processresult"] = {"status": "error", "message": str(exc)}
-        st.rerun()
+def first_line(value):
+    if value is None:
+        return ""
+    return str(value).splitlines()[0].strip()
 
 
-# ============================================================
-# GOOGLE AUTH / SERVICES
-# ============================================================
+def parse_nombre_apellidos_from_g24(g24_value):
+    raw = first_line(g24_value)
+    if "/" in raw:
+        nombre, apellidos = raw.split("/", 1)
+        return nombre.strip(), apellidos.strip()
+    return raw.strip(), ""
+
+
+# ************************************************************
+# *************** 6. GOOGLE AUTH / SERVICES ******************
+# ************************************************************
 @st.cache_resource
 def get_google_creds():
     if "gcp_service_account" not in st.secrets:
@@ -416,73 +377,48 @@ def get_google_creds():
 
 @st.cache_resource
 def get_drive_service():
-    return build("drive", "v3", credentials=get_google_creds())
+    creds = get_google_creds()
+    return build("drive", "v3", credentials=creds)
 
 
 @st.cache_resource
 def get_sheets_service():
-    return build("sheets", "v4", credentials=get_google_creds())
+    creds = get_google_creds()
+    return build("sheets", "v4", credentials=creds)
 
 
-# ============================================================
-# DRIVE / SHEETS HELPERS
-# ============================================================
+# ************************************************************
+# *************** 7. DRIVE / SHEETS HELPERS ******************
+# ************************************************************
 def list_folder_items(parentid, folders_only=False):
     service = get_drive_service()
-    query = f"'{parentid}' in parents and trashed=false"
+    q = f"'{parentid}' in parents and trashed=false"
     if folders_only:
-        query += " and mimeType='application/vnd.google-apps.folder'"
-
+        q += " and mimeType='application/vnd.google-apps.folder'"
     results = []
-    page_token = None
+    pagetoken = None
     while True:
         response = service.files().list(
-            q=query,
-            fields="nextPageToken, files(id, name, mimeType, webViewLink, description, createdTime, modifiedTime)",
+            q=q,
+            fields="nextPageToken, files(id, name, mimeType, webViewLink, description)",
             supportsAllDrives=True,
             includeItemsFromAllDrives=True,
             corpora="allDrives",
-            pageToken=page_token,
+            pageToken=pagetoken,
             pageSize=1000,
-            orderBy="modifiedTime desc",
         ).execute()
         results.extend(response.get("files", []))
-        page_token = response.get("nextPageToken")
-        if not page_token:
-            break
-    return results
-
-
-def list_spreadsheets_in_folder_recent_first(folder_id):
-    service = get_drive_service()
-    query = (
-        f"'{folder_id}' in parents and trashed=false "
-        "and mimeType='application/vnd.google-apps.spreadsheet'"
-    )
-    results = []
-    page_token = None
-    while True:
-        response = service.files().list(
-            q=query,
-            fields="nextPageToken, files(id, name, webViewLink, createdTime, modifiedTime)",
-            supportsAllDrives=True,
-            includeItemsFromAllDrives=True,
-            corpora="allDrives",
-            pageToken=page_token,
-            pageSize=1000,
-            orderBy="modifiedTime desc",
-        ).execute()
-        results.extend(response.get("files", []))
-        page_token = response.get("nextPageToken")
-        if not page_token:
+        pagetoken = response.get("nextPageToken")
+        if not pagetoken:
             break
     return results
 
 
 def find_child_folder(parentid, foldername):
-    for item in list_folder_items(parentid, folders_only=True):
-        if item["name"].strip() == foldername.strip():
-            return item
+    folders = list_folder_items(parentid, folders_only=True)
+    for f in folders:
+        if f["name"].strip() == foldername.strip():
+            return f
     return None
 
 
@@ -501,13 +437,17 @@ def create_folder(parentid, foldername):
 
 
 def get_or_create_folder(parentid, foldername):
-    return find_child_folder(parentid, foldername) or create_folder(parentid, foldername)
+    existing = find_child_folder(parentid, foldername)
+    if existing:
+        return existing
+    return create_folder(parentid, foldername)
 
 
 def find_file_by_name(parentid, filename):
-    for item in list_folder_items(parentid, folders_only=False):
-        if item["name"].strip() == filename.strip():
-            return item
+    items = list_folder_items(parentid, folders_only=False)
+    for f in items:
+        if f["name"].strip() == filename.strip():
+            return f
     return None
 
 
@@ -526,18 +466,19 @@ def copy_file_to_folder(fileid, newname, parentfolderid, description=None):
 
 def update_crucero_sheet(spreadsheetid, barco):
     sheetsservice = get_sheets_service()
-    spreadsheet = sheetsservice.spreadsheets().get(spreadsheetId=spreadsheetid).execute()
+    spreadsheet = sheetsservice.spreadsheets().get(
+        spreadsheetId=spreadsheetid
+    ).execute()
     sheets = spreadsheet.get("sheets", [])
     if not sheets:
         raise Exception("El spreadsheet no contiene hojas.")
-
-    first_sheet = sheets[0]
-    first_sheet_id = first_sheet["properties"]["sheetId"]
-    first_sheet_title = first_sheet["properties"]["title"]
+    firstsheet = sheets[0]
+    firstsheetid = firstsheet["properties"]["sheetId"]
+    firstsheettitle = firstsheet["properties"]["title"]
 
     sheetsservice.spreadsheets().values().update(
         spreadsheetId=spreadsheetid,
-        range=f"{first_sheet_title}!A1",
+        range=f"{firstsheettitle}!A1",
         valueInputOption="USER_ENTERED",
         body={"values": [[barco]]},
     ).execute()
@@ -548,7 +489,10 @@ def update_crucero_sheet(spreadsheetid, barco):
             "requests": [
                 {
                     "updateSheetProperties": {
-                        "properties": {"sheetId": first_sheet_id, "title": barco},
+                        "properties": {
+                            "sheetId": firstsheetid,
+                            "title": barco,
+                        },
                         "fields": "title",
                     }
                 }
@@ -559,7 +503,19 @@ def update_crucero_sheet(spreadsheetid, barco):
 
 def append_agency_row(agencydata):
     sheetsservice = get_sheets_service()
-    values = [[agencydata.get(field, "") for field in AGENCY_FIELDS]]
+    values = [[
+        agencydata.get("Nombre", ""),
+        agencydata.get("CODIGO", ""),
+        agencydata.get("Grupo Gest", ""),
+        agencydata.get("Telefono", ""),
+        agencydata.get("Email", ""),
+        agencydata.get("Direccion", ""),
+        agencydata.get("COMISION AGENCIA", ""),
+        agencydata.get("COMISION AGENCIA CON OFERTA ", ""),
+        agencydata.get("COMISION AGENCIA OFERTA 2X1 ", ""),
+        agencydata.get("IVA", ""),
+        agencydata.get("IVA SERVICIO OPCIONAL", ""),
+    ]]
     sheetsservice.spreadsheets().values().append(
         spreadsheetId=AGENCY_SHEET_ID,
         range=f"{AGENCY_SHEET_NAME}!A:K",
@@ -577,17 +533,31 @@ def get_agencies():
     ).execute()
     rows = response.get("values", [])
     agencies = []
-
     for idx, row in enumerate(rows, start=1):
         row = row + [""] * (11 - len(row))
-        data = {"rownumber": idx}
-        for i, field in enumerate(AGENCY_FIELDS):
-            data[field] = row[i]
-
-        data["searchblob"] = " ".join(
-            normalize_text(data[field])
-            for field in ["Nombre", "CODIGO", "Grupo Gest", "Telefono", "Email", "Direccion"]
-        )
+        data = {
+            "rownumber": idx,
+            "Nombre": row[0],
+            "CODIGO": row[1],
+            "Grupo Gest": row[2],
+            "Telefono": row[3],
+            "Email": row[4],
+            "Direccion": row[5],
+            "COMISION AGENCIA": row[6],
+            "COMISION AGENCIA CON OFERTA ": row[7],
+            "COMISION AGENCIA OFERTA 2X1 ": row[8],
+            "IVA": row[9],
+            "IVA SERVICIO OPCIONAL": row[10],
+        }
+        joined = " ".join([
+            normalize_text(data["Nombre"]),
+            normalize_text(data["CODIGO"]),
+            normalize_text(data["Grupo Gest"]),
+            normalize_text(data["Telefono"]),
+            normalize_text(data["Email"]),
+            normalize_text(data["Direccion"]),
+        ])
+        data["searchblob"] = joined
         data["phonenorm"] = normalize_phone(data["Telefono"])
         agencies.append(data)
     return agencies
@@ -599,14 +569,13 @@ def search_agencies(query):
     qphone = normalize_phone(query)
     if not q and not qphone:
         return []
-
     matches = []
-    for agency in agencies:
-        if q and q in agency["searchblob"]:
-            matches.append(agency)
+    for ag in agencies:
+        if q and q in ag["searchblob"]:
+            matches.append(ag)
             continue
-        if qphone and qphone in agency["phonenorm"]:
-            matches.append(agency)
+        if qphone and qphone in ag["phonenorm"]:
+            matches.append(ag)
     return matches
 
 
@@ -629,7 +598,8 @@ def get_boats(yearname):
     if not yearfolderid:
         return []
     folders = list_folder_items(yearfolderid, folders_only=True)
-    return sorted([f["name"].strip() for f in folders if f["name"].strip()])
+    boats = sorted([f["name"].strip() for f in folders if f["name"].strip()])
+    return boats
 
 
 @st.cache_data(ttl=300)
@@ -640,20 +610,17 @@ def get_departures(yearname, boatname):
     boatfolder = find_child_folder(yearfolderid, boatname)
     if not boatfolder:
         return []
-
     files = list_folder_items(boatfolder["id"], folders_only=False)
     pattern = re.compile(rf"^{re.escape(boatname)}_\d{{6}}$")
     departures = []
     for file in files:
         name = file["name"].strip()
         if pattern.match(name):
-            departures.append(
-                {
-                    "nombre": name,
-                    "id": file["id"],
-                    "url": file.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{file['id']}/edit",
-                }
-            )
+            departures.append({
+                "nombre": name,
+                "id": file["id"],
+                "url": file.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{file['id']}/edit",
+            })
     departures.sort(key=lambda x: x["nombre"])
     return departures
 
@@ -661,10 +628,12 @@ def get_departures(yearname, boatname):
 def create_crucero_file(barco, fechaobj):
     if not barco or not fechaobj:
         raise Exception("Faltan datos de barco o fecha.")
-
     anio = str(fechaobj.year)
-    nombrenuevo = f"{barco}_{fechaobj.strftime('%y%m%d')}"
+    yy = fechaobj.strftime("%y")
+    mm = fechaobj.strftime("%m")
+    dd = fechaobj.strftime("%d")
     fechaes = fechaobj.strftime("%d/%m/%Y")
+    nombrenuevo = f"{barco}_{yy}{mm}{dd}"
 
     carpetaanio = get_or_create_folder(DRIVE_ROOT_ID, anio)
     carpetabarco = get_or_create_folder(carpetaanio["id"], barco)
@@ -683,7 +652,8 @@ def create_crucero_file(barco, fechaobj):
         f"Los archivos de sesión deben borrarse a los 30 días."
     )
     copia = copy_file_to_folder(TEMPLATE_ID_CRUCERO, nombrenuevo, carpetabarco["id"], descripcion)
-    update_crucero_sheet(copia["id"], barco)
+    spreadsheetid = copia["id"]
+    update_crucero_sheet(spreadsheetid, barco)
 
     get_years.clear()
     get_year_folder_id.clear()
@@ -699,436 +669,303 @@ def create_crucero_file(barco, fechaobj):
     }
 
 
-# ============================================================
-# CVC HELPERS
-# ============================================================
-def get_sheet_titles_with_ids(spreadsheet_id):
+# ************************************************************
+# *************** 8. CVC FIT HELPERS *************************
+# ************************************************************
+def parse_locator(locator):
+    locator = normalize_text(locator).upper().replace(" ", "")
+    m = re.fullmatch(r"([A-Z]+)(\d{2})(\d{2})(\d{2})-(\d{3})", locator)
+    if not m:
+        raise Exception("El localizador debe tener formato BARCOAAMMDD-XXX, por ejemplo ALB260101-001.")
+    code, yy, mm, dd, seq = m.groups()
+    if code not in BARCOS_MAP:
+        raise Exception(f"Código de barco no reconocido: {code}")
+    full_boat = BARCOS_MAP[code]
+    departure_name = f"{full_boat}_{yy}{mm}{dd}"
+    year_4 = f"20{yy}"
+    fecha_salida = datetime.strptime(f"{year_4}-{mm}-{dd}", "%Y-%m-%d").date()
+    return {
+        "locator": locator,
+        "boat_code": code,
+        "boat_name": full_boat,
+        "yy": yy,
+        "mm": mm,
+        "dd": dd,
+        "seq": seq,
+        "year_folder": year_4,
+        "departure_file_name": departure_name,
+        "fecha_salida": fecha_salida,
+        "fecha_limite_pago": fecha_salida - timedelta(days=30),
+    }
+
+
+def find_drive_file_for_locator(locator_info):
+    year_folder = find_child_folder(DRIVE_ROOT_ID, locator_info["year_folder"])
+    if not year_folder:
+        raise Exception(f"No existe la carpeta del año {locator_info['year_folder']}.")
+    boat_folder = find_child_folder(year_folder["id"], locator_info["boat_name"])
+    if not boat_folder:
+        raise Exception(f"No existe la carpeta del barco {locator_info['boat_name']} en {locator_info['year_folder']}.")
+    target_file = find_file_by_name(boat_folder["id"], locator_info["departure_file_name"])
+    if not target_file:
+        raise Exception(f"No existe el archivo {locator_info['departure_file_name']}.")
+    return {
+        "id": target_file["id"],
+        "name": target_file["name"],
+        "url": target_file.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{target_file['id']}/edit",
+    }
+
+
+def get_sheet_titles(spreadsheet_id):
     sheetsservice = get_sheets_service()
     spreadsheet = sheetsservice.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
-    return [
-        {
-            "title": sheet.get("properties", {}).get("title", ""),
-            "sheetId": sheet.get("properties", {}).get("sheetId"),
-        }
-        for sheet in spreadsheet.get("sheets", [])
-    ]
+    return [s["properties"]["title"] for s in spreadsheet.get("sheets", [])]
+
+
+def get_sheet_values(spreadsheet_id, range_a1):
+    sheetsservice = get_sheets_service()
+    return sheetsservice.spreadsheets().values().get(
+        spreadsheetId=spreadsheet_id,
+        range=range_a1,
+        majorDimension="ROWS",
+    ).execute().get("values", [])
 
 
 def get_single_cell(spreadsheet_id, sheet_title, a1):
-    sheetsservice = get_sheets_service()
-    values = sheetsservice.spreadsheets().values().get(
-        spreadsheetId=spreadsheet_id,
-        range=f"'{sheet_title}'!{a1}",
-        majorDimension="ROWS",
-    ).execute().get("values", [])
-    return values[0][0] if values and values[0] else ""
+    values = get_sheet_values(spreadsheet_id, f"'{sheet_title}'!{a1}")
+    if values and values[0]:
+        return values[0][0]
+    return ""
 
 
-def get_sheet_cells_batch(spreadsheet_id, sheet_title, a1_list):
-    sheetsservice = get_sheets_service()
-    ranges = [f"'{sheet_title}'!{a1}" for a1 in a1_list]
-    response = sheetsservice.spreadsheets().values().batchGet(
-        spreadsheetId=spreadsheet_id,
-        ranges=ranges,
-        majorDimension="ROWS",
-    ).execute()
-    out = {}
-    for a1, vr in zip(a1_list, response.get("valueRanges", [])):
-        vals = vr.get("values", [])
-        out[a1] = vals[0][0] if vals and vals[0] else ""
-    return out
+def get_range(spreadsheet_id, sheet_title, a1_range):
+    return get_sheet_values(spreadsheet_id, f"'{sheet_title}'!{a1_range}")
 
 
-def export_sheet_pdf_bytes(spreadsheet_id, gid):
-    creds = get_google_creds().with_scopes([
-        "https://www.googleapis.com/auth/drive",
-        "https://www.googleapis.com/auth/spreadsheets",
-    ])
-    creds.refresh(Request())
-
-    export_url = (
-        f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export"
-        f"?format=pdf&gid={gid}&size=A4&portrait=true&fitw=true&fith=false"
-        f"&sheetnames=false&scale=2&printtitle=false&pagenumbers=false"
-        f"&gridlines=false&fzr=false&top_margin=0.50&bottom_margin=0.50"
-        f"&left_margin=0.50&right_margin=0.50"
-    )
-    response = requests.get(
-        export_url,
-        headers={"Authorization": f"Bearer {creds.token}"},
-        timeout=60,
-    )
-    response.raise_for_status()
-    return response.content
+def build_money_text(matrix):
+    lines = []
+    for row in matrix:
+        cleaned = [str(c).strip() for c in row if str(c).strip()]
+        if cleaned:
+            lines.append(" | ".join(cleaned))
+    return "\n".join(lines).strip()
 
 
-def build_cvc_pdf_from_locator(locator, target_sheet, pdf_prefix):
-    locator_clean = str(locator).strip()
-    if not locator_clean:
-        raise Exception("Debes introducir un localizador.")
-
-    yield {"type": "status", "msg": "🔍 Listando spreadsheets en el folder CVC Fit..."}
-    spreadsheets = list_spreadsheets_in_folder_recent_first(FOLDER_ID)
-    if not spreadsheets:
-        raise Exception("No se han encontrado Google Sheets en el folder indicado.")
-
-    total = len(spreadsheets)
-    yield {
-        "type": "status",
-        "msg": f"📁 Encontrados **{total}** spreadsheets. Iniciando búsqueda del localizador `{locator_clean}`...",
-    }
-
-    for idx, file in enumerate(spreadsheets, start=1):
-        spreadsheet_id = file["id"]
-        spreadsheet_name = file["name"]
-        yield {
-            "type": "progress",
-            "current": idx,
-            "total": total,
-            "file": spreadsheet_name,
-            "msg": f"Revisando **{idx}/{total}** · `{spreadsheet_name}`",
-        }
-
-        try:
-            titles = {s["title"]: s["sheetId"] for s in get_sheet_titles_with_ids(spreadsheet_id)}
-
-            if "Booking ES" not in titles:
-                yield {"type": "skip", "msg": f"⤼ Sin hoja *Booking ES* → `{spreadsheet_name}`"}
-                continue
-            if target_sheet not in titles:
-                yield {"type": "skip", "msg": f"⤼ Sin hoja *{target_sheet}* → `{spreadsheet_name}`"}
-                continue
-
-            g11_value = first_line(get_single_cell(spreadsheet_id, "Booking ES", "G11"))
-            if str(g11_value).strip() != locator_clean:
-                yield {"type": "skip", "msg": f"⤼ G11=`{g11_value}` → no coincide en `{spreadsheet_name}`"}
-                continue
-
-            yield {
-                "type": "status",
-                "msg": f"✅ **¡Coincidencia encontrada!** en `{spreadsheet_name}` — Leyendo nombre del pasajero...",
-            }
-
-            nombre = first_line(get_single_cell(spreadsheet_id, "Booking ES", "G24"))
-            nombre_safe = safe_filename(nombre if nombre else "Sin nombre")
-            pdf_name = safe_filename(f"{pdf_prefix} {nombre_safe} {locator_clean}.pdf")
-
-            yield {"type": "status", "msg": f"📄 Generando PDF de la hoja **{target_sheet}**..."}
-            pdf_bytes = export_sheet_pdf_bytes(spreadsheet_id, titles[target_sheet])
-
-            yield {
-                "type": "done",
-                "locator": locator_clean,
-                "spreadsheet_id": spreadsheet_id,
-                "spreadsheet_name": spreadsheet_name,
-                "spreadsheet_url": file.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit",
-                "nombre": nombre,
-                "filename": pdf_name,
-                "pdf_bytes": pdf_bytes,
-            }
-            return
-        except StopIteration:
-            raise
-        except Exception as exc:
-            yield {"type": "error", "msg": f"⚠️ Error en `{spreadsheet_name}`: {str(exc)}"}
-
-    raise Exception("No se ha encontrado el localizador en Booking ES!G11 de ningún Sheet del folder.")
+def underline_paragraph(paragraph):
+    pPr = paragraph._p.get_or_add_pPr()
+    pBdr = OxmlElement("w:pBdr")
+    bottom = OxmlElement("w:bottom")
+    bottom.set(qn("w:val"), "single")
+    bottom.set(qn("w:sz"), "8")
+    bottom.set(qn("w:space"), "1")
+    bottom.set(qn("w:color"), "000000")
+    pBdr.append(bottom)
+    pPr.append(pBdr)
 
 
-def run_cvc_search(locator, target_sheet, pdf_prefix, state_key):
-    st.session_state[f"{state_key}_result"] = None
-    st.session_state[f"{state_key}_log"] = []
+# ************************************************************
+# *************** 9. CVC FIT DOCX ****************************
+# ************************************************************
+def build_cvc_fit_doc(data):
+    doc = Document()
 
-    progress_bar = st.progress(0.0, text="Iniciando...")
-    status_box = st.empty()
-    log_box = st.empty()
-    log_lines = []
+    for section in doc.sections:
+        section.top_margin = Inches(0.7)
+        section.bottom_margin = Inches(0.7)
+        section.left_margin = Inches(0.8)
+        section.right_margin = Inches(0.8)
 
-    try:
-        result = None
-        for event in build_cvc_pdf_from_locator(locator, target_sheet, pdf_prefix):
-            etype = event.get("type")
-            if etype == "progress":
-                pct = event["current"] / event["total"]
-                progress_bar.progress(pct, text=f"Revisando {event['current']}/{event['total']} · {event['file']}")
-                status_box.markdown(f"<div class='{state_key}-log-line'>{event['msg']}</div>", unsafe_allow_html=True)
-            elif etype == "status":
-                log_lines.append(event["msg"])
-            elif etype == "skip":
-                log_lines.append(f"<span style='color:#9BA5B7;'>{event['msg']}</span>")
-            elif etype == "error":
-                log_lines.append(f"<span style='color:#D97706;'>{event['msg']}</span>")
-            elif etype == "done":
-                result = event
-                progress_bar.progress(1.0, text="✅ PDF generado correctamente")
-                status_box.empty()
+    style = doc.styles["Normal"]
+    style.font.name = "Arial"
+    style.font.size = Pt(10)
 
-            if log_lines:
-                log_box.markdown(
-                    "<br>".join(f"<div class='{state_key}-log-line'>{line}</div>" for line in log_lines[-12:]),
-                    unsafe_allow_html=True,
-                )
+    def add_line(text="", bold=False, align=None, size=None):
+        p = doc.add_paragraph()
+        if align is not None:
+            p.alignment = align
+        r = p.add_run(text)
+        r.bold = bold
+        if size:
+            r.font.size = Pt(size)
+        return p
 
-        if result:
-            st.session_state[f"{state_key}_result"] = result
-            st.session_state[f"{state_key}_log"] = log_lines
-        else:
-            st.error("Búsqueda finalizada sin coincidencias.")
-    except Exception as exc:
-        progress_bar.empty()
-        status_box.empty()
-        st.error(f"Error: {exc}")
-        st.session_state[f"{state_key}_result"] = None
+    def add_section_title(text):
+        p = doc.add_paragraph()
+        r = p.add_run(text)
+        r.bold = True
+        r.font.size = Pt(11)
+        return p
 
+    def add_blank_line():
+        doc.add_paragraph()
 
-# ============================================================
-# NUEVOS HELPERS CONFIRMACION / INFORME
-# ============================================================
-def parse_locator_input(locator_raw):
-    locator = str(locator_raw or "").strip().upper()
-    if not locator:
-        raise Exception("Debes introducir un localizador.")
+    add_line("Lugar y fecha: ________________________________", align=WD_ALIGN_PARAGRAPH.RIGHT)
 
-    is_group = locator.endswith("_GROUP")
-    core = locator[:-6] if is_group else locator
+    title = add_line("CONTRATO DE VIAJE COMBINADO", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=14)
+    underline_paragraph(title)
+    add_blank_line()
 
-    m = re.fullmatch(r"([A-Z]{2,3})(\d{6})-(\d{3})", core)
-    if not m:
-        raise Exception("Formato de localizador no válido. Debe ser CODIGOBARCO+AAMMDD-999 o terminar en _GROUP.")
+    add_section_title("DATOS DE LA AGENCIA DE VIAJES ORGANIZADORA Y MINORISTA")
+    add_line("Nombre: CRUCEMUNDO S.L")
+    add_line("Domicilio: Av. Europa, 86, building 2A, suite 25, cp. 08850 Gavà, Spain")
+    add_line("NIF: B64955172")
+    add_line("Teléfono: 934542041")
+    add_line("E-mail: info@crucemundo.es")
+    add_blank_line()
 
-    ship_code, yymmdd, sequence = m.groups()
-    boat_name = SHIP_CODE_TO_NAME.get(ship_code)
-    if not boat_name:
-        raise Exception(f"Código de barco no reconocido: {ship_code}")
+    add_section_title("DATOS DEL VIAJERO")
+    add_line(f"Nombre: {data['nombre']}")
+    add_line(f"Apellidos: {data['apellidos']}")
+    add_line(f"DNI / Pasaporte: {data['dni']}")
+    add_line("Dirección:")
+    add_line("Población:")
+    add_line("C. Postal:")
+    add_line("E-mail:")
+    add_line("Teléfono particular:")
+    add_line(f"Nº Personas: {data['personas']}")
+    add_line(f"Nº Habitaciones: {data['habitaciones']}")
+    add_blank_line()
 
-    year_full = f"20{yymmdd[:2]}"
-    file_base = f"{boat_name}_{yymmdd}"
+    add_section_title("CONDICIONES DEL VIAJE")
+    bloques = [
+        "El viajero manifiesta que, antes de quedar obligado por el presente contrato de viaje combinado y oferta correspondiente, ha recibido la información precontractual establecida en el artículo 153.1 del Real Decreto Legislativo 1/2007, de 16 de noviembre, compuesta por el formulario con la información normalizada relativa al viaje combinado ANEXO I y la información aplicable al viaje combinado.",
+        "Nombre y datos contacto entidades garantes en caso de insolvencia y del cumplimiento de la ejecución del contrato de viaje combinado de la agencia de viajes: en documento resumen que figura en el ANEXO II.",
+        "Condiciones generales: el viajero manifiesta aceptar las Condiciones Generales del contrato de viaje combinado que se acompañan en el ANEXO III y que obran en su poder.",
+        "Condiciones particulares: en base a la descripción de los servicios de viaje que figuran en el ANEXO IV.",
+    ]
+    for t in bloques:
+        add_line(t)
+    add_blank_line()
 
-    return {
-        "original": locator,
-        "is_group": is_group,
-        "core": core,
-        "ship_code": ship_code,
-        "boat_name": boat_name,
-        "yymmdd": yymmdd,
-        "sequence": sequence,
-        "year_full": year_full,
-        "year_folder_name": f"{year_full}_GROUP" if is_group else year_full,
-        "file_name": f"{file_base}_GROUP" if is_group else file_base,
-        "sheet_name": f"{core}_GROUP" if is_group else core,
-        "root_id": GROUPS_ROOT_ID if is_group else DRIVE_ROOT_ID,
-    }
+    add_section_title("DATOS DEL VIAJE")
+    viaje = [
+        "Destinos: Según ANEXO IV.",
+        "Itinerario: Según ANEXO IV.",
+        "Periodos estancia y sus fechas: Según ANEXO IV.",
+        "Nº de pernoctaciones incluidas: Según ANEXO IV.",
+        "Medio de transporte, características, categoría y duración: Según ANEXO IV.",
+        f"Fecha de salida: {data['fecha_salida_str']}.",
+        "Hora salida: Según PVP sujeto a cambios / Según ANEXO IV.",
+        "Lugar de salida: Según ANEXO IV.",
+        "Fecha de regreso: Según ANEXO IV.",
+        "Lugar de regreso: Según ANEXO IV.",
+        "Hora regreso: Según PVP sujeto a cambios / Según ANEXO IV.",
+        "Paradas intermedias y conexiones: Según ANEXO IV.",
+        "Ubicación, principales características y categoría del alojamiento: Según ANEXO IV.",
+        "Comidas previstas: Según ANEXO IV.",
+        "Visitas, excursiones u otros servicios incluidos en viaje: Según ANEXO IV.",
+        "Indicación de si es viaje en grupo y, si se puede, tamaño aprox. grupo: Según ANEXO IV.",
+        "Idioma prestación servicios: Según ANEXO IV.",
+        "Necesidades especiales del viajero aceptadas por el organizador:",
+    ]
+    for t in viaje:
+        add_line(t)
+    add_blank_line()
 
-
-def build_sheet_tab_url(spreadsheet_id, sheet_gid):
-    return f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit#gid={sheet_gid}"
-
-
-def find_locator_confirmation(locator_raw):
-    parsed = parse_locator_input(locator_raw)
-    log_lines = []
-
-    year_folder = find_child_folder(parsed["root_id"], parsed["year_folder_name"])
-    if not year_folder:
-        log_lines.append(f"❌ No existe la carpeta de año: {parsed['year_folder_name']}")
-        return {
-            "status": "missing_year",
-            "parsed": parsed,
-            "log": log_lines,
-        }
-    log_lines.append(f"✅ Carpeta de año encontrada: {parsed['year_folder_name']}")
-
-    boat_folder = find_child_folder(year_folder["id"], parsed["boat_name"])
-    if not boat_folder:
-        log_lines.append(f"❌ No existe la carpeta del barco: {parsed['boat_name']}")
-        return {
-            "status": "missing_boat",
-            "parsed": parsed,
-            "log": log_lines,
-        }
-    log_lines.append(f"✅ Carpeta de barco encontrada: {parsed['boat_name']}")
-
-    file_obj = find_file_by_name(boat_folder["id"], parsed["file_name"])
-    if not file_obj:
-        log_lines.append(f"❌ No existe el archivo: {parsed['file_name']}")
-        return {
-            "status": "missing_file",
-            "parsed": parsed,
-            "log": log_lines,
-        }
-    log_lines.append(f"✅ Archivo encontrado: {parsed['file_name']}")
-
-    sheets = get_sheet_titles_with_ids(file_obj["id"])
-    target_sheet = next((s for s in sheets if s["title"].strip() == parsed["sheet_name"].strip()), None)
-    if not target_sheet:
-        log_lines.append(f"❌ No existe la pestaña/localizador: {parsed['sheet_name']}")
-        return {
-            "status": "missing_locator",
-            "parsed": parsed,
-            "file": file_obj,
-            "log": log_lines,
-        }
-
-    final_url = build_sheet_tab_url(file_obj["id"], target_sheet["sheetId"])
-    log_lines.append(f"✅ Pestaña encontrada: {parsed['sheet_name']}")
-
-    return {
-        "status": "found",
-        "parsed": parsed,
-        "file": file_obj,
-        "sheet": target_sheet,
-        "url": final_url,
-        "log": log_lines,
-    }
-
-
-@st.cache_data(ttl=300)
-def get_years_by_root(root_id):
-    folders = list_folder_items(root_id, folders_only=True)
-    if root_id == DRIVE_ROOT_ID:
-        years = [f["name"].strip() for f in folders if re.fullmatch(r"\d{4}", f["name"].strip())]
+    add_section_title("PRECIO Y FORMA DE PAGO")
+    add_line("Precio y Forma de pago:")
+    if data["dinero_text"]:
+        for linea in data["dinero_text"].splitlines():
+            add_line(linea)
     else:
-        years = [f["name"].strip() for f in folders if re.fullmatch(r"\d{4}_GROUP", f["name"].strip())]
-    return sorted(years, reverse=True)
+        add_line("(Sin detalle extraído del rango G33:R53)")
+    add_line(f"Total: {data['total']}")
+    add_line(f"Fecha límite y/o calendario de pago del importe pendiente: {data['fecha_limite_pago_str']}")
+    add_line("Modalidades de pago: Transferencia bancaria.")
+    add_blank_line()
+
+    add_section_title("INFORMACIÓN ADICIONAL")
+    add_line("Revisión de los precios: Estos precios han sido calculados en fecha ____________________ en base a los tipos de cambio de divisa, al precio de transporte derivado coste combustible o de otras fuentes de energía y al nivel de impuestos y tasas sobre los servicios de viaje incluidos en el contrato vigentes en dicha fecha. Hasta 20 días antes de la salida, los precios podrán incrementarse de acuerdo con lo establecido en el apartado 11 de las Condiciones Generales ANEXO III. De igual modo el viajero tendrá derecho a reducción de precio por variación a su favor de dichos conceptos, pudiendo la agencia de viajes en tal caso deducir del reembolso los gastos administrativos reales de su tramitación.")
+    add_line("FIRMAS")
+    add_line("El presente contrato de viaje combinado se firma por duplicado en el lugar y fecha arriba indicado y a un único efecto, entregándose en este mismo momento un ejemplar al viajero.")
+    add_line("Firma viajero: ____________________")
+    add_line("Firma agencia de viajes: ____________________")
+
+    bio = io.BytesIO()
+    doc.save(bio)
+    bio.seek(0)
+    return bio
 
 
-@st.cache_data(ttl=300)
-def get_year_folder_id_by_root(root_id, yearname):
-    folder = find_child_folder(root_id, yearname)
-    return folder["id"] if folder else None
+def build_cvc_fit_from_locator(locator):
+    locator_info = parse_locator(locator)
+    drive_file = find_drive_file_for_locator(locator_info)
+    spreadsheet_id = drive_file["id"]
 
+    sheet_titles = get_sheet_titles(spreadsheet_id)
+    if locator_info["locator"] not in sheet_titles:
+        raise Exception(f"No existe una pestaña con nombre {locator_info['locator']} dentro del spreadsheet.")
 
-@st.cache_data(ttl=300)
-def get_boats_by_root(root_id, yearname):
-    yearfolderid = get_year_folder_id_by_root(root_id, yearname)
-    if not yearfolderid:
-        return []
-    folders = list_folder_items(yearfolderid, folders_only=True)
-    return sorted([f["name"].strip() for f in folders if f["name"].strip()])
+    sheet_title = locator_info["locator"]
 
+    g24 = get_single_cell(spreadsheet_id, sheet_title, "G24")
+    p24 = get_single_cell(spreadsheet_id, sheet_title, "P24")
 
-@st.cache_data(ttl=300)
-def get_departures_by_root(root_id, yearname, boatname):
-    yearfolderid = get_year_folder_id_by_root(root_id, yearname)
-    if not yearfolderid:
-        return []
-    boatfolder = find_child_folder(yearfolderid, boatname)
-    if not boatfolder:
-        return []
+    nombre, apellidos = parse_nombre_apellidos_from_g24(g24)
+    dni = first_line(p24)
 
-    files = list_folder_items(boatfolder["id"], folders_only=False)
-    if root_id == DRIVE_ROOT_ID:
-        pattern = re.compile(rf"^{re.escape(boatname)}_\d{{6}}$")
-    else:
-        pattern = re.compile(rf"^{re.escape(boatname)}_\d{{6}}_GROUP$")
+    values_people = [
+        get_single_cell(spreadsheet_id, sheet_title, "G22"),
+        get_single_cell(spreadsheet_id, sheet_title, "K22"),
+        get_single_cell(spreadsheet_id, sheet_title, "N22"),
+        get_single_cell(spreadsheet_id, sheet_title, "P22"),
+    ]
+    personas = sum(extract_first_number(v) for v in values_people)
 
-    departures = []
-    for file in files:
-        name = file["name"].strip()
-        if pattern.match(name):
-            departures.append(
-                {
-                    "nombre": name,
-                    "id": file["id"],
-                    "url": file.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{file['id']}/edit",
-                }
-            )
-    departures.sort(key=lambda x: x["nombre"])
-    return departures
+    values_rooms = [
+        get_single_cell(spreadsheet_id, sheet_title, "G20"),
+        get_single_cell(spreadsheet_id, sheet_title, "K20"),
+        get_single_cell(spreadsheet_id, sheet_title, "N20"),
+        get_single_cell(spreadsheet_id, sheet_title, "P20"),
+    ]
+    habitaciones = sum(extract_first_number(v) for v in values_rooms)
 
+    dinero = get_range(spreadsheet_id, sheet_title, "G33:R53")
+    total = get_single_cell(spreadsheet_id, sheet_title, "Q55")
 
-def parse_numeric_value(value):
-    text = str(value or "").strip()
-    if not text:
-        return 0.0
-    text = text.replace("€", "").replace("EUR", "").replace("PAX", "").strip()
-    text = text.replace(".", "").replace(",", ".")
-    m = re.search(r"-?\d+(?:\.\d+)?", text)
-    if not m:
-        return 0.0
-    try:
-        return float(m.group(0))
-    except Exception:
-        return 0.0
+    fecha_salida = locator_info["fecha_salida"]
+    fecha_limite_pago = locator_info["fecha_limite_pago"]
 
+    filename = safe_filename(
+        f"CVC Fit {apellidos} {nombre} {locator_info['boat_name']} salida {fecha_salida.strftime('%d %m')}.docx"
+    )
 
-def parse_int_from_text(value):
-    text = str(value or "").strip().upper().replace("PAX", "").strip()
-    m = re.search(r"\d+", text)
-    return int(m.group(0)) if m else 0
-
-
-def get_sheet_title_b2(spreadsheet_id, sheet_title):
-    return get_single_cell(spreadsheet_id, sheet_title, "B2")
-
-
-def extract_informe_por_barco(spreadsheet_id, spreadsheet_name):
-    sheets = get_sheet_titles_with_ids(spreadsheet_id)
-    rows = []
-
-    for sheet in sheets:
-        sheet_title = sheet["title"]
-        try:
-            b2 = str(get_sheet_title_b2(spreadsheet_id, sheet_title) or "").upper()
-            if "CONFIR" not in b2 and "PROFORMA" not in b2:
-                continue
-
-            cells = get_sheet_cells_batch(
-                spreadsheet_id,
-                sheet_title,
-                ["G11", "G5", "G57", "Q55", "P57", "G22", "K22", "N22", "P22", "G20", "K20", "N20", "P20", "G19", "G18"]
-            )
-
-            pax = sum(parse_int_from_text(cells.get(a1, "")) for a1 in ["G22", "K22", "N22", "P22"])
-            cabinas = sum(int(parse_numeric_value(cells.get(a1, ""))) for a1 in ["G20", "K20", "N20", "P20"])
-            total_eur = parse_numeric_value(cells.get("Q55", ""))
-            deposito = parse_numeric_value(cells.get("P57", ""))
-            duracion_num = int(parse_numeric_value(cells.get("G18", "")))
-
-            rows.append({
-                "Hoja": sheet_title,
-                "Localizador": str(cells.get("G11", "")).strip(),
-                "Agencia": str(cells.get("G5", "")).strip(),
-                "Estado Pago": str(cells.get("G57", "")).strip(),
-                "Total €": total_eur,
-                "Cantidad Deposito": deposito,
-                "PAX": pax,
-                "Cabinas": cabinas,
-                "Itinerario": str(cells.get("G19", "")).strip(),
-                "Duracion": f"{duracion_num} Dias" if duracion_num else "",
-                "Tipo Documento": b2,
-                "SheetId": sheet["sheetId"],
-            })
-        except Exception:
-            continue
-
-    total_importe = round(sum(r["Total €"] for r in rows), 2)
-    total_pax = sum(r["PAX"] for r in rows)
-
-    return {
+    payload = {
+        "locator": locator_info["locator"],
+        "boat_name": locator_info["boat_name"],
         "spreadsheet_id": spreadsheet_id,
-        "spreadsheet_name": spreadsheet_name,
-        "rows": rows,
-        "total_importe": total_importe,
-        "total_pax": total_pax,
+        "spreadsheet_url": drive_file["url"],
+        "sheet_title": sheet_title,
+        "nombre": nombre,
+        "apellidos": apellidos,
+        "dni": dni,
+        "personas": personas,
+        "habitaciones": habitaciones,
+        "dinero_matrix": dinero,
+        "dinero_text": build_money_text(dinero),
+        "total": total,
+        "fecha_salida": fecha_salida,
+        "fecha_salida_str": fecha_salida.strftime("%d/%m/%Y"),
+        "fecha_limite_pago": fecha_limite_pago,
+        "fecha_limite_pago_str": fecha_limite_pago.strftime("%d/%m/%Y"),
+        "filename": filename,
     }
+    return payload
 
 
-# ============================================================
-# CSS
-# ============================================================
+# ************************************************************
+# *************** 10. ESTILOS CSS ****************************
+# ************************************************************
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
 
     * { box-sizing: border-box; }
-
     html, body, [class*="css"] {
         font-family: 'DM Sans', sans-serif;
         background: #FFFFFF !important;
     }
-
     [data-testid="stAppViewContainer"] { background: #FFFFFF !important; }
     [data-testid="stHeader"] { background: transparent !important; }
     section[data-testid="stSidebar"] { display: none !important; }
@@ -1142,19 +979,12 @@ st.markdown(
         margin: 0 auto !important;
     }
 
-    .login-page {
-        min-height: auto;
-        display: flex;
-        align-items: flex-start;
-        justify-content: center;
-        padding: 0.2rem 1rem 1rem;
-    }
-
+    .login-page { min-height: auto; display: flex; align-items: flex-start; justify-content: center; padding: 0.2rem 1rem 1rem; }
     .login-shell { width: 100%; max-width: 390px; margin: 0 auto; }
     .login-head { text-align: center; margin-bottom: 0.55rem; }
     .login-logo { height: 56px; width: auto; margin: 0 auto 0.65rem auto; display: block; }
-    .login-title { font-size: 1.08rem; font-weight: 800; color: #1F2937; }
-    .login-subtitle { font-size: 0.78rem; color: #667085; margin-top: 0.28rem; }
+    .login-title { font-size: 1.08rem; font-weight: 700; color: #1F2937; }
+    .login-subtitle { font-size: 0.78rem; color: #7C869D; margin-top: 0.28rem; }
     .login-form-box { background: transparent !important; border: none !important; padding: 0 !important; }
     .login-note { margin-top: 0.65rem; text-align: center; font-size: 0.72rem; color: #8A93A5; }
 
@@ -1162,67 +992,34 @@ st.markdown(
     div[data-testid="stSelectbox"] label,
     div[data-testid="stDateInput"] label,
     div[data-testid="stNumberInput"] label {
-        color: #334155 !important;
-        font-size: 0.80rem !important;
-        font-weight: 700 !important;
-        letter-spacing: 0.01em;
+        color: #4D576D !important;
+        font-size: 0.78rem !important;
+        font-weight: 500 !important;
     }
 
     div[data-testid="stTextInput"] input,
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div,
     div[data-testid="stDateInput"] input,
-    div[data-testid="stNumberInput"] input,
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-        background: #FFFFFF !important;
-        border: 1.6px solid #CBD5E1 !important;
-        border-radius: 14px !important;
+    div[data-testid="stNumberInput"] input {
+        background: #F8FAFC !important;
+        border: 1px solid #E5EAF2 !important;
+        border-radius: 12px !important;
         color: #1F2937 !important;
-        min-height: 46px !important;
-        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05) !important;
-        font-family: 'DM Sans', sans-serif !important;
-        font-size: 0.90rem !important;
-        font-weight: 600 !important;
-        transition: all 0.18s ease !important;
-    }
-
-    div[data-testid="stTextInput"] input:focus,
-    div[data-testid="stDateInput"] input:focus,
-    div[data-testid="stNumberInput"] input:focus,
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div:focus-within {
-        border-color: #2563EB !important;
-        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14), 0 8px 18px rgba(37, 99, 235, 0.10) !important;
-        background: #FFFFFF !important;
     }
 
     div.stButton { width: fit-content !important; }
-
     div.stButton button,
     div[data-testid="stFormSubmitButton"] button,
     .logout-btn div button,
     .download-btn button {
+        color: #214D92 !important;
+        border: 1px solid rgba(33,77,146,0.14) !important;
         border-radius: 999px !important;
-        min-height: 42px !important;
+        min-height: 38px !important;
         padding: 0 1.15rem !important;
-        font-size: 0.83rem !important;
-        font-weight: 800 !important;
-        box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08) !important;
-        font-family: 'DM Sans', sans-serif !important;
-        letter-spacing: 0.01em !important;
-        transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease !important;
-        border: 1.5px solid transparent !important;
-    }
-
-    div.stButton button:hover,
-    div[data-testid="stFormSubmitButton"] button:hover,
-    .download-btn button:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12) !important;
-        filter: saturate(1.04);
-    }
-
-    div.stButton button:focus,
-    div[data-testid="stFormSubmitButton"] button:focus,
-    .download-btn button:focus {
-        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14), 0 8px 18px rgba(37, 99, 235, 0.10) !important;
+        font-size: 0.76rem !important;
+        font-weight: 600 !important;
+        box-shadow: none !important;
     }
 
     .portal-header {
@@ -1236,429 +1033,149 @@ st.markdown(
 
     .portal-header-left { display: flex; align-items: center; gap: 0.9rem; }
     .portal-logo { height: 42px; width: auto; object-fit: contain; display: block; }
-
     .portal-title, .portal-title-en {
-        font-size: 0.96rem;
-        font-weight: 800;
-        color: #1F2937;
-        line-height: 1.15;
+        font-size: 0.96rem; font-weight: 700; color: #1F2937; line-height: 1.15;
     }
-
     .portal-title-en { margin-top: 0.12rem; }
-    .portal-subtitle, .portal-subtitle-en { font-size: 0.72rem; color: #667085; line-height: 1.2; }
+    .portal-subtitle, .portal-subtitle-en {
+        font-size: 0.72rem; color: #7C869D; line-height: 1.2;
+    }
     .portal-subtitle { margin-top: 0.12rem; }
     .portal-subtitle-en { margin-top: 0.08rem; }
     .user-top { font-size: 0.72rem; color: #566079; white-space: nowrap; }
+
     .main-content { padding: 0; }
-
-    .section-head-row, .section-head-row-green {
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        gap: 0.55rem;
-        margin-bottom: 0.75rem;
-        flex-wrap: wrap;
+    .section-head-row {
+        display: flex; align-items: center; justify-content: flex-start;
+        gap: 0.55rem; margin-bottom: 0.75rem; flex-wrap: wrap;
     }
-
-    .section-head-row-green { margin-top: -0.15rem; }
-
     .section-eyebrow {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.34rem 0.74rem;
-        border-radius: 999px;
-        background: #E0ECFF;
-        border: 1px solid #BFD4FF;
-        color: #1E4FBF;
-        font-size: 0.66rem;
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        margin-bottom: 0 !important;
+        display: inline-flex; align-items: center; padding: 0.34rem 0.74rem;
+        border-radius: 999px; background: #EAF1FF; border: 1px solid #D6E3FF;
+        color: #2E5FB8; font-size: 0.66rem; font-weight: 700;
+        letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0 !important;
     }
-
-    .web-chip, .web-chip-green {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0.38rem 0.82rem;
-        border-radius: 999px;
-        font-size: 0.71rem;
-        font-weight: 800;
-        line-height: 1;
-        text-decoration: none;
-        white-space: nowrap;
-        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
-    }
-
     .web-chip {
-        background: #FFE69A;
-        border: 1px solid #F2C94C;
-        color: #7A5900 !important;
+        display: inline-flex; align-items: center; justify-content: center;
+        padding: 0.34rem 0.74rem; border-radius: 999px; background: #FFF3BF;
+        border: 1px solid #F4D35E; color: #7A5900 !important; font-size: 0.70rem;
+        font-weight: 700; line-height: 1; text-decoration: none; white-space: nowrap;
     }
-
-    .web-chip-green {
-        background: #DDF7E6;
-        border: 1px solid #9FDEB4;
-        color: #17663B !important;
-    }
-
     .user-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        margin: 0.02rem 0 1rem;
-        padding: 0.42rem 0.78rem;
-        border-radius: 999px;
-        background: #fff;
-        border: 1px solid #D9E2EC;
-        font-size: 0.73rem;
-        font-weight: 700;
-        color: #4B5565;
-        max-width: 100%;
-        word-break: break-word;
-        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+        display: inline-flex; align-items: center; gap: 0.4rem; margin: 0.02rem 0 1rem;
+        padding: 0.38rem 0.68rem; border-radius: 999px; background: #fff;
+        border: 1px solid #E4E7EF; font-size: 0.72rem; color: #5D6880;
+        max-width: 100%; word-break: break-word;
     }
 
-    .panel-inline {
-        background: linear-gradient(180deg, #FFFFFF 0%, #FAFBFD 100%);
-        border: 1px solid #DCE5F0;
-        border-radius: 22px;
-        padding: 1rem 1rem 1.1rem 1rem;
-        margin-top: 0.95rem;
-        box-shadow: 0 8px 28px rgba(15, 23, 42, 0.05);
+    .action-box {
+        width: 100%; min-height: 210px; border-radius: 22px; padding: 1rem;
+        margin-bottom: 0.85rem; display: flex; flex-direction: column;
+        justify-content: space-between; gap: 0.9rem; border: 1px solid transparent;
     }
 
-    .panel-inline h3 {
-        font-family: 'DM Sans', sans-serif !important;
-        font-weight: 800 !important;
-        color: #1F2937 !important;
-        margin-bottom: 0.65rem !important;
-        font-size: 1rem !important;
+    .card-es { background: #F3F7FF; border-color: #D9E5FF; }
+    .card-grupos { background: #F4FBF6; border-color: #D8EEDC; }
+    .card-salida { background: #FFF8F1; border-color: #F1DFC7; }
+    .card-crucero { background: #F7F4FF; border-color: #E4DDF9; }
+    .card-excursiones { background: #EEF8FB; border-color: #D5EAF1; }
+    .card-nueva-agencia { background: #F1FAF4; border-color: #D7EEDC; }
+    .card-buscar-agencia { background: #FFF7EF; border-color: #F4E1CA; }
+    .card-cvcfit { background: #FFF2F7; border-color: #F4D7E3; }
+
+    .action-top { display: flex; align-items: flex-start; gap: 0.75rem; }
+    .action-icon {
+        width: 38px; height: 38px; border-radius: 12px; display: flex;
+        align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;
+    }
+    .action-text { display: flex; flex-direction: column; gap: 0.10rem; min-width: 0; }
+    .action-title, .action-title-en {
+        font-size: 0.95rem; font-weight: 700; color: #1F2937; line-height: 1.1;
+    }
+    .action-title-en { margin-top: 0.05rem; }
+    .action-desc, .action-desc-en {
+        font-size: 0.73rem; color: #6F7B91; line-height: 1.28;
+    }
+    .action-desc { margin-top: 0.18rem; }
+    .action-desc-en { margin-top: 0.04rem; }
+    .action-button-wrap {
+        display: flex !important; justify-content: flex-start !important;
+        align-items: center !important; width: 100% !important; margin-top: 0.1rem;
     }
 
-.action-box {
-    width: 100%;
-    min-height: 20px;
-    border-radius: 22px;
-    padding: 1rem;
-    margin-bottom: 0.85rem;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 0.9rem;
-    border: 1px solid transparent;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
-}
-
-.card-es {
-    background: #EAF3FF;
-    border-color: #BFD7FF;
-    --card-btn-bg: #CFE3FF;
-    --card-btn-border: #94BEFF;
-    --card-btn-text: #1E4E93;
-    --card-btn-shadow: rgba(30, 78, 147, 0.16);
-}
-
-.card-grupos {
-    background: #EAF8EE;
-    border-color: #BDE3C7;
-    --card-btn-bg: #CDEFD7;
-    --card-btn-border: #93D0A7;
-    --card-btn-text: #1F6A3A;
-    --card-btn-shadow: rgba(31, 106, 58, 0.15);
-}
-
-.card-salida {
-    background: #FFF2E3;
-    border-color: #F1CFA9;
-    --card-btn-bg: #FFDDB8;
-    --card-btn-border: #F1B97B;
-    --card-btn-text: #8A5318;
-    --card-btn-shadow: rgba(138, 83, 24, 0.16);
-}
-
-.card-crucero {
-    background: #F0EAFE;
-    border-color: #D3C4FA;
-    --card-btn-bg: #DDD0FF;
-    --card-btn-border: #B9A0F8;
-    --card-btn-text: #5A3E9E;
-    --card-btn-shadow: rgba(90, 62, 158, 0.16);
-}
-
-.card-nueva-agencia {
-    background: #EAF8EF;
-    border-color: #BEE3C9;
-    --card-btn-bg: #D0EFDA;
-    --card-btn-border: #98D0AA;
-    --card-btn-text: #256245;
-    --card-btn-shadow: rgba(37, 98, 69, 0.16);
-}
-
-.card-buscar-agencia {
-    background: #FFF1E5;
-    border-color: #F1D1B0;
-    --card-btn-bg: #FFDDBF;
-    --card-btn-border: #F0B77E;
-    --card-btn-text: #8B5620;
-    --card-btn-shadow: rgba(139, 86, 32, 0.16);
-}
-
-.card-cvcfit {
-    background: #FDECF3;
-    border-color: #F1C3D6;
-    --card-btn-bg: #F7D2E2;
-    --card-btn-border: #E89BBB;
-    --card-btn-text: #9B3A63;
-    --card-btn-shadow: rgba(155, 58, 99, 0.16);
-}
-
-.card-cvcagencias {
-    background: #EBF8EF;
-    border-color: #BFE1C9;
-    --card-btn-bg: #D0EFD8;
-    --card-btn-border: #97D0A9;
-    --card-btn-text: #2C6A44;
-    --card-btn-shadow: rgba(44, 106, 68, 0.16);
-}
-
-.card-irconfirmacion {
-    background: #F0F3F8;
-    border-color: #CFD8E6;
-    --card-btn-bg: #E0E7F1;
-    --card-btn-border: #B8C6DC;
-    --card-btn-text: #4A5874;
-    --card-btn-shadow: rgba(74, 88, 116, 0.16);
-}
-
-.card-informebarco {
-    background: #EAF7FB;
-    border-color: #BFDDE8;
-    --card-btn-bg: #D2EDF6;
-    --card-btn-border: #97CEE0;
-    --card-btn-text: #2B6881;
-    --card-btn-shadow: rgba(43, 104, 129, 0.16);
-}
-
-.action-top {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-}
-
-.action-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    flex-shrink: 0;
-    background: rgba(255,255,255,0.42);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
-}
-
-.action-text {
-    display: flex;
-    flex-direction: column;
-    gap: 0.12rem;
-    min-width: 0;
-}
-
-.action-title,
-.action-title-en {
-    font-family: 'DM Sans', sans-serif !important;
-    line-height: 1.1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.action-title {
-    font-size: 0.96rem;
-    font-weight: 800;
-    color: #1F2937;
-}
-
-.action-title-en {
-    margin-top: 0.08rem;
-    color: #41506B;
-    font-size: 0.83rem;
-    font-weight: 700;
-}
-
-.action-button-wrap {
-    display: flex !important;
-    justify-content: flex-start !important;
-    align-items: center !important;
-    width: 100% !important;
-    margin-top: 0.1rem;
-}
-
-.action-button-wrap a.done-link {
-    margin-top: 0 !important;
-}
-
-.done-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    border-radius: 999px;
-    padding: 0.48rem 0.96rem;
-    font-size: 0.82rem;
-    font-weight: 800;
-    font-family: 'DM Sans', sans-serif !important;
-    text-decoration: none;
-    white-space: nowrap;
-    box-shadow: 0 5px 14px rgba(15, 23, 42, 0.08);
-    transition: transform 0.15s ease,
-                box-shadow 0.15s ease,
-                filter 0.15s ease;
-}
-
-.done-link:hover {
-    transform: translateY(-1px);
-    filter: saturate(1.04);
-}
-
-/* =========================================================
-   BOTONES DINÁMICOS POR TARJETA
-========================================================= */
-
-.action-box div.stButton button,
-.action-box .done-link {
-    background: var(--card-btn-bg) !important;
-    border: 1.5px solid var(--card-btn-border) !important;
-    color: var(--card-btn-text) !important;
-    box-shadow: 0 6px 14px var(--card-btn-shadow) !important;
-    font-family: 'DM Sans', sans-serif !important;
-}
-
-.action-box div.stButton button:hover,
-.action-box .done-link:hover {
-    filter: brightness(0.98) saturate(1.06);
-    box-shadow: 0 10px 20px var(--card-btn-shadow) !important;
-}
-    .action-box[data-card] div.stButton button:hover,
-    .action-box[data-card] .done-link:hover {
-        filter: brightness(0.98) saturate(1.06);
-        box-shadow: 0 10px 20px var(--card-btn-shadow) !important;
+    .panel-inline { margin-top: 1rem; padding-top: 0.2rem; width: 100%; max-width: 1100px; }
+    .done-link {
+        display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 0.65rem;
+        background: #D9E9FF; color: #214D92 !important; border: 1px solid #BDD6FF;
+        border-radius: 999px; padding: 0.42rem 0.88rem; font-size: 0.71rem;
+        font-weight: 600; text-decoration: none;
     }
 
-    .panel-inline div.stButton button,
-    .panel-inline div[data-testid="stFormSubmitButton"] button,
-    .panel-inline .download-btn button,
-    .panel-inline .stDownloadButton button {
-        background: linear-gradient(180deg, #2F6DF6 0%, #245FE0 100%) !important;
-        color: #FFFFFF !important;
-        border: 1.5px solid #1E4FC7 !important;
-        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.22) !important;
-        font-family: 'DM Sans', sans-serif !important;
+    .step { display: flex; align-items: flex-start; gap: 0.65rem; margin-bottom: 0.6rem; }
+    .step:last-child { margin-bottom: 0; }
+    .step-dot {
+        width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+        margin-top: 0.05rem; display: flex; align-items: center; justify-content: center;
+        font-size: 0.55rem; font-weight: 700;
+    }
+    .sd-done { background: #EEF7F1; border: 1px solid #D8ECDF; color: #2E7D58; }
+    .sd-active { background: #F2F4F9; border: 1px solid #DDE2EC; color: #6E778B; }
+    .sd-wait { background: #F8F9FC; border: 1px solid #E6E9F0; color: #B1B8C9; }
+    .step-content { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+    .st-done, .st-active, .st-wait { font-size: 0.76rem; }
+    .st-done { color: #394255; }
+    .st-active { color: #1F2937; font-weight: 600; }
+    .st-wait { color: #A2ABBD; }
+    .step-detail {
+        font-size: 0.7rem; color: #8790A4; margin-top: 0.08rem;
+        word-wrap: break-word !important; overflow-wrap: break-word !important; white-space: normal !important;
     }
 
-    .panel-inline div.stButton button:hover,
-    .panel-inline div[data-testid="stFormSubmitButton"] button:hover,
-    .panel-inline .stDownloadButton button:hover {
-        filter: brightness(1.03);
-        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.26) !important;
+    .agency-card, .cvcfit-card {
+        background: #FBFCFF; border: 1px solid #E6EBF3; border-radius: 18px;
+        padding: 1rem; margin-top: 0.75rem;
+    }
+    .agency-grid, .cvcfit-grid {
+        display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem 1rem;
+    }
+    .agency-item-label, .cvcfit-item-label {
+        font-size: 0.68rem; color: #7E889D; text-transform: uppercase;
+        letter-spacing: 0.04em; margin-bottom: 0.16rem;
+    }
+    .agency-item-value, .cvcfit-item-value {
+        font-size: 0.8rem; color: #1F2937; line-height: 1.35; word-break: break-word;
     }
 
-    .agency-card, .cvcfit-card, .cvcfit-status-card, .cvcagencias-card, .cvcagencias-status-card, .process-card, .irconfirmacion-card, .informebarco-card {
-        background: #FBFCFF;
-        border: 1px solid #DCE5F0;
-        border-radius: 18px;
-        padding: 1rem;
-        margin-top: 0.75rem;
-        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+    .history-row {
+        display: flex; align-items: center; gap: 0.75rem; padding: 0.28rem 0;
+        margin-bottom: 0.35rem; width: 100%; max-width: 620px;
     }
-
-    .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid, .irconfirmacion-grid, .informebarco-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.85rem 1rem;
+    .history-num {
+        width: 22px; height: 22px; border-radius: 7px; background: #F2F4F9;
+        border: 1px solid #E3E7F1; display: flex; align-items: center; justify-content: center;
+        font-size: 0.62rem; font-weight: 600; color: #5D6880; flex-shrink: 0;
     }
-
-    .agency-item-label, .cvcfit-item-label, .cvcagencias-item-label, .process-item-label, .irconfirmacion-item-label, .informebarco-item-label {
-        font-size: 0.68rem;
-        color: #64748B;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        margin-bottom: 0.16rem;
-        font-weight: 700;
+    .history-name {
+        font-size: 0.75rem; color: #394255; flex: 1; word-wrap: break-word;
+        overflow-wrap: break-word; white-space: normal;
     }
-
-    .agency-item-value, .cvcfit-item-value, .cvcagencias-item-value, .process-item-value, .irconfirmacion-item-value, .informebarco-item-value {
-        font-size: 0.82rem;
-        color: #1F2937;
-        line-height: 1.35;
-        word-break: break-word;
-        font-weight: 600;
-    }
-
-    .cvcfit-log-line, .cvcagencias-log-line, .irconfirmacion-log-line {
-        font-size: 0.74rem;
-        color: #465066;
-        line-height: 1.45;
-        margin-bottom: 0.35rem;
-        word-break: break-word;
-    }
-
-    .report-table-wrap { margin-top: 1rem; overflow-x: auto; }
-
-    .report-table {
-        width: 100%;
-        border-collapse: collapse;
-        background: #fff;
-        border: 1px solid #DCE5F0;
-        border-radius: 16px;
-        overflow: hidden;
-    }
-
-    .report-table th, .report-table td {
-        font-size: 0.76rem;
-        padding: 0.65rem 0.7rem;
-        border-bottom: 1px solid #EEF2F7;
-        text-align: left;
-        vertical-align: top;
-    }
-
-    .report-table th {
-        background: #F5F8FC;
-        color: #334155;
-        font-weight: 800;
-        white-space: nowrap;
-    }
-
-    .report-table td {
-        color: #1F2937;
-        font-weight: 500;
+    .history-time { font-size: 0.68rem; color: #A2ABBD; white-space: nowrap; }
+    .history-link {
+        font-size: 0.71rem; color: #5D6880; text-decoration: none; font-weight: 500; white-space: nowrap;
     }
 
     .portal-footer {
-        margin-top: 1rem;
-        padding: 0.5rem 0 0 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.8rem;
-        flex-wrap: wrap;
+        margin-top: 1rem; padding: 0.5rem 0 0 0; display: flex;
+        justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap;
     }
-
     .footer-text { font-size: 0.71rem; color: #A2ABBD; }
 
     @media (max-width: 1600px) {
-        .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid, .irconfirmacion-grid, .informebarco-grid {
-            grid-template-columns: 1fr;
-        }
+        .agency-grid, .cvcfit-grid { grid-template-columns: 1fr; }
     }
-
     @media (max-width: 1300px) {
-        .portal-header, .portal-footer {
-            flex-direction: column;
-            align-items: flex-start;
-        }
+        .portal-header { flex-direction: column; align-items: flex-start; }
+        .portal-footer { flex-direction: column; align-items: flex-start; }
     }
     </style>
     """,
@@ -1666,9 +1183,9 @@ st.markdown(
 )
 
 
-# ============================================================
-# LOGIN
-# ============================================================
+# ************************************************************
+# *************** 11. LOGIN **********************************
+# ************************************************************
 if not st.session_state["authenticated"]:
     st.markdown('<div class="login-page"><div class="login-shell">', unsafe_allow_html=True)
     st.markdown(
@@ -1708,22 +1225,20 @@ if not st.session_state["authenticated"]:
     st.stop()
 
 
-# ============================================================
-# VARIABLES UI
-# ============================================================
+# ************************************************************
+# *************** 12. VARIABLES UI ***************************
+# ************************************************************
 USEREMAIL = st.session_state.get("useremail", "").strip()
 DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Sin usuario"
-SALUDO = get_saludo("es")
-SALUDOEN = get_saludo("en")
+SALUDO = get_saludo()
+SALUDOEN = get_saludo_en()
+confirmstate = st.session_state.get("confirmstate", "idle")
 excursionesurl = f"https://docs.google.com/spreadsheets/d/{EXCURSIONES_SHEET_ID}/edit"
-drive_root_url = f"https://drive.google.com/drive/folders/{DRIVE_ROOT_ID}"
-groups_root_url = f"https://drive.google.com/drive/folders/{GROUPS_ROOT_ID}"
-cvcfit_folder_url = f"https://drive.google.com/drive/folders/{FOLDER_ID}"
 
 
-# ============================================================
-# CABECERA
-# ============================================================
+# ************************************************************
+# *************** 13. CABECERA *******************************
+# ************************************************************
 st.markdown(
     f"""
     <div class="portal-header">
@@ -1753,222 +1268,199 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
-st.markdown(
-    f"""
-    <div class="section-head-row-green">
-        <a class="web-chip-green" href="{drive_root_url}" target="_blank" rel="noopener noreferrer">Abre Drive Root</a>
-        <a class="web-chip-green" href="{groups_root_url}" target="_blank" rel="noopener noreferrer">Abre Drive Groups</a>
-        <a class="web-chip-green" href="{cvcfit_folder_url}" target="_blank" rel="noopener noreferrer">Abre Folder Sesiones</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER_CABINAS</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre EXCURSIONES</a>
-         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44_WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre MASTER CLIENTES</a>
-          <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCR_HJr9TCD7VWrGI6nDhMtwi27cMJL_1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Abre Ventas FIT</a>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
 st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
 
-# ============================================================
-# TARJETAS PRINCIPALES
-# ============================================================
-def render_action_card(col, config):
-    with col:
-        st.markdown(
-            f"""
-            <div class="action-box {config['card_class']}" data-card="{config['card_class']}">
-                <div class="action-top">
-                    <div class="action-icon">{config['icon']}</div>
-                    <div class="action-text">
-                        <div class="action-title">{config['title_es']}</div>
-                        <div class="action-title-en">{config['title_en']}</div>
-                    </div>
+# ************************************************************
+# *************** 14. TARJETAS PRINCIPALES *******************
+# ************************************************************
+col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8, gap="medium")
+
+with col1:
+    st.markdown(
+        f"""
+        <div class="action-box card-es">
+            <div class="action-top">
+                <div class="action-icon">📄</div>
+                <div class="action-text">
+                    <div class="action-title">Nueva Confirmación</div>
+                    <div class="action-title-en">New Confirmation</div>
+                    <div class="action-desc">Crear sesión MASTER de trabajo para {DISPLAYUSER}</div>
+                    <div class="action-desc-en">Create MASTER working session for {DISPLAYUSER}</div>
                 </div>
-                <div class="action-button-wrap">
-            """,
-            unsafe_allow_html=True,
-        )
-
-        if config.get("link"):
-            st.markdown(
-                f'<a class="done-link" href="{config["link"]}" target="_blank" rel="noopener noreferrer">{config["button_label"]}</a>',
-                unsafe_allow_html=True,
-            )
-        else:
-            disabled = config.get("disabled", False)
-            if not disabled and st.button(config["button_label"], key=config["key"]):
-                action = config.get("action")
-                if action:
-                    action()
-            elif disabled:
-                st.button(config["button_label"], key=config["key"], disabled=True)
-
-        st.markdown("</div></div>", unsafe_allow_html=True)
-
-
-cards = [
-    {
-        "card_class": "card-es",
-        "icon": "📄",
-        "title_es": "Nueva Confirmación",
-        "title_en": "New Confirmation",
-        "button_label": "Crear Sesión",
-        "key": "btncreares",
-        "action": lambda: create_master_session(
-            "es",
-            TEMPLATE_ID_ES,
-            "MASTER",
-            "Crear Sesión MASTER / CONFIRMATION"
-        ),
-        "disabled": False,
-    },
-    {
-        "card_class": "card-grupos",
-        "icon": "👥",
-        "title_es": "Nueva Confirmación GRUPOS",
-        "title_en": "New GROUPS Confirmation",
-        "button_label": "Crear Sesión GRUPOS",
-        "key": "btncreargrupos",
-        "action": lambda: create_master_session(
-            "grupos",
-            TEMPLATE_ID_GRUPOS,
-            "MASTER GRUPOS",
-            "Crear Sesión MASTER / GROUPS"
-        ),
-        "disabled": False,
-    },
-    {
-        "card_class": "card-salida",
-        "icon": "🔎",
-        "title_es": "Ir a Salida",
-        "title_en": "Go to Departure",
-        "button_label": "Buscar Salida",
-        "key": "btnirsalida",
-        "action": lambda: (open_panel("salida"), st.rerun()),
-    },
-    {
-        "card_class": "card-crucero",
-        "icon": "🛳️",
-        "title_es": "Crear Crucero",
-        "title_en": "Create Cruise",
-        "button_label": "Nuevo Crucero",
-        "key": "btncrearcruceroopen",
-        "action": lambda: (open_panel("crucero"), st.rerun()),
-    },
-    {
-        "card_class": "card-nueva-agencia",
-        "icon": "🏢",
-        "title_es": "Nueva Agencia",
-        "title_en": "New Agency",
-        "button_label": "Nueva Agencia",
-        "key": "btnnuevaagencia",
-        "action": lambda: (open_panel("nuevaagencia"), st.rerun()),
-    },
-    {
-        "card_class": "card-buscar-agencia",
-        "icon": "📇",
-        "title_es": "Buscar Agencia",
-        "title_en": "Find Agency",
-        "button_label": "Buscar Agencia",
-        "key": "btnbuscaragencia",
-        "action": lambda: (open_panel("buscaragencia"), st.rerun()),
-    },
-    {
-        "card_class": "card-cvcfit",
-        "icon": "🧾",
-        "title_es": "CVC Fit",
-        "title_en": "CVC Fit",
-        "button_label": "Abrir CVC Fit",
-        "key": "btncvcfitopen",
-        "action": lambda: (open_panel("cvcfit"), st.rerun()),
-    },
-    {
-        "card_class": "card-cvcagencias",
-        "icon": "🏷️",
-        "title_es": "CVC Agencias",
-        "title_en": "CVC Agencies",
-        "button_label": "Abrir CVC Agencias",
-        "key": "btncvcagenciasopen",
-        "action": lambda: (open_panel("cvcagencias"), st.rerun()),
-    },
-    {
-        "card_class": "card-irconfirmacion",
-        "icon": "📌",
-        "title_es": "Ir a Confirmación",
-        "title_en": "Go to Confirmation",
-        "button_label": "Buscar Localizador",
-        "key": "btnirconfirmacionopen",
-        "action": lambda: (open_panel("irconfirmacion"), st.rerun()),
-    },
-    {
-        "card_class": "card-informebarco",
-        "icon": "💶",
-        "title_es": "Informe € por Barco",
-        "title_en": "€ Report by Ship",
-        "button_label": "Abrir Informe",
-        "key": "btninformebarcoopen",
-        "action": lambda: (open_panel("informebarco"), st.rerun()),
-    },
-]
-
-row1 = st.columns(6, gap="medium")
-for col, card in zip(row1, cards[:6]):
-    render_action_card(col, card)
-
-row2 = st.columns(4, gap="medium")
-for col, card in zip(row2, cards[6:10]):
-    render_action_card(col, card)
-
-
-# ============================================================
-# PANEL PROCESO SESIONES MASTER
-# ============================================================
-if st.session_state.get("confirmstate") in ["done", "error"]:
-    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-
-    session_type = st.session_state.get("sessiontype", "")
-    process_title = st.session_state.get("processtitle", "Proceso")
-    process_result = st.session_state.get("processresult") or {}
-
-    if session_type == "es":
-        st.markdown("### Sesion MASTER_CONFIRMATION")
-    elif session_type == "grupos":
-        st.markdown("### Sesion MASTER_GROUPS")
+            </div>
+            <div class="action-button-wrap">
+        """,
+        unsafe_allow_html=True,
+    )
+    if confirmstate in ["idle", "done"]:
+        if st.button("Crear Sesión ES", key="btncreares"):
+            iniciar_proceso("es", TEMPLATE_ID_ES, "MASTER", "Estado del Proceso · Process Status · Crear Sesión MASTER/CONFIRMATION")
     else:
-        st.markdown(f"### {process_title}")
+        st.button("Crear Sesión ES", key="btncrearesdis", disabled=True)
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
-    if st.session_state.get("confirmstate") == "done":
-        st.success("Ok")
+with col2:
+    st.markdown(
+        f"""
+        <div class="action-box card-grupos">
+            <div class="action-top">
+                <div class="action-icon">👥</div>
+                <div class="action-text">
+                    <div class="action-title">Nueva Confirmación GRUPOS</div>
+                    <div class="action-title-en">New GROUPS Confirmation</div>
+                    <div class="action-desc">Crear sesión MASTER GRUPOS de trabajo para {DISPLAYUSER}</div>
+                    <div class="action-desc-en">Create MASTER GROUPS working session for {DISPLAYUSER}</div>
+                </div>
+            </div>
+            <div class="action-button-wrap">
+        """,
+        unsafe_allow_html=True,
+    )
+    if confirmstate in ["idle", "done"]:
+        if st.button("Crear Sesión GRUPOS", key="btncreargrupos"):
+            iniciar_proceso("grupos", TEMPLATE_ID_GRUPOS, "MASTER GRUPOS", "Estado del Proceso · Process Status · Crear Sesión MASTER/GRUPOS")
+    else:
+        st.button("Crear Sesión GRUPOS", key="btncreargruposdis", disabled=True)
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
-        render_key_value_grid(
-            "process",
-            [
-                ("Tipo de sesión", "MASTER / CONFIRMATION" if session_type == "es" else "MASTER / GROUPS"),
-                ("Nombre creado", process_result.get("name", st.session_state.get("nombrecopia", "-"))),
-                ("Usuario", DISPLAYUSER),
-                ("Estado", "Creada correctamente"),
-            ],
-        )
+with col3:
+    st.markdown(
+        """
+        <div class="action-box card-salida">
+            <div class="action-top">
+                <div class="action-icon">🔎</div>
+                <div class="action-text">
+                    <div class="action-title">Ir a Salida</div>
+                    <div class="action-title-en">Go to Departure</div>
+                    <div class="action-desc">Buscar una salida existente por año, barco y código de salida</div>
+                    <div class="action-desc-en">Find an existing departure by year, ship and departure code</div>
+                </div>
+            </div>
+            <div class="action-button-wrap">
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button("Buscar Salida", key="btnirsalida"):
+        open_panel("salida")
+        st.rerun()
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
-        final_url = process_result.get("url", "")
-        if final_url:
-            st.markdown(
-                f'<a class="done-link" href="{final_url}" target="_blank" rel="noopener noreferrer">Abrir sesión creada</a>',
-                unsafe_allow_html=True,
-            )
+with col4:
+    st.markdown(
+        """
+        <div class="action-box card-crucero">
+            <div class="action-top">
+                <div class="action-icon">🛳️</div>
+                <div class="action-text">
+                    <div class="action-title">Crear crucero</div>
+                    <div class="action-title-en">Create Cruise</div>
+                    <div class="action-desc">Crear salida nueva desde plantilla y guardarla en año/barco</div>
+                    <div class="action-desc-en">Create a new departure from template and save it in year/ship</div>
+                </div>
+            </div>
+            <div class="action-button-wrap">
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button("Nuevo Crucero", key="btncrearcruceroopen"):
+        open_panel("crucero")
+        st.rerun()
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
-    elif st.session_state.get("confirmstate") == "error":
-        st.error(f"No se pudo crear la sesión: {process_result.get('message', 'Error desconocido')}")
+with col5:
+    st.markdown(
+        """
+        <div class="action-box card-excursiones">
+            <div class="action-top">
+                <div class="action-icon">🧭</div>
+                <div class="action-text">
+                    <div class="action-title">Excursiones</div>
+                    <div class="action-title-en">Excursions</div>
+                    <div class="action-desc">Abrir la hoja de Excursiones</div>
+                    <div class="action-desc-en">Open the Excursions sheet</div>
+                </div>
+            </div>
+            <div class="action-button-wrap">
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<a class="done-link" href="{excursionesurl}" target="_blank">Abrir Excursiones</a>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
-    st.markdown("</div>", unsafe_allow_html=True)
+with col6:
+    st.markdown(
+        """
+        <div class="action-box card-nueva-agencia">
+            <div class="action-top">
+                <div class="action-icon">🏢</div>
+                <div class="action-text">
+                    <div class="action-title">Nueva Agencia</div>
+                    <div class="action-title-en">New Agency</div>
+                    <div class="action-desc">Crear una agencia y guardarla en la hoja Datos</div>
+                    <div class="action-desc-en">Create an agency and save it in Datos sheet</div>
+                </div>
+            </div>
+            <div class="action-button-wrap">
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button("Nueva Agencia", key="btnnuevaagencia"):
+        open_panel("nuevaagencia")
+        st.rerun()
+    st.markdown("</div></div>", unsafe_allow_html=True)
+
+with col7:
+    st.markdown(
+        """
+        <div class="action-box card-buscar-agencia">
+            <div class="action-top">
+                <div class="action-icon">📇</div>
+                <div class="action-text">
+                    <div class="action-title">Buscar Agencia</div>
+                    <div class="action-title-en">Find Agency</div>
+                    <div class="action-desc">Buscar por cualquier dato y mostrar la ficha completa</div>
+                    <div class="action-desc-en">Search by any known value and show the full record</div>
+                </div>
+            </div>
+            <div class="action-button-wrap">
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button("Buscar Agencia", key="btnbuscaragencia"):
+        open_panel("buscaragencia")
+        st.rerun()
+    st.markdown("</div></div>", unsafe_allow_html=True)
+
+with col8:
+    st.markdown(
+        """
+        <div class="action-box card-cvcfit">
+            <div class="action-top">
+                <div class="action-icon">🧾</div>
+                <div class="action-text">
+                    <div class="action-title">CVC Fit</div>
+                    <div class="action-title-en">CVC Fit</div>
+                    <div class="action-desc">Buscar por localizador y generar el DOC del contrato</div>
+                    <div class="action-desc-en">Find by locator and generate the contract DOC</div>
+                </div>
+            </div>
+            <div class="action-button-wrap">
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button("Abrir CVC Fit", key="btncvcfitopen"):
+        open_panel("cvcfit")
+        st.rerun()
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
 
-# ============================================================
-# PANEL SALIDA
-# ============================================================
+# ************************************************************
+# *************** 15. PANEL SALIDA ***************************
+# ************************************************************
 if st.session_state.get("opensalidaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### Seleccionar salida · Select departure")
@@ -2025,17 +1517,17 @@ if st.session_state.get("opensalidaform"):
             selectedobj = next((d for d in departures if d["nombre"] == selecteddeparture), None)
             if selectedobj:
                 st.markdown(
-                    f'<a class="done-link" href="{selectedobj["url"]}" target="_blank" rel="noopener noreferrer">Abrir salida · Open departure</a>',
+                    f'<a class="done-link" href="{selectedobj["url"]}" target="_blank">Abrir salida · Open departure</a>',
                     unsafe_allow_html=True,
                 )
-    except Exception as exc:
-        st.exception(exc)
+    except Exception as e:
+        st.exception(e)
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ============================================================
-# PANEL CREAR CRUCERO
-# ============================================================
+# ************************************************************
+# *************** 16. PANEL CREAR CRUCERO ********************
+# ************************************************************
 if st.session_state.get("opencruceroform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### Crear crucero · Create cruise")
@@ -2073,7 +1565,7 @@ if st.session_state.get("opencruceroform"):
 
         fechasalida = st.date_input("FECHA DE SALIDA / DEPARTURE DATE", value=date.today(), format="DD/MM/YYYY")
         if cruceroboat and fechasalida:
-            previewname = f"{cruceroboat}_{fechasalida.strftime('%y%m%d')}"
+            previewname = f"{cruceroboat}{fechasalida.strftime('%y%m%d')}"
             st.caption(f"Nombre previsto / Expected name: {previewname}")
 
         if st.button("Crear Crucero", key="btncrearcruceroaction", disabled=not (cruceroyear and cruceroboat and fechasalida)):
@@ -2084,23 +1576,23 @@ if st.session_state.get("opencruceroform"):
                 if result["status"] == "duplicate":
                     st.warning(f"Ya existe / Already exists: {result['name']}")
                     st.markdown(
-                        f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir archivo existente · Open existing file</a>',
+                        f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir archivo existente · Open existing file</a>',
                         unsafe_allow_html=True,
                     )
                 else:
                     st.success(f"Archivo creado / File created: {result['name']}")
                     st.markdown(
-                        f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir crucero · Open cruise</a>',
+                        f'<a class="done-link" href="{result["url"]}" target="_blank">Abrir crucero · Open cruise</a>',
                         unsafe_allow_html=True,
                     )
-    except Exception as exc:
-        st.exception(exc)
+    except Exception as e:
+        st.exception(e)
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ============================================================
-# PANEL NUEVA AGENCIA
-# ============================================================
+# ************************************************************
+# *************** 17. PANEL NUEVA AGENCIA ********************
+# ************************************************************
 if st.session_state.get("opennuevaagenciaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### Nueva Agencia · New Agency")
@@ -2161,14 +1653,14 @@ if st.session_state.get("opennuevaagenciaform"):
                 try:
                     append_agency_row(agencydata)
                     st.success(f"Agencia guardada correctamente: {agencydata['Nombre']}")
-                except Exception as exc:
-                    st.exception(exc)
+                except Exception as e:
+                    st.exception(e)
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ============================================================
-# PANEL BUSCAR AGENCIA
-# ============================================================
+# ************************************************************
+# *************** 18. PANEL BUSCAR AGENCIA *******************
+# ************************************************************
 if st.session_state.get("openbuscaragenciaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### Buscar Agencia · Find Agency")
@@ -2179,19 +1671,31 @@ if st.session_state.get("openbuscaragenciaform"):
     )
     if st.button("Buscar coincidencias", key="btnejecutarbusquedaagencia"):
         try:
-            st.session_state["agencymatches"] = search_agencies(searchquery)
+            matches = search_agencies(searchquery)
+            st.session_state["agencymatches"] = matches
             st.session_state["agencyselectedidx"] = None
-        except Exception as exc:
-            st.exception(exc)
+        except Exception as e:
+            st.exception(e)
 
     matches = st.session_state.get("agencymatches", [])
     if searchquery and not matches:
         st.info("No hay coincidencias.")
 
-    selectedagency = None
     if len(matches) == 1:
         st.success("Se ha encontrado 1 coincidencia.")
         selectedagency = matches[0]
+        st.markdown('<div class="agency-card"><div class="agency-grid">', unsafe_allow_html=True)
+        for field in AGENCY_FIELDS:
+            st.markdown(
+                f"""
+                <div>
+                    <div class="agency-item-label">{field}</div>
+                    <div class="agency-item-value">{selectedagency.get(field, "") or "-"}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        st.markdown("</div></div>", unsafe_allow_html=True)
     elif len(matches) > 1:
         st.warning(f"Hay {len(matches)} coincidencias. Selecciona la correcta.")
         options = [f"{i+1}. {ag['Nombre']} · {ag['CODIGO']} · {ag['Telefono']} · {ag['Email']}" for i, ag in enumerate(matches)]
@@ -2202,300 +1706,186 @@ if st.session_state.get("openbuscaragenciaform"):
             placeholder="Selecciona una coincidencia",
         )
         if selectedlabel:
-            selectedagency = matches[options.index(selectedlabel)]
-
-    if selectedagency:
-        render_key_value_grid("agency", [(field, selectedagency.get(field, "")) for field in AGENCY_FIELDS])
+            selectedidx = options.index(selectedlabel)
+            selectedagency = matches[selectedidx]
+            st.markdown('<div class="agency-card"><div class="agency-grid">', unsafe_allow_html=True)
+            for field in AGENCY_FIELDS:
+                st.markdown(
+                    f"""
+                    <div>
+                        <div class="agency-item-label">{field}</div>
+                        <div class="agency-item-value">{selectedagency.get(field, "") or "-"}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            st.markdown("</div></div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ============================================================
-# PANEL CVC FIT
-# ============================================================
+# ************************************************************
+# *************** 19. PANEL CVC FIT **************************
+# ************************************************************
 if st.session_state.get("opencvcfitform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     st.markdown("### CVC Fit")
     locator = st.text_input(
         "Localizador",
         key="cvcfitlocatorwidget",
-        placeholder="Introduce el localizador exacto de Booking ES!G11",
+        placeholder="Ej: ALB260101-001",
     )
-    if st.button("Generar PDF CVC Fit", key="btncvcfitaction", disabled=not locator):
-        run_cvc_search(locator, "CVC Fit", "CVC Fit", "cvcfit")
 
-    log_lines_saved = st.session_state.get("cvcfit_log", [])
-    if log_lines_saved:
-        st.markdown('<div class="cvcfit-status-card" style="margin-top:0.75rem;">', unsafe_allow_html=True)
-        st.markdown("**Log de la búsqueda:**")
-        st.markdown("<br>".join(f"<div class='cvcfit-log-line'>{line}</div>" for line in log_lines_saved), unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+    if st.button("Generar CVC Fit", key="btncvcfitaction", disabled=not locator):
+        try:
+            payload = build_cvc_fit_from_locator(locator)
+            doc_io = build_cvc_fit_doc(payload)
+            payload["doc_bytes"] = doc_io.getvalue()
+            st.session_state["cvcfit_result"] = payload
+            st.success("Documento generado correctamente.")
+        except Exception as e:
+            st.session_state["cvcfit_result"] = None
+            st.exception(e)
 
     result = st.session_state.get("cvcfit_result")
     if result:
-        render_key_value_grid(
-            "cvcfit",
-            [
-                ("Localizador", result.get("locator", "")),
-                ("Nombre pasajero", result.get("nombre", "")),
-                ("Spreadsheet", result.get("spreadsheet_name", "")),
-            ],
+        st.markdown('<div class="cvcfit-card"><div class="cvcfit-grid">', unsafe_allow_html=True)
+        fields = [
+            ("Localizador", result["locator"]),
+            ("Barco", result["boat_name"]),
+            ("Salida", result["fecha_salida_str"]),
+            ("Límite pago", result["fecha_limite_pago_str"]),
+            ("Nombre", result["nombre"]),
+            ("Apellidos", result["apellidos"]),
+            ("DNI", result["dni"]),
+            ("Personas", result["personas"]),
+            ("Habitaciones", result["habitaciones"]),
+            ("Total", result["total"]),
+            ("Pestaña", result["sheet_title"]),
+            ("Archivo Drive", result["filename"]),
+        ]
+        for label, value in fields:
+            st.markdown(
+                f"""
+                <div>
+                    <div class="cvcfit-item-label">{label}</div>
+                    <div class="cvcfit-item-value">{value if value not in [None, ''] else '-'}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        st.markdown("</div></div>", unsafe_allow_html=True)
+
+        st.markdown(
+            f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank">Abrir hoja origen</a>',
+            unsafe_allow_html=True,
         )
+
         st.download_button(
-            "Descargar PDF CVC Fit",
-            data=result["pdf_bytes"],
+            "Descargar DOCX",
+            data=result["doc_bytes"],
             file_name=result["filename"],
-            mime="application/pdf",
-            key="downloadcvcfitpdf",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            key="btncvcfitdownload",
         )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ************************************************************
+# *************** 20. PROCESO CONFIRMACIONES *****************
+# ************************************************************
+savedname = st.session_state.get("nombrecopia")
+savedurl = st.session_state.get("copyurl")
+processtitle = st.session_state.get("processtitle", "Estado del Proceso · Process Status")
+
+if confirmstate in ["step1", "step2", "step3", "done"]:
+    st.markdown('<div class="panel-inline" style="max-width:520px;">', unsafe_allow_html=True)
+    st.markdown(f"### {processtitle}")
+    if confirmstate == "step1":
+        render_step("Progreso · Progress", "Preparando plantilla · Preparing template...", "active")
+    elif confirmstate == "step2":
+        render_step("Progreso · Progress", "Generando copia en Drive · Creating Drive copy...", "active")
+    elif confirmstate == "step3":
+        render_step("Progreso · Progress", "Abriendo sesión · Opening session...", "active")
+    elif confirmstate == "done":
+        render_step("Progreso · Progress", "Completo · Complete", "done")
         st.markdown(
-            f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank" rel="noopener noreferrer">Abrir spreadsheet</a>',
+            f"""
+            <div style="margin-top:0.8rem;">
+                <div style="font-size:0.76rem;color:#1F2937;font-weight:600;">Sesión creada · Session created</div>
+                <div style="font-size:0.71rem;color:#657087;margin-top:0.15rem;line-height:1.3;">
+                    Puedes abrir tu sesión en el botón de abajo · You can open your session with the button below.
+                </div>
+                <a class="done-link" href="{savedurl}" target="_blank">Abrir sesión · Open session</a>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
     st.markdown("</div>", unsafe_allow_html=True)
 
+    if confirmstate == "step1":
+        time.sleep(0.7)
+        st.session_state["confirmstate"] = "step2"
+        st.rerun()
+    elif confirmstate == "step2":
+        time.sleep(0.7)
+        st.session_state["confirmstate"] = "step3"
+        st.rerun()
+    elif confirmstate == "step3":
+        time.sleep(0.7)
+        st.session_state["confirmstate"] = "done"
+        existing = [h["nombre"] for h in st.session_state["historial"]]
+        if savedname and savedname not in existing:
+            st.session_state["historial"].insert(0, {
+                "nombre": savedname,
+                "hora": datetime.now().strftime("%H:%M:%S"),
+                "url": savedurl,
+            })
+        st.rerun()
 
-# ============================================================
-# PANEL CVC AGENCIAS
-# ============================================================
-if st.session_state.get("opencvcagenciasform"):
-    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    st.markdown("### CVC Agencias")
-    locator = st.text_input(
-        "Localizador",
-        key="cvcagenciaslocatorwidget",
-        placeholder="Introduce el localizador exacto de Booking ES!G11",
+
+# ************************************************************
+# *************** 21. AUTO-OPEN SESION ***********************
+# ************************************************************
+if confirmstate == "done" and savedname and not st.session_state.get(f"opened_{savedname}"):
+    st.session_state[f"opened_{savedname}"] = True
+    st.markdown(
+        f"<script>setTimeout(()=>window.open('{savedurl}','_blank'),300);</script>",
+        unsafe_allow_html=True,
     )
-    if st.button("Generar PDF CVC Agencias", key="btncvcagenciasaction", disabled=not locator):
-        run_cvc_search(locator, "CVC Agencias", "CVC Agencias", "cvcagencias")
 
-    log_lines_saved = st.session_state.get("cvcagencias_log", [])
-    if log_lines_saved:
-        st.markdown('<div class="cvcagencias-status-card" style="margin-top:0.75rem;">', unsafe_allow_html=True)
-        st.markdown("**Log de la búsqueda:**")
-        st.markdown("<br>".join(f"<div class='cvcagencias-log-line'>{line}</div>" for line in log_lines_saved), unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
 
-    result = st.session_state.get("cvcagencias_result")
-    if result:
-        render_key_value_grid(
-            "cvcagencias",
-            [
-                ("Localizador", result.get("locator", "")),
-                ("Nombre pasajero", result.get("nombre", "")),
-                ("Spreadsheet", result.get("spreadsheet_name", "")),
-            ],
-        )
-        st.download_button(
-            "Descargar PDF CVC Agencias",
-            data=result["pdf_bytes"],
-            file_name=result["filename"],
-            mime="application/pdf",
-            key="downloadcvcagenciaspdf",
-        )
+# ************************************************************
+# *************** 22. LOGOUT + HISTORIAL + FOOTER ************
+# ************************************************************
+st.markdown('<div style="height:1rem;"></div>', unsafe_allow_html=True)
+st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
+if st.button("Cerrar sesión / Logout", key="btnlogout"):
+    do_logout()
+st.markdown("</div>", unsafe_allow_html=True)
+
+if st.session_state.get("historial"):
+    st.markdown('<div style="height:1.2rem;"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-eyebrow">ESTA SESIÓN · THIS SESSION</div>', unsafe_allow_html=True)
+    for i, entry in enumerate(st.session_state["historial"], 1):
         st.markdown(
-            f'<a class="done-link" href="{result["spreadsheet_url"]}" target="_blank" rel="noopener noreferrer">Abrir spreadsheet</a>',
+            f"""
+            <div class="history-row">
+                <div class="history-num">{i}</div>
+                <div class="history-name">{entry["nombre"]}</div>
+                <div class="history-time">{entry["hora"]}</div>
+                <a class="history-link" href="{entry["url"]}" target="_blank">Abrir · Open</a>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-# ============================================================
-# PANEL IR A CONFIRMACION
-# ============================================================
-if st.session_state.get("openirconfirmacionform"):
-    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    st.markdown("### Ir a Confirmación")
-    locator = st.text_input(
-        "Localizador",
-        key="irconfirmacionlocatorwidget",
-        placeholder="Ej: ALB250601-001 o ALB250601-001_GROUP",
-    )
-    if st.button("Buscar confirmación", key="btnirconfirmacionaction", disabled=not locator):
-        try:
-            result = find_locator_confirmation(locator)
-            st.session_state["irconfirmacion_result"] = result
-            st.session_state["irconfirmacion_log"] = result.get("log", [])
-        except Exception as exc:
-            st.error(str(exc))
-            st.session_state["irconfirmacion_result"] = None
-            st.session_state["irconfirmacion_log"] = []
-
-    log_lines_saved = st.session_state.get("irconfirmacion_log", [])
-    if log_lines_saved:
-        st.markdown('<div class="irconfirmacion-card" style="margin-top:0.75rem;">', unsafe_allow_html=True)
-        st.markdown("**Resultado de la búsqueda:**")
-        st.markdown("<br>".join(f"<div class='irconfirmacion-log-line'>{line}</div>" for line in log_lines_saved), unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    result = st.session_state.get("irconfirmacion_result")
-    if result and result.get("status") == "found":
-        parsed = result.get("parsed", {})
-        render_key_value_grid(
-            "irconfirmacion",
-            [
-                ("Localizador", parsed.get("original", "")),
-                ("Barco", parsed.get("boat_name", "")),
-                ("Archivo", result.get("file", {}).get("name", "")),
-                ("Pestaña", result.get("sheet", {}).get("title", "")),
-            ],
-        )
-        st.markdown(
-            f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir confirmación</a>',
-            unsafe_allow_html=True,
-        )
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-# ============================================================
-# PANEL INFORME BARCO
-# ============================================================
-if st.session_state.get("openinformebarcoform"):
-    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    st.markdown("### Informe € por Barco")
-
-    tipo_options = ["NORMAL", "GROUPS"]
-    current_tipo = st.session_state.get("informetype")
-    if current_tipo not in tipo_options:
-        current_tipo = None
-
-    informetype = st.selectbox(
-        "TIPO",
-        options=tipo_options,
-        index=tipo_options.index(current_tipo) if current_tipo in tipo_options else None,
-        placeholder="Selecciona tipo",
-        key="informetypewidget",
-        on_change=on_informe_type_change,
-    )
-    if informetype != st.session_state.get("informetype"):
-        st.session_state["informetype"] = informetype
-
-    root_id = GROUPS_ROOT_ID if informetype == "GROUPS" else DRIVE_ROOT_ID
-
-    years = get_years_by_root(root_id) if informetype else []
-    current_year = st.session_state.get("informeyear")
-    if current_year not in years:
-        current_year = None
-
-    informeyear = st.selectbox(
-        "AÑO",
-        options=years,
-        index=years.index(current_year) if current_year in years else None,
-        placeholder="Selecciona año",
-        key="informeyearwidget",
-        on_change=on_informe_year_change,
-        disabled=not informetype,
-    )
-    if informeyear != st.session_state.get("informeyear"):
-        st.session_state["informeyear"] = informeyear
-
-    boats = get_boats_by_root(root_id, informeyear) if informetype and informeyear else []
-    current_boat = st.session_state.get("informeboat")
-    if current_boat not in boats:
-        current_boat = None
-
-    informeboat = st.selectbox(
-        "BARCO",
-        options=boats,
-        index=boats.index(current_boat) if current_boat in boats else None,
-        placeholder="Selecciona barco",
-        key="informeboatwidget",
-        on_change=on_informe_boat_change,
-        disabled=not informeyear,
-    )
-    if informeboat != st.session_state.get("informeboat"):
-        st.session_state["informeboat"] = informeboat
-
-    departures = get_departures_by_root(root_id, informeyear, informeboat) if informetype and informeyear and informeboat else []
-    departure_names = [d["nombre"] for d in departures]
-    current_dep = st.session_state.get("informesalida")
-    if current_dep not in departure_names:
-        current_dep = None
-
-    informesalida = st.selectbox(
-        "SALIDA",
-        options=departure_names,
-        index=departure_names.index(current_dep) if current_dep in departure_names else None,
-        placeholder="Selecciona salida",
-        key="informesalidawidget",
-        on_change=on_informe_salida_change,
-        disabled=not informeboat,
-    )
-    if informesalida != st.session_state.get("informesalida"):
-        st.session_state["informesalida"] = informesalida
-
-    if st.button("Generar informe", key="btngenerarinforme", disabled=not informesalida):
-        try:
-            selected = next((d for d in departures if d["nombre"] == informesalida), None)
-            if not selected:
-                st.error("No se ha encontrado la salida seleccionada.")
-            else:
-                st.session_state["informeresult"] = extract_informe_por_barco(selected["id"], selected["nombre"])
-        except Exception as exc:
-            st.exception(exc)
-
-    informeresult = st.session_state.get("informeresult")
-    if informeresult:
-        render_key_value_grid(
-            "informebarco",
-            [
-                ("Spreadsheet", informeresult.get("spreadsheet_name", "")),
-                ("Total Importe", f"{informeresult.get('total_importe', 0):,.2f} €"),
-                ("Total PAX", str(informeresult.get("total_pax", 0))),
-                ("Total Hojas", str(len(informeresult.get("rows", [])))),
-            ],
-        )
-
-        rows = informeresult.get("rows", [])
-        if rows:
-            table_html = """
-            <div class="report-table-wrap">
-            <table class="report-table">
-                <thead>
-                    <tr>
-                        <th>Hoja</th>
-                        <th>Localizador</th>
-                        <th>Agencia</th>
-                        <th>Estado Pago</th>
-                        <th>Total €</th>
-                        <th>Depósito</th>
-                        <th>PAX</th>
-                        <th>Cabinas</th>
-                        <th>Itinerario</th>
-                        <th>Duración</th>
-                        <th>Tipo</th>
-                    </tr>
-                </thead>
-                <tbody>
-            """
-            for row in rows:
-                table_html += f"""
-                    <tr>
-                        <td>{row.get('Hoja', '')}</td>
-                        <td>{row.get('Localizador', '')}</td>
-                        <td>{row.get('Agencia', '')}</td>
-                        <td>{row.get('Estado Pago', '')}</td>
-                        <td>{row.get('Total €', 0):,.2f} €</td>
-                        <td>{row.get('Cantidad Deposito', 0):,.2f} €</td>
-                        <td>{row.get('PAX', 0)}</td>
-                        <td>{row.get('Cabinas', 0)}</td>
-                        <td>{row.get('Itinerario', '')}</td>
-                        <td>{row.get('Duracion', '')}</td>
-                        <td>{row.get('Tipo Documento', '')}</td>
-                    </tr>
-                """
-            table_html += "</tbody></table></div>"
-            st.markdown(table_html, unsafe_allow_html=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
 
 st.markdown(
-    """
+    f"""
     <div class="portal-footer">
-        <div class="footer-text">Crucemundo Hub</div>
+        <span class="footer-text">Panel de Control · Control Panel · v4.3.1</span>
+        <span class="footer-text">Raíz Drive · Drive Root · {DRIVE_ROOT_ID}</span>
     </div>
     """,
     unsafe_allow_html=True,
 )
-
 st.markdown("</div>", unsafe_allow_html=True)
