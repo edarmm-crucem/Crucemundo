@@ -1,1 +1,46 @@
 
+import streamlit as st
+
+# Configuración de la página
+st.set_page_config(
+    page_title="Panel de Control - Crucemundo",
+    page_icon="🛳️",
+    layout="wide"
+)
+
+# Título con estilo
+st.title("🛳️ Panel de Gestión")
+st.markdown("---") # Línea divisoria para separar el encabezado
+
+# Diseño en columnas para que sea visual
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric(label="Cruceros Activos", value="12", delta="1")
+    st.button("Ver detalle de barcos")
+
+with col2:
+    st.metric(label="Reservas Hoy", value="45", delta="12%")
+    st.button("Gestionar reservas")
+
+with col3:
+    st.metric(label="Capacidad Media", value="88%", delta="-2%")
+    st.button("Ver estadísticas")
+
+st.markdown("---")
+
+# Una sección de información sencilla
+st.subheader("Estado del Sistema")
+st.success("Todos los sistemas de Crucemundo Hub están operando correctamente.")
+
+# Ejemplo de una tabla de datos rápida
+data = {
+    "Barco": ["MS Mediterranean", "Ocean Star", "Sea Breeze"],
+    "Destino": ["Grecia", "Caribe", "Fiordos"],
+    "Estado": ["En puerto", "Navegando", "Mantenimiento"]
+}
+st.table(data)
+
+# Botón para volver al inicio si el usuario se pierde
+if st.button("⬅️ Volver al Hub Principal"):
+    st.switch_page("app.py")
