@@ -14,7 +14,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
-FOLDER_SESIONES_ID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
+
 
 # ============================================================
 # CONSTANTES
@@ -348,50 +348,55 @@ def render_key_value_grid(css_prefix, fields):
     st.markdown("</div></div>", unsafe_allow_html=True)
 
 
-def create_master_session(template_id, prefixname, processtitle, user_email):
-    """Crea la copia en la carpeta específica y la comparte con el usuario"""
-    drive_service = get_drive_service()
-    nombre_final = f"{prefixname} - {processtitle}"
-    
+def create_master_session(sessiontype, templateid, prefixname, processtitle):
+    clear_transient_ui()
+
+    fechastr = datetime.now().strftime("%Y%m%d-%H%M")
+    displayuser = st.session_state.get("displayname", "").strip() or "Sin usuario"
+    nombrecopia = f"SESION - {displayuser} - {prefixname} - {fechastr}"
+    descripcion = (
+        f"Tipo: {sessiontype} | Usuario: {displayuser} | "
+        f"Creado: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
+    )
+
+    st.session_state["confirmstate"] = "running"
+    st.session_state["sessiontype"] = sessiontype
+    st.session_state["nombrecopia"] = nombrecopia
+    st.session_state["processtitle"] = processtitle
+    st.session_state["activepanel"] = "process"
+
+    progress_bar = st.progress(0.0, text="Iniciando...")
+    status_box = st.empty()
+
     try:
-        # 1. Configurar la copia dentro de la carpeta destino
-        file_metadata = {
-            'name': nombre_final,
-            'parents': [FOLDER_SESIONES_ID]
+        progress_bar.progress(0.2, text="Preparando sesión...")
+        status_box.info("Preparando copia en Drive...")
+
+        progress_bar.progress(0.55, text="Creando copia en Drive...")
+        copia = copy_file_to_folder(templateid, nombrecopia, FOLDER_ID, descripcion)
+
+        final_url = copia.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{copia['id']}/edit"
+
+        progress_bar.progress(1.0, text="Ok")
+        status_box.success("Ok")
+
+        st.session_state["copyurl"] = final_url
+        st.session_state["processresult"] = {
+            "status": "created",
+            "name": copia.get("name", nombrecopia),
+            "url": final_url,
+            "id": copia.get("id", ""),
         }
-        
-        # 2. Ejecutar la copia
-        new_file = drive_service.files().copy(
-            fileId=template_id,
-            body=file_metadata,
-            fields='id, webViewLink'
-        ).execute()
-        
-        new_file_id = new_file.get('id')
-        final_url = new_file.get('webViewLink')
+        st.session_state["confirmstate"] = "done"
+        st.rerun()
 
-        # 3. Dar permiso de edición al usuario final
-        permission = {
-            'type': 'user',
-            'role': 'writer',
-            'emailAddress': user_email
-        }
-        drive_service.permissions().create(fileId=new_file_id, body=permission).execute()
+    except Exception as exc:
+        progress_bar.empty()
+        status_box.empty()
+        st.session_state["confirmstate"] = "error"
+        st.session_state["processresult"] = {"status": "error", "message": str(exc)}
+        st.rerun()
 
-        # 4. Botón minimalista (minúsculas)
-        st.markdown(f"""
-            <div style="margin-top: 15px; padding: 10px; border-radius: 5px; background-color: #f0f2f6;">
-                <p style="font-size: 0.85em; color: #555; margin-bottom: 8px;">Sesión creada correctamente.</p>
-                <a href="{final_url}" target="_blank" style="text-decoration: none;">
-                    <div style="display: inline-block; padding: 6px 16px; background-color: #ffffff; color: #31333F; border: 1px solid #dcdfe3; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
-                        abrir copia de trabajo
-                    </div>
-                </a>
-            </div>
-        """, unsafe_allow_html=True)
-
-    except Exception as e:
-        st.error(f"Error al procesar la sesión: {e}")
 
 # ============================================================
 # GOOGLE AUTH / SERVICES
