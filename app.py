@@ -2082,7 +2082,7 @@ if st.session_state.get("openinformebarcoform"):
                     </tr>
                 """
             tablehtml += "</tbody></table></div>"
-            st.markdown(tablehtml, unsafe_allow_html=True)
+            st.html(tablehtml)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
