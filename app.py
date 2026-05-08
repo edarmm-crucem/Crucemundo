@@ -377,13 +377,6 @@ def iniciarproceso(sessiontype, templateid, prefixname, processtitle):
 
     st.rerun()
 
-st.session_state.confirmstate = "done"
-st.session_state.sessiontype = sessiontype
-st.session_state.nombrecopia = nombrecopia
-st.session_state.copyurl = copia.get("webViewLink")
-st.session_state.processtitle = processtitle
-st.session_state.activepanel = "process"
-st.rerun()
 
 
 @st.cache_resource
