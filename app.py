@@ -520,57 +520,43 @@ def transfer_ownership(file_id: str, new_owner_email: str) -> None:
 # MASTER SESSION
 # ============================================================
 def create_master_session(sessiontype, templateid, prefixname, processtitle):
-    # 1. Capturar datos dinámicos
-    # Asumimos que guardas el nombre en session_state al hacer login
-    usuario = st.session_state.get("username", "Usuario") 
-    ahora = datetime.now()
-    fecha_str = ahora.strftime("%d-%m-%Y")
-    hora_str = ahora.strftime("%H:%M")
-    
-    # 2. Construir el nombre exacto solicitado
-    # SESION + Usuario + ARCHIVO + FECHA + HORA
-    nombre_final = f"SESION - {usuario} - {processtitle} - {fecha_str} - {hora_str}"
+    # 1. Definimos los datos básicos
+    nombre_sugerido = f"{prefixname} - {processtitle}"
     
     try:
-        # 3. Construir la URL de copia
-        # El parámetro copyName es una sugerencia para Google Drive
-        copy_url = f"https://docs.google.com/spreadsheets/d/{templateid}/copy?copyName={nombre_final}"
+        progress_bar = st.progress(0, text="Generando enlace de sesión...")
+        
+        # 2. En lugar de crear el archivo con la Service Account, 
+        # generamos el enlace de copia directa para el usuario.
+        copy_url = f"https://docs.google.com/spreadsheets/d/{templateid}/copy"
 
+        progress_bar.progress(1.0, text="Enlace listo")
+
+        # 3. Mostramos una interfaz clara para que el usuario haga la copia
         st.markdown(f"""
-            <div style="background-color: #f8f9fa; padding: 25px; border-radius: 15px; border: 1px solid #dee2e6; margin-top: 20px; font-family: 'Century Gothic', sans-serif;">
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #dee2e6; margin-top: 20px;">
                 <h3 style="color: #1f77b4; margin-top: 0;">🚀 Preparar Nueva Sesión</h3>
-                
-                <p style="font-size: 1.1em;">
-                    Para activar el <b>Menú de Funciones</b> y mantener el orden, sigue estos pasos:
-                </p>
-                
-                <div style="background-color: #ffffff; padding: 15px; border-left: 5px solid #28a745; margin: 15px 0; box-shadow: inset 0 0 5px rgba(0,0,0,0.05);">
-                    <b style="color: #555;">Nombre asignado para el archivo:</b><br>
-                    <code style="font-size: 1.2em; color: #d63384; font-weight: bold;">{nombre_final}</code>
-                </div>
-
-                <ol style="line-height: 1.8;">
-                    <li>Haz clic en el botón <b>verde</b> de abajo.</li>
-                    <li>En la ventana de Google, pulsa el botón azul que dice <b>"Hacer una copia"</b>.</li>
-                    <li>Al abrirse la hoja, espera 3-5 segundos y verás aparecer tu <b>Menú de Scripts</b>.</li>
+                <p style="font-size: 1.1em;">Para que el <b>Menú de Funciones</b> aparezca correctamente, debes crear la copia tú mismo:</p>
+                <ol>
+                    <li>Haz clic en el botón de abajo.</li>
+                    <li>Selecciona <b>"Hacer una copia"</b> cuando Google lo solicite.</li>
+                    <li>Una vez abierto, el menú aparecerá en la barra superior en unos segundos.</li>
                 </ol>
-
                 <div style="text-align: center; margin-top: 25px;">
                     <a href="{copy_url}" target="_blank" style="text-decoration: none;">
-                        <div style="background-color: #28a745; color: white; padding: 18px 35px; border-radius: 10px; font-weight: bold; font-size: 1.3em; display: inline-block; cursor: pointer; transition: 0.3s;">
+                        <div style="background-color: #28a745; color: white; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 1.2em; display: inline-block; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                             📂 CREAR COPIA CON MIS SCRIPTS
                         </div>
                     </a>
                 </div>
-                
-                <p style="font-size: 0.85em; color: #6c757d; margin-top: 20px; font-style: italic;">
-                    * Tip: Si Google no cambia el nombre automáticamente, copia el texto rosa de arriba y pégalo como nombre del archivo.
+                <p style="font-size: 0.85em; color: #6c757d; margin-top: 15px; font-style: italic;">
+                    * El archivo se guardará en tu unidad de Drive con el nombre: <b>{nombre_sugerido}</b>
                 </p>
             </div>
         """, unsafe_allow_html=True)
 
     except Exception as e:
-        st.error(f"Hubo un error al generar la sesión: {e}")
+        st.error(f"Error al generar el enlace: {e}")
 # ============================================================
 # SHEETS HELPERS
 # ============================================================
