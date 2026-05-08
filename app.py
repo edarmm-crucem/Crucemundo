@@ -1311,44 +1311,6 @@ st.markdown(
         color: #17663B !important;
     }
 
-    /* ── st.page_link styled as yellow chip ── */
-    [data-testid="stPageLink"] {
-        display: inline-flex !important;
-        align-items: center !important;
-    }
-
-    [data-testid="stPageLink"] a,
-    [data-testid="stPageLink"] a:visited {
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        padding: 0.38rem 0.82rem !important;
-        border-radius: 999px !important;
-        font-size: 0.71rem !important;
-        font-weight: 800 !important;
-        font-family: 'DM Sans', sans-serif !important;
-        line-height: 1 !important;
-        text-decoration: none !important;
-        white-space: nowrap !important;
-        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06) !important;
-        background: #FFE69A !important;
-        border: 1px solid #F2C94C !important;
-        color: #7A5900 !important;
-        transition: background 0.15s ease, border-color 0.15s ease !important;
-    }
-
-    [data-testid="stPageLink"] a:hover {
-        background: #FFD966 !important;
-        border-color: #E6B800 !important;
-        color: #5C4200 !important;
-        text-decoration: none !important;
-    }
-
-    /* Hide the arrow icon that page_link adds by default */
-    [data-testid="stPageLink"] a svg {
-        display: none !important;
-    }
-
     .user-pill {
         display: inline-flex;
         align-items: center;
@@ -1802,26 +1764,17 @@ st.markdown(
 )
 
 st.markdown('<div class="main-content">', unsafe_allow_html=True)
-
-# ── Section head row: chips + st.page_link for internal page ──
-# We render the external chips via HTML and then use st.page_link
-# (which Streamlit renders as a native link) for the internal page.
-# Both sit in the same flex row via a container trick.
-
 st.markdown(
     """
-    <div class="section-head-row" id="section-head-chips">
+    <div class="section-head-row">
         <div class="section-eyebrow">ACCIONES RÁPIDAS · QUICK ACTIONS</div>
         <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">Ir a Crucemundo</a>
         <a class="web-chip" href="https://mail.google.com" target="_blank" rel="noopener noreferrer">Gmail</a>
+        <a class="web-chip" href="/01_page" target="_self">Abrir 01 Page</a>
     </div>
     """,
     unsafe_allow_html=True,
 )
-
-# st.page_link renders correctly and is styled as a yellow chip via the CSS above.
-# Change "pages/01_page.py" to the exact filename of your page inside the /pages folder.
-st.page_link("pages/01_page.py", label="Abrir 01 Page")
 
 st.markdown(
     f"""
@@ -2520,6 +2473,7 @@ if st.session_state.get("openinformebarcoform"):
             <table class="report-table">
                 <thead>
                     <tr>
+                        
                         <th>Localizador</th>
                         <th>Agencia</th>
                         <th>Estado Pago</th>
@@ -2538,6 +2492,7 @@ if st.session_state.get("openinformebarcoform"):
             for row in rows:
                 tablehtml += f"""
                 <tr>
+                   
                     <td>{row.get('Localizador', '')}</td>
                     <td>{row.get('Agencia', '')}</td>
                     <td>{row.get('Estado Pago', '')}</td>
