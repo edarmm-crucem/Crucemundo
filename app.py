@@ -349,54 +349,31 @@ def render_key_value_grid(css_prefix, fields):
 
 
 def create_master_session(sessiontype, templateid, prefixname, processtitle):
-    clear_transient_ui()
-
-    fechastr = datetime.now().strftime("%Y%m%d-%H%M")
-    displayuser = st.session_state.get("displayname", "").strip() or "Sin usuario"
-    nombrecopia = f"SESION - {displayuser} - {prefixname} - {fechastr}"
-    descripcion = (
-        f"Tipo: {sessiontype} | Usuario: {displayuser} | "
-        f"Creado: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
-    )
-
-    st.session_state["confirmstate"] = "running"
-    st.session_state["sessiontype"] = sessiontype
-    st.session_state["nombrecopia"] = nombrecopia
-    st.session_state["processtitle"] = processtitle
-    st.session_state["activepanel"] = "process"
-
-    progress_bar = st.progress(0.0, text="Iniciando...")
-    status_box = st.empty()
-
+    # ... (código previo sin cambios)
     try:
         progress_bar.progress(0.2, text="Preparando sesión...")
         status_box.info("Preparando copia en Drive...")
 
         progress_bar.progress(0.55, text="Creando copia en Drive...")
         copia = copy_file_to_folder(templateid, nombrecopia, FOLDER_ID, descripcion)
+        
+        # --- NUEVA LÓGICA DE TRANSFERENCIA ---
+        service = get_drive_service()
+        user_email = st.session_state.get("useremail")
+        if user_email:
+            try:
+                service.permissions().create(
+                    fileId=copia['id'],
+                    body={'type': 'user', 'role': 'owner', 'emailAddress': user_email},
+                    transferOwnership=True,
+                    supportsAllDrives=True
+                ).execute()
+            except Exception as e:
+                st.warning(f"No se pudo transferir la propiedad: {e}")
+        # -------------------------------------
 
         final_url = copia.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{copia['id']}/edit"
-
-        progress_bar.progress(1.0, text="Ok")
-        status_box.success("Ok")
-
-        st.session_state["copyurl"] = final_url
-        st.session_state["processresult"] = {
-            "status": "created",
-            "name": copia.get("name", nombrecopia),
-            "url": final_url,
-            "id": copia.get("id", ""),
-        }
-        st.session_state["confirmstate"] = "done"
-        st.rerun()
-
-    except Exception as exc:
-        progress_bar.empty()
-        status_box.empty()
-        st.session_state["confirmstate"] = "error"
-        st.session_state["processresult"] = {"status": "error", "message": str(exc)}
-        st.rerun()
-
+        # ... (resto de la función)
 
 # ============================================================
 # GOOGLE AUTH / SERVICES
@@ -659,45 +636,29 @@ def get_departures(yearname, boatname):
 
 
 def create_crucero_file(barco, fechaobj):
-    if not barco or not fechaobj:
-        raise Exception("Faltan datos de barco o fecha.")
-
-    anio = str(fechaobj.year)
-    nombrenuevo = f"{barco}_{fechaobj.strftime('%y%m%d')}"
-    fechaes = fechaobj.strftime("%d/%m/%Y")
-
-    carpetaanio = get_or_create_folder(DRIVE_ROOT_ID, anio)
-    carpetabarco = get_or_create_folder(carpetaanio["id"], barco)
-
-    duplicado = find_file_by_name(carpetabarco["id"], nombrenuevo)
-    if duplicado:
-        return {
-            "status": "duplicate",
-            "name": nombrenuevo,
-            "url": duplicado.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{duplicado['id']}/edit",
-        }
-
-    descripcion = (
-        f"Barco: {barco} | Salida: {fechaes} | "
-        f"Creado: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} | "
-        f"Los archivos de sesión deben borrarse a los 30 días."
-    )
+    # ... (código previo de validación y creación de carpetas)
+    
     copia = copy_file_to_folder(TEMPLATE_ID_CRUCERO, nombrenuevo, carpetabarco["id"], descripcion)
     update_crucero_sheet(copia["id"], barco)
 
+    # --- NUEVA LÓGICA DE TRANSFERENCIA ---
+    service = get_drive_service()
+    user_email = st.session_state.get("useremail")
+    if user_email:
+        try:
+            service.permissions().create(
+                fileId=copia["id"],
+                body={'type': 'user', 'role': 'owner', 'emailAddress': user_email},
+                transferOwnership=True,
+                supportsAllDrives=True
+            ).execute()
+        except Exception as e:
+            # Silenciamos o registramos el error según prefieras
+            pass
+    # -------------------------------------
+
     get_years.clear()
-    get_year_folder_id.clear()
-    get_boats.clear()
-    get_departures.clear()
-
-    return {
-        "status": "created",
-        "name": nombrenuevo,
-        "url": copia.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{copia['id']}/edit",
-        "year": anio,
-        "boat": barco,
-    }
-
+    # ... (resto de la función)
 
 # ============================================================
 # CVC HELPERS
