@@ -519,7 +519,7 @@ def transfer_ownership(file_id: str, new_owner_email: str) -> None:
 # ============================================================
 # MASTER SESSION
 # ============================================================
-dedef create_master_session(sessiontype, templateid, prefixname, processtitle):
+def create_master_session(sessiontype, templateid, prefixname, processtitle):
     # ... (tus validaciones de nombre y fecha)
     
     try:
