@@ -520,60 +520,43 @@ def transfer_ownership(file_id: str, new_owner_email: str) -> None:
 # MASTER SESSION
 # ============================================================
 def create_master_session(sessiontype, templateid, prefixname, processtitle):
-    # Definimos el nombre de la copia primero
-    nombrecopia = f"{prefixname} - {processtitle}"
-    descripcion = f"Sesión creada desde Hub el {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+    # 1. Definimos los datos básicos
+    nombre_sugerido = f"{prefixname} - {processtitle}"
     
     try:
-        progress_bar = st.progress(0, text="Iniciando proceso...")
-        status_box = st.empty()
+        progress_bar = st.progress(0, text="Generando enlace de sesión...")
         
-        status_box.info("Preparando copia en Drive...")
-        progress_bar.progress(0.2, text="Conectando con Google Drive...")
+        # 2. En lugar de crear el archivo con la Service Account, 
+        # generamos el enlace de copia directa para el usuario.
+        copy_url = f"https://docs.google.com/spreadsheets/d/{templateid}/copy"
 
-        # 1. Crear la copia directamente en la carpeta de sesiones
-        copia = copy_file_to_folder(templateid, nombrecopia, FOLDER_ID, descripcion)
-        file_id = copia['id']
-        
-        progress_bar.progress(0.6, text="Transfiriendo propiedad...")
-        
-        # 2. Intentar transferencia de propiedad para activar el menú de scripts
-        service = get_drive_service()
-        user_email = st.session_state.get("useremail")
-        
-        if user_email:
-            try:
-                # En Unidades Compartidas no existe 'owner', usamos 'fileOrganizer'
-                service.permissions().create(
-                    fileId=file_id,
-                    body={
-                        'type': 'user', 
-                        'role': 'fileOrganizer', # Nivel máximo para gestionar scripts
-                        'emailAddress': user_email
-                    },
-                    supportsAllDrives=True # Vital para que reconozca la Shared Drive
-                ).execute()
-                status_box.success("✅ Permisos de organizador concedidos.")
-            except Exception as e_perm:
-                st.warning(f"No se pudo asignar rol de organizador: {e_perm}")
-        
-        progress_bar.progress(1.0, text="Proceso finalizado")
+        progress_bar.progress(1.0, text="Enlace listo")
 
-        # 3. Mostrar botón para abrir
-        final_url = copia.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
-        
+        # 3. Mostramos una interfaz clara para que el usuario haga la copia
         st.markdown(f"""
-            <div style="margin-top: 20px;">
-                <a href="{final_url}" target="_blank" style="text-decoration: none;">
-                    <div style="background-color: #28a745; color: white; text-align: center; padding: 15px; border-radius: 8px; font-weight: bold; font-size: 1.2em; cursor: pointer;">
-                        📂 ABRIR SESIÓN Y CARGAR MENÚ
-                    </div>
-                </a>
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #dee2e6; margin-top: 20px;">
+                <h3 style="color: #1f77b4; margin-top: 0;">🚀 Preparar Nueva Sesión</h3>
+                <p style="font-size: 1.1em;">Para que el <b>Menú de Funciones</b> aparezca correctamente, debes crear la copia tú mismo:</p>
+                <ol>
+                    <li>Haz clic en el botón de abajo.</li>
+                    <li>Selecciona <b>"Hacer una copia"</b> cuando Google lo solicite.</li>
+                    <li>Una vez abierto, el menú aparecerá en la barra superior en unos segundos.</li>
+                </ol>
+                <div style="text-align: center; margin-top: 25px;">
+                    <a href="{copy_url}" target="_blank" style="text-decoration: none;">
+                        <div style="background-color: #28a745; color: white; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 1.2em; display: inline-block; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            📂 CREAR COPIA CON MIS SCRIPTS
+                        </div>
+                    </a>
+                </div>
+                <p style="font-size: 0.85em; color: #6c757d; margin-top: 15px; font-style: italic;">
+                    * El archivo se guardará en tu unidad de Drive con el nombre: <b>{nombre_sugerido}</b>
+                </p>
             </div>
         """, unsafe_allow_html=True)
 
     except Exception as e:
-        st.error(f"Error en la creación: {e}")
+        st.error(f"Error al generar el enlace: {e}")
 # ============================================================
 # SHEETS HELPERS
 # ============================================================
