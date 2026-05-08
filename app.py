@@ -927,15 +927,13 @@ def getyearfolderidbyroot(rootid, yearname):
     return folder["id"] if folder else None
 
 @st.cache_data(ttl=300)
-def getboatsbyroot(rootid, yearname):
-    year = getyearDbyroot(rootid, yearname)
-    if not year:
-        return []
-    folders = listfolderitems(year, foldersonly=True)
-    return sorted(f["name"].strip() for f in folders if f["name"].strip())
-
-
 @st.cache_data(ttl=300)
+def getboatsbyroot(rootid, yearname):
+    yearfolderid = getyearfolderidbyroot(rootid, yearname)
+    if not yearfolderid:
+        return []
+    folders = listfolderitems(yearfolderid, foldersonly=True)
+    return sorted(f["name"].strip() for f in folders if f["name"].strip())
 def getdeparturesbyroot(rootid, yearname, boatname):
     year = getyearbyroot(rootid, yearname)
     if not year:
