@@ -407,13 +407,15 @@ def get_google_creds():
 
 @st.cache_resource
 def get_drive_service():
-    return build("drive", "v3", credentials=get_google_creds())
-
-
-@st.cache_resource
-def get_sheets_service():
-    return build("sheets", "v4", credentials=get_google_creds())
-
+    """Inicializa el servicio de Drive usando los Secrets de Streamlit"""
+    # Cargamos la info directamente desde el diccionario de Secrets
+    creds_info = st.secrets["gcp_service_account"]
+    
+    creds = Credentials.from_service_account_info(
+        creds_info, 
+        scopes=SCOPES
+    )
+    return build('drive', 'v3', credentials=creds)
 
 # ============================================================
 # DRIVE / SHEETS HELPERS
