@@ -355,28 +355,31 @@ def panelheader(title, closekey):
 
 
 def iniciarproceso(sessiontype, templateid, prefixname, processtitle):
-    cleartransientui()
+    try:
+        cleartransientui()
 
-    fechastr = datetime.now().strftime("%Y%m%d-%H%M")
-    displayuser = st.session_state.get("displayname", "").strip() or "Sin usuario"
+        fechastr = datetime.now().strftime("%Y%m%d-%H%M")
+        displayuser = st.session_state.get("displayname", "").strip() or "Sin usuario"
 
-    nombrecopia = f"SESION - {displayuser} - {prefixname} - {fechastr}"
+        nombrecopia = f"SESION - {displayuser} - {prefixname} - {fechastr}"
 
-    copia = copyfiletofolder(
-        templateid,
-        nombrecopia,
-        FOLDERSESIONESID
-    )
+        copia = copyfiletofolder(
+            templateid,
+            nombrecopia,
+            FOLDERSESIONESID
+        )
 
-    st.session_state.confirmstate = "done"
-    st.session_state.sessiontype = sessiontype
-    st.session_state.nombrecopia = nombrecopia
-    st.session_state.copyurl = copia.get("webViewLink")
-    st.session_state.processtitle = processtitle
-    st.session_state.activepanel = "process"
+        st.session_state.confirmstate = "done"
+        st.session_state.sessiontype = sessiontype
+        st.session_state.nombrecopia = nombrecopia
+        st.session_state.copyurl = copia.get("webViewLink")
+        st.session_state.processtitle = processtitle
+        st.session_state.activepanel = "process"
 
-    st.rerun()
+        st.rerun()
 
+    except Exception as e:
+        st.error(str(e))
 
 
 @st.cache_resource
