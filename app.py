@@ -42,7 +42,7 @@ VALIDUSERS = {
     "finance@crucemundo.com": "Aleksandr",
     "edarmm@gmail.com": "Esteban",
 }
-VALIDPASSWORD = st.secrets["apppassword"]
+VALIDPASSWORD = st.secrets.get("apppassword", "")
 
 AGENCYFIELDS = [
     "Nombre",
