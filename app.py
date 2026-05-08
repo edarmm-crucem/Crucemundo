@@ -348,65 +348,55 @@ def render_key_value_grid(css_prefix, fields):
     st.markdown("</div></div>", unsafe_allow_html=True)
 
 
-from googleapiclient.discovery import build
+def create_master_session(sessiontype, templateid, prefixname, processtitle):
+    clear_transient_ui()
 
-def create_master_session(drive_service, template_id, prefixname, processtitle, user_email):
-    """
-    Crea una copia, le pone el nombre correcto, la mueve a la carpeta 
-    específica y le da acceso al usuario.
-    """
-    target_folder_id = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
-    nombre_final = f"{prefixname} - {processtitle}"
-    
+    fechastr = datetime.now().strftime("%Y%m%d-%H%M")
+    displayuser = st.session_state.get("displayname", "").strip() or "Sin usuario"
+    nombrecopia = f"SESION - {displayuser} - {prefixname} - {fechastr}"
+    descripcion = (
+        f"Tipo: {sessiontype} | Usuario: {displayuser} | "
+        f"Creado: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
+    )
+
+    st.session_state["confirmstate"] = "running"
+    st.session_state["sessiontype"] = sessiontype
+    st.session_state["nombrecopia"] = nombrecopia
+    st.session_state["processtitle"] = processtitle
+    st.session_state["activepanel"] = "process"
+
+    progress_bar = st.progress(0.0, text="Iniciando...")
+    status_box = st.empty()
+
     try:
-        # 1. Crear la copia directamente en la carpeta destino
-        file_metadata = {
-            'name': nombre_final,
-            'parents': [target_folder_id]
+        progress_bar.progress(0.2, text="Preparando sesión...")
+        status_box.info("Preparando copia en Drive...")
+
+        progress_bar.progress(0.55, text="Creando copia en Drive...")
+        copia = copy_file_to_folder(templateid, nombrecopia, FOLDER_ID, descripcion)
+
+        final_url = copia.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{copia['id']}/edit"
+
+        progress_bar.progress(1.0, text="Ok")
+        status_box.success("Ok")
+
+        st.session_state["copyurl"] = final_url
+        st.session_state["processresult"] = {
+            "status": "created",
+            "name": copia.get("name", nombrecopia),
+            "url": final_url,
+            "id": copia.get("id", ""),
         }
-        
-        new_file = drive_service.files().copy(
-            fileId=template_id,
-            body=file_metadata,
-            fields='id, webViewLink'
-        ).execute()
-        
-        new_file_id = new_file.get('id')
-        final_url = new_file.get('webViewLink')
+        st.session_state["confirmstate"] = "done"
+        st.rerun()
 
-        # 2. Dar permiso de escritura al usuario (necesario para ejecutar scripts)
-        permission = {
-            'type': 'user',
-            'role': 'writer',
-            'emailAddress': user_email
-        }
-        drive_service.permissions().create(fileId=new_file_id, body=permission).execute()
+    except Exception as exc:
+        progress_bar.empty()
+        status_box.empty()
+        st.session_state["confirmstate"] = "error"
+        st.session_state["processresult"] = {"status": "error", "message": str(exc)}
+        st.rerun()
 
-        # 3. Mostrar el botón minimalista en Streamlit
-        st.markdown(f"""
-            <div style="margin-top: 20px; padding: 15px; border-left: 4px solid #28a745; background-color: #f4fdf4;">
-                <p style="font-size: 0.9em; color: #1e4620; margin-bottom: 10px;">
-                    La sesión ha sido preparada en la carpeta compartida.
-                </p>
-                <a href="{final_url}" target="_blank" style="text-decoration: none;">
-                    <div style="
-                        display: inline-block;
-                        padding: 8px 20px;
-                        background-color: #ffffff;
-                        color: #28a745;
-                        border: 1px solid #28a745;
-                        border-radius: 5px;
-                        font-size: 0.85em;
-                        font-weight: bold;
-                        cursor: pointer;">
-                        Abrir sesión de trabajo
-                    </div>
-                </a>
-            </div>
-        """, unsafe_allow_html=True)
-
-    except Exception as e:
-        st.error(f"Error al organizar el archivo: {e}")
 
 # ============================================================
 # GOOGLE AUTH / SERVICES
