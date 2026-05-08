@@ -520,56 +520,57 @@ def transfer_ownership(file_id: str, new_owner_email: str) -> None:
 # MASTER SESSION
 # ============================================================
 def create_master_session(sessiontype, templateid, prefixname, processtitle):
-    # 1. Obtener datos para el nombre
-    usuario = st.session_state.get("username", "Usuario")
+    # 1. Capturar datos dinámicos
+    # Asumimos que guardas el nombre en session_state al hacer login
+    usuario = st.session_state.get("username", "Usuario") 
     ahora = datetime.now()
     fecha_str = ahora.strftime("%d-%m-%Y")
     hora_str = ahora.strftime("%H:%M")
     
-    # 2. Construir el nombre solicitado: SESION + Usuario + ARCHIVO + FECHA + HORA
-    # Ejemplo: SESION - Juan - Master v2 - 08-05-2026 - 17:00
+    # 2. Construir el nombre exacto solicitado
+    # SESION + Usuario + ARCHIVO + FECHA + HORA
     nombre_final = f"SESION - {usuario} - {processtitle} - {fecha_str} - {hora_str}"
     
     try:
-        # 3. Construir la URL de copia forzada
-        # El parámetro copyName permite sugerir el nombre en algunos navegadores/configuraciones
+        # 3. Construir la URL de copia
+        # El parámetro copyName es una sugerencia para Google Drive
         copy_url = f"https://docs.google.com/spreadsheets/d/{templateid}/copy?copyName={nombre_final}"
 
         st.markdown(f"""
-            <div style="background-color: #f8f9fa; padding: 25px; border-radius: 15px; border: 1px solid #dee2e6; margin-top: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-                <h3 style="color: #1f77b4; margin-top: 0; font-family: 'Century Gothic', sans-serif;">🚀 Preparar Nueva Sesión</h3>
+            <div style="background-color: #f8f9fa; padding: 25px; border-radius: 15px; border: 1px solid #dee2e6; margin-top: 20px; font-family: 'Century Gothic', sans-serif;">
+                <h3 style="color: #1f77b4; margin-top: 0;">🚀 Preparar Nueva Sesión</h3>
                 
-                <p style="font-size: 1.1em; font-family: 'Century Gothic', sans-serif;">
+                <p style="font-size: 1.1em;">
                     Para activar el <b>Menú de Funciones</b> y mantener el orden, sigue estos pasos:
                 </p>
                 
-                <div style="background-color: #ffffff; padding: 15px; border-left: 5px solid #28a745; margin: 15px 0;">
-                    <b style="font-family: 'Century Gothic', sans-serif;">Nombre asignado:</b><br>
-                    <code style="font-size: 1.2em; color: #d63384;">{nombre_final}</code>
+                <div style="background-color: #ffffff; padding: 15px; border-left: 5px solid #28a745; margin: 15px 0; box-shadow: inset 0 0 5px rgba(0,0,0,0.05);">
+                    <b style="color: #555;">Nombre asignado para el archivo:</b><br>
+                    <code style="font-size: 1.2em; color: #d63384; font-weight: bold;">{nombre_final}</code>
                 </div>
 
-                <ol style="font-family: 'Century Gothic', sans-serif; line-height: 1.6;">
-                    <li>Haz clic en el botón verde de abajo.</li>
-                    <li>Pulsa el botón <b>"Hacer una copia"</b> en la página de Google.</li>
-                    <li>Una vez abierto el archivo, el menú de scripts cargará automáticamente.</li>
+                <ol style="line-height: 1.8;">
+                    <li>Haz clic en el botón <b>verde</b> de abajo.</li>
+                    <li>En la ventana de Google, pulsa el botón azul que dice <b>"Hacer una copia"</b>.</li>
+                    <li>Al abrirse la hoja, espera 3-5 segundos y verás aparecer tu <b>Menú de Scripts</b>.</li>
                 </ol>
 
                 <div style="text-align: center; margin-top: 25px;">
                     <a href="{copy_url}" target="_blank" style="text-decoration: none;">
-                        <div style="background-color: #28a745; color: white; padding: 18px 35px; border-radius: 10px; font-weight: bold; font-size: 1.3em; display: inline-block; cursor: pointer; transition: 0.3s; font-family: 'Century Gothic', sans-serif;">
-                            📂 CREAR COPIA Y ACTIVAR SCRIPTS
+                        <div style="background-color: #28a745; color: white; padding: 18px 35px; border-radius: 10px; font-weight: bold; font-size: 1.3em; display: inline-block; cursor: pointer; transition: 0.3s;">
+                            📂 CREAR COPIA CON MIS SCRIPTS
                         </div>
                     </a>
                 </div>
                 
-                <p style="font-size: 0.85em; color: #6c757d; margin-top: 20px; font-style: italic; font-family: 'Century Gothic', sans-serif;">
-                    * Nota: Si Google le pone el nombre "Copia de...", por favor renómbralo con el texto rosa de arriba para mantener el estándar.
+                <p style="font-size: 0.85em; color: #6c757d; margin-top: 20px; font-style: italic;">
+                    * Tip: Si Google no cambia el nombre automáticamente, copia el texto rosa de arriba y pégalo como nombre del archivo.
                 </p>
             </div>
         """, unsafe_allow_html=True)
 
     except Exception as e:
-        st.error(f"Error al generar la sesión: {e}")
+        st.error(f"Hubo un error al generar la sesión: {e}")
 # ============================================================
 # SHEETS HELPERS
 # ============================================================
