@@ -543,20 +543,19 @@ def create_master_session(sessiontype, templateid, prefixname, processtitle):
         
         if user_email:
             try:
+                # En Unidades Compartidas no existe 'owner', usamos 'fileOrganizer'
                 service.permissions().create(
                     fileId=file_id,
                     body={
                         'type': 'user', 
-                        'role': 'owner', 
+                        'role': 'fileOrganizer', # Nivel máximo para gestionar scripts
                         'emailAddress': user_email
                     },
-                    transferOwnership=True,
-                    supportsAllDrives=True
+                    supportsAllDrives=True # Vital para que reconozca la Shared Drive
                 ).execute()
-                status_box.success("✅ Sesión creada y propiedad transferida con éxito.")
+                status_box.success("✅ Permisos de organizador concedidos.")
             except Exception as e_perm:
-                # Si esto falla, el archivo existe pero el menú onOpen podría no salir
-                st.warning(f"Archivo creado, pero hubo un problema de permisos: {e_perm}")
+                st.warning(f"No se pudo asignar rol de organizador: {e_perm}")
         
         progress_bar.progress(1.0, text="Proceso finalizado")
 
