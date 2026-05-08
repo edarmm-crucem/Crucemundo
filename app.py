@@ -579,13 +579,10 @@ def getyears():
     years = [f["name"].strip() for f in folders if re.fullmatch(r"\d{4}", f["name"].strip())]
     return sorted(years, reverse=True)
 
-
 @st.cache_data(ttl=300)
-def getyearFOLDERSESIONESID(yearname):
-    = findchildfolder(DRIVEROOTID, yearname)
-    return folder["id"] if else None
-
-
+def getyearfolderid(yearname):
+    folder = findchildfolder(DRIVEROOTID, yearname)
+    return folder["id"] if folder else None
 @st.cache_data(ttl=300)
 def getboats(yearname):
     yearFOLDERSESIONESID = getyearFOLDERSESIONESID(yearname)
