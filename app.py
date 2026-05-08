@@ -520,43 +520,35 @@ def transfer_ownership(file_id: str, new_owner_email: str) -> None:
 # MASTER SESSION
 # ============================================================
 def create_master_session(sessiontype, templateid, prefixname, processtitle):
-    # 1. Definimos los datos básicos
     nombre_sugerido = f"{prefixname} - {processtitle}"
+    copy_url = f"https://docs.google.com/spreadsheets/d/{templateid}/copy"
     
     try:
-        progress_bar = st.progress(0, text="Generando enlace de sesión...")
-        
-        # 2. En lugar de crear el archivo con la Service Account, 
-        # generamos el enlace de copia directa para el usuario.
-        copy_url = f"https://docs.google.com/spreadsheets/d/{templateid}/copy"
-
-        progress_bar.progress(1.0, text="Enlace listo")
-
-        # 3. Mostramos una interfaz clara para que el usuario haga la copia
+        # Interfaz simplificada y botones más pequeños
         st.markdown(f"""
-            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #dee2e6; margin-top: 20px;">
-                <h3 style="color: #1f77b4; margin-top: 0;">🚀 Preparar Nueva Sesión</h3>
-                <p style="font-size: 1.1em;">Para que el <b>Menú de Funciones</b> aparezca correctamente, debes crear la copia tú mismo:</p>
-                <ol>
-                    <li>Haz clic en el botón de abajo.</li>
-                    <li>Selecciona <b>"Hacer una copia"</b> cuando Google lo solicite.</li>
-                    <li>Una vez abierto, el menú aparecerá en la barra superior en unos segundos.</li>
-                </ol>
-                <div style="text-align: center; margin-top: 25px;">
-                    <a href="{copy_url}" target="_blank" style="text-decoration: none;">
-                        <div style="background-color: #28a745; color: white; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 1.2em; display: inline-block; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                            📂 CREAR COPIA CON MIS SCRIPTS
-                        </div>
-                    </a>
-                </div>
-                <p style="font-size: 0.85em; color: #6c757d; margin-top: 15px; font-style: italic;">
-                    * El archivo se guardará en tu unidad de Drive con el nombre: <b>{nombre_sugerido}</b>
+            <div style="margin-top: 20px; padding: 15px; border-left: 4px solid #dee2e6; background-color: #f9f9f9;">
+                <p style="font-size: 0.9em; color: #555; margin-bottom: 10px;">
+                    Haz clic para crear tu copia de trabajo. El archivo se llamará: <b>{nombre_sugerido}</b>
                 </p>
+                <a href="{copy_url}" target="_blank" style="text-decoration: none;">
+                    <div style="
+                        display: inline-block;
+                        padding: 8px 20px;
+                        background-color: #f0f2f6;
+                        color: #31333F;
+                        border: 1px solid #dcdfe3;
+                        border-radius: 5px;
+                        font-size: 0.85em;
+                        transition: background-color 0.3s;
+                        cursor: pointer;">
+                        Crear copia con mis scripts
+                    </div>
+                </a>
             </div>
         """, unsafe_allow_html=True)
 
     except Exception as e:
-        st.error(f"Error al generar el enlace: {e}")
+        st.error(f"Error: {e}")
 # ============================================================
 # SHEETS HELPERS
 # ============================================================
