@@ -1,7 +1,7 @@
 import re
 import urllib.parse
 from datetime import date, datetime
-FOLDERID = FOLDERSESIONESID
+
 import requests
 import streamlit as st
 from google.auth.transport.requests import Request
