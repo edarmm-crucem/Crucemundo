@@ -1084,7 +1084,12 @@ def extract_informe_por_barco(spreadsheet_id, spreadsheet_name):
             cells = get_sheet_cells_batch(
                 spreadsheet_id,
                 sheet_title,
-                ["G11", "G5", "G57", "Q55", "P57", "G22", "K22", "N22", "P22", "G20", "K20", "N20", "P20", "G19", "G18"]
+                [
+                    "G11", "G5", "G57", "Q55", "P57",
+                    "G22", "K22", "N22", "P22",
+                    "G20", "K20", "N20", "P20",
+                    "G19", "G18", "G10", "G23"
+                ]
             )
 
             pax = sum(parse_int_from_text(cells.get(a1, "")) for a1 in ["G22", "K22", "N22", "P22"])
@@ -1093,18 +1098,30 @@ def extract_informe_por_barco(spreadsheet_id, spreadsheet_name):
             deposito = parse_numeric_value(cells.get("P57", ""))
             duracion_num = int(parse_numeric_value(cells.get("G18", "")))
 
+            localizador = str(cells.get("G11", "")).strip()
+            confirmation_url = ""
+            if localizador:
+                try:
+                    confirmation_result = find_locator_confirmation(localizador)
+                    if confirmation_result.get("status") == "found":
+                        confirmation_url = confirmation_result.get("url", "")
+                except Exception:
+                    confirmation_url = ""
+
             rows.append({
                 "Hoja": sheet_title,
-                "Localizador": str(cells.get("G11", "")).strip(),
+                "Localizador": localizador,
+                "Localizador URL": confirmation_url,
                 "Agencia": str(cells.get("G5", "")).strip(),
                 "Estado Pago": str(cells.get("G57", "")).strip(),
+                "Estado de Reserva": str(cells.get("G10", "")).strip(),
                 "Total €": total_eur,
                 "Cantidad Deposito": deposito,
                 "PAX": pax,
                 "Cabinas": cabinas,
                 "Itinerario": str(cells.get("G19", "")).strip(),
                 "Duracion": f"{duracion_num} Dias" if duracion_num else "",
-                "Tipo Documento": b2,
+                "Idioma": str(cells.get("G23", "")).strip(),
                 "SheetId": sheet["sheetId"],
             })
         except Exception:
@@ -1655,6 +1672,16 @@ st.markdown(
     .report-table td {
         color: #1F2937;
         font-weight: 500;
+    }
+
+    .report-table a {
+        color: #1E4FBF !important;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .report-table a:hover {
+        text-decoration: underline;
     }
 
     .portal-footer {
@@ -2473,36 +2500,43 @@ if st.session_state.get("openinformebarcoform"):
             <table class="report-table">
                 <thead>
                     <tr>
-                        
                         <th>Localizador</th>
                         <th>Agencia</th>
                         <th>Estado Pago</th>
+                        <th>Estado de Reserva</th>
                         <th>Total €</th>
                         <th>Depósito</th>
                         <th>PAX</th>
                         <th>Cabinas</th>
                         <th>Itinerario</th>
                         <th>Duración</th>
-                        <th>Tipo</th>
+                        <th>Idioma</th>
                     </tr>
                 </thead>
                 <tbody>
             """
 
             for row in rows:
+                localizador = row.get("Localizador", "")
+                localizador_url = row.get("Localizador URL", "")
+                if localizador_url:
+                    localizador_html = f'<a href="{localizador_url}" target="_blank" rel="noopener noreferrer">{localizador}</a>'
+                else:
+                    localizador_html = localizador
+
                 tablehtml += f"""
                 <tr>
-                   
-                    <td>{row.get('Localizador', '')}</td>
+                    <td>{localizador_html}</td>
                     <td>{row.get('Agencia', '')}</td>
                     <td>{row.get('Estado Pago', '')}</td>
+                    <td>{row.get('Estado de Reserva', '')}</td>
                     <td>{format_eur_es(row.get('Total €', 0))}</td>
                     <td>{format_eur_es(row.get('Cantidad Deposito', 0))}</td>
                     <td>{row.get('PAX', 0)}</td>
                     <td>{row.get('Cabinas', 0)}</td>
                     <td>{row.get('Itinerario', '')}</td>
                     <td>{row.get('Duracion', '')}</td>
-                    <td>{row.get('Tipo Documento', '')}</td>
+                    <td>{row.get('Idioma', '')}</td>
                 </tr>
                 """
 
