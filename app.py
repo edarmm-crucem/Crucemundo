@@ -1972,10 +1972,6 @@ if st.session_state.get("openinformebarcoform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     panelheader("Informe por Barco", "closeinformebarcopanel")
 
-    tipooptions = ["NORMAL", "GROUPS"]
-    currenttipo = st.session_state.get("informetype")
-    if currenttipo not in tipooptions:
-        currenttipo = None
 
 tipooptions = ["NORMAL", "GROUPS"]
 currenttipo = st.session_state.get("informetype")
