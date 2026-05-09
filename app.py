@@ -1968,7 +1968,7 @@ if st.session_state.get("openirconfirmacionform"):
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    if st.session_state.get("openinformebarcoform"):
+if st.session_state.get("openinformebarcoform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     panelheader("Informe por Barco", "closeinformebarcopanel")
 
