@@ -862,7 +862,7 @@ def parselocatorinput(locatorraw):
         "yymmdd": yymmdd,
         "sequence": sequence,
         "yearfull": yearfull,
-        "yearfoldername": f"{yearfull}GROUP" if isgroup else yearfull,
+        "yearfoldername": f"{yearfull}_GROUP" if isgroup else yearfull,
         "filename": f"{filebase}GROUP" if isgroup else filebase,
         "sheetname": f"{core}GROUP" if isgroup else core,
         "rootid": GROUPSROOTID if isgroup else DRIVEROOTID,
@@ -913,7 +913,7 @@ def getyearsbyroot(rootid):
     if rootid == DRIVEROOTID:
         years = [f["name"].strip() for f in folders if re.fullmatch(r"\d{4}", f["name"].strip())]
     else:
-        years = [f["name"].strip() for f in folders if re.fullmatch(r"\d{4}GROUP", f["name"].strip())]
+        years = [f["name"].strip() for f in folders if re.fullmatch(r"\d{4}_GROUP", f["name"].strip())]
     return sorted(years, reverse=True)
 
 
