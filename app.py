@@ -863,8 +863,8 @@ def parselocatorinput(locatorraw):
         "sequence": sequence,
         "yearfull": yearfull,
         "yearfoldername": f"{yearfull}_GROUP" if isgroup else yearfull,
-        "filename": f"{filebase}GROUP" if isgroup else filebase,
-        "sheetname": f"{core}GROUP" if isgroup else core,
+        "filename": f"{filebase}_GROUP" if isgroup else filebase,
+        "sheetname": f"{core}_GROUP" if isgroup else core,
         "rootid": GROUPSROOTID if isgroup else DRIVEROOTID,
     }
 
@@ -931,6 +931,7 @@ def getboatsbyroot(rootid, yearname):
 
 
 @st.cache_data(ttl=300)
+@st.cache_data(ttl=300)
 def getdeparturesbyroot(rootid, yearname, boatname):
     yearfolderid = getyearfolderidbyroot(rootid, yearname)
     if not yearfolderid:
@@ -939,7 +940,7 @@ def getdeparturesbyroot(rootid, yearname, boatname):
     if not boatfolder:
         return []
     files = listfolderitems(boatfolder["id"], foldersonly=False)
-    pattern = re.compile(rf"^{re.escape(boatname)}_?\d{{6}}(GROUP)?$")
+    pattern = re.compile(rf"^{re.escape(boatname)}_\d{{6}}_GROUP$")
     departures = []
     for file in files:
         name = file["name"].strip()
