@@ -996,12 +996,13 @@ def extractinformeporbarco(spreadsheetid, spreadsheetname):
             cells = getsheetcellsbatch(
                 spreadsheetid,
                 sheettitle,
-                ["G10", "G11", "G5", "G57", "P57", "G22", "K22", "N22", "P22", "G20", "K20", "N20", "P20", "G19", "G18"],
+                ["G10", "G11", "G5", "G57", "P57", "Q55", "G22", "K22", "N22", "P22", "G20", "K20", "N20", "P20", "G19", "G18"],
             )
 
             pax = sum(parseintfromtext(cells.get(a1)) for a1 in ["G22", "K22", "N22", "P22"])
             cabinas = sum(int(parsenumericvalue(cells.get(a1))) for a1 in ["G20", "K20", "N20", "P20"])
             deposito = parsenumericvalue(cells.get("P57"))
+            total = parsenumericvalue(cells.get("Q55"))
             duracionnum = int(parsenumericvalue(cells.get("G18")))
 
             rows.append({
@@ -1010,6 +1011,7 @@ def extractinformeporbarco(spreadsheetid, spreadsheetname):
                 "Estado": str(cells.get("G10", "")).strip(),
                 "Estado Pago": str(cells.get("G57", "")).strip(),
                 "Cantidad Deposito": deposito,
+                "Total": total,
                 "PAX": pax,
                 "Cabinas": cabinas,
                 "Itinerario": str(cells.get("G19", "")).strip(),
@@ -2067,6 +2069,7 @@ if st.session_state.get("openinformebarcoform"):
                     ("Spreadsheet", informeresult.get("spreadsheetname")),
                     ("Total PAX", str(informeresult.get("totalpax", 0))),
                     ("Total Hojas", str(len(informeresult.get("rows", [])))),
+                    ("Total €", f"{sum(r.get('Total', 0) for r in informeresult.get('rows', [])):.2f}"),
                 ],
             )
 
@@ -2082,6 +2085,7 @@ if st.session_state.get("openinformebarcoform"):
                         <th>Estado</th>
                         <th>Estado Pago</th>
                         <th>Depósito</th>
+                        <th>Total</th>
                         <th>PAX</th>
                         <th>Cabinas</th>
                         <th>Itinerario</th>
@@ -2102,6 +2106,7 @@ if st.session_state.get("openinformebarcoform"):
                         <td>{estadohtml}</td>
                         <td>{estadopagohtml}</td>
                         <td>{row.get("Cantidad Deposito", 0):.2f}</td>
+                        <td>{row.get("Total", 0):.2f}</td>
                         <td>{row.get("PAX", 0)}</td>
                         <td>{row.get("Cabinas", 0)}</td>
                         <td>{row.get("Itinerario", "")}</td>
