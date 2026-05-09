@@ -2069,7 +2069,7 @@ if st.session_state.get("openinformebarcoform"):
                     ("Spreadsheet", informeresult.get("spreadsheetname")),
                     ("Total PAX", str(informeresult.get("totalpax", 0))),
                     ("Total Hojas", str(len(informeresult.get("rows", [])))),
-                    ("Total €", f"{sum(r.get('Total', 0) for r in informeresult.get('rows', [])):.2f}"),
+                    ("Total €", f"{sum(r.get('Total', 0) for r in informeresult.get('rows', [])):.2f} €"),
                 ],
             )
 
@@ -2105,8 +2105,8 @@ if st.session_state.get("openinformebarcoform"):
                         <td>{row.get("Agencia", "")}</td>
                         <td>{estadohtml}</td>
                         <td>{estadopagohtml}</td>
-                        <td>{row.get("Cantidad Deposito", 0):.2f}</td>
-                        <td>{row.get("Total", 0):.2f}</td>
+                        <td>{row.get("Cantidad Deposito", 0):.2f} €</td>
+                        <td>{row.get("Total", 0):.2f} €</td>
                         <td>{row.get("PAX", 0)}</td>
                         <td>{row.get("Cabinas", 0)}</td>
                         <td>{row.get("Itinerario", "")}</td>
