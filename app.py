@@ -1973,7 +1973,7 @@ if st.session_state.get("openinformebarcoform"):
     panelheader("Informe por Barco", "closeinformebarcopanel")
 
 
-tipooptions = ["NORMAL", "GROUPS"]
+    tipooptions = ["NORMAL", "GROUPS"]
 currenttipo = st.session_state.get("informetype")
 if currenttipo not in tipooptions:
     currenttipo = None
