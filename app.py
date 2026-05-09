@@ -1977,20 +1977,27 @@ if st.session_state.get("openinformebarcoform"):
     if currenttipo not in tipooptions:
         currenttipo = None
 
-    informetype = st.selectbox(
-        "TIPO",
-        options=tipooptions,
-        index=tipooptions.index(currenttipo) if currenttipo in tipooptions else None,
-        placeholder="Selecciona tipo",
-        key="informetypewidget",
-        on_change=oninformetypechange,
-    )
-    if informetype != st.session_state.get("informetype"):
-        st.session_state.informetype = informetype
+tipooptions = ["NORMAL", "GROUPS"]
+currenttipo = st.session_state.get("informetype")
+if currenttipo not in tipooptions:
+    currenttipo = None
 
-    rootid = GROUPSROOTID if informetype == "GROUP" else DRIVEROOTID
+informetype = st.selectbox(
+    "TIPO",
+    options=tipooptions,
+    index=tipooptions.index(currenttipo) if currenttipo in tipooptions else None,
+    placeholder="Selecciona tipo",
+    key="informetypewidget",
+    on_change=oninformetypechange,
+)
 
-    years = getyearsbyroot(rootid) if informetype else []
+if informetype != st.session_state.get("informetype"):
+    st.session_state.informetype = informetype
+
+selected_type = st.session_state.get("informetype") or informetype
+rootid = GROUPSROOTID if selected_type == "GROUPS" else DRIVEROOTID
+
+years = getyearsbyroot(rootid) if selected_type else []
     currentyear = st.session_state.get("informeyear")
     if currentyear not in years:
         currentyear = None
