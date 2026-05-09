@@ -1978,12 +1978,7 @@ currenttipo = st.session_state.get("informetype")
 if currenttipo not in tipooptions:
     currenttipo = None
 
-    tipooptions = ["NORMAL", "GROUPS"]
-currenttipo = st.session_state.get("informetype")
-if currenttipo not in tipooptions:
-    currenttipo = None
-
-informetype = st.selectbox(
+st.selectbox(
     "TIPO",
     options=tipooptions,
     index=tipooptions.index(currenttipo) if currenttipo in tipooptions else None,
@@ -1996,54 +1991,54 @@ selected_type = st.session_state.get("informetype")
 rootid = GROUPSROOTID if selected_type == "GROUPS" else DRIVEROOTID
 years = getyearsbyroot(rootid) if selected_type else []
 
+currentyear = st.session_state.get("informeyear")
+if currentyear not in years:
+    currentyear = None
 
-   currentyear = st.session_state.get("informeyear")
-    if currentyear not in years:
-        currentyear = None
-    informeyear = st.selectbox(
-        "AÑO",
-        options=years,
-        index=years.index(currentyear) if currentyear in years else None,
-        placeholder="Selecciona año",
-        key="informeyearwidget",
-        on_change=oninformeyearchange,
-        disabled=not informetype,
-    )
-    if informeyear != st.session_state.get("informeyear"):
-        st.session_state.informeyear = informeyear
+st.selectbox(
+    "AÑO",
+    options=years,
+    index=years.index(currentyear) if currentyear in years else None,
+    placeholder="Selecciona año",
+    key="informeyearwidget",
+    on_change=oninformeyearchange,
+    disabled=not selected_type,
+)
 
-    boats = getboatsbyroot(rootid, informeyear) if informetype and informeyear else []
-    currentboat = st.session_state.get("informeboat")
-    if currentboat not in boats:
-        currentboat = None
+selected_year = st.session_state.get("informeyear")
+boats = getboatsbyroot(rootid, selected_year) if selected_type and selected_year else []
 
-    informeboat = st.selectbox(
-        "BARCO",
-        options=boats,
-        index=boats.index(currentboat) if currentboat in boats else None,
-        placeholder="Selecciona barco",
-        key="informeboatwidget",
-        on_change=oninformeboatchange,
-        disabled=not informeyear,
-    )
-    if informeboat != st.session_state.get("informeboat"):
-        st.session_state.informeboat = informeboat
+currentboat = st.session_state.get("informeboat")
+if currentboat not in boats:
+    currentboat = None
 
-    departures = getdeparturesbyroot(rootid, informeyear, informeboat) if informetype and informeyear and informeboat else []
-    departurenames = [d["nombre"] for d in departures]
-    currentdep = st.session_state.get("informesalida")
-    if currentdep not in departurenames:
-        currentdep = None
+st.selectbox(
+    "BARCO",
+    options=boats,
+    index=boats.index(currentboat) if currentboat in boats else None,
+    placeholder="Selecciona barco",
+    key="informeboatwidget",
+    on_change=oninformeboatchange,
+    disabled=not selected_year,
+)
 
-    informesalida = st.selectbox(
-        "SALIDA",
-        options=departurenames,
-        index=departurenames.index(currentdep) if currentdep in departurenames else None,
-        placeholder="Selecciona salida",
-        key="informesalidawidget",
-        on_change=oninformesalidachange,
-        disabled=not informeboat,
-    )
+selected_boat = st.session_state.get("informeboat")
+departures = getdeparturesbyroot(rootid, selected_year, selected_boat) if selected_type and selected_year and selected_boat else []
+departurenames = [d["nombre"] for d in departures]
+
+currentdep = st.session_state.get("informesalida")
+if currentdep not in departurenames:
+    currentdep = None
+
+st.selectbox(
+    "SALIDA",
+    options=departurenames,
+    index=departurenames.index(currentdep) if currentdep in departurenames else None,
+    placeholder="Selecciona salida",
+    key="informesalidawidget",
+    on_change=oninformesalidachange,
+    disabled=not selected_boat,
+)
     if informesalida != st.session_state.get("informesalida"):
         st.session_state.informesalida = informesalida
 
