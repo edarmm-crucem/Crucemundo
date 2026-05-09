@@ -1988,7 +1988,7 @@ if st.session_state.get("openinformebarcoform"):
     if informetype != st.session_state.get("informetype"):
         st.session_state.informetype = informetype
 
-    rootid = GROUPSROOTID if informetype == "GROUPS" else DRIVEROOTID
+    rootid = GROUPSROOTID if informetype == "GROUP" else DRIVEROOTID
 
     years = getyearsbyroot(rootid) if informetype else []
     currentyear = st.session_state.get("informeyear")
