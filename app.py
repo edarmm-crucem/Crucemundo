@@ -966,6 +966,7 @@ def getsheettitleb2(spreadsheetid, sheettitle):
     return getsinglecell(spreadsheetid, sheettitle, "B2")
 
 
+# CHANGE B: added "G10" to the batch cell list to get Estado
 def extractinformeporbarco(spreadsheetid, spreadsheetname):
     sheets = getsheettitleswithids(spreadsheetid)
     rows = []
@@ -980,7 +981,7 @@ def extractinformeporbarco(spreadsheetid, spreadsheetname):
             cells = getsheetcellsbatch(
                 spreadsheetid,
                 sheettitle,
-                ["G11", "G5", "G57", "Q55", "P57", "G22", "K22", "N22", "P22", "G20", "K20", "N20", "P20", "G19", "G18"],
+                ["G10", "G11", "G5", "G57", "Q55", "P57", "G22", "K22", "N22", "P22", "G20", "K20", "N20", "P20", "G19", "G18"],
             )
 
             pax = sum(parseintfromtext(cells.get(a1)) for a1 in ["G22", "K22", "N22", "P22"])
@@ -991,7 +992,10 @@ def extractinformeporbarco(spreadsheetid, spreadsheetname):
 
             rows.append({
                 "Hoja": sheettitle,
+                "SheetId": sheet["sheetId"],
+                "SpreadsheetId": spreadsheetid,
                 "Localizador": str(cells.get("G11", "")).strip(),
+                "Estado": str(cells.get("G10", "")).strip(),
                 "Agencia": str(cells.get("G5", "")).strip(),
                 "Estado Pago": str(cells.get("G57", "")).strip(),
                 "Total": totaleur,
@@ -1000,8 +1004,6 @@ def extractinformeporbarco(spreadsheetid, spreadsheetname):
                 "Cabinas": cabinas,
                 "Itinerario": str(cells.get("G19", "")).strip(),
                 "Duracion": f"{duracionnum} Dias" if duracionnum else "",
-                "Tipo Documento": b2,
-                "SheetId": sheet["sheetId"],
             })
         except Exception:
             continue
@@ -1157,8 +1159,8 @@ st.markdown(
     }
 
     .action-box {
-        width: 100%; min-height: 20px; border-radius: 22px; padding: 1rem; margin-bottom: 0.85rem;
-        display: flex; flex-direction: column; justify-content: space-between; gap: 0.9rem;
+        width: 100%; min-height: 20px; border-radius: 22px; padding: 0.75rem; margin-bottom: 0.85rem;
+        display: flex; flex-direction: column; justify-content: space-between; gap: 0.6rem;
         border: 1px solid transparent; box-shadow: 0 6px 18px rgba(15,23,42,0.05);
     }
 
@@ -1177,24 +1179,19 @@ st.markdown(
 
     .action-top { display: flex; align-items: flex-start; gap: 0.75rem; }
     .action-icon {
-        width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
-        font-size: 1rem; flex-shrink: 0; background: rgba(255,255,255,0.42); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
+        width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+        font-size: 0.9rem; flex-shrink: 0; background: rgba(255,255,255,0.42); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
     }
-    .action-text { display: flex; flex-direction: column; gap: 0.12rem; min-width: 0; }
-    .action-title, .action-title-en {
+    .action-text { display: flex; flex-direction: column; gap: 0.06rem; min-width: 0; }
+    .action-title {
         font-family: "DM Sans", sans-serif !important; line-height: 1.1; white-space: nowrap;
         overflow: hidden; text-overflow: ellipsis;
-    }
-    .action-title { font-size: 0.96rem; font-weight: 800; color: #1F2937; }
-    .action-title-en { margin-top: 0.08rem; color: #41506B; font-size: 0.83rem; font-weight: 700; }
-
-    .action-desc, .action-desc-en {
-        font-size: 0.73rem; color: #64748B; line-height: 1.28;
+        font-size: 0.92rem; font-weight: 800; color: #1F2937;
     }
 
     .action-button-wrap {
         display: flex !important; justify-content: flex-start !important; align-items: center !important;
-        width: 100% !important; margin-top: 0.1rem;
+        width: 100% !important; margin-top: 0.05rem;
     }
 
     .done-link {
@@ -1250,6 +1247,23 @@ st.markdown(
     }
     .report-table th { background: #F5F8FC; color: #334155; font-weight: 800; white-space: nowrap; }
     .report-table td { color: #1F2937; font-weight: 500; }
+
+    .estado-confirmado {
+        display: inline-block; padding: 0.18rem 0.55rem; border-radius: 999px;
+        background: #D1FAE5; color: #065F46; font-weight: 700; font-size: 0.72rem; white-space: nowrap;
+    }
+    .estado-noconfirmado {
+        display: inline-block; padding: 0.18rem 0.55rem; border-radius: 999px;
+        background: #FEF3C7; color: #92400E; font-weight: 700; font-size: 0.72rem; white-space: nowrap;
+    }
+    .estado-cancelado {
+        display: inline-block; padding: 0.18rem 0.55rem; border-radius: 999px;
+        background: #FEE2E2; color: #991B1B; font-weight: 700; font-size: 0.72rem; white-space: nowrap;
+    }
+    .estado-otro {
+        display: inline-block; padding: 0.18rem 0.55rem; border-radius: 999px;
+        background: #F1F5F9; color: #475569; font-weight: 700; font-size: 0.72rem; white-space: nowrap;
+    }
 
     .portal-footer {
         margin-top: 1rem; padding: 0.5rem 0 0 0; display: flex; justify-content: space-between;
@@ -1378,9 +1392,6 @@ def renderactioncard(col, config):
                     <div class="action-icon">{config["icon"]}</div>
                     <div class="action-text">
                         <div class="action-title">{config["titlees"]}</div>
-                        <div class="action-title-en">{config["titleen"]}</div>
-                        <div class="action-desc">{config.get("desces","")}</div>
-                        <div class="action-desc-en">{config.get("descen","")}</div>
                     </div>
                 </div>
                 <div class="action-button-wrap">
@@ -1405,14 +1416,13 @@ def renderactioncard(col, config):
         st.markdown("</div></div>", unsafe_allow_html=True)
 
 
-cards = [
+# CHANGE A: Row 1 = Nueva Confirmación, Nueva Confirmación GRUPOS, Ir a Salida, Crear Crucero, Buscar Agencia, Nueva Agencia
+# Excursiones removed from row 1; Buscar Agencia moved up
+cards_row1 = [
     {
         "cardclass": "card-es",
         "icon": "📘",
         "titlees": "Nueva Confirmación",
-        "titleen": "New Confirmation",
-        "desces": f"Crear sesión MASTER de trabajo para {DISPLAYUSER}",
-        "descen": f"Create MASTER working session for {DISPLAYUSER}",
         "buttonlabel": "Crear Sesión",
         "key": "btncreares",
         "action": lambda: iniciarproceso("es", TEMPLATEIDES, "MASTER", "Estado del Proceso / Process Status / Crear Sesión MASTERCONFIRMATION"),
@@ -1421,9 +1431,6 @@ cards = [
         "cardclass": "card-grupos",
         "icon": "👥",
         "titlees": "Nueva Confirmación GRUPOS",
-        "titleen": "New GROUPS Confirmation",
-        "desces": f"Crear sesión MASTER GRUPOS de trabajo para {DISPLAYUSER}",
-        "descen": f"Create MASTER GROUPS working session for {DISPLAYUSER}",
         "buttonlabel": "Crear Sesión GRUPOS",
         "key": "btncreargrupos",
         "action": lambda: iniciarproceso("grupos", TEMPLATEIDGRUPOS, "MASTER GRUPOS", "Estado del Proceso / Process Status / Crear Sesión MASTERGRUPOS"),
@@ -1432,9 +1439,6 @@ cards = [
         "cardclass": "card-salida",
         "icon": "🧭",
         "titlees": "Ir a Salida",
-        "titleen": "Go to Departure",
-        "desces": "Buscar una salida existente por año, barco y código de salida",
-        "descen": "Find an existing departure by year, ship and departure code",
         "buttonlabel": "Buscar Salida",
         "key": "btnirsalida",
         "action": lambda: openpanel("salida"),
@@ -1443,53 +1447,42 @@ cards = [
         "cardclass": "card-crucero",
         "icon": "🚢",
         "titlees": "Crear Crucero",
-        "titleen": "Create Cruise",
-        "desces": "Crear salida nueva desde plantilla y guardarla en año/barco",
-        "descen": "Create a new departure from template and save it in year/ship",
         "buttonlabel": "Nuevo Crucero",
         "key": "btncrearcruceroopen",
         "action": lambda: openpanel("crucero"),
     },
     {
-        "cardclass": "card-excursiones",
-        "icon": "🗺️",
-        "titlees": "Excursiones",
-        "titleen": "Excursions",
-        "desces": "Abrir la hoja de Excursiones",
-        "descen": "Open the Excursions sheet",
-        "buttonlabel": "Abrir Excursiones",
-        "key": "btnexcursioneslink",
-        "link": excursionesurl,
-    },
-    {
-        "cardclass": "card-nueva-agencia",
-        "icon": "🏢",
-        "titlees": "Nueva Agencia",
-        "titleen": "New Agency",
-        "desces": "Crear una agencia y guardarla en la hoja Datos",
-        "descen": "Create an agency and save it in Datos sheet",
-        "buttonlabel": "Nueva Agencia",
-        "key": "btnnuevaagencia",
-        "action": lambda: openpanel("nuevaagencia"),
-    },
-    {
         "cardclass": "card-buscar-agencia",
         "icon": "🔎",
         "titlees": "Buscar Agencia",
-        "titleen": "Find Agency",
-        "desces": "Buscar por cualquier dato y mostrar la ficha completa",
-        "descen": "Search by any known value and show the full record",
         "buttonlabel": "Buscar Agencia",
         "key": "btnbuscaragencia",
         "action": lambda: openpanel("buscaragencia"),
     },
     {
+        "cardclass": "card-nueva-agencia",
+        "icon": "🏢",
+        "titlees": "Nueva Agencia",
+        "buttonlabel": "Nueva Agencia",
+        "key": "btnnuevaagencia",
+        "action": lambda: openpanel("nuevaagencia"),
+    },
+]
+
+# Row 2: Excursiones, CVC Fit, CVC Agencias, Ir a Confirmación, Informe por Barco, NextCard
+cards_row2 = [
+    {
+        "cardclass": "card-excursiones",
+        "icon": "🗺️",
+        "titlees": "Excursiones",
+        "buttonlabel": "Abrir Excursiones",
+        "key": "btnexcursioneslink",
+        "link": excursionesurl,
+    },
+    {
         "cardclass": "card-cvcfit",
         "icon": "📄",
         "titlees": "CVC Fit",
-        "titleen": "CVC Fit",
-        "desces": "Buscar localizador en Booking ES!G11 y descargar PDF de la hoja CVC Fit",
-        "descen": "Find locator in Booking ES!G11 and download the CVC Fit sheet as PDF",
         "buttonlabel": "Abrir CVC Fit",
         "key": "btncvcfitopen",
         "action": lambda: openpanel("cvcfit"),
@@ -1498,9 +1491,6 @@ cards = [
         "cardclass": "card-cvcagencias",
         "icon": "📑",
         "titlees": "CVC Agencias",
-        "titleen": "CVC Agencies",
-        "desces": "Buscar localizador en Booking ES!G11 y descargar PDF de la hoja CVC Agencias",
-        "descen": "Find locator in Booking ES!G11 and download the CVC Agencias sheet as PDF",
         "buttonlabel": "Abrir CVC Agencias",
         "key": "btncvcagenciasopen",
         "action": lambda: openpanel("cvcagencias"),
@@ -1509,9 +1499,6 @@ cards = [
         "cardclass": "card-irconfirmacion",
         "icon": "📍",
         "titlees": "Ir a Confirmación",
-        "titleen": "Go to Confirmation",
-        "desces": "Buscar un localizador y abrir su pestaña exacta",
-        "descen": "Find a locator and open its exact tab",
         "buttonlabel": "Buscar Localizador",
         "key": "btnirconfirmacionopen",
         "action": lambda: openpanel("irconfirmacion"),
@@ -1520,9 +1507,6 @@ cards = [
         "cardclass": "card-informebarco",
         "icon": "📊",
         "titlees": "Informe por Barco",
-        "titleen": "Report by Ship",
-        "desces": "Generar resumen por salida y barco",
-        "descen": "Generate summary by departure and ship",
         "buttonlabel": "Abrir Informe",
         "key": "btninformebarcoopen",
         "action": lambda: openpanel("informebarco"),
@@ -1531,9 +1515,6 @@ cards = [
         "cardclass": "card-nextcard",
         "icon": "➕",
         "titlees": "NextCard",
-        "titleen": "NextCard",
-        "desces": "Tarjeta reservada para un uso futuro",
-        "descen": "Reserved card for future use",
         "buttonlabel": "Próximamente",
         "key": "btnnextcardfuture",
         "disabled": True,
@@ -1541,11 +1522,11 @@ cards = [
 ]
 
 row1 = st.columns([1.45, 1.45, 1.05, 1.05, 1.10, 1.10], gap="medium")
-for col, card in zip(row1, cards[:6]):
+for col, card in zip(row1, cards_row1):
     renderactioncard(col, card)
 
 row2 = st.columns([0.9, 0.9, 0.9, 0.9, 0.9, 0.9], gap="medium")
-for col, card in zip(row2, cards[6:12]):
+for col, card in zip(row2, cards_row2):
     renderactioncard(col, card)
 
 if st.session_state.get("confirmstate") == "step1":
@@ -2045,40 +2026,59 @@ if st.session_state.get("openinformebarcoform"):
 
         rows = informeresult.get("rows", [])
         if rows:
+            # Helper: render Estado badge with color
+            def render_estado(estado_raw):
+                v = str(estado_raw or "").strip().upper()
+                if "CONFIRMADO" in v and "NO" not in v and "CANCEL" not in v:
+                    return f'<span class="estado-confirmado">{estado_raw}</span>'
+                elif "NO CONFIRMADO" in v or "NO_CONFIRMADO" in v:
+                    return f'<span class="estado-noconfirmado">{estado_raw}</span>'
+                elif "CANCELADO" in v or "CANCEL" in v:
+                    return f'<span class="estado-cancelado">{estado_raw}</span>'
+                else:
+                    return f'<span class="estado-otro">{estado_raw if estado_raw else "-"}</span>'
+
+            spreadsheet_id = informeresult.get("spreadsheetid", "")
+
             tablehtml = """
             <div class="report-table-wrap">
                 <table class="report-table">
                     <thead>
                         <tr>
-                            <th>Hoja</th>
                             <th>Localizador</th>
                             <th>Agencia</th>
+                            <th>Estado</th>
                             <th>Estado Pago</th>
-                            <th>Total</th>
                             <th>Depósito</th>
                             <th>PAX</th>
                             <th>Cabinas</th>
                             <th>Itinerario</th>
                             <th>Duración</th>
-                            <th>Tipo</th>
                         </tr>
                     </thead>
                     <tbody>
             """
             for row in rows:
+                localizador = row.get('Localizador', '')
+                sheet_id = row.get('SheetId', '')
+                sp_id = row.get('SpreadsheetId', spreadsheet_id)
+                if localizador and sheet_id != '':
+                    tab_url = f"https://docs.google.com/spreadsheets/d/{sp_id}/edit#gid={sheet_id}"
+                    localizador_html = f'<a href="{tab_url}" target="_blank" rel="noopener noreferrer" style="color:#2563EB;font-weight:700;text-decoration:none;">{localizador}</a>'
+                else:
+                    localizador_html = localizador or "-"
+
                 tablehtml += f"""
                     <tr>
-                        <td>{row.get('Hoja','')}</td>
-                        <td>{row.get('Localizador','')}</td>
-                        <td>{row.get('Agencia','')}</td>
-                        <td>{row.get('Estado Pago','')}</td>
-                        <td>{row.get('Total',0):,.2f}</td>
+                        <td>{localizador_html}</td>
+                        <td>{row.get('Agencia','') or '-'}</td>
+                        <td>{render_estado(row.get('Estado',''))}</td>
+                        <td>{row.get('Estado Pago','') or '-'}</td>
                         <td>{row.get('Cantidad Deposito',0):,.2f}</td>
                         <td>{row.get('PAX',0)}</td>
                         <td>{row.get('Cabinas',0)}</td>
-                        <td>{row.get('Itinerario','')}</td>
-                        <td>{row.get('Duracion','')}</td>
-                        <td>{row.get('Tipo Documento','')}</td>
+                        <td>{row.get('Itinerario','') or '-'}</td>
+                        <td>{row.get('Duracion','') or '-'}</td>
                     </tr>
                 """
             tablehtml += "</tbody></table></div>"
