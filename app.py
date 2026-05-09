@@ -838,12 +838,12 @@ def parselocatorinput(locatorraw):
     if not locator:
         raise Exception("Debes introducir un localizador.")
 
-    isgroup = locator.endswith("GROUP")
-    core = locator[:-5] if isgroup else locator
+    isgroup = locator.endswith("_GROUP")
+    core = locator[:-6] if isgroup else locator  # 6 = len("_GROUP")
 
     m = re.fullmatch(r"([A-Z]{2,3})(\d{6})-(\d{3})", core)
     if not m:
-        raise Exception("Formato de localizador no válido. Debe ser CODIGOBARCOAAMMDD-999 o terminar en GROUP.")
+        raise Exception("Formato de localizador no válido. Debe ser CODIGOBARCOAAMMDD-999 o terminar en _GROUP.")
 
     shipcode, yymmdd, sequence = m.groups()
     boatname = SHIPCODETONAME.get(shipcode)
@@ -867,7 +867,6 @@ def parselocatorinput(locatorraw):
         "sheetname": f"{core}_GROUP" if isgroup else core,
         "rootid": GROUPSROOTID if isgroup else DRIVEROOTID,
     }
-
 
 def buildsheettaburl(spreadsheetid, sheetgid):
     return f"https://docs.google.com/spreadsheets/d/{spreadsheetid}/edit#gid={sheetgid}"
