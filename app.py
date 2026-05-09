@@ -1968,145 +1968,153 @@ if st.session_state.get("openirconfirmacionform"):
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-if st.session_state.get("openinformebarcoform"):
+    if st.session_state.get("openinformebarcoform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     panelheader("Informe por Barco", "closeinformebarcopanel")
 
+    try:
+        tipooptions = ["NORMAL", "GROUPS"]
+        currenttipo = st.session_state.get("informetype")
+        if currenttipo not in tipooptions:
+            currenttipo = None
 
-    tipooptions = ["NORMAL", "GROUPS"]
-currenttipo = st.session_state.get("informetype")
-if currenttipo not in tipooptions:
-    currenttipo = None
-
-st.selectbox(
-    "TIPO",
-    options=tipooptions,
-    index=tipooptions.index(currenttipo) if currenttipo in tipooptions else None,
-    placeholder="Selecciona tipo",
-    key="informetypewidget",
-    on_change=oninformetypechange,
-)
-
-selected_type = st.session_state.get("informetype")
-rootid = GROUPSROOTID if selected_type == "GROUPS" else DRIVEROOTID
-years = getyearsbyroot(rootid) if selected_type else []
-
-currentyear = st.session_state.get("informeyear")
-if currentyear not in years:
-    currentyear = None
-
-st.selectbox(
-    "AÑO",
-    options=years,
-    index=years.index(currentyear) if currentyear in years else None,
-    placeholder="Selecciona año",
-    key="informeyearwidget",
-    on_change=oninformeyearchange,
-    disabled=not selected_type,
-)
-
-selected_year = st.session_state.get("informeyear")
-boats = getboatsbyroot(rootid, selected_year) if selected_type and selected_year else []
-
-currentboat = st.session_state.get("informeboat")
-if currentboat not in boats:
-    currentboat = None
-
-st.selectbox(
-    "BARCO",
-    options=boats,
-    index=boats.index(currentboat) if currentboat in boats else None,
-    placeholder="Selecciona barco",
-    key="informeboatwidget",
-    on_change=oninformeboatchange,
-    disabled=not selected_year,
-)
-
-selected_boat = st.session_state.get("informeboat")
-departures = getdeparturesbyroot(rootid, selected_year, selected_boat) if selected_type and selected_year and selected_boat else []
-departurenames = [d["nombre"] for d in departures]
-
-currentdep = st.session_state.get("informesalida")
-if currentdep not in departurenames:
-    currentdep = None
-
-st.selectbox(
-    "SALIDA",
-    options=departurenames,
-    index=departurenames.index(currentdep) if currentdep in departurenames else None,
-    placeholder="Selecciona salida",
-    key="informesalidawidget",
-    on_change=oninformesalidachange,
-    disabled=not selected_boat,
-)
-    if informesalida != st.session_state.get("informesalida"):
-        st.session_state.informesalida = informesalida
-
-    if st.button("Generar informe", key="btngenerarinforme", disabled=not informesalida):
-        try:
-            selected = next((d for d in departures if d["nombre"] == informesalida), None)
-            if not selected:
-                st.error("No se ha encontrado la salida seleccionada.")
-            else:
-                st.session_state.informeresult = extractinformeporbarco(selected["id"], selected["nombre"])
-        except Exception as exc:
-            st.exception(exc)
-
-    informeresult = st.session_state.get("informeresult")
-    if informeresult:
-        renderkeyvaluegrid(
-            "informebarco",
-            [
-                ("Spreadsheet", informeresult.get("spreadsheetname")),
-                ("Total PAX", str(informeresult.get("totalpax", 0))),
-                ("Total Hojas", str(len(informeresult.get("rows", [])))),
-            ],
+        st.selectbox(
+            "TIPO",
+            options=tipooptions,
+            index=tipooptions.index(currenttipo) if currenttipo in tipooptions else None,
+            placeholder="Selecciona tipo",
+            key="informetypewidget",
+            on_change=oninformetypechange,
         )
 
-        rows = informeresult.get("rows", [])
-        if rows:
-            tablehtml = """
-            <div class="report-table-wrap">
-                <table class="report-table">
+        selected_type = st.session_state.get("informetype")
+        rootid = GROUPSROOTID if selected_type == "GROUPS" else DRIVEROOTID
+        years = getyearsbyroot(rootid) if selected_type else []
+
+        currentyear = st.session_state.get("informeyear")
+        if currentyear not in years:
+            currentyear = None
+
+        st.selectbox(
+            "AÑO",
+            options=years,
+            index=years.index(currentyear) if currentyear in years else None,
+            placeholder="Selecciona año",
+            key="informeyearwidget",
+            on_change=oninformeyearchange,
+            disabled=not selected_type,
+        )
+
+        selected_year = st.session_state.get("informeyear")
+        boats = getboatsbyroot(rootid, selected_year) if selected_type and selected_year else []
+
+        currentboat = st.session_state.get("informeboat")
+        if currentboat not in boats:
+            currentboat = None
+
+        st.selectbox(
+            "BARCO",
+            options=boats,
+            index=boats.index(currentboat) if currentboat in boats else None,
+            placeholder="Selecciona barco",
+            key="informeboatwidget",
+            on_change=oninformeboatchange,
+            disabled=not selected_year,
+        )
+
+        selected_boat = st.session_state.get("informeboat")
+        departures = getdeparturesbyroot(rootid, selected_year, selected_boat) if selected_type and selected_year and selected_boat else []
+        departurenames = [d["nombre"] for d in departures]
+
+        currentdep = st.session_state.get("informesalida")
+        if currentdep not in departurenames:
+            currentdep = None
+
+        st.selectbox(
+            "SALIDA",
+            options=departurenames,
+            index=departurenames.index(currentdep) if currentdep in departurenames else None,
+            placeholder="Selecciona salida",
+            key="informesalidawidget",
+            on_change=oninformesalidachange,
+            disabled=not selected_boat,
+        )
+
+        selected_departure = st.session_state.get("informesalida")
+
+        if st.button("Generar informe", key="btngenerarinforme", disabled=not selected_departure):
+            try:
+                selected = next((d for d in departures if d["nombre"] == selected_departure), None)
+                if not selected:
+                    st.error("No se ha encontrado la salida seleccionada.")
+                else:
+                    st.session_state.informeresult = extractinformeporbarco(
+                        selected["id"],
+                        selected["nombre"],
+                    )
+            except Exception as exc:
+                st.exception(exc)
+
+        informeresult = st.session_state.get("informeresult")
+        if informeresult:
+            renderkeyvaluegrid(
+                "informebarco",
+                [
+                    ("Spreadsheet", informeresult.get("spreadsheetname")),
+                    ("Total PAX", str(informeresult.get("totalpax", 0))),
+                    ("Total Hojas", str(len(informeresult.get("rows", [])))),
+                ],
+            )
+
+            rows = informeresult.get("rows", [])
+            if rows:
+                tablehtml = """
+                <div class="report-table-wrap">
+                  <table class="report-table">
                     <thead>
-                        <tr>
-                            <th>Localizador</th>
-                            <th>Agencia</th>
-                            <th>Estado</th>
-                            <th>Estado Pago</th>
-                            <th>Depósito</th>
-                            <th>PAX</th>
-                            <th>Cabinas</th>
-                            <th>Itinerario</th>
-                            <th>Duración</th>
-                        </tr>
+                      <tr>
+                        <th>Localizador</th>
+                        <th>Agencia</th>
+                        <th>Estado</th>
+                        <th>Estado Pago</th>
+                        <th>Depósito</th>
+                        <th>PAX</th>
+                        <th>Cabinas</th>
+                        <th>Itinerario</th>
+                        <th>Duración</th>
+                      </tr>
                     </thead>
                     <tbody>
-            """
-            for row in rows:
-                locator = row.get("Localizador", "")
-                sheeturl = row.get("SheetUrl", "#")
-                estadohtml = formatestadobadge(row.get("Estado", ""))
-                estadopagohtml = formatestadopagobadge(row.get("Estado Pago", ""))
-
-                tablehtml += f"""
-                    <tr>
+                """
+                for row in rows:
+                    locator = row.get("Localizador", "")
+                    sheeturl = row.get("SheetUrl", "#")
+                    estadohtml = formatestadobadge(row.get("Estado"))
+                    estadopagohtml = formatestadopagobadge(row.get("Estado Pago"))
+                    tablehtml += f"""
+                      <tr>
                         <td><a class="report-link" href="{sheeturl}" target="_blank" rel="noopener noreferrer">{locator}</a></td>
                         <td>{row.get("Agencia", "")}</td>
                         <td>{estadohtml}</td>
                         <td>{estadopagohtml}</td>
-                        <td>{row.get("Cantidad Deposito", 0):,.2f}</td>
+                        <td>{row.get("Cantidad Deposito", 0):.2f}</td>
                         <td>{row.get("PAX", 0)}</td>
                         <td>{row.get("Cabinas", 0)}</td>
                         <td>{row.get("Itinerario", "")}</td>
                         <td>{row.get("Duracion", "")}</td>
-                    </tr>
+                      </tr>
+                    """
+                tablehtml += """
+                    </tbody>
+                  </table>
+                </div>
                 """
-            tablehtml += "</tbody></table></div>"
-            st.html(tablehtml)
+                st.html(tablehtml)
+
+    except Exception as exc:
+        st.exception(exc)
 
     st.markdown("</div>", unsafe_allow_html=True)
-
 footercol1, footercol2 = st.columns([3, 1])
 with footercol1:
     st.markdown('<div class="portal-footer"><div class="footer-text">Crucemundo Hub</div></div>', unsafe_allow_html=True)
