@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 
 st.set_page_config(
     page_title="Crucemundo Hub",
-    page_icon=favicon1.png,
+    page_icon="favicon1.png",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
