@@ -1933,7 +1933,7 @@ if st.session_state.get("openirconfirmacionform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     panelheader("Ir a Confirmación", "closeirconfirmacionpanel")
 
-    locator = st.text_input("Localizador", key="irconfirmacionlocatorwidget", placeholder="Ej: ALB250601-001 o ALB250601-001GROUP")
+    locator = st.text_input("Localizador", key="irconfirmacionlocatorwidget", placeholder="Ej: ALB250601-001 o ALB250601-001_GROUP")
     if st.button("Buscar confirmación", key="btnirconfirmacionaction", disabled=not locator):
         try:
             result = findlocatorconfirmation(locator)
