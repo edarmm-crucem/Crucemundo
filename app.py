@@ -284,12 +284,19 @@ def getsessiondurationseconds():
 
 def ensure_sheet_headers():
     sheetsservice = getsheetsservice()
-    spreadsheet = sheetsservice.spreadsheets().get(spreadsheetId=BOATREGISTRYSHEETID).execute()
-    sheets = spreadsheet.get("sheets", [])
-    if not sheets:
-        raise Exception("El spreadsheet de registro no contiene hojas.")
+    spreadsheet = sheetsservice.spreadsheets().get(
+        spreadsheetId=BOATREGISTRYSHEETID
+    ).execute()
 
-    first_title = sheets[0]["properties"]["title"]
+    sheets = spreadsheet.get("sheets", [])
+    if len(sheets) < 2:
+        raise Exception(
+            "El spreadsheet debe tener al menos 2 hojas: índice 0 para log y índice 1 para tickets."
+        )
+
+    log_title = sheets[0]["properties"]["title"]
+    ticket_title = sheets[1]["properties"]["title"]
+
     audit_headers = [[
         "timestamp",
         "useremail",
@@ -303,7 +310,8 @@ def ensure_sheet_headers():
         "requested_by",
         "request_date",
     ]]
-    boat_headers = [[
+
+    ticket_headers = [[
         "timestamp",
         "useremail",
         "displayname",
@@ -317,31 +325,30 @@ def ensure_sheet_headers():
         "request_date",
     ]]
 
-    first_range = f"'{first_title}'!A1:K1"
-    boat_range = f"'{BOATREGISTRYSHEETNAME}'!A1:K1"
-
-    first_values = sheetsservice.spreadsheets().values().get(
+    log_values = sheetsservice.spreadsheets().values().get(
         spreadsheetId=BOATREGISTRYSHEETID,
-        range=first_range,
+        range=f"{log_title}!A1:K1",
     ).execute().get("values", [])
-    if not first_values or not any(str(v).strip() for v in first_values[0]):
+
+    if not log_values or not any(str(v).strip() for v in log_values[0]):
         sheetsservice.spreadsheets().values().update(
             spreadsheetId=BOATREGISTRYSHEETID,
-            range=first_range,
+            range=f"{log_title}!A1:K1",
             valueInputOption="USER_ENTERED",
             body={"values": audit_headers},
         ).execute()
 
-    boat_values = sheetsservice.spreadsheets().values().get(
+    ticket_values = sheetsservice.spreadsheets().values().get(
         spreadsheetId=BOATREGISTRYSHEETID,
-        range=boat_range,
+        range=f"{ticket_title}!A1:K1",
     ).execute().get("values", [])
-    if not boat_values or not any(str(v).strip() for v in boat_values[0]):
+
+    if not ticket_values or not any(str(v).strip() for v in ticket_values[0]):
         sheetsservice.spreadsheets().values().update(
             spreadsheetId=BOATREGISTRYSHEETID,
-            range=boat_range,
+            range=f"{ticket_title}!A1:K1",
             valueInputOption="USER_ENTERED",
-            body={"values": boat_headers},
+            body={"values": ticket_headers},
         ).execute()
 
 
@@ -354,8 +361,22 @@ def get_request_identity():
 def appendauditrow(action, detail="", panel="", extra=None):
     ensure_sheet_headers()
     sheetsservice = getsheetsservice()
+
+    spreadsheet = sheetsservice.spreadsheets().get(
+        spreadsheetId=BOATREGISTRYSHEETID
+    ).execute()
+
+    sheets = spreadsheet.get("sheets", [])
+    if len(sheets) < 2:
+        raise Exception(
+            "El spreadsheet debe tener al menos 2 hojas: índice 0 para log y índice 1 para tickets."
+        )
+
+    log_title = sheets[0]["properties"]["title"]
+
     metadata = extra or {}
     requested_by, request_date = get_request_identity()
+
     values = [[
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         st.session_state.get("useremail", ""),
@@ -369,14 +390,14 @@ def appendauditrow(action, detail="", panel="", extra=None):
         requested_by,
         request_date,
     ]]
+
     sheetsservice.spreadsheets().values().append(
         spreadsheetId=BOATREGISTRYSHEETID,
-        range="A:K",
+        range=f"{log_title}!A:K",
         valueInputOption="USER_ENTERED",
         insertDataOption="INSERT_ROWS",
         body={"values": values},
     ).execute()
-
 
 def safeaudit(action, detail="", panel="", extra=None):
     try:
@@ -388,15 +409,33 @@ def safeaudit(action, detail="", panel="", extra=None):
 def save_new_boat_registry(barconombre, localizador, cabin_pairs):
     ensure_sheet_headers()
     sheetsservice = getsheetsservice()
+
+    spreadsheet = sheetsservice.spreadsheets().get(
+        spreadsheetId=BOATREGISTRYSHEETID
+    ).execute()
+
+    sheets = spreadsheet.get("sheets", [])
+    if len(sheets) < 2:
+        raise Exception(
+            "El spreadsheet debe tener al menos 2 hojas: índice 0 para log y índice 1 para tickets."
+        )
+
+    ticket_title = sheets[1]["properties"]["title"]
+
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     useremail = st.session_state.get("useremail", "")
     displayname = st.session_state.get("displayname", "")
     sessionid = st.session_state.get("sessionid", "")
     requested_by, request_date = get_request_identity()
+
     values = []
     for idx, (cabina, categoria) in enumerate(cabin_pairs, start=1):
-        if not str(cabina).strip() and not str(categoria).strip():
+        cabina = str(cabina).strip()
+        categoria = str(categoria).strip().upper()
+
+        if not cabina and not categoria:
             continue
+
         values.append([
             timestamp,
             useremail,
@@ -405,22 +444,24 @@ def save_new_boat_registry(barconombre, localizador, cabin_pairs):
             barconombre.strip(),
             localizador.strip().upper(),
             idx,
-            str(cabina).strip(),
-            str(categoria).strip().upper(),
+            cabina,
+            categoria,
             requested_by,
             request_date,
         ])
+
     if not values:
         raise Exception("Debes informar al menos una cabina y/o una categoría.")
+
     sheetsservice.spreadsheets().values().append(
         spreadsheetId=BOATREGISTRYSHEETID,
-        range=f"'{BOATREGISTRYSHEETNAME}'!A:K",
+        range=f"{ticket_title}!A:K",
         valueInputOption="USER_ENTERED",
         insertDataOption="INSERT_ROWS",
         body={"values": values},
     ).execute()
-    return len(values)
 
+    return len(values)
 
 def dologout():
     safeaudit("logout", "Cierre de sesión", panel=st.session_state.get("activepanel") or "app", extra={"request_type": "logout"})
