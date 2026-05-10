@@ -2227,7 +2227,7 @@ if st.session_state.get("opennuevobarcoform"):
         for idx in range(1, 6):
             colcab, colcat = st.columns(2, gap="medium")
             with colcab:
-                cabina = st.text_input(f"Categoria {idx}", key=f"nuevobarcocabina{idx}", placeholder="Ej: Principal, Main...")
+                cabina = st.text_input(f"Categoria {idx}", key=f"nuevobarcocabina{idx}", placeholder="Ej: PRINCIPAL, SUPERIOR ...")
             with colcat:
                 categoria = st.text_input(f"Categoría normalizada {idx}", key=f"nuevobarcocategoria{idx}", placeholder="Ej: UPP, MAIN, G UPP...")
             cabin_pairs.append((cabina, categoria))
