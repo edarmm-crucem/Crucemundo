@@ -2240,18 +2240,18 @@ if st.session_state.get("opennuevobarcoform"):
                 st.error("El campo Localizador es obligatorio.")
             else:
                 try:
-                    totalrows = save_new_boat_registry(barconombre, localizador, cabin_pairs)
-                    safeaudit(
-                        "save_new_boat",
-                        f"Barco guardado: {barconombre.strip()} ({localizador.strip().upper()})",
-                        panel="nuevobarco",
-                        extra={"filas": totalrows, "requested_by": st.session_state.get("displayname", ""), "request_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
-                    )
-                    st.success(
-                    st.success(
+                totalrows = save_new_boat_registry(barconombre, localizador, cabin_pairs)
+                safeaudit(
+                    "save_new_boat",
+                    f"Barco guardado: {barconombre.strip()} ({localizador.strip().upper()})",
+                    panel="nuevobarco",
+                    extra={"filas": totalrows, "requested_by": st.session_state.get("displayname", ""), "request_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
+                )
+                st.success(
                     f"Barco registrado con {totalrows} categorías. "
                     "Avisadme por WhatsApp 608091436 / mail edarmm@gmail.com para la incorporación."
                 )
+                    
                 except Exception as exc:
                     st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
