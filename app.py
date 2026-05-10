@@ -2248,9 +2248,7 @@ if st.session_state.get("opennuevobarcoform"):
                         extra={"filas": totalrows, "requested_by": st.session_state.get("displayname", ""), "request_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
                     )
                     st.success(
-                    f"Barco guardado correctamente. Filas insertadas: {totalrows}.\n"
-                    "Enviado ticket a Esteban para su inclusión, avisadme por WhatsApp 608091436."
-                )
+                    st.success(f"Barco registrado con {totalrows} categorías. Avisadme por WhatsApp 608091436 / mail edarmm@gmail.com para la incorporación.")
                 except Exception as exc:
                     st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
