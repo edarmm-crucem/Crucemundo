@@ -1,6 +1,7 @@
 import re
 import urllib.parse
 from datetime import date, datetime
+import uuid
 
 import requests
 import streamlit as st
@@ -27,12 +28,8 @@ AGENCYSHEETID = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
 AGENCYSHEETNAME = "Datos"
 DRIVEROOTID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
 GROUPSROOTID = "1MMNH3y1E3jJIp6uUnxbwV0toAtdr2F2M"
-
-# ── NUEVO: spreadsheet de tickets y logs ────────────────────────────────────
-TICKETSSHEETID = "1pvDAEPGkb1DmvbauY-eKk3ymljDvEBvDivijVDUHmGA"
-TICKETSSHEETNAME = "Tickets"   # índice 1
-ACTIVITYSHEETNAME = "Actividad"  # índice 0 – se usará el nombre real; si no existe, creamos con ese nombre
-# ────────────────────────────────────────────────────────────────────────────
+BOATREGISTRYSHEETID = "1pvDAEPGkb1DmvbauY-eKk3ymljDvEBvDivijVDUHmGA"
+BOATREGISTRYSHEETNAME = "TICKETS, RESULTADO, ENVIADO TICKET"
 
 VALIDUSERS = {
     "support@crucemundo.com": "Albina",
@@ -88,6 +85,8 @@ STATEDEFAULTS = {
     "historial": "",
     "sessiontype": "",
     "activepanel": None,
+    "sessionid": "",
+    "sessionstart": None,
 
     "opensalidaform": False,
     "opencruceroform": False,
@@ -97,7 +96,7 @@ STATEDEFAULTS = {
     "opencvcagenciasform": False,
     "openirconfirmacionform": False,
     "openinformebarcoform": False,
-    "opennuevobarcoform": False,   # NUEVO
+    "opennuevobarcoform": False,
 
     "salidayear": None,
     "salidaboat": None,
@@ -132,11 +131,18 @@ STATEDEFAULTS = {
     "processtitle": "",
     "processresult": None,
 
-    # Activity tracking
-    "session_start": None,
-    "activity_log_sent": False,
-    "last_action": "",
-    "action_count": 0,
+    "nuevobarconombre": "",
+    "nuevobarcolocalizador": "",
+    "nuevobarcocabina1": "",
+    "nuevobarcocategoria1": "",
+    "nuevobarcocabina2": "",
+    "nuevobarcocategoria2": "",
+    "nuevobarcocabina3": "",
+    "nuevobarcocategoria3": "",
+    "nuevobarcocabina4": "",
+    "nuevobarcocategoria4": "",
+    "nuevobarcocabina5": "",
+    "nuevobarcocategoria5": "",
 }
 
 STATEGROUPS = {
@@ -166,16 +172,16 @@ STATEGROUPS = {
         "informetype", "informeyear", "informeboat", "informesalida", "informeresult",
         "informetypewidget", "informeyearwidget", "informeboatwidget", "informesalidawidget",
     ],
+    "nuevobarco": [
+        "nuevobarconombre", "nuevobarcolocalizador",
+        "nuevobarcocabina1", "nuevobarcocategoria1",
+        "nuevobarcocabina2", "nuevobarcocategoria2",
+        "nuevobarcocabina3", "nuevobarcocategoria3",
+        "nuevobarcocabina4", "nuevobarcocategoria4",
+        "nuevobarcocabina5", "nuevobarcocategoria5",
+    ],
     "process": [
         "nombrecopia", "copyurl", "processtitle", "confirmstate", "sessiontype", "processresult",
-    ],
-    "nuevobarco": [
-        "nb_nombre", "nb_localizador",
-        "nb_cat1a", "nb_cat1b",
-        "nb_cat2a", "nb_cat2b",
-        "nb_cat3a", "nb_cat3b",
-        "nb_cat4a", "nb_cat4b",
-        "nb_cat5a", "nb_cat5b",
     ],
 }
 
@@ -188,94 +194,13 @@ PANELFLAGS = {
     "cvcagencias": "opencvcagenciasform",
     "irconfirmacion": "openirconfirmacionform",
     "informebarco": "openinformebarcoform",
-    "nuevobarco": "opennuevobarcoform",   # NUEVO
+    "nuevobarco": "opennuevobarcoform",
 }
 
 for key, value in STATEDEFAULTS.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
-
-# ═══════════════════════════════════════════════════════════════════════════
-#  ACTIVITY LOGGING HELPERS
-# ═══════════════════════════════════════════════════════════════════════════
-
-def _get_sheet_name_by_index(spreadsheetid, index):
-    """Devuelve el título de la hoja en la posición `index` (0-based)."""
-    try:
-        sheetsservice = getsheetsservice()
-        spreadsheet = sheetsservice.spreadsheets().get(spreadsheetId=spreadsheetid).execute()
-        sheets = spreadsheet.get("sheets", [])
-        if index < len(sheets):
-            return sheets[index]["properties"]["title"]
-    except Exception:
-        pass
-    return None
-
-
-def log_activity(event_type, detail=""):
-    """Añade una fila de actividad a la hoja índice 0 del spreadsheet de tickets."""
-    try:
-        sheetsservice = getsheetsservice()
-        sheet_name = _get_sheet_name_by_index(TICKETSSHEETID, 0)
-        if not sheet_name:
-            return
-
-        now = datetime.now()
-        user = st.session_state.get("displayname", "")
-        email = st.session_state.get("useremail", "")
-        session_start = st.session_state.get("session_start")
-        elapsed = ""
-        if session_start:
-            secs = int((now - session_start).total_seconds())
-            elapsed = f"{secs // 60}m {secs % 60}s"
-
-        row = [
-            now.strftime("%Y-%m-%d"),
-            now.strftime("%H:%M:%S"),
-            user,
-            email,
-            event_type,
-            detail,
-            elapsed,
-        ]
-        sheetsservice.spreadsheets().values().append(
-            spreadsheetId=TICKETSSHEETID,
-            range=f"{sheet_name}!A:G",
-            valueInputOption="USER_ENTERED",
-            insertDataOption="INSERT_ROWS",
-            body={"values": [row]},
-        ).execute()
-    except Exception:
-        pass  # Nunca interrumpir la UX por un fallo de logging
-
-
-def ensure_activity_headers():
-    """Escribe cabeceras en la hoja de actividad si la primera fila está vacía."""
-    try:
-        sheetsservice = getsheetsservice()
-        sheet_name = _get_sheet_name_by_index(TICKETSSHEETID, 0)
-        if not sheet_name:
-            return
-        resp = sheetsservice.spreadsheets().values().get(
-            spreadsheetId=TICKETSSHEETID,
-            range=f"{sheet_name}!A1:G1",
-        ).execute()
-        if not resp.get("values"):
-            headers = [["Fecha", "Hora", "Usuario", "Email", "Evento", "Detalle", "Tiempo en sesión"]]
-            sheetsservice.spreadsheets().values().update(
-                spreadsheetId=TICKETSSHEETID,
-                range=f"{sheet_name}!A1:G1",
-                valueInputOption="USER_ENTERED",
-                body={"values": headers},
-            ).execute()
-    except Exception:
-        pass
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-#  UTILITY
-# ═══════════════════════════════════════════════════════════════════════════
 
 def getsaludo(lang="es"):
     hour = datetime.now().hour
@@ -339,8 +264,7 @@ def openpanel(panelname):
     if flag:
         st.session_state[flag] = True
         st.session_state.activepanel = panelname
-    # Log panel open
-    log_activity("PANEL_ABIERTO", panelname)
+        safeaudit("open_panel", f"Apertura de panel {panelname}", panel=panelname, extra={"request_type": "open_panel"})
 
 
 def closecurrentpanel():
@@ -348,8 +272,158 @@ def closecurrentpanel():
     st.rerun()
 
 
+def getsessiondurationseconds():
+    started = st.session_state.get("sessionstart")
+    if not started:
+        return 0
+    try:
+        return int((datetime.now() - started).total_seconds())
+    except Exception:
+        return 0
+
+
+def ensure_sheet_headers():
+    sheetsservice = getsheetsservice()
+    spreadsheet = sheetsservice.spreadsheets().get(spreadsheetId=BOATREGISTRYSHEETID).execute()
+    sheets = spreadsheet.get("sheets", [])
+    if not sheets:
+        raise Exception("El spreadsheet de registro no contiene hojas.")
+
+    first_title = sheets[0]["properties"]["title"]
+    audit_headers = [[
+        "timestamp",
+        "useremail",
+        "displayname",
+        "sessionid",
+        "action",
+        "detail",
+        "panel",
+        "duration_seconds",
+        "metadata",
+        "requested_by",
+        "request_date",
+    ]]
+    boat_headers = [[
+        "timestamp",
+        "useremail",
+        "displayname",
+        "sessionid",
+        "barco",
+        "localizador",
+        "linea",
+        "cabina",
+        "categoria_normalizada",
+        "requested_by",
+        "request_date",
+    ]]
+
+    first_range = f"'{first_title}'!A1:K1"
+    boat_range = f"'{BOATREGISTRYSHEETNAME}'!A1:K1"
+
+    first_values = sheetsservice.spreadsheets().values().get(
+        spreadsheetId=BOATREGISTRYSHEETID,
+        range=first_range,
+    ).execute().get("values", [])
+    if not first_values or not any(str(v).strip() for v in first_values[0]):
+        sheetsservice.spreadsheets().values().update(
+            spreadsheetId=BOATREGISTRYSHEETID,
+            range=first_range,
+            valueInputOption="USER_ENTERED",
+            body={"values": audit_headers},
+        ).execute()
+
+    boat_values = sheetsservice.spreadsheets().values().get(
+        spreadsheetId=BOATREGISTRYSHEETID,
+        range=boat_range,
+    ).execute().get("values", [])
+    if not boat_values or not any(str(v).strip() for v in boat_values[0]):
+        sheetsservice.spreadsheets().values().update(
+            spreadsheetId=BOATREGISTRYSHEETID,
+            range=boat_range,
+            valueInputOption="USER_ENTERED",
+            body={"values": boat_headers},
+        ).execute()
+
+
+def get_request_identity():
+    requested_by = st.session_state.get("displayname", "").strip() or st.session_state.get("useremail", "")
+    request_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return requested_by, request_date
+
+
+def appendauditrow(action, detail="", panel="", extra=None):
+    ensure_sheet_headers()
+    sheetsservice = getsheetsservice()
+    metadata = extra or {}
+    requested_by, request_date = get_request_identity()
+    values = [[
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        st.session_state.get("useremail", ""),
+        st.session_state.get("displayname", ""),
+        st.session_state.get("sessionid", ""),
+        action,
+        detail,
+        panel or st.session_state.get("activepanel") or "",
+        getsessiondurationseconds(),
+        str(metadata),
+        requested_by,
+        request_date,
+    ]]
+    sheetsservice.spreadsheets().values().append(
+        spreadsheetId=BOATREGISTRYSHEETID,
+        range="A:K",
+        valueInputOption="USER_ENTERED",
+        insertDataOption="INSERT_ROWS",
+        body={"values": values},
+    ).execute()
+
+
+def safeaudit(action, detail="", panel="", extra=None):
+    try:
+        appendauditrow(action, detail, panel, extra)
+    except Exception:
+        pass
+
+
+def save_new_boat_registry(barconombre, localizador, cabin_pairs):
+    ensure_sheet_headers()
+    sheetsservice = getsheetsservice()
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    useremail = st.session_state.get("useremail", "")
+    displayname = st.session_state.get("displayname", "")
+    sessionid = st.session_state.get("sessionid", "")
+    requested_by, request_date = get_request_identity()
+    values = []
+    for idx, (cabina, categoria) in enumerate(cabin_pairs, start=1):
+        if not str(cabina).strip() and not str(categoria).strip():
+            continue
+        values.append([
+            timestamp,
+            useremail,
+            displayname,
+            sessionid,
+            barconombre.strip(),
+            localizador.strip().upper(),
+            idx,
+            str(cabina).strip(),
+            str(categoria).strip().upper(),
+            requested_by,
+            request_date,
+        ])
+    if not values:
+        raise Exception("Debes informar al menos una cabina y/o una categoría.")
+    sheetsservice.spreadsheets().values().append(
+        spreadsheetId=BOATREGISTRYSHEETID,
+        range=f"'{BOATREGISTRYSHEETNAME}'!A:K",
+        valueInputOption="USER_ENTERED",
+        insertDataOption="INSERT_ROWS",
+        body={"values": values},
+    ).execute()
+    return len(values)
+
+
 def dologout():
-    log_activity("LOGOUT", f"Acciones en sesión: {st.session_state.get('action_count', 0)}")
+    safeaudit("logout", "Cierre de sesión", panel=st.session_state.get("activepanel") or "app", extra={"request_type": "logout"})
     for key in list(st.session_state.keys()):
         st.session_state.pop(key, None)
     st.rerun()
@@ -473,23 +547,18 @@ def iniciarproceso(sessiontype, templateid, prefixname, processtitle):
             f"&title={urllib.parse.quote(nombrecopia)}"
         )
 
+        safeaudit("request_create_session", f"Petición crear sesión: {prefixname}", panel="process", extra={"request_type": "create_session"})
         st.session_state.confirmstate = "step1"
         st.session_state.sessiontype = sessiontype
         st.session_state.nombrecopia = nombrecopia
         st.session_state.copyurl = copyurl
         st.session_state.processtitle = processtitle
         st.session_state.activepanel = "process"
-        st.session_state.action_count = st.session_state.get("action_count", 0) + 1
-        log_activity("NUEVA_SESION", f"Tipo: {sessiontype} | Nombre: {nombrecopia}")
         st.rerun()
 
     except Exception as e:
         st.error(str(e))
 
-
-# ═══════════════════════════════════════════════════════════════════════════
-#  GOOGLE API
-# ═══════════════════════════════════════════════════════════════════════════
 
 @st.cache_resource
 def getgooglecreds():
@@ -935,8 +1004,6 @@ def runcvcsearch(locator, targetsheet, pdfprefix, statekey):
         if result:
             st.session_state[f"{statekey}result"] = result
             st.session_state[f"{statekey}log"] = loglines
-            log_activity(f"CVC_PDF_GENERADO", f"Tipo: {statekey} | Localizador: {locator}")
-            st.session_state.action_count = st.session_state.get("action_count", 0) + 1
         else:
             st.error("Búsqueda finalizada sin coincidencias.")
 
@@ -953,7 +1020,7 @@ def parselocatorinput(locatorraw):
         raise Exception("Debes introducir un localizador.")
 
     isgroup = locator.endswith("_GROUP")
-    core = locator[:-6] if isgroup else locator  # 6 = len("_GROUP")
+    core = locator[:-6] if isgroup else locator
 
     m = re.fullmatch(r"([A-Z]{2,3})(\d{6})-(\d{3})", core)
     if not m:
@@ -1003,7 +1070,7 @@ def findlocatorconfirmation(locatorraw):
     fileobj = findfilebyname(boatfolder["id"], parsed["filename"])
     if not fileobj:
         loglines.append(f"No existe el archivo {parsed['filename']}")
-        return {"status": "missingfile", "parsed": parsed, "log": loglines}
+        return {"status": "missingfile", "parsed": parsed, "file": fileobj, "log": loglines}
     loglines.append(f"Archivo encontrado: {parsed['filename']}")
     sheets = getsheettitleswithids(fileobj["id"])
     targetsheet = next((s for s in sheets if s["title"].strip() == parsed["sheetname"].strip()), None)
@@ -1171,75 +1238,6 @@ def formatestadopagobadge(value):
     return f'<span class="status-pill">{value or ""}</span>'
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-#  NUEVO BARCO — guardar ticket
-# ═══════════════════════════════════════════════════════════════════════════
-
-def save_nuevo_barco_ticket(nombre, localizador, categorias):
-    """
-    Guarda en la hoja TICKETS (índice 1) del spreadsheet TICKETSSHEETID.
-    Columnas: Fecha | Hora | Usuario | Email | Barco | Localizador | Cat1_Nombre | Cat1_Norm | Cat2_Nombre | Cat2_Norm | ... (5 pares)
-    """
-    sheetsservice = getsheetsservice()
-    sheet_name = _get_sheet_name_by_index(TICKETSSHEETID, 1)
-    if not sheet_name:
-        raise Exception("No se encontró la hoja de índice 1 (Tickets) en el spreadsheet.")
-
-    # Asegurar cabeceras si la hoja está vacía
-    resp = sheetsservice.spreadsheets().values().get(
-        spreadsheetId=TICKETSSHEETID,
-        range=f"{sheet_name}!A1:P1",
-    ).execute()
-    if not resp.get("values"):
-        headers = [[
-            "Fecha", "Hora", "Usuario", "Email",
-            "Barco", "Localizador",
-            "Cat1 Nombre", "Cat1 Normalizado",
-            "Cat2 Nombre", "Cat2 Normalizado",
-            "Cat3 Nombre", "Cat3 Normalizado",
-            "Cat4 Nombre", "Cat4 Normalizado",
-            "Cat5 Nombre", "Cat5 Normalizado",
-        ]]
-        sheetsservice.spreadsheets().values().update(
-            spreadsheetId=TICKETSSHEETID,
-            range=f"{sheet_name}!A1:P1",
-            valueInputOption="USER_ENTERED",
-            body={"values": headers},
-        ).execute()
-
-    now = datetime.now()
-    user = st.session_state.get("displayname", "")
-    email = st.session_state.get("useremail", "")
-
-    cat_flat = []
-    for cat_nombre, cat_norm in categorias:
-        cat_flat.extend([cat_nombre, cat_norm])
-    # Rellenar hasta 5 pares si hay menos
-    while len(cat_flat) < 10:
-        cat_flat.extend(["", ""])
-
-    row = [
-        now.strftime("%Y-%m-%d"),
-        now.strftime("%H:%M:%S"),
-        user,
-        email,
-        nombre,
-        localizador,
-    ] + cat_flat[:10]
-
-    sheetsservice.spreadsheets().values().append(
-        spreadsheetId=TICKETSSHEETID,
-        range=f"{sheet_name}!A:P",
-        valueInputOption="USER_ENTERED",
-        insertDataOption="INSERT_ROWS",
-        body={"values": [row]},
-    ).execute()
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-#  CSS
-# ═══════════════════════════════════════════════════════════════════════════
-
 st.markdown(
     """
     <style>
@@ -1402,7 +1400,7 @@ st.markdown(
     .card-cvcagencias { background: #EBF8EF; border-color: #BFE1C9; --card-btn-bg:#D0EFD8; --card-btn-border:#97D0A9; --card-btn-text:#2C6A44; --card-btn-shadow:rgba(44,106,68,0.16); }
     .card-irconfirmacion { background: #F0F3F8; border-color: #CFD8E6; --card-btn-bg:#E0E7F1; --card-btn-border:#B8C6DC; --card-btn-text:#4A5874; --card-btn-shadow:rgba(74,88,116,0.16); }
     .card-informebarco { background: #EAF7FB; border-color: #BFDDE8; --card-btn-bg:#D2EDF6; --card-btn-border:#97CEE0; --card-btn-text:#2B6881; --card-btn-shadow:rgba(43,104,129,0.16); }
-    .card-nuevobarco { background: #FFF7EC; border-color: #F5D9A8; --card-btn-bg:#FFE9C0; --card-btn-border:#F0C070; --card-btn-text:#7A4A00; --card-btn-shadow:rgba(122,74,0,0.16); }
+    .card-nuevobarco { background: #EEF6FF; border-color: #C7DCF9; --card-btn-bg:#DCEBFF; --card-btn-border:#A8C8F5; --card-btn-text:#27518A; --card-btn-shadow:rgba(39,81,138,0.16); }
 
     .action-top { display: flex; align-items: flex-start; gap: 0.65rem; }
     .action-icon {
@@ -1447,36 +1445,25 @@ st.markdown(
         box-shadow: 0 8px 20px rgba(37, 99, 235, 0.22) !important;
     }
 
-    .agency-card, .cvcfit-card, .cvcfit-status-card, .cvcagencias-card, .cvcagencias-status-card, .process-card, .irconfirmacion-card, .informebarco-card, .nuevobarco-card {
+    .agency-card, .cvcfit-card, .cvcfit-status-card, .cvcagencias-card, .cvcagencias-status-card, .process-card, .irconfirmacion-card, .informebarco-card {
         background: #FBFCFF; border: 1px solid #DCE5F0; border-radius: 18px; padding: 1rem; margin-top: 0.75rem;
         box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
     }
 
-    .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid, .irconfirmacion-grid, .informebarco-grid, .nuevobarco-grid {
+    .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid, .irconfirmacion-grid, .informebarco-grid {
         display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem 1rem;
     }
 
-    .agency-item-label, .cvcfit-item-label, .cvcagencias-item-label, .process-item-label, .irconfirmacion-item-label, .informebarco-item-label, .nuevobarco-item-label {
+    .agency-item-label, .cvcfit-item-label, .cvcagencias-item-label, .process-item-label, .irconfirmacion-item-label, .informebarco-item-label {
         font-size: 0.68rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.16rem; font-weight: 700;
     }
 
-    .agency-item-value, .cvcfit-item-value, .cvcagencias-item-value, .process-item-value, .irconfirmacion-item-value, .informebarco-item-value, .nuevobarco-item-value {
+    .agency-item-value, .cvcfit-item-value, .cvcagencias-item-value, .process-item-value, .irconfirmacion-item-value, .informebarco-item-value {
         font-size: 0.82rem; color: #1F2937; line-height: 1.35; word-break: break-word; font-weight: 600;
     }
 
     .cvcfit-log-line, .cvcagencias-log-line, .irconfirmacion-log-line {
         font-size: 0.74rem; color: #465066; line-height: 1.45; margin-bottom: 0.35rem; word-break: break-word;
-    }
-
-    /* Separador sutil entre filas de categorías */
-    .nb-cat-row {
-        display: flex; gap: 0.6rem; align-items: flex-end; padding: 0.45rem 0;
-        border-bottom: 1px solid #EEF2F7;
-    }
-    .nb-cat-row:last-child { border-bottom: none; }
-    .nb-cat-num {
-        font-size: 0.72rem; font-weight: 800; color: #94A3B8; min-width: 1.4rem;
-        padding-top: 0.55rem;
     }
 
     .report-table-wrap { margin-top: 1rem; overflow-x: auto; }
@@ -1525,7 +1512,7 @@ st.markdown(
     .footer-text { font-size: 0.71rem; color: #A2ABBD; }
 
     @media (max-width: 1600px) {
-        .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid, .irconfirmacion-grid, .informebarco-grid, .nuevobarco-grid {
+        .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid, .irconfirmacion-grid, .informebarco-grid {
             grid-template-columns: 1fr;
         }
     }
@@ -1536,10 +1523,6 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
-# ═══════════════════════════════════════════════════════════════════════════
-#  LOGIN
-# ═══════════════════════════════════════════════════════════════════════════
 
 if not st.session_state.authenticated:
     st.markdown('<div class="login-page"><div class="login-shell">', unsafe_allow_html=True)
@@ -1571,14 +1554,9 @@ if not st.session_state.authenticated:
                 st.session_state.authenticated = True
                 st.session_state.useremail = emailclean
                 st.session_state.displayname = VALIDUSERS[emailclean]
-                st.session_state.session_start = datetime.now()
-                st.session_state.action_count = 0
-                # Log login (best-effort; creds may not be ready yet, so wrap)
-                try:
-                    ensure_activity_headers()
-                    log_activity("LOGIN", f"Usuario: {VALIDUSERS[emailclean]} | {emailclean}")
-                except Exception:
-                    pass
+                st.session_state.sessionid = str(uuid.uuid4())
+                st.session_state.sessionstart = datetime.now()
+                safeaudit("login", "Inicio de sesión correcto", panel="login", extra={"request_type": "login"})
                 st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
@@ -1588,10 +1566,6 @@ if not st.session_state.authenticated:
     )
     st.markdown("</div></div>", unsafe_allow_html=True)
     st.stop()
-
-# ═══════════════════════════════════════════════════════════════════════════
-#  PORTAL HEADER
-# ═══════════════════════════════════════════════════════════════════════════
 
 USEREMAIL = st.session_state.get("useremail", "").strip()
 DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Sin usuario"
@@ -1651,10 +1625,6 @@ st.markdown(
 
 st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
-
-# ═══════════════════════════════════════════════════════════════════════════
-#  ACTION CARDS
-# ═══════════════════════════════════════════════════════════════════════════
 
 def renderactioncard(col, config):
     with col:
@@ -1781,13 +1751,12 @@ cards = [
         "key": "btninformebarcoopen",
         "action": lambda: openpanel("informebarco"),
     },
-    # ── NUEVA TARJETA ──────────────────────────────────────────────────────
     {
         "cardclass": "card-nuevobarco",
-        "icon": "⚓",
+        "icon": "🛳️",
         "titlees": "Nuevo Barco",
         "titleen": "New Ship",
-        "buttonlabel": "Crear Barco",
+        "buttonlabel": "Abrir Nuevo Barco",
         "key": "btnnuevobarcoopen",
         "action": lambda: openpanel("nuevobarco"),
     },
@@ -1797,15 +1766,9 @@ row1 = st.columns([1.45, 1.45, 1.05, 1.05, 1.10, 1.10], gap="medium")
 for col, card in zip(row1, cards[:6]):
     renderactioncard(col, card)
 
-# Row 2: CVC Fit, CVC Agencias, Ir a Confirmación, Informe, Nuevo Barco
-row2 = st.columns([0.9, 0.9, 0.9, 0.9, 0.9], gap="medium")
+row2 = st.columns([0.85, 0.85, 0.85, 0.85, 0.95], gap="medium")
 for col, card in zip(row2, cards[6:11]):
     renderactioncard(col, card)
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-#  PANELS
-# ═══════════════════════════════════════════════════════════════════════════
 
 if st.session_state.get("confirmstate") == "step1":
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
@@ -1897,7 +1860,6 @@ if st.session_state.get("opensalidaform"):
         if selecteddeparture:
             selectedobj = next((d for d in departures if d["nombre"] == selecteddeparture), None)
             if selectedobj:
-                log_activity("IR_SALIDA", selecteddeparture)
                 st.markdown(
                     f'<a class="done-link" href="{selectedobj["url"]}" target="_blank" rel="noopener noreferrer">Abrir salida / Open departure</a>',
                     unsafe_allow_html=True,
@@ -1953,6 +1915,7 @@ if st.session_state.get("opencruceroform"):
             if int(cruceroyear) != fechasalida.year:
                 st.error("El año seleccionado no coincide con el año de la fecha / Selected year does not match the date year.")
             else:
+                safeaudit("request_create_cruise", f"Petición crear crucero: {cruceroboat} {fechasalida}", panel="crucero", extra={"request_type": "create_cruise"})
                 result = createcrucerofile(cruceroboat, fechasalida)
                 if result["status"] == "duplicate":
                     st.warning(f"Ya existe / Already exists: {result['name']}")
@@ -1961,8 +1924,6 @@ if st.session_state.get("opencruceroform"):
                         unsafe_allow_html=True,
                     )
                 else:
-                    log_activity("CRUCERO_CREADO", result["name"])
-                    st.session_state.action_count = st.session_state.get("action_count", 0) + 1
                     st.success(f"Archivo creado / File created: {result['name']}")
                     st.markdown(
                         f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir crucero / Open cruise</a>',
@@ -2031,8 +1992,6 @@ if st.session_state.get("opennuevaagenciaform"):
                 }
                 try:
                     appendagencyrow(agencydata)
-                    log_activity("AGENCIA_GUARDADA", f"{agencydata['Nombre']} | {agencydata['CODIGO']}")
-                    st.session_state.action_count = st.session_state.get("action_count", 0) + 1
                     st.success(f"Agencia guardada correctamente: {agencydata['Nombre']}")
                 except Exception as exc:
                     st.exception(exc)
@@ -2052,7 +2011,6 @@ if st.session_state.get("openbuscaragenciaform"):
         try:
             st.session_state.agencymatches = searchagencies(searchquery)
             st.session_state.agencyselectedidx = None
-            log_activity("BUSCAR_AGENCIA", searchquery)
         except Exception as exc:
             st.exception(exc)
 
@@ -2178,8 +2136,6 @@ if st.session_state.get("openirconfirmacionform"):
             result = findlocatorconfirmation(locator)
             st.session_state.irconfirmacionresult = result
             st.session_state.irconfirmacionlog = result.get("log", [])
-            log_activity("IR_CONFIRMACION", f"Localizador: {locator} | Status: {result.get('status')}")
-            st.session_state.action_count = st.session_state.get("action_count", 0) + 1
         except Exception as exc:
             st.error(str(exc))
             st.session_state.irconfirmacionresult = None
@@ -2212,6 +2168,47 @@ if st.session_state.get("openirconfirmacionform"):
             unsafe_allow_html=True,
         )
 
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+if st.session_state.get("opennuevobarcoform"):
+    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
+    panelheader("Nuevo Barco / New Ship", "closenuevobarcopanel")
+    with st.form("formnuevobarco", clear_on_submit=False):
+        rownb1, rownb2 = st.columns(2, gap="medium")
+        with rownb1:
+            barconombre = st.text_input("Nombre de barco", key="nuevobarconombre", placeholder="Ej: MS FIDELIO")
+        with rownb2:
+            localizador = st.text_input("Localizador", key="nuevobarcolocalizador", placeholder="Ej: FID")
+
+        st.markdown("#### Cabinas y categorías normalizadas")
+        cabin_pairs = []
+        for idx in range(1, 6):
+            colcab, colcat = st.columns(2, gap="medium")
+            with colcab:
+                cabina = st.text_input(f"Nombre cabina {idx}", key=f"nuevobarcocabina{idx}", placeholder="Ej: Principal, Main...")
+            with colcat:
+                categoria = st.text_input(f"Categoría normalizada {idx}", key=f"nuevobarcocategoria{idx}", placeholder="Ej: UPP, MAIN, G UPP...")
+            cabin_pairs.append((cabina, categoria))
+
+        guardarnuevobarco = st.form_submit_button("Guardar Barco")
+        if guardarnuevobarco:
+            if not barconombre.strip():
+                st.error("El campo Nombre de barco es obligatorio.")
+            elif not localizador.strip():
+                st.error("El campo Localizador es obligatorio.")
+            else:
+                try:
+                    totalrows = save_new_boat_registry(barconombre, localizador, cabin_pairs)
+                    safeaudit(
+                        "save_new_boat",
+                        f"Barco guardado: {barconombre.strip()} ({localizador.strip().upper()})",
+                        panel="nuevobarco",
+                        extra={"filas": totalrows, "requested_by": st.session_state.get("displayname", ""), "request_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
+                    )
+                    st.success(f"Barco guardado correctamente. Filas insertadas: {totalrows}")
+                except Exception as exc:
+                    st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
 
 if st.session_state.get("openinformebarcoform"):
@@ -2298,8 +2295,6 @@ if st.session_state.get("openinformebarcoform"):
                         selected["id"],
                         selected["nombre"],
                     )
-                    log_activity("INFORME_GENERADO", selected_departure)
-                    st.session_state.action_count = st.session_state.get("action_count", 0) + 1
             except Exception as exc:
                 st.exception(exc)
 
@@ -2366,101 +2361,6 @@ if st.session_state.get("openinformebarcoform"):
         st.exception(exc)
 
     st.markdown("</div>", unsafe_allow_html=True)
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-#  PANEL: NUEVO BARCO
-# ═══════════════════════════════════════════════════════════════════════════
-
-if st.session_state.get("opennuevobarcoform"):
-    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    panelheader("Nuevo Barco / New Ship", "closenuevobarcopanel")
-
-    with st.form("formnuevobarco", clear_on_submit=True):
-        nb_col1, nb_col2 = st.columns(2, gap="medium")
-        with nb_col1:
-            nb_nombre = st.text_input(
-                "🚢 Nombre del barco / Ship name",
-                key="nb_nombre",
-                placeholder="Ej: MS_AURORA",
-            )
-        with nb_col2:
-            nb_localizador = st.text_input(
-                "🔑 Localizador (código) / Locator code",
-                key="nb_localizador",
-                placeholder="Ej: AUR",
-            )
-
-        st.markdown("---")
-        st.markdown("##### Categorías de cabina / Cabin categories")
-        st.caption("Rellena las categorías que tenga el barco (mínimo 1). Deja en blanco las que no apliquen.")
-
-        cat_labels = ["Principal / Main", "Segunda / Second", "Tercera / Third", "Cuarta / Fourth", "Quinta / Fifth"]
-        cat_fields = []
-        for i, label in enumerate(cat_labels, start=1):
-            st.markdown(f'<div class="nb-cat-num">Categoría {i} · {label}</div>', unsafe_allow_html=True)
-            cc1, cc2 = st.columns(2, gap="medium")
-            with cc1:
-                nombre_cat = st.text_input(
-                    f"Nombre categoría {i}",
-                    key=f"nb_cat{i}a",
-                    placeholder="Ej: PRINCIPAL, MAIN, SUITE…",
-                    label_visibility="collapsed",
-                )
-            with cc2:
-                norm_cat = st.text_input(
-                    f"Nombre normalizado {i}",
-                    key=f"nb_cat{i}b",
-                    placeholder="Ej: UPP, MAIN, G UPP…",
-                    label_visibility="collapsed",
-                )
-            cat_fields.append((nombre_cat, norm_cat))
-
-        nb_submit = st.form_submit_button("⚓ Guardar Barco / Save Ship")
-
-        if nb_submit:
-            if not nb_nombre.strip():
-                st.error("El nombre del barco es obligatorio.")
-            elif not nb_localizador.strip():
-                st.error("El localizador es obligatorio.")
-            else:
-                # Filtrar categorías con al menos un campo relleno
-                categorias_validas = [
-                    (n.strip(), r.strip())
-                    for n, r in cat_fields
-                    if n.strip() or r.strip()
-                ]
-                if not categorias_validas:
-                    st.error("Introduce al menos una categoría.")
-                else:
-                    try:
-                        save_nuevo_barco_ticket(
-                            nb_nombre.strip(),
-                            nb_localizador.strip().upper(),
-                            categorias_validas,
-                        )
-                        log_activity("NUEVO_BARCO", f"{nb_nombre.strip()} | {nb_localizador.strip().upper()} | {len(categorias_validas)} categorías")
-                        st.session_state.action_count = st.session_state.get("action_count", 0) + 1
-                        st.success(f"✅ Barco guardado correctamente: {nb_nombre.strip()} ({nb_localizador.strip().upper()})")
-                        renderkeyvaluegrid(
-                            "nuevobarco",
-                            [
-                                ("Barco", nb_nombre.strip()),
-                                ("Localizador", nb_localizador.strip().upper()),
-                                ("Categorías", str(len(categorias_validas))),
-                                ("Guardado por", DISPLAYUSER),
-                            ],
-                        )
-                    except Exception as exc:
-                        st.exception(exc)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-#  FOOTER
-# ═══════════════════════════════════════════════════════════════════════════
-
 footercol1, footercol2 = st.columns([3, 1])
 with footercol1:
     st.markdown('<div class="portal-footer"><div class="footer-text">Crucemundo Hub</div></div>', unsafe_allow_html=True)
