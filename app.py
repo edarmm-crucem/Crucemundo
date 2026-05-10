@@ -2233,27 +2233,26 @@ if st.session_state.get("opennuevobarcoform"):
             cabin_pairs.append((cabina, categoria))
 
         guardarnuevobarco = st.form_submit_button("Guardar Barco")
-        if guardarnuevobarco:
-            if not barconombre.strip():
-                st.error("El campo Nombre de barco es obligatorio.")
-            elif not localizador.strip():
-                st.error("El campo Localizador es obligatorio.")
-            else:
-                try:
-                totalrows = save_new_boat_registry(barconombre, localizador, cabin_pairs)
-                safeaudit(
-                    "save_new_boat",
-                    f"Barco guardado: {barconombre.strip()} ({localizador.strip().upper()})",
-                    panel="nuevobarco",
-                    extra={"filas": totalrows, "requested_by": st.session_state.get("displayname", ""), "request_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
-                )
-                st.success(
-                    f"Barco registrado con {totalrows} categorías. "
-                    "Avisadme por WhatsApp 608091436 / mail edarmm@gmail.com para la incorporación."
-                )
-                    
-                except Exception as exc:
-                    st.exception(exc)
+if guardarnuevobarco:
+    if not barconombre.strip():
+        st.error("El campo Nombre de barco es obligatorio.")
+    elif not localizador.strip():
+        st.error("El campo Localizador es obligatorio.")
+    else:
+        try:
+            totalrows = save_new_boat_registry(barconombre, localizador, cabin_pairs)
+            safeaudit(
+                "save_new_boat",
+                f"Barco guardado: {barconombre.strip()} ({localizador.strip().upper()})",
+                panel="nuevobarco",
+                extra={"filas": totalrows, "requested_by": st.session_state.get("displayname", ""), "request_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
+            )
+            st.success(
+                f"Barco registrado con {totalrows} categorías. "
+                "Avisadme por WhatsApp 608091436 / mail edarmm@gmail.com para la incorporación."
+            )
+        except Exception as exc:
+            st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
 
 if st.session_state.get("openinformebarcoform"):
