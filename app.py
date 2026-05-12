@@ -2249,7 +2249,7 @@ if st.session_state.get("opennuevobarcoform"):
                     )
                     st.success(
                         f"Barco registrado con {totalrows} categorías. "
-                        "Avisadme por WhatsApp 608091436 / mail edarmm@gmail.com para la incorporación."
+                        "Enviado ticket para incorporacion al sistema."
                     )
                 except Exception as exc:
                     st.exception(exc)
