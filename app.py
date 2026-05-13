@@ -1666,7 +1666,6 @@ st.markdown(
 
 st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
-
 def renderactioncard(col, config):
     with col:
         st.markdown(
@@ -1684,23 +1683,29 @@ def renderactioncard(col, config):
             unsafe_allow_html=True,
         )
 
+        # ---------------------------
+        # LINK EXTERNO (OK)
+        # ---------------------------
         if config.get("link"):
             st.markdown(
                 f'<a class="done-link" href="{config["link"]}" target="_blank" rel="noopener noreferrer">{config["buttonlabel"]}</a>',
                 unsafe_allow_html=True,
             )
+
+        # ---------------------------
+        # STREAMLIT NAVIGATION (FIX)
+        # ---------------------------
         else:
             disabled = config.get("disabled", False)
-            if not disabled and st.button(config["buttonlabel"], key=config["key"]):
-                action = config.get("action")
-                if action:
-                    action()
-            elif disabled:
-                st.button(config["buttonlabel"], key=config["key"], disabled=True)
+
+            if st.button(config["buttonlabel"], key=config["key"], disabled=disabled):
+
+                # 🔥 AQUÍ NO LLAMES action()
+                if "page" in config:
+                    st.switch_page(f"pages/{config['page']}.py")
 
         st.markdown("</div></div>", unsafe_allow_html=True)
-
-
+        
 cards = [
     {
         "cardclass": "card-es",
