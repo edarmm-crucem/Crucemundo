@@ -1693,20 +1693,25 @@ def renderactioncard(col, config):
             )
 
         # ---------------------------
-        # STREAMLIT NAVIGATION (FIX)
-        # ---------------------------
+# STREAMLIT NAVIGATION (FIX)
+# ---------------------------
+else:
+    disabled = config.get("disabled", False)
+
+    if st.button(config["buttonlabel"], key=config["key"], disabled=disabled):
+
+        page = config.get("page")
+
+        ROUTES = {
+            "sepabase": "pages/01_page.py",            
+        }
+
+        if page in ROUTES:
+            st.switch_page(ROUTES[page])
         else:
-            disabled = config.get("disabled", False)
-        
-            if st.button(config["buttonlabel"], key=config["key"], disabled=disabled):
-        
-                # navegación segura
-                page = config.get("page")
-        
-                if page:
-                    st.switch_page(page)
-        
-        st.markdown("</div></div>", unsafe_allow_html=True)
+            st.error(f"Página no registrada: {page}")
+
+st.markdown("</div></div>", unsafe_allow_html=True)
         
 cards = [
     {
