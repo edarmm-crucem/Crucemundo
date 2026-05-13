@@ -1442,6 +1442,7 @@ st.markdown(
     .card-irconfirmacion { background: #F0F3F8; border-color: #CFD8E6; --card-btn-bg:#E0E7F1; --card-btn-border:#B8C6DC; --card-btn-text:#4A5874; --card-btn-shadow:rgba(74,88,116,0.16); }
     .card-informebarco { background: #EAF7FB; border-color: #BFDDE8; --card-btn-bg:#D2EDF6; --card-btn-border:#97CEE0; --card-btn-text:#2B6881; --card-btn-shadow:rgba(43,104,129,0.16); }
     .card-nuevobarco { background: #EEF6FF; border-color: #C7DCF9; --card-btn-bg:#DCEBFF; --card-btn-border:#A8C8F5; --card-btn-text:#27518A; --card-btn-shadow:rgba(39,81,138,0.16); }
+    .card-supabase { background: #F0FDF4; border-color: #BBF7D0; --card-btn-bg:#D1FAE5; --card-btn-border:#6EE7B7; --card-btn-text:#065F46; --card-btn-shadow:rgba(6,95,70,0.16); }
 
     .action-top { display: flex; align-items: flex-start; gap: 0.65rem; }
     .action-icon {
@@ -1801,14 +1802,23 @@ cards = [
         "key": "btnnuevobarcoopen",
         "action": lambda: openpanel("nuevobarco"),
     },
+    {
+        "cardclass": "card-supabase",
+        "icon": "🗄️",
+        "titlees": "Pruebas Supabase",
+        "titleen": "Supabase Tests",
+        "buttonlabel": "Abrir Supabase",
+        "key": "btnpruebassupabase",
+        "action": lambda: st.switch_page("pages/01_page.py"),
+    },
 ]
 
 row1 = st.columns([1.45, 1.45, 1.05, 1.05, 1.10, 1.10], gap="medium")
 for col, card in zip(row1, cards[:6]):
     renderactioncard(col, card)
 
-row2 = st.columns([0.85, 0.85, 0.85, 0.85, 0.95], gap="medium")
-for col, card in zip(row2, cards[6:11]):
+row2 = st.columns([0.85, 0.85, 0.85, 0.85, 0.95, 0.95], gap="medium")
+for col, card in zip(row2, cards[6:12]):
     renderactioncard(col, card)
 
 if st.session_state.get("confirmstate") == "step1":
