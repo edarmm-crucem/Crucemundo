@@ -1809,7 +1809,7 @@ cards = [
         "titleen": "Supabase Tests",
         "buttonlabel": "Abrir Supabase",
         "key": "btnpruebassupabase",
-        "link": "01_page",
+        "link": "https://crucemundo.streamlit.app/~/+/01_page",
     },
 ]
 
