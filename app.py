@@ -1697,13 +1697,15 @@ def renderactioncard(col, config):
         # ---------------------------
         else:
             disabled = config.get("disabled", False)
-
+        
             if st.button(config["buttonlabel"], key=config["key"], disabled=disabled):
-
-                # 🔥 AQUÍ NO LLAMES action()
-                if "page" in config:
-                    st.switch_page(f"pages/{config['page']}.py")
-
+        
+                # navegación segura
+                page = config.get("page")
+        
+                if page:
+                    st.switch_page(page)
+        
         st.markdown("</div></div>", unsafe_allow_html=True)
         
 cards = [
