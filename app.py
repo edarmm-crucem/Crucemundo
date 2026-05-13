@@ -1809,7 +1809,7 @@ cards = [
         "titleen": "Supabase Tests",
         "buttonlabel": "Abrir Supabase",
         "key": "btnpruebassupabase",
-        "action": lambda: st.switch_page("pages/01_page.py"),
+        "link": "01_page",
     },
 ]
 
