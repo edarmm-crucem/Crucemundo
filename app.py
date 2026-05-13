@@ -1442,7 +1442,7 @@ st.markdown(
     .card-irconfirmacion { background: #F0F3F8; border-color: #CFD8E6; --card-btn-bg:#E0E7F1; --card-btn-border:#B8C6DC; --card-btn-text:#4A5874; --card-btn-shadow:rgba(74,88,116,0.16); }
     .card-informebarco { background: #EAF7FB; border-color: #BFDDE8; --card-btn-bg:#D2EDF6; --card-btn-border:#97CEE0; --card-btn-text:#2B6881; --card-btn-shadow:rgba(43,104,129,0.16); }
     .card-nuevobarco { background: #EEF6FF; border-color: #C7DCF9; --card-btn-bg:#DCEBFF; --card-btn-border:#A8C8F5; --card-btn-text:#27518A; --card-btn-shadow:rgba(39,81,138,0.16); }
-    .card-sepabase { background: #FFF8EC; border-color: #F5D98B; --card-btn-bg:#FDEEBA; --card-btn-border:#F0CC6A; --card-btn-text:#7A5C00; --card-btn-shadow:rgba(122,92,0,0.16); }
+
     .action-top { display: flex; align-items: flex-start; gap: 0.65rem; }
     .action-icon {
         width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
@@ -1666,6 +1666,7 @@ st.markdown(
 
 st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
+
 def renderactioncard(col, config):
     with col:
         st.markdown(
@@ -1683,36 +1684,23 @@ def renderactioncard(col, config):
             unsafe_allow_html=True,
         )
 
-        # ---------------------------
-        # LINK EXTERNO (OK)
-        # ---------------------------
         if config.get("link"):
             st.markdown(
                 f'<a class="done-link" href="{config["link"]}" target="_blank" rel="noopener noreferrer">{config["buttonlabel"]}</a>',
                 unsafe_allow_html=True,
             )
-
-        # ---------------------------
-        # STREAMLIT NAVIGATION (FIX)
-        # ---------------------------
         else:
             disabled = config.get("disabled", False)
-        
-            if st.button(config["buttonlabel"], key=config["key"], disabled=disabled):
-        
-                page = config.get("page")
-        
-                ROUTES = {
-                    "sepabase": "pages/01_page.py",            
-                }
-        
-                if page in ROUTES:
-                    st.switch_page(ROUTES[page])
-                else:
-                    st.error(f"Página no registrada: {page}")
+            if not disabled and st.button(config["buttonlabel"], key=config["key"]):
+                action = config.get("action")
+                if action:
+                    action()
+            elif disabled:
+                st.button(config["buttonlabel"], key=config["key"], disabled=True)
 
-st.markdown("</div></div>", unsafe_allow_html=True)
-        
+        st.markdown("</div></div>", unsafe_allow_html=True)
+
+
 cards = [
     {
         "cardclass": "card-es",
@@ -1813,24 +1801,14 @@ cards = [
         "key": "btnnuevobarcoopen",
         "action": lambda: openpanel("nuevobarco"),
     },
-
-    {
-        "cardclass": "card-sepabase",
-        "icon": "🧪",
-        "titlees": "Pruebas Sepabase",
-        "titleen": "Sepabase Tests",
-        "buttonlabel": "Abrir Pruebas",
-        "key": "btnsepabaseopen",
-        "page": "01_page"
-    },
 ]
 
 row1 = st.columns([1.45, 1.45, 1.05, 1.05, 1.10, 1.10], gap="medium")
 for col, card in zip(row1, cards[:6]):
     renderactioncard(col, card)
 
-row2 = st.columns([0.85, 0.85, 0.85, 0.85, 0.95, 0.95], gap="medium")
-for col, card in zip(row2, cards[6:12]):
+row2 = st.columns([0.85, 0.85, 0.85, 0.85, 0.95], gap="medium")
+for col, card in zip(row2, cards[6:11]):
     renderactioncard(col, card)
 
 if st.session_state.get("confirmstate") == "step1":
