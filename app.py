@@ -1838,33 +1838,47 @@ st.markdown(
         <div class="nav-sep"></div>
 
         <!-- CONFIRMACIONES -->
-        <div class="nav-group" tabindex="0">
-            <button class="{_grp_cls(confirmaciones_pages)}" type="button">
-                📋 Confirmaciones <span class="nav-caret">▼</span>
-            </button>
-            <div class="nav-dropdown">
-                <div style="padding:0.22rem 0.65rem 0.28rem; font-size:0.64rem; font-weight:800;
-                            color:#94A3B8; letter-spacing:0.07em; text-transform:uppercase;">
-                    Confirmaciones · Confirmations
-                </div>
-                <div class="nav-divider"></div>
-                <!-- item activo: usa botón Streamlit debajo -->
-                <div class="{'nav-item nav-item-active' if active_nav == NAV_PAGE_01 else 'nav-item'}"
-                     id="nav-item-nueva-es"
-                     style="cursor:pointer"
-                     onclick="document.getElementById('nav-btn-nueva-es').click()">
-                    📘 Nueva Confirmación ES
-                </div>
-                <div class="nav-item-disabled">
-                    📗 New Confirmation EN
-                    <span class="nav-badge-wip">WIP</span>
-                </div>
-                <div class="nav-item-disabled">
-                    👥 Nueva Confirmación GRUPO
-                    <span class="nav-badge-wip">WIP</span>
-                </div>
-            </div>
+<div class="nav-group" tabindex="0">
+    <button class="{_grp_cls(confirmaciones_pages)}" type="button">
+        📋 Confirmaciones <span class="nav-caret">▼</span>
+    </button>
+
+    <div class="nav-dropdown">
+
+        <div style="
+            padding:0.22rem 0.65rem 0.28rem;
+            font-size:0.64rem;
+            font-weight:800;
+            color:#94A3B8;
+            letter-spacing:0.07em;
+            text-transform:uppercase;
+        ">
+            Confirmaciones · Confirmations
         </div>
+
+        <div class="nav-divider"></div>
+
+        <div class="{nav_item_class}"
+             id="nav-item-nueva-es"
+             style="cursor:pointer"
+             onclick="document.getElementById('nav-btn-nueva-es').click()">
+
+            📘 Nueva Confirmación ES
+
+        </div>
+
+        <div class="nav-item-disabled">
+            📗 New Confirmation EN
+            <span class="nav-badge-wip">WIP</span>
+        </div>
+
+        <div class="nav-item-disabled">
+            👥 Nueva Confirmación GRUPO
+            <span class="nav-badge-wip">WIP</span>
+        </div>
+
+    </div>
+</div>
 
         <!-- ROOMING LIST -->
         <div class="nav-group" tabindex="0">
