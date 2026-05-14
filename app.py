@@ -16,7 +16,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# --- CONFIGURACIÓN DE IDs ---
 FOLDERSESIONESID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
 FOLDERID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
 LOGOID = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
@@ -32,78 +31,20 @@ GROUPSROOTID = "1MMNH3y1E3jJIp6uUnxbwV0toAtdr2F2M"
 BOATREGISTRYSHEETID = "1pvDAEPGkb1DmvbauY-eKk3ymljDvEBvDivijVDUHmGA"
 BOATREGISTRYSHEETNAME = "TICKETS, RESULTADO, ENVIADO TICKET"
 
-# --- ESTILOS CSS (Century Gothic & Minimalismo) ---
-st.markdown("""
-<style>
-    .chip-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 10px;
-        align-items: center;
-    }
-    .chip-label {
-        font-family: 'Century Gothic', sans-serif;
-        font-weight: 600;
-        font-size: 0.8rem;
-        padding: 4px 12px;
-        border-radius: 12px;
-        min-width: 150px;
-        text-align: center;
-        text-transform: uppercase;
-    }
-    /* Colores solicitados */
-    .label-orange { background-color: #FFEDD5; color: #9A3412; border: 1px solid #FED7AA; }
-    .label-green { background-color: #DCFCE7; color: #166534; border: 1px solid #BBF7D0; }
-    .label-yellow { background-color: #FEF9C3; color: #854D0E; border: 1px solid #FDE047; }
-
-    .chip-link {
-        font-family: 'Century Gothic', sans-serif;
-        background-color: #FFFFFF;
-        color: #4B5563;
-        padding: 4px 14px;
-        border-radius: 15px;
-        text-decoration: none;
-        font-size: 0.82rem;
-        border: 1px solid #E5E7EB;
-        transition: all 0.2s;
-    }
-    .chip-link:hover {
-        background-color: #F9FAFB;
-        border-color: #D1D5DB;
-        color: #111827;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# --- FILA 1: ENLACES EXTERNOS (Naranja) ---
-st.markdown(f'''
-<div class="chip-container">
-    <span class="chip-label label-orange">ENLACES EXTERNOS</span>
-    <a class="chip-link" href="https://github.com/Crucemundo" target="_blank">GitHub</a>
-    <a class="chip-link" href="https://crucemundo.com" target="_blank">Web Oficial</a>
-</div>
-''', unsafe_allow_html=True)
-
-# --- FILA 2: ENLACES DRIVE (Verde) ---
-st.markdown(f'''
-<div class="chip-container">
-    <span class="chip-label label-green">ENLACES DRIVE</span>
-    <a class="chip-link" href="https://drive.google.com/drive/folders/{DRIVEROOTID}" target="_blank">📂 Salidas</a>
-    <a class="chip-link" href="https://drive.google.com/drive/folders/{GROUPSROOTID}" target="_blank">👥 Grupos</a>
-    <a class="chip-link" href="https://docs.google.com/spreadsheets/d/{AGENCYSHEETID}" target="_blank">🏢 Agencias</a>
-</div>
-''', unsafe_allow_html=True)
-
-# --- FILA 3: ACCIONES (Amarillo) ---
-st.markdown(f'''
-<div class="chip-container">
-    <span class="chip-label label-yellow">ACCIONES</span>
-    <a class="chip-link" href="/01_page" target="_self">🚀 Abrir 01_page</a>
-</div>
-''', unsafe_allow_html=True)
-
-st.divider()
+VALIDUSERS = {
+    "support@crucemundo.com": "Albina",
+    "sales@crucemundo.com": "Kristina",
+    "cruise@crucemundo.com": "Malvina",
+    "tania@crucemundo.com": "Tania Bondar",
+    "incoming@crucemundo.com": "Tatiana",
+    "operations@crucemundo.com": "Anton",
+    "reservations@crucemundo.com": "Serge",
+    "marketing@crucemundo.com": "Asel",
+    "alexei@crucemundo.com": "Alexei",
+    "anton@crucemundo.com": "Anton",
+    "finance@crucemundo.com": "Aleksandr",
+    "edarmm@gmail.com": "Esteban",
+}
 VALIDPASSWORD = st.secrets.get("apppassword", "")
 
 AGENCYFIELDS = [
