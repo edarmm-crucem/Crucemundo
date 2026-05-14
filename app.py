@@ -1641,46 +1641,23 @@ st.markdown('<div class="main-content">', unsafe_allow_html=True)
 st.markdown(
     '''
     <div class="section-head-row">
-        <div class="section-eyebrow">ACCIONES RÁPIDAS · QUICK ACTIONS</div>
 
-        <a class="web-chip"
-           href="https://www.crucemundo.es"
-           target="_blank"
-           rel="noopener noreferrer">
-           Ir a Crucemundo
-        </a>
-
-        <a class="web-chip"
-           href="https://mail.google.com"
-           target="_blank"
-           rel="noopener noreferrer">
-           Gmail
-        </a>
-    </div>
-    ''',
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    '''
-    <div class="section-head-row">
         <div class="section-eyebrow">
             ACCIONES RÁPIDAS · QUICK ACTIONS
         </div>
 
         <a class="web-chip"
            href="https://www.crucemundo.es"
-           target="_blank"
-           rel="noopener noreferrer">
+           target="_blank">
            Ir a Crucemundo
         </a>
 
         <a class="web-chip"
            href="https://mail.google.com"
-           target="_blank"
-           rel="noopener noreferrer">
+           target="_blank">
            Gmail
         </a>
+
     </div>
 
     <div class="section-head-row" style="margin-top:0.45rem;">
@@ -1695,7 +1672,6 @@ st.markdown(
     ''',
     unsafe_allow_html=True,
 )
-
 st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
 
