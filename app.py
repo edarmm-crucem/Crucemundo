@@ -1641,37 +1641,29 @@ st.markdown('<div class="main-content">', unsafe_allow_html=True)
 st.markdown(
     '''
     <div class="section-head-row">
-
-        <div class="section-eyebrow">
-            ACCIONES RÁPIDAS · QUICK ACTIONS
-        </div>
-
-        <a class="web-chip"
-           href="https://www.crucemundo.es"
-           target="_blank">
-           Ir a Crucemundo
-        </a>
-
-        <a class="web-chip"
-           href="https://mail.google.com"
-           target="_blank">
-           Gmail
-        </a>
-
-    </div>
-
-    <div class="section-head-row" style="margin-top:0.45rem;">
-
-        <a class="web-chip"
-           href="/01_Page"
-           target="_self">
-           📄 01 Page
-        </a>
-
+        <div class="section-eyebrow">ACCIONES RÁPIDAS · QUICK ACTIONS</div>
+        <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">Ir a Crucemundo</a>
+        <a class="web-chip" href="https://mail.google.com" target="_blank" rel="noopener noreferrer">Gmail</a>
     </div>
     ''',
     unsafe_allow_html=True,
 )
+
+st.markdown(
+    f'''
+    <div class="section-head-row-green">
+        <a class="web-chip-green" href="{driverooturl}" target="_blank" rel="noopener noreferrer">Drive Root</a>
+        <a class="web-chip-green" href="{groupsrooturl}" target="_blank" rel="noopener noreferrer">Drive Groups</a>
+        <a class="web-chip-green" href="{cvcfitfolderurl}" target="_blank" rel="noopener noreferrer">Folder Sesiones</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-TnE3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">MASTERCABINAS</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">EXCURSIONES</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">MASTER CLIENTES</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCRHJr9TCD7VWrGI6nDhMtwi27cMJL1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Ventas FIT</a>
+    </div>
+    ''',
+    unsafe_allow_html=True,
+)
+
 st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
 
