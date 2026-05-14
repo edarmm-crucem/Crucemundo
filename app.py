@@ -1714,18 +1714,18 @@ st.markdown(
            Ventas FIT
         </a>
 
-    </div>
+        </div>
 
-    <!-- NUEVA FILA AMARILLA -->
-    <div class="section-head-row" style="margin-top:0.45rem;">
-
-        <a class="web-chip"
-           href="/01_Page"
-           target="_self">
-           📄 01 Page
-        </a>
-
-    </div>
+        <!-- NUEVA FILA AMARILLA -->
+        <div class="section-head-row" style="margin-top:0.45rem;">
+    
+            <a class="web-chip"
+               href="/01_Page"
+               target="_self">
+               📄 01 Page
+            </a>
+    
+        </div>
 
     ''',
     unsafe_allow_html=True,
