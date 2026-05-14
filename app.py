@@ -1640,85 +1640,65 @@ st.markdown(
 st.markdown('<div class="main-content">', unsafe_allow_html=True)
 
 # ============================================================
-# CHIPS SUPERIORES
+# CSS · SOLO TITULOS FILA UN POCO MÁS GRANDES
 # ============================================================
 
 st.markdown(
     """
     <style>
 
-    /* ============================================================
-       CHIP TITLES
-    ============================================================ */
+    /* TITULOS FILAS */
 
     .chip-row-title{
-        display:flex;
+        display:inline-flex;
         align-items:center;
-        gap:0.55rem;
 
-        width:100%;
+        padding:0.38rem 0.90rem;
 
-        padding:0.78rem 1.2rem;
+        border-radius:999px;
 
-        border-radius:18px;
-
-        font-size:0.84rem;
+        font-size:0.76rem;
         font-weight:800;
-        letter-spacing:0.05em;
+        letter-spacing:0.04em;
         text-transform:uppercase;
 
-        margin-top:0.95rem;
-        margin-bottom:0.75rem;
-
-        box-shadow:
-            0 2px 10px rgba(0,0,0,0.10);
-
-        border:1px solid rgba(255,255,255,0.20);
+        margin-top:0.45rem;
+        margin-bottom:0.35rem;
     }
 
     .chip-yellow{
-        background:linear-gradient(135deg,#FDE68A 0%, #FACC15 100%);
+        background:#FACC15;
         color:#78350F;
     }
 
     .chip-orange{
-        background:linear-gradient(135deg,#FDBA74 0%, #FB923C 100%);
+        background:#FB923C;
         color:#7C2D12;
     }
 
     .chip-blue{
-        background:linear-gradient(135deg,#93C5FD 0%, #3B82F6 100%);
+        background:#3B82F6;
         color:#FFFFFF;
     }
 
-    /* ============================================================
-       CHIP BUTTONS
-    ============================================================ */
+    /* CHIPS MINI */
 
     .stLinkButton > a,
     div.stButton > button {
 
-        width:100% !important;
+        padding:0.10rem 0.45rem !important;
 
-        border-radius:14px !important;
+        min-height:unset !important;
 
-        padding:0.72rem 1rem !important;
+        border-radius:999px !important;
 
-        font-size:0.83rem !important;
+        font-size:0.63rem !important;
 
         font-weight:700 !important;
 
-        border:none !important;
+        line-height:1 !important;
 
-        transition:all 0.18s ease !important;
-
-        box-shadow:
-            0 2px 8px rgba(0,0,0,0.08) !important;
-    }
-
-    div.stButton > button:hover,
-    .stLinkButton > a:hover{
-        transform:translateY(-1px);
+        box-shadow:none !important;
     }
 
     </style>
@@ -1739,31 +1719,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-extcol1, extcol2, extcol3, extcol4 = st.columns(4)
+# AQUÍ DEJAS TUS LINKS ACTUALES EXACTAMENTE IGUAL
 
-with extcol1:
-    st.link_button(
-        "💻 Github",
-        "https://github.com/"
-    )
-
-with extcol2:
-    st.link_button(
-        "📁 Google Drive",
-        "https://drive.google.com/"
-    )
-
-with extcol3:
-    st.link_button(
-        "📧 Gmail",
-        "https://mail.google.com/"
-    )
-
-with extcol4:
-    st.link_button(
-        "🌍 Crucemundo",
-        "https://crucemundo.com"
-    )
 
 # ============================================================
 # FILA 2 · ENLACES DRIVE
@@ -1778,31 +1735,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-drivecol1, drivecol2, drivecol3, drivecol4 = st.columns(4)
+# AQUÍ DEJAS TUS LINKS DRIVE ACTUALES EXACTAMENTE IGUAL
 
-with drivecol1:
-    st.link_button(
-        "📘 Confirmaciones",
-        "https://drive.google.com/"
-    )
-
-with drivecol2:
-    st.link_button(
-        "🛏️ Room Lists",
-        "https://drive.google.com/"
-    )
-
-with drivecol3:
-    st.link_button(
-        "🎫 Bonos",
-        "https://drive.google.com/"
-    )
-
-with drivecol4:
-    st.link_button(
-        "🛳️ Barcos",
-        "https://drive.google.com/"
-    )
 
 # ============================================================
 # FILA 3 · ACCIONES
@@ -1822,7 +1756,7 @@ actioncol1, actioncol2, actioncol3, actioncol4 = st.columns(4)
 with actioncol1:
 
     if st.button(
-        "📘 Nueva Confirmación",
+        "📘 Nueva",
         key="btn_nueva_confirmacion_chip"
     ):
         st.switch_page("pages/01_page.py")
@@ -1830,7 +1764,7 @@ with actioncol1:
 with actioncol2:
 
     if st.button(
-        "🛳️ Nuevo Barco",
+        "🛳️ Barco",
         key="btn_nuevo_barco_chip"
     ):
         st.session_state["opennuevobarcoform"] = True
@@ -1839,7 +1773,7 @@ with actioncol2:
 with actioncol3:
 
     if st.button(
-        "📊 Informes",
+        "📊 Informe",
         key="btn_informes_chip"
     ):
         st.session_state["openinformebarcoform"] = True
@@ -1848,11 +1782,10 @@ with actioncol3:
 with actioncol4:
 
     if st.button(
-        "🧪 Supabase",
+        "🧪 Supa",
         key="btn_supabase_chip"
     ):
         st.switch_page("pages/01_page.py")
-st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
 
 def renderactioncard(col, config):
