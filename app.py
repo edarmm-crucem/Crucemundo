@@ -16,6 +16,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+# --- CONFIGURACIÓN DE IDs ---
 FOLDERSESIONESID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
 FOLDERID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
 LOGOID = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
@@ -31,6 +32,106 @@ GROUPSROOTID = "1MMNH3y1E3jJIp6uUnxbwV0toAtdr2F2M"
 BOATREGISTRYSHEETID = "1pvDAEPGkb1DmvbauY-eKk3ymljDvEBvDivijVDUHmGA"
 BOATREGISTRYSHEETNAME = "TICKETS, RESULTADO, ENVIADO TICKET"
 
+# --- ESTILOS CSS PERSONALIZADOS ---
+st.markdown("""
+<style>
+    /* Estilos para el contenedor de chips */
+    .chip-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+        align-items: center;
+        padding: 5px 0;
+    }
+
+    /* Estilo para los títulos de fila (Labels) */
+    .chip-label {
+        font-family: 'Century Gothic', sans-serif;
+        font-weight: 600;
+        font-size: 0.75rem;
+        padding: 4px 12px;
+        border-radius: 12px;
+        margin-right: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        min-width: 140px;
+        text-align: center;
+    }
+
+    /* Colores específicos por fila */
+    .label-blue { background-color: #E1EFFE; color: #1E429F; border: 1px solid #BCDAFF; }
+    .label-yellow { background-color: #FEF9C3; color: #854D0E; border: 1px solid #FDE047; }
+    .label-green { background-color: #DEF7EC; color: #03543F; border: 1px solid #84E1BC; }
+
+    /* Estilo para los botones/links individuales (Chips) */
+    .chip-link {
+        font-family: 'Century Gothic', sans-serif;
+        background-color: #ffffff;
+        color: #4B5563;
+        padding: 4px 14px;
+        border-radius: 15px;
+        text-decoration: none;
+        font-size: 0.82rem;
+        border: 1px solid #E5E7EB;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .chip-link:hover {
+        background-color: #F9FAFB;
+        border-color: #9CA3AF;
+        color: #111827;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    /* Ajuste general de la fuente Century Gothic */
+    html, body, [class*="css"] {
+        font-family: 'Century Gothic', sans-serif;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- CABECERA Y BIENVENIDA ---
+st.title("Portal Crucemundo")
+
+# --- BLOQUE DE CHIPS (FILAS 1, 2 y 3) ---
+
+# Fila 1: ENLACES EXTERNOS (Azul) - Incluye enlace interno de GitHub
+st.markdown(f'''
+<div class="chip-container">
+    <span class="chip-label label-blue">ENLACES EXTERNOS</span>
+    <a class="chip-link" href="/Crucemundo/pages/01_page.app" target="_self">📂 Página 01 (GitHub)</a>
+    <a class="chip-link" href="https://github.com/Crucemundo" target="_blank">🌐 Repositorio Principal</a>
+    <a class="chip-link" href="https://crucemundo.com" target="_blank">💻 Web Crucemundo</a>
+</div>
+''', unsafe_allow_html=True)
+
+# Fila 2: ENLACES DRIVE (Amarillo)
+st.markdown(f'''
+<div class="chip-container">
+    <span class="chip-label label-yellow">ENLACES DRIVE</span>
+    <a class="chip-link" href="https://drive.google.com/drive/folders/{DRIVEROOTID}" target="_blank">📁 Salidas 2024/25</a>
+    <a class="chip-link" href="https://drive.google.com/drive/folders/{GROUPSROOTID}" target="_blank">👥 Carpeta Grupos</a>
+    <a class="chip-link" href="https://docs.google.com/spreadsheets/d/{AGENCYSHEETID}" target="_blank">🏢 Base Agencias</a>
+</div>
+''', unsafe_allow_html=True)
+
+# Fila 3: ACCIONES (Verde)
+st.markdown(f'''
+<div class="chip-container">
+    <span class="chip-label label-green">ACCIONES</span>
+    <a class="chip-link" href="javascript:window.location.reload();">🔄 Refrescar Hub</a>
+    <a class="chip-link" href="#">📊 Reporte Diario</a>
+    <a class="chip-link" href="#">📋 Registro Tickets</a>
+</div>
+''', unsafe_allow_html=True)
+
+st.divider()
+
+# --- EL RESTO DE TU LÓGICA DE FUNCIONES Y PANELES CONTINÚA AQUÍ ---
+# (Se omite el resto del código funcional para brevedad, pero mantén tus funciones de búsqueda y Drive)
 VALIDUSERS = {
     "support@crucemundo.com": "Albina",
     "sales@crucemundo.com": "Kristina",
