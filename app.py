@@ -1639,32 +1639,219 @@ st.markdown(
 
 st.markdown('<div class="main-content">', unsafe_allow_html=True)
 
+# ============================================================
+# CHIPS SUPERIORES
+# ============================================================
+
 st.markdown(
-    '''
-    <div class="section-head-row">
-        <div class="section-eyebrow">ACCIONES RÁPIDAS · QUICK ACTIONS</div>
-        <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">Ir a Crucemundo</a>
-        <a class="web-chip" href="https://mail.google.com" target="_blank" rel="noopener noreferrer">Gmail</a>
-    </div>
-    ''',
+    """
+    <style>
+
+    /* ============================================================
+       CHIP TITLES
+    ============================================================ */
+
+    .chip-row-title{
+        display:flex;
+        align-items:center;
+        gap:0.55rem;
+
+        width:100%;
+
+        padding:0.78rem 1.2rem;
+
+        border-radius:18px;
+
+        font-size:0.84rem;
+        font-weight:800;
+        letter-spacing:0.05em;
+        text-transform:uppercase;
+
+        margin-top:0.95rem;
+        margin-bottom:0.75rem;
+
+        box-shadow:
+            0 2px 10px rgba(0,0,0,0.10);
+
+        border:1px solid rgba(255,255,255,0.20);
+    }
+
+    .chip-yellow{
+        background:linear-gradient(135deg,#FDE68A 0%, #FACC15 100%);
+        color:#78350F;
+    }
+
+    .chip-orange{
+        background:linear-gradient(135deg,#FDBA74 0%, #FB923C 100%);
+        color:#7C2D12;
+    }
+
+    .chip-blue{
+        background:linear-gradient(135deg,#93C5FD 0%, #3B82F6 100%);
+        color:#FFFFFF;
+    }
+
+    /* ============================================================
+       CHIP BUTTONS
+    ============================================================ */
+
+    .stLinkButton > a,
+    div.stButton > button {
+
+        width:100% !important;
+
+        border-radius:14px !important;
+
+        padding:0.72rem 1rem !important;
+
+        font-size:0.83rem !important;
+
+        font-weight:700 !important;
+
+        border:none !important;
+
+        transition:all 0.18s ease !important;
+
+        box-shadow:
+            0 2px 8px rgba(0,0,0,0.08) !important;
+    }
+
+    div.stButton > button:hover,
+    .stLinkButton > a:hover{
+        transform:translateY(-1px);
+    }
+
+    </style>
+    """,
     unsafe_allow_html=True,
 )
 
+# ============================================================
+# FILA 1 · ENLACES EXTERNOS
+# ============================================================
+
 st.markdown(
-    f'''
-    <div class="section-head-row-green">
-        <a class="web-chip-green" href="{driverooturl}" target="_blank" rel="noopener noreferrer">Drive Root</a>
-        <a class="web-chip-green" href="{groupsrooturl}" target="_blank" rel="noopener noreferrer">Drive Groups</a>
-        <a class="web-chip-green" href="{cvcfitfolderurl}" target="_blank" rel="noopener noreferrer">Folder Sesiones</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-TnE3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">MASTERCABINAS</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">EXCURSIONES</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">MASTER CLIENTES</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCRHJr9TCD7VWrGI6nDhMtwi27cMJL1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Ventas FIT</a>
+    """
+    <div class="chip-row-title chip-yellow">
+        🌐 ENLACES EXTERNOS
     </div>
-    ''',
+    """,
     unsafe_allow_html=True,
 )
 
+extcol1, extcol2, extcol3, extcol4 = st.columns(4)
+
+with extcol1:
+    st.link_button(
+        "💻 Github",
+        "https://github.com/"
+    )
+
+with extcol2:
+    st.link_button(
+        "📁 Google Drive",
+        "https://drive.google.com/"
+    )
+
+with extcol3:
+    st.link_button(
+        "📧 Gmail",
+        "https://mail.google.com/"
+    )
+
+with extcol4:
+    st.link_button(
+        "🌍 Crucemundo",
+        "https://crucemundo.com"
+    )
+
+# ============================================================
+# FILA 2 · ENLACES DRIVE
+# ============================================================
+
+st.markdown(
+    """
+    <div class="chip-row-title chip-orange">
+        📂 ENLACES DRIVE
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+drivecol1, drivecol2, drivecol3, drivecol4 = st.columns(4)
+
+with drivecol1:
+    st.link_button(
+        "📘 Confirmaciones",
+        "https://drive.google.com/"
+    )
+
+with drivecol2:
+    st.link_button(
+        "🛏️ Room Lists",
+        "https://drive.google.com/"
+    )
+
+with drivecol3:
+    st.link_button(
+        "🎫 Bonos",
+        "https://drive.google.com/"
+    )
+
+with drivecol4:
+    st.link_button(
+        "🛳️ Barcos",
+        "https://drive.google.com/"
+    )
+
+# ============================================================
+# FILA 3 · ACCIONES
+# ============================================================
+
+st.markdown(
+    """
+    <div class="chip-row-title chip-blue">
+        ⚡ ACCIONES
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+actioncol1, actioncol2, actioncol3, actioncol4 = st.columns(4)
+
+with actioncol1:
+
+    if st.button(
+        "📘 Nueva Confirmación",
+        key="btn_nueva_confirmacion_chip"
+    ):
+        st.switch_page("pages/01_page.py")
+
+with actioncol2:
+
+    if st.button(
+        "🛳️ Nuevo Barco",
+        key="btn_nuevo_barco_chip"
+    ):
+        st.session_state["opennuevobarcoform"] = True
+        st.rerun()
+
+with actioncol3:
+
+    if st.button(
+        "📊 Informes",
+        key="btn_informes_chip"
+    ):
+        st.session_state["openinformebarcoform"] = True
+        st.rerun()
+
+with actioncol4:
+
+    if st.button(
+        "🧪 Supabase",
+        key="btn_supabase_chip"
+    ):
+        st.switch_page("pages/01_page.py")
 st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
 
