@@ -1279,6 +1279,9 @@ def formatestadopagobadge(value):
     return f'<span class="status-pill">{value or ""}</span>'
 
 
+# ─────────────────────────────────────────────
+#  CSS
+# ─────────────────────────────────────────────
 st.markdown(
     """
     <style>
@@ -1299,6 +1302,7 @@ st.markdown(
         margin: 0 auto !important;
     }
 
+    /* ── LOGIN ── */
     .login-page { min-height: auto; display: flex; align-items: flex-start; justify-content: center; padding: 0.2rem 1rem 1rem; }
     .login-shell { width: 100%; max-width: 390px; margin: 0 auto; }
     .login-head { text-align: center; margin-bottom: 0.55rem; }
@@ -1308,6 +1312,7 @@ st.markdown(
     .login-form-box { background: transparent !important; border: none !important; padding: 0 !important; }
     .login-note { margin-top: 0.65rem; text-align: center; font-size: 0.72rem; color: #8A93A5; }
 
+    /* ── INPUTS ── */
     div[data-testid="stTextInput"] label,
     div[data-testid="stSelectbox"] label,
     div[data-testid="stDateInput"] label,
@@ -1343,6 +1348,7 @@ st.markdown(
         background: #FFFFFF !important;
     }
 
+    /* ── BUTTONS ── */
     div.stButton { width: fit-content !important; }
     div.stButton button,
     div[data-testid="stFormSubmitButton"] button,
@@ -1370,6 +1376,7 @@ st.markdown(
         filter: saturate(1.04);
     }
 
+    /* ── PORTAL HEADER ── */
     .portal-header { padding: 0.1rem 0 0.55rem 0; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.55rem; }
     .portal-header-left { display: flex; align-items: center; gap: 0.9rem; }
     .portal-logo { height: 42px; width: auto; object-fit: contain; display: block; }
@@ -1380,6 +1387,155 @@ st.markdown(
     .portal-subtitle-en { margin-top: 0.08rem; }
     .user-top { font-size: 0.72rem; color: #566079; white-space: nowrap; }
 
+    /* ── NAV MENU ── */
+    .nav-menu-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.3rem 0.4rem;
+        background: #F1F5F9;
+        border: 1px solid #E2E8F0;
+        border-radius: 16px;
+        margin-bottom: 0.85rem;
+        flex-wrap: wrap;
+    }
+    .nav-menu-label {
+        font-size: 0.68rem;
+        font-weight: 800;
+        color: #94A3B8;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 0 0.5rem;
+        white-space: nowrap;
+    }
+    .nav-sep {
+        width: 1px;
+        height: 18px;
+        background: #CBD5E1;
+        margin: 0 0.15rem;
+        flex-shrink: 0;
+    }
+    .nav-group {
+        position: relative;
+        display: inline-block;
+    }
+    .nav-group-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.32rem;
+        padding: 0.38rem 0.72rem;
+        border-radius: 10px;
+        border: none;
+        background: transparent;
+        font-family: "DM Sans", sans-serif;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #334155;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease;
+        white-space: nowrap;
+        user-select: none;
+    }
+    .nav-group-btn:hover {
+        background: #E2E8F0;
+        color: #1E293B;
+    }
+    .nav-group-btn.nav-active {
+        background: #DBEAFE;
+        color: #1D4ED8;
+    }
+    .nav-group-btn .nav-caret {
+        font-size: 0.55rem;
+        opacity: 0.55;
+        transition: transform 0.2s ease;
+    }
+    .nav-group-btn.nav-active .nav-caret {
+        transform: rotate(180deg);
+    }
+    .nav-dropdown {
+        display: none;
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        min-width: 230px;
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 14px;
+        box-shadow: 0 12px 32px rgba(15,23,42,0.12);
+        z-index: 9999;
+        padding: 0.35rem 0.35rem;
+        animation: navFadeIn 0.15s ease;
+    }
+    @keyframes navFadeIn {
+        from { opacity: 0; transform: translateY(-4px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .nav-group:hover .nav-dropdown,
+    .nav-group:focus-within .nav-dropdown {
+        display: block;
+    }
+    .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        width: 100%;
+        padding: 0.46rem 0.65rem;
+        border-radius: 9px;
+        border: none;
+        background: transparent;
+        font-family: "DM Sans", sans-serif;
+        font-size: 0.80rem;
+        font-weight: 600;
+        color: #1E293B;
+        cursor: pointer;
+        text-align: left;
+        text-decoration: none;
+        transition: background 0.13s ease;
+        white-space: nowrap;
+    }
+    .nav-item:hover {
+        background: #F1F5F9;
+    }
+    .nav-item.nav-item-active {
+        background: #EFF6FF;
+        color: #1D4ED8;
+        font-weight: 700;
+    }
+    .nav-item-disabled {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        width: 100%;
+        padding: 0.46rem 0.65rem;
+        border-radius: 9px;
+        font-family: "DM Sans", sans-serif;
+        font-size: 0.80rem;
+        font-weight: 600;
+        color: #94A3B8;
+        cursor: not-allowed;
+        white-space: nowrap;
+    }
+    .nav-badge-wip {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.10rem 0.38rem;
+        border-radius: 999px;
+        background: #FEF9C3;
+        border: 1px solid #FDE047;
+        color: #854D0E;
+        font-size: 0.60rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        margin-left: auto;
+    }
+    .nav-divider {
+        height: 1px;
+        background: #F1F5F9;
+        margin: 0.25rem 0;
+    }
+
+    /* ── MAIN CONTENT ── */
     .main-content { padding: 0; }
     .section-head-row, .section-head-row-green {
         display: flex; align-items: center; justify-content: flex-start; gap: 0.55rem;
@@ -1417,6 +1573,7 @@ st.markdown(
         box-shadow: 0 8px 28px rgba(15,23,42,0.05);
     }
 
+    /* ── ACTION CARDS ── */
     .action-box {
         width: 100%;
         min-height: 20px;
@@ -1487,6 +1644,7 @@ st.markdown(
         box-shadow: 0 8px 20px rgba(37, 99, 235, 0.22) !important;
     }
 
+    /* ── INFO CARDS ── */
     .agency-card, .cvcfit-card, .cvcfit-status-card, .cvcagencias-card, .cvcagencias-status-card, .process-card, .irconfirmacion-card, .informebarco-card {
         background: #FBFCFF; border: 1px solid #DCE5F0; border-radius: 18px; padding: 1rem; margin-top: 0.75rem;
         box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
@@ -1508,6 +1666,7 @@ st.markdown(
         font-size: 0.74rem; color: #465066; line-height: 1.45; margin-bottom: 0.35rem; word-break: break-word;
     }
 
+    /* ── REPORT TABLE ── */
     .report-table-wrap { margin-top: 1rem; overflow-x: auto; }
     .report-table {
         width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #DCE5F0; border-radius: 16px; overflow: hidden;
@@ -1547,6 +1706,7 @@ st.markdown(
         text-decoration:underline;
     }
 
+    /* ── FOOTER ── */
     .portal-footer {
         margin-top: 1rem; padding: 0.5rem 0 0 0; display: flex; justify-content: space-between;
         align-items: center; gap: 0.8rem; flex-wrap: wrap;
@@ -1566,6 +1726,9 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# ─────────────────────────────────────────────
+#  LOGIN
+# ─────────────────────────────────────────────
 if not st.session_state.authenticated:
     st.markdown('<div class="login-page"><div class="login-shell">', unsafe_allow_html=True)
     st.markdown(
@@ -1609,6 +1772,9 @@ if not st.session_state.authenticated:
     st.markdown("</div></div>", unsafe_allow_html=True)
     st.stop()
 
+# ─────────────────────────────────────────────
+#  PORTAL — variables
+# ─────────────────────────────────────────────
 USEREMAIL = st.session_state.get("useremail", "").strip()
 DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Sin usuario"
 SALUDO = getsaludo("es")
@@ -1619,6 +1785,9 @@ driverooturl = f"https://drive.google.com/drive/folders/{DRIVEROOTID}"
 groupsrooturl = f"https://drive.google.com/drive/folders/{GROUPSROOTID}"
 cvcfitfolderurl = f"https://drive.google.com/drive/folders/{FOLDERID}"
 
+# ─────────────────────────────────────────────
+#  PORTAL HEADER
+# ─────────────────────────────────────────────
 st.markdown(
     f'''
     <div class="portal-header">
@@ -1637,6 +1806,156 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# ─────────────────────────────────────────────
+#  NAV MENU — dropdown HTML (pure CSS hover)
+# ─────────────────────────────────────────────
+# The active page is stored in session_state["nav_page"].
+# Clicking a Streamlit button next to the HTML menu sets this key and reruns.
+if "nav_page" not in st.session_state:
+    st.session_state["nav_page"] = None
+
+NAV_PAGE_01 = "01_Page"   # internal page key for Nueva Confirmación ES
+
+def _navbtn(label, page_key, key):
+    """Renders a small invisible Streamlit button that sets nav_page."""
+    if st.button(label, key=key):
+        st.session_state["nav_page"] = page_key
+        cleartransientui()
+        st.rerun()
+
+active_nav = st.session_state.get("nav_page")
+
+# Build active CSS class helpers
+def _grp_cls(pages):
+    return "nav-group-btn nav-active" if active_nav in pages else "nav-group-btn"
+
+confirmaciones_pages = [NAV_PAGE_01]
+
+st.markdown(
+    f"""
+    <div class="nav-menu-bar">
+        <span class="nav-menu-label">Menú</span>
+        <div class="nav-sep"></div>
+
+        <!-- CONFIRMACIONES -->
+        <div class="nav-group" tabindex="0">
+            <button class="{_grp_cls(confirmaciones_pages)}" type="button">
+                📋 Confirmaciones <span class="nav-caret">▼</span>
+            </button>
+            <div class="nav-dropdown">
+                <div style="padding:0.22rem 0.65rem 0.28rem; font-size:0.64rem; font-weight:800;
+                            color:#94A3B8; letter-spacing:0.07em; text-transform:uppercase;">
+                    Confirmaciones · Confirmations
+                </div>
+                <div class="nav-divider"></div>
+                <!-- item activo: usa botón Streamlit debajo -->
+                <div class="{'nav-item nav-item-active' if active_nav == NAV_PAGE_01 else 'nav-item'}"
+                     id="nav-item-nueva-es"
+                     style="cursor:pointer"
+                     onclick="document.getElementById('nav-btn-nueva-es').click()">
+                    📘 Nueva Confirmación ES
+                </div>
+                <div class="nav-item-disabled">
+                    📗 New Confirmation EN
+                    <span class="nav-badge-wip">WIP</span>
+                </div>
+                <div class="nav-item-disabled">
+                    👥 Nueva Confirmación GRUPO
+                    <span class="nav-badge-wip">WIP</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROOMING LIST -->
+        <div class="nav-group" tabindex="0">
+            <button class="nav-group-btn" type="button">
+                🛏️ RoomingList <span class="nav-caret">▼</span>
+            </button>
+            <div class="nav-dropdown">
+                <div style="padding:0.22rem 0.65rem 0.28rem; font-size:0.64rem; font-weight:800;
+                            color:#94A3B8; letter-spacing:0.07em; text-transform:uppercase;">
+                    Rooming List
+                </div>
+                <div class="nav-divider"></div>
+                <div class="nav-item-disabled">
+                    ➕ Crear Roomlist
+                    <span class="nav-badge-wip">WIP</span>
+                </div>
+                <div class="nav-item-disabled">
+                    🔍 Ver Roomlist
+                    <span class="nav-badge-wip">WIP</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- BONOS -->
+        <div class="nav-group" tabindex="0">
+            <button class="nav-group-btn" type="button">
+                🎫 Bonos <span class="nav-caret">▼</span>
+            </button>
+            <div class="nav-dropdown">
+                <div style="padding:0.22rem 0.65rem 0.28rem; font-size:0.64rem; font-weight:800;
+                            color:#94A3B8; letter-spacing:0.07em; text-transform:uppercase;">
+                    Bonos · Vouchers
+                </div>
+                <div class="nav-divider"></div>
+                <div class="nav-item-disabled">
+                    ➕ Crear Bonos
+                    <span class="nav-badge-wip">WIP</span>
+                </div>
+                <div class="nav-item-disabled">
+                    🔍 Ver Bonos
+                    <span class="nav-badge-wip">WIP</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+# Hidden Streamlit button that the HTML onclick fires (invisible via CSS trick)
+st.markdown(
+    '<div id="nav-btn-nueva-es" style="display:none">',
+    unsafe_allow_html=True,
+)
+_navbtn("__nav_nueva_es__", NAV_PAGE_01, "nav-btn-nueva-es-st")
+st.markdown("</div>", unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────
+#  NAV PAGE: 01_Page
+# ─────────────────────────────────────────────
+if active_nav == NAV_PAGE_01:
+    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
+
+    headcol1, headcol2 = st.columns([12, 1])
+    with headcol1:
+        st.markdown("### 📘 Nueva Confirmación ES")
+    with headcol2:
+        if st.button("✕", key="close_nav_page_01"):
+            st.session_state["nav_page"] = None
+            st.rerun()
+
+    st.info(
+        "Esta sección está conectada a la página interna **01_Page**. "
+        "Aquí puedes introducir los datos de la nueva confirmación ES.",
+        icon="ℹ️",
+    )
+
+    # ── Switch to the actual Streamlit page ──────────────────────────────
+    # If you have a pages/01_Page.py file, the button below navigates to it.
+    st.page_link("pages/01_Page.py", label="Ir a 01_Page →", icon="🔗")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # Stop rendering the rest of the hub when we're in a nav page
+    # (comment out the line below if you prefer to show both)
+    st.stop()
+
+# ─────────────────────────────────────────────
+#  MAIN CONTENT (quick actions + cards)
+# ─────────────────────────────────────────────
 st.markdown('<div class="main-content">', unsafe_allow_html=True)
 
 st.markdown(
@@ -1821,6 +2140,9 @@ row2 = st.columns([0.85, 0.85, 0.85, 0.85, 0.95, 0.95], gap="medium")
 for col, card in zip(row2, cards[6:12]):
     renderactioncard(col, card)
 
+# ─────────────────────────────────────────────
+#  INLINE PANELS
+# ─────────────────────────────────────────────
 if st.session_state.get("confirmstate") == "step1":
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     panelheader("Crear sesión", "closeprocesspanel")
@@ -2415,6 +2737,10 @@ if st.session_state.get("openinformebarcoform"):
         st.exception(exc)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────
+#  FOOTER
+# ─────────────────────────────────────────────
 footercol1, footercol2 = st.columns([3, 1])
 with footercol1:
     st.markdown('<div class="portal-footer"><div class="footer-text">Crucemundo Hub</div></div>', unsafe_allow_html=True)
