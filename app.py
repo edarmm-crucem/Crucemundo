@@ -1442,7 +1442,6 @@ st.markdown(
     .card-irconfirmacion { background: #F0F3F8; border-color: #CFD8E6; --card-btn-bg:#E0E7F1; --card-btn-border:#B8C6DC; --card-btn-text:#4A5874; --card-btn-shadow:rgba(74,88,116,0.16); }
     .card-informebarco { background: #EAF7FB; border-color: #BFDDE8; --card-btn-bg:#D2EDF6; --card-btn-border:#97CEE0; --card-btn-text:#2B6881; --card-btn-shadow:rgba(43,104,129,0.16); }
     .card-nuevobarco { background: #EEF6FF; border-color: #C7DCF9; --card-btn-bg:#DCEBFF; --card-btn-border:#A8C8F5; --card-btn-text:#27518A; --card-btn-shadow:rgba(39,81,138,0.16); }
-    .card-supabase { background: #F0FDF4; border-color: #BBF7D0; --card-btn-bg:#D1FAE5; --card-btn-border:#6EE7B7; --card-btn-text:#065F46; --card-btn-shadow:rgba(6,95,70,0.16); }
 
     .action-top { display: flex; align-items: flex-start; gap: 0.65rem; }
     .action-icon {
@@ -1639,153 +1638,33 @@ st.markdown(
 
 st.markdown('<div class="main-content">', unsafe_allow_html=True)
 
-# ============================================================
-# CSS · SOLO TITULOS FILA UN POCO MÁS GRANDES
-# ============================================================
-
 st.markdown(
-    """
-    <style>
-
-    /* TITULOS FILAS */
-
-    .chip-row-title{
-        display:inline-flex;
-        align-items:center;
-
-        padding:0.38rem 0.90rem;
-
-        border-radius:999px;
-
-        font-size:0.76rem;
-        font-weight:800;
-        letter-spacing:0.04em;
-        text-transform:uppercase;
-
-        margin-top:0.45rem;
-        margin-bottom:0.35rem;
-    }
-
-    .chip-yellow{
-        background:#FACC15;
-        color:#78350F;
-    }
-
-    .chip-orange{
-        background:#FB923C;
-        color:#7C2D12;
-    }
-
-    .chip-blue{
-        background:#3B82F6;
-        color:#FFFFFF;
-    }
-
-    /* CHIPS MINI */
-
-    .stLinkButton > a,
-    div.stButton > button {
-
-        padding:0.10rem 0.45rem !important;
-
-        min-height:unset !important;
-
-        border-radius:999px !important;
-
-        font-size:0.63rem !important;
-
-        font-weight:700 !important;
-
-        line-height:1 !important;
-
-        box-shadow:none !important;
-    }
-
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-# ============================================================
-# FILA 1 · ENLACES EXTERNOS
-# ============================================================
-
-st.markdown(
-    """
-    <div class="chip-row-title chip-yellow">
-        🌐 ENLACES EXTERNOS
+    '''
+    <div class="section-head-row">
+        <div class="section-eyebrow">ACCIONES RÁPIDAS · QUICK ACTIONS</div>
+        <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">Ir a Crucemundo</a>
+        <a class="web-chip" href="https://mail.google.com" target="_blank" rel="noopener noreferrer">Gmail</a>
     </div>
-    """,
+    ''',
     unsafe_allow_html=True,
 )
-
-# AQUÍ DEJAS TUS LINKS ACTUALES EXACTAMENTE IGUAL
-
-
-# ============================================================
-# FILA 2 · ENLACES DRIVE
-# ============================================================
 
 st.markdown(
-    """
-    <div class="chip-row-title chip-orange">
-        📂 ENLACES DRIVE
+    f'''
+    <div class="section-head-row-green">
+        <a class="web-chip-green" href="{driverooturl}" target="_blank" rel="noopener noreferrer">Drive Root</a>
+        <a class="web-chip-green" href="{groupsrooturl}" target="_blank" rel="noopener noreferrer">Drive Groups</a>
+        <a class="web-chip-green" href="{cvcfitfolderurl}" target="_blank" rel="noopener noreferrer">Folder Sesiones</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-TnE3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">MASTERCABINAS</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">EXCURSIONES</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">MASTER CLIENTES</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCRHJr9TCD7VWrGI6nDhMtwi27cMJL1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Ventas FIT</a>
     </div>
-    """,
+    ''',
     unsafe_allow_html=True,
 )
 
-# AQUÍ DEJAS TUS LINKS DRIVE ACTUALES EXACTAMENTE IGUAL
-
-
-# ============================================================
-# FILA 3 · ACCIONES
-# ============================================================
-
-st.markdown(
-    """
-    <div class="chip-row-title chip-blue">
-        ⚡ ACCIONES
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-actioncol1, actioncol2, actioncol3, actioncol4 = st.columns(4)
-
-with actioncol1:
-
-    if st.button(
-        "📘 Nueva",
-        key="btn_nueva_confirmacion_chip"
-    ):
-        st.switch_page("pages/01_page.py")
-
-with actioncol2:
-
-    if st.button(
-        "🛳️ Barco",
-        key="btn_nuevo_barco_chip"
-    ):
-        st.session_state["opennuevobarcoform"] = True
-        st.rerun()
-
-with actioncol3:
-
-    if st.button(
-        "📊 Informe",
-        key="btn_informes_chip"
-    ):
-        st.session_state["openinformebarcoform"] = True
-        st.rerun()
-
-with actioncol4:
-
-    if st.button(
-        "🧪 Supa",
-        key="btn_supabase_chip"
-    ):
-        st.switch_page("pages/01_page.py")
+st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
 
 def renderactioncard(col, config):
@@ -1922,23 +1801,14 @@ cards = [
         "key": "btnnuevobarcoopen",
         "action": lambda: openpanel("nuevobarco"),
     },
-    {
-        "cardclass": "card-supabase",
-        "icon": "🗄️",
-        "titlees": "Pruebas Supabase",
-        "titleen": "Supabase Tests",
-        "buttonlabel": "Abrir Supabase",
-        "key": "btnpruebassupabase",
-        "link": "https://crucemundo.streamlit.app/~/+/01_page",
-    },
 ]
 
 row1 = st.columns([1.45, 1.45, 1.05, 1.05, 1.10, 1.10], gap="medium")
 for col, card in zip(row1, cards[:6]):
     renderactioncard(col, card)
 
-row2 = st.columns([0.85, 0.85, 0.85, 0.85, 0.95, 0.95], gap="medium")
-for col, card in zip(row2, cards[6:12]):
+row2 = st.columns([0.85, 0.85, 0.85, 0.85, 0.95], gap="medium")
+for col, card in zip(row2, cards[6:11]):
     renderactioncard(col, card)
 
 if st.session_state.get("confirmstate") == "step1":
