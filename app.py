@@ -2177,7 +2177,7 @@ if st.session_state.get("openinformebarcoform"):
                 ("Spreadsheet", informeresult.get("spreadsheetname")),
                 ("Total PAX", str(informeresult.get("totalpax", 0))),
                 ("Total Hojas", str(len(informeresult.get("rows", [])))),
-                ("Total €", f"{sum(r.get('Total Bruto', 0) for r in informeresult.get('rows', [])):.2f} €"),
+                ("Total Bruto €", f"{sum(r.get('Total', 0) for r in informeresult.get('rows', [])):.2f} €"),
             ])
             rows = informeresult.get("rows", [])
             if rows:
