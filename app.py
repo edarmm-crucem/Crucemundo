@@ -1591,6 +1591,7 @@ st.markdown(
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">EXCURSIONES</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">MASTER CLIENTES</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCRHJr9TCD7VWrGI6nDhMtwi27cMJL1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Ventas FIT</a>
+         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1GYclq4YkcTCe4Fuj_ajRnkeIJjaBFDLzQSMIMKXqdWg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Diccionario</a>
     </div>
     ''',
     unsafe_allow_html=True,
