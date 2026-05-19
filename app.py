@@ -559,6 +559,8 @@ def exportsheetpdfbytes(spreadsheetid, gid):
 # ============================================================
 
 def ensure_sheet_headers():
+    if st.session_state.get("_headers_checked"):
+        return
     sheetsservice = getsheetsservice()
     spreadsheet = sheetsservice.spreadsheets().get(
         spreadsheetId=BOATREGISTRYSHEETID
@@ -568,6 +570,8 @@ def ensure_sheet_headers():
         raise Exception("El spreadsheet debe tener al menos 2 hojas.")
     log_title = sheets[0]["properties"]["title"]
     ticket_title = sheets[1]["properties"]["title"]
+    st.session_state["_log_title"] = log_title
+    st.session_state["_ticket_title"] = ticket_title
     audit_headers = [["timestamp","useremail","displayname","sessionid","action","detail","panel","duration_seconds","metadata","requested_by","request_date"]]
     ticket_headers = [["timestamp","useremail","displayname","sessionid","barco","localizador","linea","cabina","categoria_normalizada","requested_by","request_date"]]
     log_values = sheetsservice.spreadsheets().values().get(
@@ -586,16 +590,15 @@ def ensure_sheet_headers():
             spreadsheetId=BOATREGISTRYSHEETID, range=f"{ticket_title}!A1:K1",
             valueInputOption="USER_ENTERED", body={"values": ticket_headers},
         ).execute()
+    st.session_state["_headers_checked"] = True
 
 
 def appendauditrow(action, detail="", panel="", extra=None):
     ensure_sheet_headers()
     sheetsservice = getsheetsservice()
-    spreadsheet = sheetsservice.spreadsheets().get(spreadsheetId=BOATREGISTRYSHEETID).execute()
-    sheets = spreadsheet.get("sheets", [])
-    if len(sheets) < 2:
-        raise Exception("El spreadsheet debe tener al menos 2 hojas.")
-    log_title = sheets[0]["properties"]["title"]
+    log_title = st.session_state.get("_log_title")
+    if not log_title:
+        raise Exception("No se pudo obtener el título de la hoja de log.")
     metadata = extra or {}
     requested_by, request_date = get_request_identity()
     values = [[
