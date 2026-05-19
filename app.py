@@ -1401,10 +1401,16 @@ st.markdown(
     .done-link:hover { transform: translateY(-1px); filter: saturate(1.04); }
 
      .action-box div.stButton button, .action-box .done-link {
-        background: var(--card-btn-bg) !important; border: 2px solid var(--card-btn-border) !important;
-        color: var(--card-btn-text) !important; box-shadow: 0 2px 6px var(--card-btn-shadow) !important;
-        min-height: 26px !important; padding: 0 0.65rem !important;
-        font-size: 0.68rem !important; font-weight: 800 !important;
+        background: var(--card-btn-bg) !important;
+        border: 2.5px solid var(--card-btn-border) !important;
+        color: var(--card-btn-text) !important;
+        box-shadow: 0 2px 6px var(--card-btn-shadow) !important;
+        min-height: 24px !important;
+        height: 24px !important;
+        padding: 0 0.60rem !important;
+        font-size: 0.66rem !important;
+        font-weight: 800 !important;
+        line-height: 1 !important;
         border-radius: 999px !important;
     }
 
