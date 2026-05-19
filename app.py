@@ -1359,18 +1359,18 @@ st.markdown(
         box-shadow: 0 3px 10px rgba(15,23,42,0.07);
     }
 
-    .card-es { background: #EAF3FF; border-color: #BFD7FF; --card-btn-bg:#CFE3FF; --card-btn-border:#94BEFF; --card-btn-text:#1E4E93; --card-btn-shadow:rgba(30,78,147,0.16); }
-    .card-grupos { background: #EAF8EE; border-color: #BDE3C7; --card-btn-bg:#CDEFD7; --card-btn-border:#93D0A7; --card-btn-text:#1F6A3A; --card-btn-shadow:rgba(31,106,58,0.15); }
-    .card-salida { background: #FFF2E3; border-color: #F1CFA9; --card-btn-bg:#FFDDB8; --card-btn-border:#F1B97B; --card-btn-text:#8A5318; --card-btn-shadow:rgba(138,83,24,0.16); }
-    .card-crucero { background: #F0EAFE; border-color: #D3C4FA; --card-btn-bg:#DDD0FF; --card-btn-border:#B9A0F8; --card-btn-text:#5A3E9E; --card-btn-shadow:rgba(90,62,158,0.16); }
-    .card-nueva-agencia { background: #EAF8EF; border-color: #BEE3C9; --card-btn-bg:#D0EFDA; --card-btn-border:#98D0AA; --card-btn-text:#256245; --card-btn-shadow:rgba(37,98,69,0.16); }
-    .card-buscar-agencia { background: #FFF1E5; border-color: #F1D1B0; --card-btn-bg:#FFDDBF; --card-btn-border:#F0B77E; --card-btn-text:#8B5620; --card-btn-shadow:rgba(139,86,32,0.16); }
-    .card-cvcfit { background: #FDECF3; border-color: #F1C3D6; --card-btn-bg:#F7D2E2; --card-btn-border:#E89BBB; --card-btn-text:#9B3A63; --card-btn-shadow:rgba(155,58,99,0.16); }
-    .card-cvcagencias { background: #EBF8EF; border-color: #BFE1C9; --card-btn-bg:#D0EFD8; --card-btn-border:#97D0A9; --card-btn-text:#2C6A44; --card-btn-shadow:rgba(44,106,68,0.16); }
-    .card-irconfirmacion { background: #F0F3F8; border-color: #CFD8E6; --card-btn-bg:#E0E7F1; --card-btn-border:#B8C6DC; --card-btn-text:#4A5874; --card-btn-shadow:rgba(74,88,116,0.16); }
-    .card-informebarco { background: #EAF7FB; border-color: #BFDDE8; --card-btn-bg:#D2EDF6; --card-btn-border:#97CEE0; --card-btn-text:#2B6881; --card-btn-shadow:rgba(43,104,129,0.16); }
-    .card-nuevobarco { background: #EEF6FF; border-color: #C7DCF9; --card-btn-bg:#DCEBFF; --card-btn-border:#A8C8F5; --card-btn-text:#27518A; --card-btn-shadow:rgba(39,81,138,0.16); }
-    .card-buscarclientes { background: #F3EEFF; border-color: #D8C8F9; --card-btn-bg:#E5D8FF; --card-btn-border:#C3A8F6; --card-btn-text:#5230A0; --card-btn-shadow:rgba(82,48,160,0.16); }
+    .card-es { background: #EAF3FF; border-color: #BFD7FF; --card-btn-bg:#CFE3FF; --card-btn-border:#5B8FE8; --card-btn-text:#1E4E93; --card-btn-shadow:rgba(30,78,147,0.16); }
+    .card-grupos { background: #EAF8EE; border-color: #BDE3C7; --card-btn-bg:#CDEFD7; --card-btn-border:#4DA872; --card-btn-text:#1F6A3A; --card-btn-shadow:rgba(31,106,58,0.15); }
+    .card-salida { background: #FFF2E3; border-color: #F1CFA9; --card-btn-bg:#FFDDB8; --card-btn-border:#D4882A; --card-btn-text:#8A5318; --card-btn-shadow:rgba(138,83,24,0.16); }
+    .card-crucero { background: #F0EAFE; border-color: #D3C4FA; --card-btn-bg:#DDD0FF; --card-btn-border:#8B6AE8; --card-btn-text:#5A3E9E; --card-btn-shadow:rgba(90,62,158,0.16); }
+    .card-nueva-agencia { background: #EAF8EF; border-color: #BEE3C9; --card-btn-bg:#D0EFDA; --card-btn-border:#3D9E6A; --card-btn-text:#256245; --card-btn-shadow:rgba(37,98,69,0.16); }
+    .card-buscar-agencia { background: #FFF1E5; border-color: #F1D1B0; --card-btn-bg:#FFDDBF; --card-btn-border:#D4862A; --card-btn-text:#8B5620; --card-btn-shadow:rgba(139,86,32,0.16); }
+    .card-cvcfit { background: #FDECF3; border-color: #F1C3D6; --card-btn-bg:#F7D2E2; --card-btn-border:#C45A8A; --card-btn-text:#9B3A63; --card-btn-shadow:rgba(155,58,99,0.16); }
+    .card-cvcagencias { background: #EBF8EF; border-color: #BFE1C9; --card-btn-bg:#D0EFD8; --card-btn-border:#3D9E6A; --card-btn-text:#2C6A44; --card-btn-shadow:rgba(44,106,68,0.16); }
+    .card-irconfirmacion { background: #F0F3F8; border-color: #CFD8E6; --card-btn-bg:#E0E7F1; --card-btn-border:#7A90B0; --card-btn-text:#4A5874; --card-btn-shadow:rgba(74,88,116,0.16); }
+    .card-informebarco { background: #EAF7FB; border-color: #BFDDE8; --card-btn-bg:#D2EDF6; --card-btn-border:#3A90B0; --card-btn-text:#2B6881; --card-btn-shadow:rgba(43,104,129,0.16); }
+    .card-nuevobarco { background: #EEF6FF; border-color: #C7DCF9; --card-btn-bg:#DCEBFF; --card-btn-border:#4A80CC; --card-btn-text:#27518A; --card-btn-shadow:rgba(39,81,138,0.16); }
+    .card-buscarclientes { background: #F3EEFF; border-color: #D8C8F9; --card-btn-bg:#E5D8FF; --card-btn-border:#8A5AE0; --card-btn-text:#5230A0; --card-btn-shadow:rgba(82,48,160,0.16); }
 
     .action-top { display: flex; align-items: flex-start; gap: 0.65rem; }
     .action-icon {
@@ -1400,16 +1400,16 @@ st.markdown(
     }
     .done-link:hover { transform: translateY(-1px); filter: saturate(1.04); }
 
-     .action-box div.stButton button, .action-box .done-link {
+    .action-box div.stButton button, .action-box .done-link {
         background: var(--card-btn-bg) !important;
-        border: 2.5px solid var(--card-btn-border) !important;
+        border: 3px solid var(--card-btn-border) !important;
         color: var(--card-btn-text) !important;
         box-shadow: 0 2px 6px var(--card-btn-shadow) !important;
         min-height: 24px !important;
         height: 24px !important;
         padding: 0 0.60rem !important;
-        font-size: 0.66rem !important;
-        font-weight: 800 !important;
+        font-size: 0.62rem !important;   /* ← más pequeño */
+        font-weight: 900 !important;     /* ← más negrita */
         line-height: 1 !important;
         border-radius: 999px !important;
     }
