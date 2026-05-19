@@ -1317,6 +1317,7 @@ st.markdown(
     .user-top { font-size: 0.72rem; color: #566079; white-space: nowrap; }
 
     .main-content { padding: 0; }
+
     .section-head-row, .section-head-row-green {
         display: flex; align-items: center; justify-content: flex-start; gap: 0.55rem;
         margin-bottom: 0.75rem; flex-wrap: wrap;
@@ -1329,14 +1330,14 @@ st.markdown(
         font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0 !important;
     }
 
-    .web-chip, .web-chip-green {
+    .web-chip, .web-chip-green, .web-chip-blue {
         display: inline-flex; align-items: center; justify-content: center;
         padding: 0.38rem 0.82rem; border-radius: 999px; font-size: 0.71rem; font-weight: 800;
         line-height: 1; text-decoration: none; white-space: nowrap; box-shadow: 0 2px 8px rgba(15,23,42,0.06);
     }
     .web-chip { background: #FFE69A; border: 1px solid #F2C94C; color: #7A5900 !important; }
     .web-chip-green { background: #DDF7E6; border: 1px solid #9FDEB4; color: #17663B !important; }
-
+    .web-chip-blue { background: #E0ECFF; border: 1px solid #BFD4FF; color: #1E4FBF !important; cursor: default; }
     .user-pill {
         display: inline-flex; align-items: center; gap: 0.4rem; margin: 0.02rem 0 1rem;
         padding: 0.42rem 0.78rem; border-radius: 999px; background: #fff; border: 1px solid #D9E2EC;
@@ -1573,7 +1574,7 @@ st.markdown('<div class="main-content">', unsafe_allow_html=True)
 st.markdown(
     '''
     <div class="section-head-row">
-        <div class="section-eyebrow">ACCIONES RÁPIDAS · QUICK ACTIONS</div>
+        <span class="web-chip-blue">ENLACES EXTERNOS</span>
         <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">Ir a Crucemundo</a>
         <a class="web-chip" href="https://mail.google.com" target="_blank" rel="noopener noreferrer">Gmail</a>
     </div>
@@ -1584,6 +1585,7 @@ st.markdown(
 st.markdown(
     f'''
     <div class="section-head-row-green">
+        <span class="web-chip-blue">ENLACES INTERNOS</span>
         <a class="web-chip-green" href="{driverooturl}" target="_blank" rel="noopener noreferrer">📁 Drive Root</a>
         <a class="web-chip-green" href="{groupsrooturl}" target="_blank" rel="noopener noreferrer">📁 Drive Groups</a>
         <a class="web-chip-green" href="{cvcfitfolderurl}" target="_blank" rel="noopener noreferrer">📁 Folder Sesiones</a>
@@ -1591,7 +1593,7 @@ st.markdown(
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊Excursiones</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊MASTER Clientes</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCRHJr9TCD7VWrGI6nDhMtwi27cMJL1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊Ventas FIT</a>
-         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1GYclq4YkcTCe4Fuj_ajRnkeIJjaBFDLzQSMIMKXqdWg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊 Diccionario</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1GYclq4YkcTCe4Fuj_ajRnkeIJjaBFDLzQSMIMKXqdWg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊 Diccionario</a>
     </div>
     ''',
     unsafe_allow_html=True,
