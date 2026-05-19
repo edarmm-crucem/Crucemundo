@@ -6,7 +6,7 @@ import re
 import urllib.parse
 from datetime import date, datetime
 import uuid
-
+import pytz 
 import requests
 import streamlit as st
 from google.auth.transport.requests import Request
@@ -232,9 +232,13 @@ for key, value in STATEDEFAULTS.items():
 # ============================================================
 # BLOQUE 4: UTILIDADES GENERALES
 # ============================================================
+TIMEZONE = pytz.timezone("Europe/Madrid")
+def now():
+    """Devuelve la hora actual en zona horaria de Madrid."""
+    return datetime.now(pytz.utc).astimezone(TIMEZONE).replace(tzinfo=None)
 
 def getsaludo(lang="es"):
-    hour = datetime.now().hour
+    hour = now().hour
     if lang == "en":
         if 6 <= hour < 14:
             return "Good morning"
@@ -271,7 +275,7 @@ def firstline(value):
 
 def get_request_identity():
     requested_by = st.session_state.get("displayname", "").strip() or st.session_state.get("useremail", "")
-    request_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    request_date = now().strftime("%Y-%m-%d %H:%M:%S")
     return requested_by, request_date
 
 
@@ -339,7 +343,7 @@ def getsessiondurationseconds():
     if not started:
         return 0
     try:
-        return int((datetime.now() - started).total_seconds())
+        return int((now() - started).total_seconds())
     except Exception:
         return 0
 
@@ -595,7 +599,7 @@ def appendauditrow(action, detail="", panel="", extra=None):
     metadata = extra or {}
     requested_by, request_date = get_request_identity()
     values = [[
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        now().strftime("%Y-%m-%d %H:%M:%S"),
         st.session_state.get("useremail", ""),
         st.session_state.get("displayname", ""),
         st.session_state.get("sessionid", ""),
@@ -814,7 +818,7 @@ def createcrucerofile(barco, fechaobj):
         }
     descripcion = (
         f"Barco: {barco}\nSalida: {fechaes}\n"
-        f"Creado: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}\n"
+        f"Creado: {now().strftime('%d/%m/%Y %H:%M:%S')}\n"
         f"Los archivos de sesión deben borrarse a los 30 días."
     )
     copia = copyfiletofolder(TEMPLATEIDCRUCERO, nombrenuevo, carpetabarco["id"], descripcion)
@@ -890,7 +894,7 @@ def save_new_boat_registry(barconombre, localizador, cabin_pairs):
     if len(sheets) < 2:
         raise Exception("El spreadsheet debe tener al menos 2 hojas.")
     ticket_title = sheets[1]["properties"]["title"]
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = now().strftime("%Y-%m-%d %H:%M:%S")
     useremail = st.session_state.get("useremail", "")
     displayname = st.session_state.get("displayname", "")
     sessionid = st.session_state.get("sessionid", "")
@@ -1205,7 +1209,7 @@ def oninformesalidachange():
 def iniciarproceso(sessiontype, templateid, prefixname, processtitle):
     try:
         cleartransientui()
-        fechastr = datetime.now().strftime("%Y%m%d-%H%M")
+        fechastr = now().strftime("%Y%m%d-%H%M")
         displayuser = st.session_state.get("displayname", "").strip() or "Sin usuario"
         nombrecopia = f"SESION - {displayuser} - {prefixname} - {fechastr}"
         copyurl = (
@@ -1510,7 +1514,7 @@ if not st.session_state.authenticated:
                 st.session_state.useremail = emailclean
                 st.session_state.displayname = VALIDUSERS[emailclean]
                 st.session_state.sessionid = str(uuid.uuid4())
-                st.session_state.sessionstart = datetime.now()
+                st.session_state.sessionstart = now()
                 safeaudit("login", "Inicio de sesión correcto", panel="login", extra={"request_type": "login"})
                 st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
