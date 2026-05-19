@@ -1575,7 +1575,7 @@ st.markdown(
     '''
     <div class="section-head-row">
         <span class="web-chip-blue">ENLACES EXTERNOS</span>
-        <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">Ir a Crucemundo</a>
+        <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">Crucemundo</a>
         <a class="web-chip" href="https://mail.google.com" target="_blank" rel="noopener noreferrer">Gmail</a>
     </div>
     ''',
