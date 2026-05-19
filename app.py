@@ -1393,8 +1393,8 @@ st.markdown(
     }
 
     .done-link {
-        display: inline-flex; align-items: center; gap: 0.35rem; border-radius: 999px; padding: 0.48rem 0.96rem;
-        font-size: 0.82rem; font-weight: 800; font-family: "DM Sans", sans-serif !important; text-decoration: none;
+        display: inline-flex; align-items: center; gap: 0.25rem; border-radius: 999px; padding: 0.28rem 0.70rem;
+        font-size: 0.70rem; font-weight: 800; font-family: "DM Sans", sans-serif !important; text-decoration: none;
         white-space: nowrap; box-shadow: 0 5px 14px rgba(15,23,42,0.08);
         transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
     }
