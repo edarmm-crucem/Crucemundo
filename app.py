@@ -1782,7 +1782,7 @@ if st.session_state.get("confirmstate") == "step1":
 
 elif st.session_state.get("confirmstate") == "done":
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    panelheader("Crear sesión", "closeprocesspaneldone")
+    panelheader("Crear sesión GRUPOS", "closeprocesspaneldone")
     st.success("Ok")
     renderkeyvaluegrid(
         "process",
