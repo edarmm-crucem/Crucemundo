@@ -1770,7 +1770,7 @@ for col, card in zip(row2_cols, row2_cards):
 
 if st.session_state.get("confirmstate") == "step1":
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    panelheader(st.session_state.get("processtitle", "Crear sesión"), "closeprocesspanel")
+    panelheader("Crear sesión MASTER CONFIRMATION", "closeprocesspanel")
     st.markdown(
         f'<a class="done-link" href="{st.session_state.copyurl}" target="_blank" rel="noopener noreferrer">Crear copia en Drive</a>',
         unsafe_allow_html=True,
@@ -1782,7 +1782,7 @@ if st.session_state.get("confirmstate") == "step1":
 
 elif st.session_state.get("confirmstate") == "done":
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    panelheader(st.session_state.get("processtitle", "Crear sesión"), "closeprocesspaneldone")
+    panelheader("Crear sesión GROUPS", "closeprocesspanel")
     st.success("Ok")
     renderkeyvaluegrid(
         "process",
