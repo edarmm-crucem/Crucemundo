@@ -1291,12 +1291,12 @@ st.markdown(
     div.stButton button,
     div[data-testid="stFormSubmitButton"] button,
     .logout-btn div button, .download-btn button, .stDownloadButton button {
-        border-radius: 999px !important; min-height: 42px !important;
-        padding: 0 1.15rem !important; font-size: 0.83rem !important;
-        font-weight: 800 !important; box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08) !important;
+        border-radius: 999px !important; min-height: 28px !important;
+        padding: 0 0.75rem !important; font-size: 0.70rem !important;
+        font-weight: 800 !important; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.10) !important;
         font-family: "DM Sans", sans-serif !important; letter-spacing: 0.01em !important;
         transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease !important;
-        border: 1.5px solid transparent !important;
+        border: 2px solid transparent !important;
     }
 
     div.stButton button:hover, div[data-testid="stFormSubmitButton"] button:hover,
@@ -1352,11 +1352,11 @@ st.markdown(
     }
 
     .action-box {
-        width: 100%; min-height: 20px; border-radius: 22px;
-        padding: 0.72rem 0.85rem 0.78rem 0.85rem; margin-bottom: 0.70rem;
+        width: 100%; min-height: 0px; border-radius: 14px;
+        padding: 0.42rem 0.60rem 0.48rem 0.60rem; margin-bottom: 0.40rem;
         display: flex; flex-direction: column; justify-content: space-between;
-        gap: 0.42rem; border: 1px solid transparent;
-        box-shadow: 0 6px 18px rgba(15,23,42,0.05);
+        gap: 0.28rem; border: 2px solid transparent;
+        box-shadow: 0 3px 10px rgba(15,23,42,0.07);
     }
 
     .card-es { background: #EAF3FF; border-color: #BFD7FF; --card-btn-bg:#CFE3FF; --card-btn-border:#94BEFF; --card-btn-text:#1E4E93; --card-btn-shadow:rgba(30,78,147,0.16); }
@@ -1374,16 +1374,17 @@ st.markdown(
 
     .action-top { display: flex; align-items: flex-start; gap: 0.65rem; }
     .action-icon {
-        width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
-        font-size: 1rem; flex-shrink: 0; background: rgba(255,255,255,0.42); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
+    width: 26px; height: 26px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; flex-shrink: 0; background: rgba(255,255,255,0.42); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
     }
     .action-text { display: flex; flex-direction: column; gap: 0.06rem; min-width: 0; }
     .action-title, .action-title-en {
         font-family: "DM Sans", sans-serif !important; line-height: 1.08; white-space: nowrap;
         overflow: hidden; text-overflow: ellipsis;
     }
-    .action-title { font-size: 0.96rem; font-weight: 800; color: #1F2937; }
-    .action-title-en { margin-top: 0.02rem; color: #41506B; font-size: 0.80rem; font-weight: 800; }
+    .action-title { font-size: 0.78rem; font-weight: 800; color: #1F2937; }
+    .action-title-en { margin-top: 0.01rem; color: #41506B; font-size: 0.68rem; font-weight: 700; }
+
     .action-desc, .action-desc-en { display: none !important; }
 
     .action-button-wrap {
