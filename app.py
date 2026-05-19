@@ -1599,7 +1599,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
+# st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
 
 # ============================================================
