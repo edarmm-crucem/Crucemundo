@@ -1,3 +1,7 @@
+# ============================================================
+# BLOQUE 1: IMPORTS Y CONFIGURACIÓN DE PÁGINA
+# ============================================================
+
 import re
 import urllib.parse
 from datetime import date, datetime
@@ -16,6 +20,11 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+
+# ============================================================
+# BLOQUE 2: CONSTANTES — IDs, URLs, USUARIOS Y CAMPOS
+# ============================================================
+
 FOLDERSESIONESID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
 FOLDERID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
 LOGOID = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
@@ -30,7 +39,7 @@ DRIVEROOTID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
 GROUPSROOTID = "1MMNH3y1E3jJIp6uUnxbwV0toAtdr2F2M"
 BOATREGISTRYSHEETID = "1pvDAEPGkb1DmvbauY-eKk3ymljDvEBvDivijVDUHmGA"
 BOATREGISTRYSHEETNAME = "TICKETS, RESULTADO, ENVIADO TICKET"
-MASTERCLIENTESSHEETID = "1Z4sZolu-F44_WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k"  # ← NUEVO
+MASTERCLIENTESSHEETID = "1Z4sZolu-F44_WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k"
 
 VALIDUSERS = {
     "support@crucemundo.com": "Albina",
@@ -62,7 +71,7 @@ AGENCYFIELDS = [
     "IVA SERVICIO OPCIONAL",
 ]
 
-CLIENTFIELDS = ["Nombre", "Apellidos", "Documento", "Region", "Localizador"]  # ← NUEVO
+CLIENTFIELDS = ["Nombre", "Apellidos", "Documento", "Region", "Localizador"]
 
 SHIPCODEMAP = {
     "MS_ALBERTINA": "ALB",
@@ -81,6 +90,9 @@ SHIPCODEMAP = {
 SHIPCODETONAME = {v: k for k, v in SHIPCODEMAP.items()}
 
 
+# ============================================================
+# BLOQUE 3: ESTADO DE SESIÓN — DEFAULTS Y GRUPOS
+# ============================================================
 
 STATEDEFAULTS = {
     "authenticated": False,
@@ -102,7 +114,7 @@ STATEDEFAULTS = {
     "openirconfirmacionform": False,
     "openinformebarcoform": False,
     "opennuevobarcoform": False,
-    "openbuscarclientesform": False,  # ← NUEVO
+    "openbuscarclientesform": False,
 
     "salidayear": None,
     "salidaboat": None,
@@ -150,7 +162,6 @@ STATEDEFAULTS = {
     "nuevobarcocabina5": "",
     "nuevobarcocategoria5": "",
 
-    # ← NUEVO
     "buscarclientes_query": "",
     "buscarclientes_matches": [],
     "buscarclientes_lastmodified": None,
@@ -194,7 +205,6 @@ STATEGROUPS = {
     "process": [
         "nombrecopia", "copyurl", "processtitle", "confirmstate", "sessiontype", "processresult",
     ],
-    # ← NUEVO
     "buscarclientes": [
         "buscarclientes_query", "buscarclientes_matches",
         "buscarclientes_lastmodified", "buscarclientes_querywidget",
@@ -211,13 +221,17 @@ PANELFLAGS = {
     "irconfirmacion": "openirconfirmacionform",
     "informebarco": "openinformebarcoform",
     "nuevobarco": "opennuevobarcoform",
-    "buscarclientes": "openbuscarlientesform",  # ← NUEVO
+    "buscarclientes": "openbuscarlientesform",
 }
 
 for key, value in STATEDEFAULTS.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
+
+# ============================================================
+# BLOQUE 4: UTILIDADES GENERALES
+# ============================================================
 
 def getsaludo(lang="es"):
     hour = datetime.now().hour
@@ -254,6 +268,37 @@ def safefilename(text):
 def firstline(value):
     return "" if value is None else str(value).splitlines()[0].strip()
 
+
+def get_request_identity():
+    requested_by = st.session_state.get("displayname", "").strip() or st.session_state.get("useremail", "")
+    request_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return requested_by, request_date
+
+
+def parsenumericvalue(value):
+    text = str(value or "").strip()
+    if not text:
+        return 0.0
+    text = text.replace("€", "").replace("EUR", "").replace("PAX", "").strip()
+    text = text.replace(".", "").replace(",", ".")
+    m = re.search(r"-?\d+(?:\.\d+)?", text)
+    if not m:
+        return 0.0
+    try:
+        return float(m.group(0))
+    except Exception:
+        return 0.0
+
+
+def parseintfromtext(value):
+    text = str(value or "").strip().upper().replace("PAX", "").strip()
+    m = re.search(r"\d+", text)
+    return int(m.group(0)) if m else 0
+
+
+# ============================================================
+# BLOQUE 5: GESTIÓN DE PANELES Y ESTADO UI
+# ============================================================
 
 def clearstategroup(groupname):
     for key in STATEGROUPS.get(groupname, []):
@@ -299,6 +344,10 @@ def getsessiondurationseconds():
         return 0
 
 
+# ============================================================
+# BLOQUE 6: COMPONENTES UI REUTILIZABLES
+# ============================================================
+
 def renderkeyvaluegrid(cssprefix, fields):
     st.markdown(f'<div class="{cssprefix}-card"><div class="{cssprefix}-grid">', unsafe_allow_html=True)
     for label, value in fields:
@@ -324,20 +373,9 @@ def panelheader(title, closekey):
             closecurrentpanel()
 
 
-def get_request_identity():
-    requested_by = st.session_state.get("displayname", "").strip() or st.session_state.get("useremail", "")
-    request_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    return requested_by, request_date
-
-
-
-
-
-
-
-
-
-
+# ============================================================
+# BLOQUE 7: AUTENTICACIÓN Y SESIÓN
+# ============================================================
 
 def dologout():
     safeaudit("logout", "Cierre de sesión", panel=st.session_state.get("activepanel") or "app", extra={"request_type": "logout"})
@@ -345,6 +383,10 @@ def dologout():
         st.session_state.pop(key, None)
     st.rerun()
 
+
+# ============================================================
+# BLOQUE 8: SERVICIOS GOOGLE (DRIVE Y SHEETS)
+# ============================================================
 
 @st.cache_resource
 def getgooglecreds():
@@ -460,6 +502,58 @@ def copyfiletofolder(fileid, newname, parent, description=None):
     ).execute()
 
 
+def getsheettitleswithids(spreadsheetid):
+    sheetsservice = getsheetsservice()
+    spreadsheet = sheetsservice.spreadsheets().get(spreadsheetId=spreadsheetid).execute()
+    return [
+        {"title": sheet.get("properties", {}).get("title", ""), "sheetId": sheet.get("properties", {}).get("sheetId")}
+        for sheet in spreadsheet.get("sheets", [])
+    ]
+
+
+def getsinglecell(spreadsheetid, sheettitle, a1):
+    sheetsservice = getsheetsservice()
+    values = sheetsservice.spreadsheets().values().get(
+        spreadsheetId=spreadsheetid, range=f"{sheettitle}!{a1}", majorDimension="ROWS",
+    ).execute().get("values", [])
+    return values[0][0] if values and values[0] else ""
+
+
+def getsheetcellsbatch(spreadsheetid, sheettitle, a1list):
+    sheetsservice = getsheetsservice()
+    ranges = [f"{sheettitle}!{a1}" for a1 in a1list]
+    response = sheetsservice.spreadsheets().values().batchGet(
+        spreadsheetId=spreadsheetid, ranges=ranges, majorDimension="ROWS",
+    ).execute()
+    out = {}
+    for a1, vr in zip(a1list, response.get("valueRanges", [])):
+        vals = vr.get("values", [])
+        out[a1] = vals[0][0] if vals and vals[0] else ""
+    return out
+
+
+def exportsheetpdfbytes(spreadsheetid, gid):
+    creds = getgooglecreds().with_scopes([
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/spreadsheets",
+    ])
+    creds.refresh(Request())
+    exporturl = (
+        f"https://docs.google.com/spreadsheets/d/{spreadsheetid}/export"
+        f"?format=pdf&gid={gid}&size=A4&portrait=true&fitw=true&fith=false"
+        f"&sheetnames=false&scale=2&printtitle=false&pagenumbers=false"
+        f"&gridlines=false&fzr=false&top_margin=0.50&bottom_margin=0.50"
+        f"&left_margin=0.50&right_margin=0.50"
+    )
+    response = requests.get(exporturl, headers={"Authorization": f"Bearer {creds.token}"}, timeout=60)
+    response.raise_for_status()
+    return response.content
+
+
+# ============================================================
+# BLOQUE 9: AUDITORÍA Y REGISTRO
+# ============================================================
+
 def ensure_sheet_headers():
     sheetsservice = getsheetsservice()
     spreadsheet = sheetsservice.spreadsheets().get(
@@ -524,58 +618,9 @@ def safeaudit(action, detail="", panel="", extra=None):
         pass
 
 
-def save_new_boat_registry(barconombre, localizador, cabin_pairs):
-    ensure_sheet_headers()
-    sheetsservice = getsheetsservice()
-    spreadsheet = sheetsservice.spreadsheets().get(spreadsheetId=BOATREGISTRYSHEETID).execute()
-    sheets = spreadsheet.get("sheets", [])
-    if len(sheets) < 2:
-        raise Exception("El spreadsheet debe tener al menos 2 hojas.")
-    ticket_title = sheets[1]["properties"]["title"]
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    useremail = st.session_state.get("useremail", "")
-    displayname = st.session_state.get("displayname", "")
-    sessionid = st.session_state.get("sessionid", "")
-    requested_by, request_date = get_request_identity()
-    values = []
-    for idx, (cabina, categoria) in enumerate(cabin_pairs, start=1):
-        cabina = str(cabina).strip()
-        categoria = str(categoria).strip().upper()
-        if not cabina and not categoria:
-            continue
-        values.append([
-            timestamp, useremail, displayname, sessionid,
-            barconombre.strip(), localizador.strip().upper(), idx,
-            cabina, categoria, requested_by, request_date,
-        ])
-    if not values:
-        raise Exception("Debes informar al menos una cabina y/o una categoría.")
-    sheetsservice.spreadsheets().values().append(
-        spreadsheetId=BOATREGISTRYSHEETID, range=f"{ticket_title}!A:K",
-        valueInputOption="USER_ENTERED", insertDataOption="INSERT_ROWS",
-        body={"values": values},
-    ).execute()
-    return len(values)
-
-
-def updatecrucerosheet(spreadsheetid, barco):
-    sheetsservice = getsheetsservice()
-    spreadsheet = sheetsservice.spreadsheets().get(spreadsheetId=spreadsheetid).execute()
-    sheets = spreadsheet.get("sheets", [])
-    if not sheets:
-        raise Exception("El spreadsheet no contiene hojas.")
-    firstsheet = sheets[0]
-    firstsheetid = firstsheet["properties"]["sheetId"]
-    firstsheettitle = firstsheet["properties"]["title"]
-    sheetsservice.spreadsheets().values().update(
-        spreadsheetId=spreadsheetid, range=f"{firstsheettitle}!A1",
-        valueInputOption="USER_ENTERED", body={"values": [[barco]]},
-    ).execute()
-    sheetsservice.spreadsheets().batchUpdate(
-        spreadsheetId=spreadsheetid,
-        body={"requests": [{"updateSheetProperties": {"properties": {"sheetId": firstsheetid, "title": barco}, "fields": "title"}}]},
-    ).execute()
-
+# ============================================================
+# BLOQUE 10: LÓGICA DE NEGOCIO — AGENCIAS
+# ============================================================
 
 def appendagencyrow(agencydata):
     sheetsservice = getsheetsservice()
@@ -621,10 +666,11 @@ def searchagencies(query):
     return matches
 
 
-
+# ============================================================
+# BLOQUE 11: LÓGICA DE NEGOCIO — CLIENTES
+# ============================================================
 
 def getmasterclienteslastmodified():
-    """Devuelve la fecha de última modificación del archivo MASTER CLIENTES en Drive."""
     try:
         service = getdriveservice()
         file = service.files().get(
@@ -642,7 +688,6 @@ def getmasterclienteslastmodified():
 
 
 def getclientes():
-    """Lee el índice 0 del MASTER_CLIENTES: col A Nombre, B Apellidos, C Documento, D Region, E Localizador."""
     sheetsservice = getsheetsservice()
     spreadsheet = sheetsservice.spreadsheets().get(
         spreadsheetId=MASTERCLIENTESSHEETID
@@ -659,7 +704,7 @@ def getclientes():
     clientes = []
     for idx, row in enumerate(rows, start=1):
         if idx == 1:
-            continue  # saltar cabecera si la hay
+            continue
         row = row + [""] * (5 - len(row))
         data = {
             "rownumber": idx,
@@ -684,7 +729,9 @@ def searchclientes(query):
     return [c for c in clientes if q in c["searchblob"]]
 
 
-
+# ============================================================
+# BLOQUE 12: LÓGICA DE NEGOCIO — DRIVE / SALIDAS / CRUCEROS
+# ============================================================
 
 @st.cache_data(ttl=300)
 def getyears():
@@ -731,6 +778,25 @@ def getdepartures(yearname, boatname):
     return departures
 
 
+def updatecrucerosheet(spreadsheetid, barco):
+    sheetsservice = getsheetsservice()
+    spreadsheet = sheetsservice.spreadsheets().get(spreadsheetId=spreadsheetid).execute()
+    sheets = spreadsheet.get("sheets", [])
+    if not sheets:
+        raise Exception("El spreadsheet no contiene hojas.")
+    firstsheet = sheets[0]
+    firstsheetid = firstsheet["properties"]["sheetId"]
+    firstsheettitle = firstsheet["properties"]["title"]
+    sheetsservice.spreadsheets().values().update(
+        spreadsheetId=spreadsheetid, range=f"{firstsheettitle}!A1",
+        valueInputOption="USER_ENTERED", body={"values": [[barco]]},
+    ).execute()
+    sheetsservice.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheetid,
+        body={"requests": [{"updateSheetProperties": {"properties": {"sheetId": firstsheetid, "title": barco}, "fields": "title"}}]},
+    ).execute()
+
+
 def createcrucerofile(barco, fechaobj):
     if not barco or not fechaobj:
         raise Exception("Faltan datos de barco o fecha.")
@@ -765,53 +831,89 @@ def createcrucerofile(barco, fechaobj):
     }
 
 
-def getsheettitleswithids(spreadsheetid):
+def getyearsbyroot(rootid):
+    folders = listfolderitems(rootid, foldersonly=True)
+    if rootid == DRIVEROOTID:
+        years = [f["name"].strip() for f in folders if re.fullmatch(r"\d{4}", f["name"].strip())]
+    else:
+        years = [f["name"].strip() for f in folders if re.fullmatch(r"\d{4}_GROUP", f["name"].strip())]
+    return sorted(years, reverse=True)
+
+
+def getyearfolderidbyroot(rootid, yearname):
+    folder = findchildfolder(rootid, yearname)
+    return folder["id"] if folder else None
+
+
+def getboatsbyroot(rootid, yearname):
+    yearfolderid = getyearfolderidbyroot(rootid, yearname)
+    if not yearfolderid:
+        return []
+    folders = listfolderitems(yearfolderid, foldersonly=True)
+    return sorted(f["name"].strip() for f in folders if f["name"].strip())
+
+
+@st.cache_data(ttl=300)
+def getdeparturesbyroot(rootid, yearname, boatname):
+    yearfolderid = getyearfolderidbyroot(rootid, yearname)
+    if not yearfolderid:
+        return []
+    boatfolder = findchildfolder(yearfolderid, boatname)
+    if not boatfolder:
+        return []
+    files = listfolderitems(boatfolder["id"], foldersonly=False)
+    if rootid == DRIVEROOTID:
+        pattern = re.compile(rf"^{re.escape(boatname)}_\d{{6}}$")
+    else:
+        pattern = re.compile(rf"^{re.escape(boatname)}_\d{{6}}_GROUP$")
+    departures = []
+    for file in files:
+        name = file["name"].strip()
+        if pattern.match(name):
+            departures.append({
+                "nombre": name, "id": file["id"],
+                "url": file.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{file['id']}/edit",
+            })
+    departures.sort(key=lambda x: x["nombre"])
+    return departures
+
+
+# ============================================================
+# BLOQUE 13: LÓGICA DE NEGOCIO — BARCOS, CVC E INFORMES
+# ============================================================
+
+def save_new_boat_registry(barconombre, localizador, cabin_pairs):
+    ensure_sheet_headers()
     sheetsservice = getsheetsservice()
-    spreadsheet = sheetsservice.spreadsheets().get(spreadsheetId=spreadsheetid).execute()
-    return [
-        {"title": sheet.get("properties", {}).get("title", ""), "sheetId": sheet.get("properties", {}).get("sheetId")}
-        for sheet in spreadsheet.get("sheets", [])
-    ]
-
-
-def getsinglecell(spreadsheetid, sheettitle, a1):
-    sheetsservice = getsheetsservice()
-    values = sheetsservice.spreadsheets().values().get(
-        spreadsheetId=spreadsheetid, range=f"{sheettitle}!{a1}", majorDimension="ROWS",
-    ).execute().get("values", [])
-    return values[0][0] if values and values[0] else ""
-
-
-def getsheetcellsbatch(spreadsheetid, sheettitle, a1list):
-    sheetsservice = getsheetsservice()
-    ranges = [f"{sheettitle}!{a1}" for a1 in a1list]
-    response = sheetsservice.spreadsheets().values().batchGet(
-        spreadsheetId=spreadsheetid, ranges=ranges, majorDimension="ROWS",
+    spreadsheet = sheetsservice.spreadsheets().get(spreadsheetId=BOATREGISTRYSHEETID).execute()
+    sheets = spreadsheet.get("sheets", [])
+    if len(sheets) < 2:
+        raise Exception("El spreadsheet debe tener al menos 2 hojas.")
+    ticket_title = sheets[1]["properties"]["title"]
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    useremail = st.session_state.get("useremail", "")
+    displayname = st.session_state.get("displayname", "")
+    sessionid = st.session_state.get("sessionid", "")
+    requested_by, request_date = get_request_identity()
+    values = []
+    for idx, (cabina, categoria) in enumerate(cabin_pairs, start=1):
+        cabina = str(cabina).strip()
+        categoria = str(categoria).strip().upper()
+        if not cabina and not categoria:
+            continue
+        values.append([
+            timestamp, useremail, displayname, sessionid,
+            barconombre.strip(), localizador.strip().upper(), idx,
+            cabina, categoria, requested_by, request_date,
+        ])
+    if not values:
+        raise Exception("Debes informar al menos una cabina y/o una categoría.")
+    sheetsservice.spreadsheets().values().append(
+        spreadsheetId=BOATREGISTRYSHEETID, range=f"{ticket_title}!A:K",
+        valueInputOption="USER_ENTERED", insertDataOption="INSERT_ROWS",
+        body={"values": values},
     ).execute()
-    out = {}
-    for a1, vr in zip(a1list, response.get("valueRanges", [])):
-        vals = vr.get("values", [])
-        out[a1] = vals[0][0] if vals and vals[0] else ""
-    return out
-
-
-def exportsheetpdfbytes(spreadsheetid, gid):
-    creds = getgooglecreds().with_scopes([
-        "https://www.googleapis.com/auth/drive",
-        "https://www.googleapis.com/auth/spreadsheets",
-    ])
-    creds.refresh(Request())
-    exporturl = (
-        f"https://docs.google.com/spreadsheets/d/{spreadsheetid}/export"
-        f"?format=pdf&gid={gid}&size=A4&portrait=true&fitw=true&fith=false"
-        f"&sheetnames=false&scale=2&printtitle=false&pagenumbers=false"
-        f"&gridlines=false&fzr=false&top_margin=0.50&bottom_margin=0.50"
-        f"&left_margin=0.50&right_margin=0.50"
-    )
-    response = requests.get(exporturl, headers={"Authorization": f"Bearer {creds.token}"}, timeout=60)
-    response.raise_for_status()
-    return response.content
-
+    return len(values)
 
 
 def buildcvcpdffromlocator(locator, targetsheet, pdfprefix):
@@ -961,74 +1063,6 @@ def findlocatorconfirmation(locatorraw):
     return {"status": "found", "parsed": parsed, "file": fileobj, "sheet": targetsheet, "url": finalurl, "log": loglines}
 
 
-def getyearsbyroot(rootid):
-    folders = listfolderitems(rootid, foldersonly=True)
-    if rootid == DRIVEROOTID:
-        years = [f["name"].strip() for f in folders if re.fullmatch(r"\d{4}", f["name"].strip())]
-    else:
-        years = [f["name"].strip() for f in folders if re.fullmatch(r"\d{4}_GROUP", f["name"].strip())]
-    return sorted(years, reverse=True)
-
-
-def getyearfolderidbyroot(rootid, yearname):
-    folder = findchildfolder(rootid, yearname)
-    return folder["id"] if folder else None
-
-
-def getboatsbyroot(rootid, yearname):
-    yearfolderid = getyearfolderidbyroot(rootid, yearname)
-    if not yearfolderid:
-        return []
-    folders = listfolderitems(yearfolderid, foldersonly=True)
-    return sorted(f["name"].strip() for f in folders if f["name"].strip())
-
-
-@st.cache_data(ttl=300)
-def getdeparturesbyroot(rootid, yearname, boatname):
-    yearfolderid = getyearfolderidbyroot(rootid, yearname)
-    if not yearfolderid:
-        return []
-    boatfolder = findchildfolder(yearfolderid, boatname)
-    if not boatfolder:
-        return []
-    files = listfolderitems(boatfolder["id"], foldersonly=False)
-    if rootid == DRIVEROOTID:
-        pattern = re.compile(rf"^{re.escape(boatname)}_\d{{6}}$")
-    else:
-        pattern = re.compile(rf"^{re.escape(boatname)}_\d{{6}}_GROUP$")
-    departures = []
-    for file in files:
-        name = file["name"].strip()
-        if pattern.match(name):
-            departures.append({
-                "nombre": name, "id": file["id"],
-                "url": file.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{file['id']}/edit",
-            })
-    departures.sort(key=lambda x: x["nombre"])
-    return departures
-
-
-def parsenumericvalue(value):
-    text = str(value or "").strip()
-    if not text:
-        return 0.0
-    text = text.replace("€", "").replace("EUR", "").replace("PAX", "").strip()
-    text = text.replace(".", "").replace(",", ".")
-    m = re.search(r"-?\d+(?:\.\d+)?", text)
-    if not m:
-        return 0.0
-    try:
-        return float(m.group(0))
-    except Exception:
-        return 0.0
-
-
-def parseintfromtext(value):
-    text = str(value or "").strip().upper().replace("PAX", "").strip()
-    m = re.search(r"\d+", text)
-    return int(m.group(0)) if m else 0
-
-
 def extractinformeporbarco(spreadsheetid, spreadsheetname):
     sheets = getsheettitleswithids(spreadsheetid)
     rows = []
@@ -1080,6 +1114,9 @@ def formatestadopagobadge(value):
     return f'<span class="status-pill">{value or ""}</span>'
 
 
+# ============================================================
+# BLOQUE 14: CALLBACKS DE WIDGETS (onChange)
+# ============================================================
 
 def resetsalidadownstream(level):
     if level == "year":
@@ -1161,6 +1198,10 @@ def oninformesalidachange():
     st.session_state.informesalida = st.session_state.get("informesalidawidget")
 
 
+# ============================================================
+# BLOQUE 15: PROCESO DE SESIÓN (INICIAR PROCESO)
+# ============================================================
+
 def iniciarproceso(sessiontype, templateid, prefixname, processtitle):
     try:
         cleartransientui()
@@ -1184,6 +1225,9 @@ def iniciarproceso(sessiontype, templateid, prefixname, processtitle):
         st.error(str(e))
 
 
+# ============================================================
+# BLOQUE 16: CSS GLOBAL
+# ============================================================
 
 st.markdown(
     """
@@ -1322,7 +1366,6 @@ st.markdown(
     .card-irconfirmacion { background: #F0F3F8; border-color: #CFD8E6; --card-btn-bg:#E0E7F1; --card-btn-border:#B8C6DC; --card-btn-text:#4A5874; --card-btn-shadow:rgba(74,88,116,0.16); }
     .card-informebarco { background: #EAF7FB; border-color: #BFDDE8; --card-btn-bg:#D2EDF6; --card-btn-border:#97CEE0; --card-btn-text:#2B6881; --card-btn-shadow:rgba(43,104,129,0.16); }
     .card-nuevobarco { background: #EEF6FF; border-color: #C7DCF9; --card-btn-bg:#DCEBFF; --card-btn-border:#A8C8F5; --card-btn-text:#27518A; --card-btn-shadow:rgba(39,81,138,0.16); }
-    /* ← NUEVO */
     .card-buscarclientes { background: #F3EEFF; border-color: #D8C8F9; --card-btn-bg:#E5D8FF; --card-btn-border:#C3A8F6; --card-btn-text:#5230A0; --card-btn-shadow:rgba(82,48,160,0.16); }
 
     .action-top { display: flex; align-items: flex-start; gap: 0.65rem; }
@@ -1433,7 +1476,9 @@ st.markdown(
 )
 
 
-
+# ============================================================
+# BLOQUE 17: PANTALLA DE LOGIN
+# ============================================================
 
 if not st.session_state.authenticated:
     st.markdown('<div class="login-page"><div class="login-shell">', unsafe_allow_html=True)
@@ -1477,6 +1522,9 @@ if not st.session_state.authenticated:
     st.stop()
 
 
+# ============================================================
+# BLOQUE 18: CABECERA DEL PORTAL Y VARIABLES DE SESIÓN
+# ============================================================
 
 USEREMAIL = st.session_state.get("useremail", "").strip()
 DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Sin usuario"
@@ -1537,6 +1585,9 @@ st.markdown(
 st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
 
+# ============================================================
+# BLOQUE 19: TARJETAS DE ACCIÓN — DEFINICIÓN Y RENDER
+# ============================================================
 
 def renderactioncard(col, config):
     with col:
@@ -1570,11 +1621,6 @@ def renderactioncard(col, config):
         st.markdown("</div></div>", unsafe_allow_html=True)
 
 
-# ──────────────────────────────────────────────
-# FILA 1: pos1 Nueva Confirmación ES | pos2 Nueva Confirmación GRUPOS
-#         pos3 Ir a Salida | pos4 Ir a Confirmación
-#         pos5 Buscar Agencia | pos6 Buscar Clientes  ← NUEVO ORDEN
-# ──────────────────────────────────────────────
 row1_cards = [
     {
         "cardclass": "card-es",
@@ -1632,11 +1678,6 @@ row1_cards = [
     },
 ]
 
-# ──────────────────────────────────────────────
-# FILA 2: pos1 CVC Fit | pos2 CVC Agencias
-#         pos3 Informe € por Barco | pos4 Crear Crucero
-#         pos5 Añadir Agencia | pos6 Nuevo Barco  ← NUEVO ORDEN
-# ──────────────────────────────────────────────
 row2_cards = [
     {
         "cardclass": "card-cvcfit",
@@ -1703,6 +1744,9 @@ for col, card in zip(row2_cols, row2_cards):
     renderactioncard(col, card)
 
 
+# ============================================================
+# BLOQUE 20: PANEL — PROCESO / SESIÓN
+# ============================================================
 
 if st.session_state.get("confirmstate") == "step1":
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
@@ -1735,6 +1779,11 @@ elif st.session_state.get("confirmstate") == "done":
             unsafe_allow_html=True,
         )
     st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ============================================================
+# BLOQUE 21: PANEL — IR A SALIDA
+# ============================================================
 
 if st.session_state.get("opensalidaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
@@ -1782,6 +1831,11 @@ if st.session_state.get("opensalidaform"):
         st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
 
+
+# ============================================================
+# BLOQUE 22: PANEL — CREAR CRUCERO
+# ============================================================
+
 if st.session_state.get("opencruceroform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     panelheader("Crear crucero / Create cruise", "closecruceropanel")
@@ -1827,7 +1881,9 @@ if st.session_state.get("opencruceroform"):
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-
+# ============================================================
+# BLOQUE 23: PANEL — AÑADIR AGENCIA
+# ============================================================
 
 if st.session_state.get("opennuevaagenciaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
@@ -1885,6 +1941,11 @@ if st.session_state.get("opennuevaagenciaform"):
                     st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
 
+
+# ============================================================
+# BLOQUE 24: PANEL — BUSCAR AGENCIA
+# ============================================================
+
 if st.session_state.get("openbuscaragenciaform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     panelheader("Buscar Agencia / Find Agency", "closebuscaragenciapanel")
@@ -1917,6 +1978,9 @@ if st.session_state.get("openbuscaragenciaform"):
     st.markdown("</div>", unsafe_allow_html=True)
 
 
+# ============================================================
+# BLOQUE 25: PANEL — CVC FIT
+# ============================================================
 
 if st.session_state.get("opencvcfitform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
@@ -1945,6 +2009,11 @@ if st.session_state.get("opencvcfitform"):
             st.markdown(f'<a class="done-link" href="{result["spreadsheeturl"]}" target="_blank" rel="noopener noreferrer">Abrir spreadsheet</a>', unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
+
+# ============================================================
+# BLOQUE 26: PANEL — CVC AGENCIAS
+# ============================================================
+
 if st.session_state.get("opencvcagenciasform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     panelheader("CVC Agencias", "closecvcagenciaspanel")
@@ -1971,6 +2040,11 @@ if st.session_state.get("opencvcagenciasform"):
         with colb:
             st.markdown(f'<a class="done-link" href="{result["spreadsheeturl"]}" target="_blank" rel="noopener noreferrer">Abrir spreadsheet</a>', unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ============================================================
+# BLOQUE 27: PANEL — IR A CONFIRMACIÓN
+# ============================================================
 
 if st.session_state.get("openirconfirmacionform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
@@ -2002,6 +2076,11 @@ if st.session_state.get("openirconfirmacionform"):
         ])
         st.markdown(f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir confirmación</a>', unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ============================================================
+# BLOQUE 28: PANEL — BUSCAR CLIENTE
+# ============================================================
 
 if st.session_state.get("openbuscarlientesform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
@@ -2043,7 +2122,6 @@ if st.session_state.get("openbuscarlientesform"):
             unsafe_allow_html=True,
         )
     elif searchquery and not matches and lastmod is None and st.session_state.get("buscarclientes_matches") == []:
-        # la búsqueda ya se ejecutó pero no hay lastmod (error al obtenerlo)
         st.info("No se han encontrado resultados.")
 
     selectedclient = None
@@ -2085,6 +2163,9 @@ if st.session_state.get("openbuscarlientesform"):
     st.markdown("</div>", unsafe_allow_html=True)
 
 
+# ============================================================
+# BLOQUE 29: PANEL — NUEVO BARCO
+# ============================================================
 
 if st.session_state.get("opennuevobarcoform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
@@ -2123,6 +2204,11 @@ if st.session_state.get("opennuevobarcoform"):
                 except Exception as exc:
                     st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ============================================================
+# BLOQUE 30: PANEL — INFORME POR BARCO
+# ============================================================
 
 if st.session_state.get("openinformebarcoform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
@@ -2212,7 +2298,11 @@ if st.session_state.get("openinformebarcoform"):
         st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ── FOOTER ──
+
+# ============================================================
+# BLOQUE 31: FOOTER Y LOGOUT
+# ============================================================
+
 footercol1, footercol2 = st.columns([3, 1])
 with footercol1:
     st.markdown('<div class="portal-footer"><div class="footer-text">Crucemundo Hub</div></div>', unsafe_allow_html=True)
