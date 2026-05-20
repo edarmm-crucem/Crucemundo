@@ -1602,14 +1602,14 @@ st.markdown(
     ''',
     unsafe_allow_html=True,
     )
-    st.markdown(
-        '''
-        <div class="section-head-row">
-            <span class="web-chip-blue">ACCIONES</span>
-            <a class="web-chip-purple" href="/pages/01_page" target="_self">📋 Página 01</a>
-        </div>
-        ''',
-        unsafe_allow_html=True,
+st.markdown(
+     '''
+     <div class="section-head-row">
+        <span class="web-chip-blue">ACCIONES</span>
+        <a class="web-chip-purple" href="/pages/01_page" target="_self">📋 Página 01</a>
+      </div>
+    ''',
+unsafe_allow_html=True,
     )
 
 
