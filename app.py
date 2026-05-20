@@ -1491,7 +1491,7 @@ st.markdown(
     }
     div[data-testid="stButton"] button {
     padding: 0.15rem 0.6rem !important;
-    font-size: 0.75rem !important;
+    font-size: 0.15rem !important;
     height: auto !important;
     min-height: 0 !important;
     }
@@ -1618,7 +1618,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-if st.button("📋 Página 01"):
+if st.button("Pruebas"):
     st.switch_page("pages/01_page.py")
 
 # st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
