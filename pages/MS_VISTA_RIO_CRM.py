@@ -10,7 +10,7 @@ from collections import defaultdict
 # ============================================================
 st.set_page_config(
     page_title="MS VISTA RIO",
-    page_icon="🚢",
+    page_icon="favicon1.png",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
