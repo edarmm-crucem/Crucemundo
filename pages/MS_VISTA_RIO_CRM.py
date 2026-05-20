@@ -10,7 +10,7 @@ from collections import defaultdict
 # ============================================================
 st.set_page_config(
     page_title="MS VISTA RIO",
-    page_icon="favicon1.png",
+    page_icon="🚢",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -182,7 +182,6 @@ st.markdown(
         .portal-title strong, .portal-title-en strong { color: #111827; }
         .portal-title-en { margin-top: 0.12rem; font-style: italic; color: #6B7280; }
         
-        /* Estilos para destacar el Barco en grande */
         .ship-badge-container { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
         .ship-title { font-size: 1.5rem; font-weight: 900; color: #1E3A8A; letter-spacing: 0.05em; line-height: 1; }
         .ship-subtitle { font-size: 0.75rem; font-weight: 600; color: #4B5563; text-transform: uppercase; margin-top: 0.2rem; letter-spacing: 0.1em; }
@@ -238,15 +237,39 @@ if not cabinas:
     st.stop()
 
 # ============================================================
-# SELECTOR DE MODO INICIAL
+# SELECTOR DE MODO INICIAL (Añadido "Inicio" a la derecha)
 # ============================================================
+opciones_modo = ["Mapa de cabinas", "Ver Cupos", "Configurar Cupos", "Nueva salida", "Inicio"]
+
 modo = st.radio(
     "¿Qué quieres hacer?", 
-    ["Mapa de cabinas", "Ver Cupos", "Configurar Cupos", "Nueva salida"], 
+    opciones_modo, 
+    index=4,  # Hace que por defecto se cargue seleccionada la opción "Inicio" (índice 4 de la lista)
     horizontal=True
 )
 
-if modo == "Nueva salida":
+# ------------------------------------------------------------
+# MODO: INICIO
+# ------------------------------------------------------------
+if modo == "Inicio":
+    st.markdown(f"### 👋 Bienvenido al Panel del {NOMBRE_BARCO_LIMPIO}")
+    st.markdown(
+        f"""
+        Has iniciado sesión correctamente como **{DISPLAYUSER}**. 
+        
+        Desde este panel centralizado puedes gestionar de forma ágil la ocupación del buque. Utiliza el menú superior para navegar entre las herramientas disponibles:
+        
+        *   **🚢 Mapa de cabinas:** Visualiza de forma gráfica el estado de ocupación de las cubiertas y asigna o modifica reservas en tiempo real.
+        *   **📊 Ver Cupos:** Consulta de manera analítica el estado de los cupos de las agencias comerciales para cualquier salida seleccionada.
+        *   **⚙️ Configurar Cupos:** Añade agencias y modifica sus límites de cupos asignados de forma directa sin salir de la plataforma.
+        *   **📅 Nueva salida:** Genera la estructura inicial para una nueva fecha operativa del barco en la base de datos.
+        """
+    )
+
+# ------------------------------------------------------------
+# MODO: NUEVA SALIDA
+# ------------------------------------------------------------
+elif modo == "Nueva salida":
     st.markdown("#### Crear una nueva salida")
     ddmm = st.text_input("Fecha de salida (DDMM)", max_chars=4, placeholder="2705")
     if ddmm and len(ddmm) == 4:
@@ -260,6 +283,9 @@ if modo == "Nueva salida":
                     st.success(f"Salida {ddmm} creada correctamente.")
                     st.rerun()
 
+# ------------------------------------------------------------
+# MODOS QUE REQUIEREN SELECCIONAR UNA SALIDA EXISTENTE
+# ------------------------------------------------------------
 else:
     if not salidas:
         st.info("No hay salidas creadas todavía.")
