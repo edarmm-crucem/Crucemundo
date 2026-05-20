@@ -41,7 +41,8 @@ def getsaludo(lang="es"):
 DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Sin usuario"
 SALUDO = getsaludo("es")
 SALUDOEN = getsaludo("en")
-LOGOURL = st.secrets.get("LOGOURL", "")
+LOGOID = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
+LOGOURL = f"https://lh3.googleusercontent.com/d/{LOGOID}"
 
 # ============================================================
 # CSS CABECERA
