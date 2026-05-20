@@ -1489,6 +1489,12 @@ st.markdown(
     @media (max-width: 1300px) {
         .portal-header, .portal-footer { flex-direction: column; align-items: flex-start; }
     }
+    div[data-testid="stButton"] button {
+    padding: 0.15rem 0.6rem !important;
+    font-size: 0.75rem !important;
+    height: auto !important;
+    min-height: 0 !important;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -1604,16 +1610,13 @@ st.markdown(
     )
 
 st.markdown(
-       '''
-   div[data-testid="stButton"] button {
-    padding: 0.15rem 0.6rem !important;
-    font-size: 0.75rem !important;
-    height: auto !important;
-    min-height: 0 !important;
-    }
-       ''',
-      unsafe_allow_html=True,
- )
+    '''
+    <div class="section-head-row">
+        <span class="web-chip-blue">ACCIONES</span>
+    </div>
+    ''',
+    unsafe_allow_html=True,
+)
 
 if st.button("📋 Página 01"):
     st.switch_page("pages/01_page.py")
