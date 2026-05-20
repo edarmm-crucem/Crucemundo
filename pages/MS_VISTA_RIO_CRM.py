@@ -31,8 +31,6 @@ CRMBARCO = "1ApNv3qK-_2ANOVwSZoOchAdwWaeQg0Evz-n54s6T2cE"
 LOGOID = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
 LOGOURL = f"https://lh3.googleusercontent.com/d/{LOGOID}"
 
-# 🆕 Nombre del barco dinámico basado en la constante (quitando CRM si lo lleva)
-# Si prefieres basarlo en el nombre del archivo físico (.py), se podría usar __file__
 NOMBRE_BARCO_LIMPIO = BARCO.replace("_CRM", "").replace("_", " ")
 
 # ============================================================
@@ -123,7 +121,7 @@ def crearsalida(ddmm, cabinas):
         body={"values": header + rows}
     ).execute()
 
-@st.cache_data(ttl=5) # Reducido a 5s para que las pruebas de cupos se vean al instante
+@st.cache_data(ttl=5)
 def getdatossalida(ddmm):
     service = getsheetsservice()
     result = service.spreadsheets().values().get(
@@ -146,31 +144,22 @@ def guardarcabina(ddmm, rowindex, agencia, pax, localizador, notas):
         body={"values": [["VENDIDA" if agencia else "LIBRE", agencia, pax, localizador, notas]]}
     ).execute()
 
-# 🆕 FUNCIÓN PARA GUARDAR O ACTUALIZAR CUPOS EN LAS COLUMNAS H E I
 def guardar_cupo_sheets(ddmm, datos_completos, agencia, nuevo_limite):
     service = getsheetsservice()
-    
-    # Buscamos si la agencia ya está registrada en la columna H
     fila_destino = None
     for i, d in enumerate(datos_completos):
-        if d.get("cupo_agencia", "").strip() == list(agencias.keys()):
-            pass
-        # Si encontramos una fila donde ya esté la agencia escrita
         if d.get("cupo_agencia", "").strip() == agencia:
             fila_destino = i + 2
             break
             
-    # Si no existía, buscamos la primera fila libre en la columna H
     if fila_destino is None:
         for i, d in enumerate(datos_completos):
             if not d.get("cupo_agencia", "").strip():
                 fila_destino = i + 2
                 break
-        # Si todo estuviera lleno (raro), escribimos al final
         if fila_destino is None:
             fila_destino = len(datos_completos) + 2
 
-    # Actualizamos los valores en el Sheets
     service.spreadsheets().values().update(
         spreadsheetId=CRMBARCO,
         range=f"{ddmm}!H{fila_destino}:I{fila_destino}",
@@ -211,7 +200,7 @@ st.markdown(
 )
 
 # ============================================================
-# CABECERA (Con el nombre del barco limpio dinámico)
+# CABECERA
 # ============================================================
 st.markdown(
     f'''
@@ -253,9 +242,6 @@ modo = st.radio(
     horizontal=True
 )
 
-# ------------------------------------------------------------
-# MODO: NUEVA SALIDA
-# ------------------------------------------------------------
 if modo == "Nueva salida":
     st.markdown("#### Crear una nueva salida")
     ddmm = st.text_input("Fecha de salida (DDMM)", max_chars=4, placeholder="2705")
@@ -270,9 +256,6 @@ if modo == "Nueva salida":
                     st.success(f"Salida {ddmm} creada correctamente.")
                     st.rerun()
 
-# ------------------------------------------------------------
-# MODOS QUE REQUIEREN SELECCIONAR UNA SALIDA EXISTENTE
-# ------------------------------------------------------------
 else:
     if not salidas:
         st.info("No hay salidas creadas todavía.")
@@ -287,7 +270,6 @@ else:
             st.warning("La salida seleccionada no contiene datos.")
             st.stop()
 
-        # Procesar ocupaciones y cupos actuales
         ventas_por_agencia = defaultdict(int)
         cupos_salida = {}
         
@@ -309,11 +291,9 @@ else:
         # ------------------------------------------------------------
         if modo == "Ver Cupos":
             st.markdown(f"### 📊 Estado de Cupos — Salida {ddmm_sel}")
-            
             if not cupos_salida:
                 st.info("No hay cupos configurados para esta salida todavía. Ve a la sección 'Configurar Cupos' para asignarlos.")
             else:
-                # Creación de una tabla limpia de visualización
                 tabla_cupos = []
                 for ag in agencias.keys():
                     limite = cupos_salida.get(ag, 0)
@@ -336,11 +316,10 @@ else:
                     st.warning("No hay datos de cupos disponibles de agencias activas.")
 
         # ------------------------------------------------------------
-        # OPCIÓN: AÑADIR / MODIFICAR CUPOS
+        # OPCIÓN: CONFIGURAR CUPOS
         # ------------------------------------------------------------
         elif modo == "Configurar Cupos":
             st.markdown(f"### ⚙️ Añadir / Modificar Cupos — Salida {ddmm_sel}")
-            
             col_a, col_b = st.columns(2)
             with col_a:
                 agencia_cupo = st.selectbox("Selecciona la Agencia", list(agencias.keys()))
@@ -361,7 +340,7 @@ else:
                     st.rerun()
 
         # ------------------------------------------------------------
-        # OPCIÓN: MAPA DE CABINAS (EL PANEL ORIGINAL)
+        # OPCIÓN: MAPA DE CABINAS
         # ------------------------------------------------------------
         elif modo == "Mapa de cabinas":
             estadocabina = {d.get("cabina", ""): d for d in datos}
@@ -369,7 +348,6 @@ else:
             for c in cabinas:
                 porcategoria[c[3]].append(c[1])
 
-            # Monitor superior rápido
             if cupos_salida:
                 with st.expander("📊 Vista Rápida de Alertas de Cupos", expanded=True):
                     c_cups = st.columns(min(len(cupos_salida), 5))
@@ -379,7 +357,8 @@ else:
                             if actuales > lim:
                                 st.metric(label=f"🚨 {ag} (Excedido)", value=f"{actuales} / {lim}")
                             else:
-                                st.metric(label=f"💼 {ag}", value=f"{actuales} / {lim}")
+                                block_label = f"💼 {ag}"
+                                st.metric(label=block_label, value=f"{actuales} / {lim}")
 
             st.markdown(f"### 🚢 Mapa de cabinas — Salida {ddmm_sel}")
             for categoria, nums in porcategoria.items():
@@ -413,21 +392,32 @@ else:
                 info = estadocabina.get(cabina_input, {})
                 agencia_actual_cabina = info.get("agencia", "").strip()
                 
+                # 🛠️ DETECTAR SI LA CABINA YA ESTÁ ASIGNADA A OTRA AGENCIA
+                permitir_guardado = True
+                if agencia_actual_cabina:
+                    st.error(f"⚠️ **¡Atención!** La cabina {cabina_input} ya se encuentra asignada a la agencia **{agencia_actual_cabina}**.")
+                    # Checkbox obligatorio para desbloquear la sobreescritura
+                    confirmar_sustitucion = st.checkbox(f"¿Quieres sustituir la asignación de {agencia_actual_cabina}?", value=False)
+                    if not confirmar_sustitucion:
+                        permitir_guardado = False
+
                 with col2:
                     agencia_sel = st.selectbox(
                         "Agencia",
                         [""] + list(agencias.keys()),
                         index=list(agencias.keys()).index(info.get("agencia", "")) + 1
-                        if info.get("agencia") in agencias else 0
+                        if info.get("agencia") in agencias else 0,
+                        disabled=not permitir_guardado  # Se bloquea si no se confirma la sustitución
                     )
                 c1, c2, c3 = st.columns(3)
                 with c1:
-                    pax_input = st.number_input("Pax", min_value=0, max_value=10, value=int(info.get("pax", 0) or 0))
+                    pax_input = st.number_input("Pax", min_value=0, max_value=10, value=int(info.get("pax", 0) or 0), disabled=not permitir_guardado)
                 with c2:
-                    loc_input = st.text_input("Localizador", value=info.get("localizador", ""))
+                    loc_input = st.text_input("Localizador", value=info.get("localizador", ""), disabled=not permitir_guardado)
                 with c3:
-                    notas_input = st.text_input("Notas", value=info.get("notas", ""))
+                    notas_input = st.text_input("Notas", value=info.get("notas", ""), disabled=not permitir_guardado)
 
+                # Alerta de límite de cupo
                 if agencia_sel in cupos_salida:
                     limite_agencia = cupos_salida[agencia_sel]
                     ocupadas_ya = ventas_por_agencia[agencia_sel]
@@ -436,7 +426,8 @@ else:
                     if ocupadas_ya >= limite_agencia and not se_mantiene:
                         st.error(f"🚫 **Cupo Máximo Superado:** {agencia_sel} ya tiene {ocupadas_ya} cabinas. El límite para esta salida es de {limite_agencia}.")
 
-                if st.button("💾 Guardar"):
+                # El botón se deshabilita si la cabina estaba ocupada y el usuario no marcó el checkbox
+                if st.button("💾 Guardar", disabled=not permitir_guardado):
                     rowindex = next((i for i, d in enumerate(datos) if d.get("cabina") == cabina_input), None)
                     if rowindex is not None:
                         with st.spinner("Guardando..."):
