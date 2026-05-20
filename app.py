@@ -1338,31 +1338,6 @@ st.markdown(
         padding: 0.38rem 0.82rem; border-radius: 999px; font-size: 0.71rem; font-weight: 800;
         line-height: 1; text-decoration: none; white-space: nowrap; box-shadow: 0 2px 8px rgba(15,23,42,0.06);
     }
-
-
-    .web-chip-purple {
-        display: inline-flex; align-items: center; justify-content: center;
-        padding: 0.38rem 0.82rem; border-radius: 999px; font-size: 0.71rem; font-weight: 800;
-        line-height: 1; text-decoration: none; white-space: nowrap; box-shadow: 0 2px 8px rgba(15,23,42,0.06);
-        background: #F3EEFF; border: 1px solid #C9B3F5; color: #6B21A8 !important;
-    }
-
-    [data-testid="stPageLink"] {
-        display: inline-flex !important;
-        width: auto !important;
-    }
-    [data-testid="stPageLink"] a {
-        display: inline-flex !important; align-items: center !important;
-        padding: 0.38rem 0.82rem !important; border-radius: 999px !important;
-        font-size: 0.71rem !important; font-weight: 800 !important;
-        line-height: 1 !important; text-decoration: none !important;
-        white-space: nowrap !important; box-shadow: 0 2px 8px rgba(15,23,42,0.06) !important;
-        background: #F3EEFF !important; border: 1px solid #C9B3F5 !important;
-        color: #6B21A8 !important;
-    }
-    [data-testid="stPageLink"] a:hover {
-        background: #EAD9FF !important; border-color: #A97FE0 !important;
-    }
     .web-chip { background: #FFE69A; border: 1px solid #F2C94C; color: #7A5900 !important; }
     .web-chip-green { background: #DDF7E6; border: 1px solid #9FDEB4; color: #17663B !important; }
     .web-chip-blue { background: #E0ECFF; border: 1px solid #BFD4FF; color: #1E4FBF !important; cursor: default; }
@@ -1626,20 +1601,6 @@ st.markdown(
     ''',
     unsafe_allow_html=True,
 )
-
-
-col_chip, col_link = st.columns([0, 10], gap="small", vertical_alignment="center")
-
-st.markdown(
-    '''
-    <div class="section-head-row" style="margin-top: 0.1rem; margin-bottom: 0.3rem;">
-        <span class="web-chip-blue">ACCIONES</span>
-    </div>
-    ''',
-    unsafe_allow_html=True,
-)
-st.page_link("pages/01_page.py", label="🚀 Nombre del chip")
-
 
 # st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
