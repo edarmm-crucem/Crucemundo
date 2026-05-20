@@ -1605,9 +1605,12 @@ st.markdown(
 
 st.markdown(
        '''
-    <div class="section-head-row">
-        <span class="web-chip-blue">ACCIONES</span>
-  </div>
+   div[data-testid="stButton"] button {
+    padding: 0.15rem 0.6rem !important;
+    font-size: 0.75rem !important;
+    height: auto !important;
+    min-height: 0 !important;
+    }
        ''',
       unsafe_allow_html=True,
  )
