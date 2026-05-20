@@ -173,6 +173,11 @@ def guardar_cupo_sheets(ddmm, datos_completos, agencia, nuevo_limite):
 st.markdown(
     '''
     <style>
+        /* Aplicar Century Gothic globalmente */
+        html, body, [data-testid="stAppViewContainer"], .stMarkdown, p, div, span, label {
+            font-family: 'Century Gothic', 'Century', sans-serif !important;
+        }
+
         [data-testid="stSidebarNav"] { display: none !important; }
         header[data-testid="stHeader"] { display: none !important; }
         .portal-header { padding: 0.1rem 0 0.55rem 0; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.55rem; }
@@ -274,6 +279,9 @@ if modo == "Inicio":
         *   **📅 Nueva salida:** Genera la estructura inicial para una nueva fecha operativa del barco en la base de datos.
         """
     )
+    st.markdown("---")
+    # Botón de regreso rápido en la pantalla principal
+    st.page_link("app.py", label=" Volver al Menú Principal (Selección de Barcos)", icon="🏠")
 
 # ------------------------------------------------------------
 # MODO: NUEVA SALIDA
@@ -517,3 +525,9 @@ else:
                             st.cache_data.clear()
                             st.success(f"Cabina {cabina_input} actualizada correctamente.")
                             st.rerun()
+
+# ============================================================
+# PIE DE PÁGINA (BOTÓN NAVEGACIÓN GLOBAL AL RAÍZ)
+# ============================================================
+st.markdown("---")
+st.page_link("app.py", label=" Volver al Menú Principal (Selección de Barcos)", icon="🏠")
