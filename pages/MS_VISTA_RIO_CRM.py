@@ -10,7 +10,7 @@ from collections import defaultdict
 # ============================================================
 st.set_page_config(
     page_title="MS VISTA RIO",
-    page_icon="favicon1.png",
+    page_icon="🚢",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -41,13 +41,9 @@ def now():
     return datetime.now(pytz.utc).astimezone(TIMEZONE).replace(tzinfo=None)
 def getsaludo(lang="es"):
     hour = now().hour
-    if lang == "en":
-        if 6 <= hour < 14: return "Good morning"
-        if 14 <= hour < 21: return "Good afternoon"
-        return "Good evening"
-    if 6 <= hour < 14: return "Buenos días"
-    if 14 <= hour < 21: return "Buenas tardes"
-    return "Buenas noches"
+    if 6 <= hour < 14: return "Buenos días" if lang == "es" else "Good morning"
+    if 14 <= hour < 21: return "Buenas tardes" if lang == "es" else "Good afternoon"
+    return "Buenas noches" if lang == "es" else "Good evening"
 
 DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Sin usuario"
 SALUDO = getsaludo("es")
@@ -141,14 +137,14 @@ def guardarcabina(ddmm, rowindex, agencia, pax, localizador, notas):
         spreadsheetId=CRMBARCO,
         range=f"{ddmm}!C{fila}:G{fila}",
         valueInputOption="RAW",
-        body={"values": [["VENDIDA" if agencia else "LIBRE", agencia, pax, localizador, notas]]}
+        body={"values": [["VENDIDA" if agencia else "LIBRE", agencia, str(pax), localizador, notas]]}
     ).execute()
 
-def guardar_cupo_sheets(ddmm, datos_completos, agencia, nuevo_limite):
+def guardar_cupo_sheets(ddmm, datos_completos, clave_cupo, limites_str):
     service = getsheetsservice()
     fila_destino = None
     for i, d in enumerate(datos_completos):
-        if d.get("cupo_agencia", "").strip() == agencia:
+        if d.get("cupo_agencia", "").strip() == clave_cupo:
             fila_destino = i + 2
             break
             
@@ -164,7 +160,7 @@ def guardar_cupo_sheets(ddmm, datos_completos, agencia, nuevo_limite):
         spreadsheetId=CRMBARCO,
         range=f"{ddmm}!H{fila_destino}:I{fila_destino}",
         valueInputOption="RAW",
-        body={"values": [[agencia, str(nuevo_limite)]]}
+        body={"values": [[clave_cupo, limites_str]]}
     ).execute()
 
 # ============================================================
@@ -188,12 +184,10 @@ st.markdown(
         
         section[data-testid="stMain"] > div:first-child { padding-top: 1rem !important; }
         
-        /* Estructura de Cubierta de Barco Real (Filas paralelas) */
         .deck-layout { background: #FFFFFF; padding: 1.2rem; border-radius: 12px; border: 1px solid #E5E7EB; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 1.5rem; }
         .deck-row { display: flex; flex-wrap: nowrap; gap: 0.5rem; overflow-x: auto; padding: 0.2rem 0; }
         .deck-row-style { justify-content: flex-start; } 
         
-        /* Pasillo horizontal central */
         .horizontal-corridor { height: 18px; margin: 0.4rem 0; background-image: linear-gradient(to right, #E5E7EB 50%, rgba(255,255,255,0) 0%); background-position: bottom; background-size: 15px 2px; background-repeat: repeat-x; display: flex; align-items: center; padding-left: 0.5rem; font-size: 0.6rem; font-weight: 700; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.15em; }
         
         .cabina-box {
@@ -211,7 +205,7 @@ st.markdown(
 )
 
 # ============================================================
-# CABECERA OPTIMIZADA CON BARCO DESTACADO
+# CABECERA
 # ============================================================
 st.markdown(
     f'''
@@ -245,17 +239,14 @@ if not cabinas:
     st.error(f"No se encontraron cabinas para {BARCO} en el master.")
     st.stop()
 
+# Extraer lista de categorías únicas del buque
+todas_categorias = sorted(list(set([c[3] for c in cabinas])))
+
 # ============================================================
 # SELECTOR DE MODO INICIAL
 # ============================================================
 opciones_modo = ["Mapa de cabinas", "Ver Cupos", "Configurar Cupos", "Nueva salida", "Inicio"]
-
-modo = st.radio(
-    "¿Qué quieres hacer?", 
-    opciones_modo, 
-    index=4, 
-    horizontal=True
-)
+modo = st.radio("¿Qué quieres hacer?", opciones_modo, index=4, horizontal=True)
 
 # ------------------------------------------------------------
 # MODO: INICIO
@@ -268,9 +259,9 @@ if modo == "Inicio":
         
         Desde este panel centralizado puedes gestionar de forma ágil la ocupación del buque. Utiliza el menú superior para navegar entre las herramientas disponibles:
         
-        *   **🚢 Mapa de cabinas:** Visualiza los planos de las cubiertas orientados de forma realista (Conteo e inicio desde el extremo derecho avanzando hacia la izquierda).
-        *   **📊 Ver Cupos:** Consulta de manera analítica el estado de los cupos de las agencias comerciales para cualquier salida seleccionada.
-        *   **⚙️ Configurar Cupos:** Añade agencias y modifica sus límites de cupos asignados de forma directa sin salir de la plataforma.
+        *   **🚢 Mapa de cabinas:** Visualiza planos con validación cruzada estricta por categoría (Cabinas y Personas asignadas).
+        *   **📊 Ver Cupos:** Cuadro analítico de disponibilidad segmentado por Agencia, Categoría de Cabina y Pasajeros.
+        *   **⚙️ Configurar Cupos:** Ajusta las limitaciones comerciales de cabinas y personas por cada categoría del buque.
         *   **📅 Nueva salida:** Genera la estructura inicial para una nueva fecha operativa del barco en la base de datos.
         """
     )
@@ -311,77 +302,112 @@ else:
             st.warning("La salida seleccionada no contiene datos.")
             st.stop()
 
-        ventas_por_agencia = defaultdict(int)
-        cupos_salida = {}
+        # CONTEOS REVOLUCIONADOS: Segmentación indexada [(agencia, categoria)]
+        cabinas_por_ag_cat = defaultdict(int)
+        pax_por_ag_cat = defaultdict(int)
+        
+        # Diccionario de cupos estructurado: cupos_config[(agencia, categoria)] = {"cabinas": X, "pax": Y}
+        cupos_config = {}
         
         for d in datos:
+            cabina_id = d.get("cabina", "").strip()
             ag_en_fila = d.get("agencia", "").strip()
-            if ag_en_fila:
-                ventas_por_agencia[ag_en_fila] += 1
             
-            c_ag = d.get("cupo_agencia", "").strip()
-            c_max = d.get("cupo_maximo", "").strip()
-            if c_ag and c_max:
+            # Buscar la categoría correspondiente a esta cabina en la definición master
+            cat_en_fila = next((c[3] for c in cabinas if c[1] == cabina_id), "").strip()
+            
+            if ag_en_fila and cat_en_fila:
+                cabinas_por_ag_cat[(ag_en_fila, cat_en_fila)] += 1
                 try:
-                    cupos_salida[c_ag] = int(c_max)
+                    pax_cabina = int(d.get("pax", 0) or 0)
+                    pax_por_ag_cat[(ag_en_fila, cat_en_fila)] += pax_cabina
+                except ValueError:
+                    pass
+            
+            # Procesar la configuración estructurada de cupos (Formato guardado en Sheets: "AGENCIA|CATEGORIA")
+            c_ag = d.get("cupo_agencia", "").strip()
+            c_max = d.get("cupo_maximo", "").strip() # Almacena "MaxCabinas,MaxPax"
+            
+            if c_ag and "|" in c_ag and c_max and "," in c_max:
+                try:
+                    ag_cupo, cat_cupo = c_ag.split("|")
+                    max_cab, max_px = c_max.split(",")
+                    cupos_config[(ag_cupo.strip(), cat_cupo.strip())] = {
+                        "cabinas": int(max_cab),
+                        "pax": int(max_px)
+                    }
                 except ValueError:
                     pass
 
         # ------------------------------------------------------------
-        # OPCIÓN: VER CUPOS
+        # OPCIÓN: VER CUPOS (AVANZADOS POR CATEGORÍA)
         # ------------------------------------------------------------
         if modo == "Ver Cupos":
-            st.markdown(f"### 📊 Estado de Cupos — Salida {ddmm_sel}")
-            if not cupos_salida:
-                st.info("No hay cupos configurados para esta salida todavía. Ve a la sección 'Configurar Cupos' para asignarlos.")
+            st.markdown(f"### 📊 Cuadro de Mandos de Cupos — Salida {ddmm_sel}")
+            if not cupos_config:
+                st.info("No hay cupos configurados para esta salida. Configúralos en la pestaña 'Configurar Cupos'.")
             else:
                 tabla_cupos = []
-                for ag in agencias.keys():
-                    limite = cupos_salida.get(ag, 0)
-                    vendidas = ventas_por_agencia[ag]
-                    disponibles = limite - vendidas
+                for (ag, cat), lims in cupos_config.items():
+                    cab_lim = lims["cabinas"]
+                    pax_lim = lims["pax"]
                     
-                    if limite > 0 or vendidas > 0:
-                        estado = "🚨 Excedido" if disponibles < 0 else "✅ OK"
-                        tabla_cupos.append({
-                            "Agencia": ag,
-                            "Cupo Máximo": limite,
-                            "Cabinas Vendidas": vendidas,
-                            "Disponibles": disponibles,
-                            "Estado": estado
-                        })
+                    cab_usadas = cabinas_por_ag_cat[(ag, cat)]
+                    pax_usados = pax_por_ag_cat[(ag, cat)]
+                    
+                    cab_disp = cab_lim - cab_usadas
+                    pax_disp = pax_lim - pax_usados
+                    
+                    status = "✅ OK"
+                    if cab_disp < 0 or pax_disp < 0:
+                        status = "🚨 Excedido"
+                        
+                    tabla_cupos.append({
+                        "Agencia": ag,
+                        "Categoría": cat,
+                        "Cupo Cabinas": cab_lim,
+                        "Cabinas Ocupadas": cab_usadas,
+                        "Cabinas Disp.": cab_disp,
+                        "Cupo Pax (Personas)": pax_lim,
+                        "Pax Registrados": pax_usados,
+                        "Pax Disp.": pax_disp,
+                        "Estado": status
+                    })
                 
                 if tabla_cupos:
                     st.table(tabla_cupos)
-                else:
-                    st.warning("No hay datos de cupos disponibles de agencias activas.")
 
         # ------------------------------------------------------------
         # OPCIÓN: CONFIGURAR CUPOS
         # ------------------------------------------------------------
         elif modo == "Configurar Cupos":
-            st.markdown(f"### ⚙️ Añadir / Modificar Cupos — Salida {ddmm_sel}")
+            st.markdown(f"### ⚙️ Definir Límites por Categoría — Salida {ddmm_sel}")
             col_a, col_b = st.columns(2)
             with col_a:
-                agencia_cupo = st.selectbox("Selecciona la Agencia", list(agencias.keys()))
+                agencia_cupo = st.selectbox("1. Selecciona la Agencia", list(agencias.keys()))
             with col_b:
-                cupo_actual_valor = cupos_salida.get(agencia_cupo, 0)
-                nuevo_limite = st.number_input(
-                    f"Cupo máximo para {agencia_cupo}", 
-                    min_value=0, 
-                    max_value=100, 
-                    value=int(cupo_actual_valor)
-                )
+                categoria_cupo = st.selectbox("2. Selecciona la Categoría del Buque", todas_categorias)
             
-            if st.button("💾 Guardar Configuración de Cupo"):
-                with st.spinner("Guardando en Sheets..."):
-                    guardar_cupo_sheets(ddmm_sel, datos, agencia_cupo, nuevo_limite)
+            valores_actuales = cupos_config.get((agencia_cupo, categoria_cupo), {"cabinas": 0, "pax": 0})
+            
+            st.markdown("---")
+            c_l1, c_l2 = st.columns(2)
+            with c_l1:
+                limite_cabinas = st.number_input("Número MÁXIMO de Cabinas autorizadas", min_value=0, max_value=50, value=valores_actuales["cabinas"])
+            with c_l2:
+                limite_pax = st.number_input("Número MÁXIMO de Personas (Pax) autorizadas", min_value=0, max_value=150, value=valores_actuales["pax"])
+            
+            if st.button("💾 Guardar Límites de Cupo"):
+                with st.spinner("Sincronizando con base de datos..."):
+                    clave_compuesta = f"{agencia_cupo}|{categoria_cupo}"
+                    datos_limites_str = f"{limite_cabinas},{limite_pax}"
+                    guardar_cupo_sheets(ddmm_sel, datos, clave_compuesta, datos_limites_str)
                     st.cache_data.clear()
-                    st.success(f"Cupo de {agencia_cupo} actualizado a {nuevo_limite} para la salida {ddmm_sel}.")
+                    st.success(f"Límites guardados para {agencia_cupo} en {categoria_cupo} ({limite_cabinas} Cabinas / {limite_pax} Pax).")
                     st.rerun()
 
         # ------------------------------------------------------------
-        # OPCIÓN: MAPA DE CABINAS (DISTRIBUCIÓN REVERSA COMPLETA)
+        # OPCIÓN: MAPA DE CABINAS
         # ------------------------------------------------------------
         elif modo == "Mapa de cabinas":
             estadocabina = {d.get("cabina", ""): d for d in datos}
@@ -389,20 +415,23 @@ else:
             for c in cabinas:
                 porcategoria[c[3]].append(c[1])
 
-            if cupos_salida:
-                with st.expander("📊 Vista Rápida de Alertas de Cupos", expanded=True):
-                    c_cups = st.columns(min(len(cupos_salida), 5))
-                    for idx, (ag, lim) in enumerate(cupos_salida.items()):
-                        actuales = ventas_por_agencia[ag]
+            if cupos_config:
+                with st.expander("📊 Vista Rápida de Alertas de Cupos Avanzados (Categorías)", expanded=True):
+                    c_cups = st.columns(min(len(cupos_config), 4))
+                    for idx, ((ag, cat), lims) in enumerate(cupos_config.items()):
+                        c_max = lims["cabinas"]
+                        p_max = lims["pax"]
+                        c_act = cabinas_por_ag_cat[(ag, cat)]
+                        p_act = pax_por_ag_cat[(ag, cat)]
+                        
                         with c_cups[idx % len(c_cups)]:
-                            if actuales > lim:
-                                st.metric(label=f"🚨 {ag} (Excedido)", value=f"{actuales} / {lim}")
-                            else:
-                                block_label = f"💼 {ag}"
-                                st.metric(label=block_label, value=f"{actuales} / {lim}")
+                            excedido = (c_act > c_max) or (p_act > p_max)
+                            label_tarjeta = f"{'🚨' if excedido else '💼'} {ag} ({cat})"
+                            val_tarjeta = f"Cab: {c_act}/{c_max} | Pax: {p_act}/{p_max}"
+                            st.metric(label=label_tarjeta, value=val_tarjeta)
 
             st.markdown(f"### 🚢 Distribución de Cubiertas — Salida {ddmm_sel}")
-            
+            st.caption("◀ Conteo desde la Derecha hacia la Izquierda en ambas filas")
             
             for categoria, nums in porcategoria.items():
                 st.markdown(f'<div class="categoria-label">📍 {categoria}</div>', unsafe_allow_html=True)
@@ -421,19 +450,20 @@ else:
                     except ValueError:
                         pares.append((999, num))
 
-                # ORDENACIÓN: Ambos de mayor a menor para comenzar con el número más pequeño en la derecha
                 impares_ordenados = [item[1] for item in sorted(impares, key=lambda x: x[0], reverse=True)]
                 pares_ordenados = [item[1] for item in sorted(pares, key=lambda x: x[0], reverse=True)]
 
-                # Construir HTML de la cubierta completa
                 html = '<div class="deck-layout">'
                 
-                # --- FILA SUPERIOR: IMPARES (Menores a la Derecha) ---
+                # --- FILA SUPERIOR: IMPARES ---
                 html += '<div class="deck-row deck-row-style">'
                 for num in impares_ordenados:
                     info = estadocabina.get(num, {})
                     agencia = info.get("agencia", "")
                     estado = info.get("estado", "LIBRE")
+                    cant_pax = info.get("pax", "")
+                    pax_txt = f" ({cant_pax}p)" if cant_pax and int(cant_pax) > 0 else ""
+                    
                     color = agencias.get(agencia, "#F3F4F6") if agencia else "#F3F4F6"
                     border = "#1F2937" if estado == "VENDIDA" else "#D1D5DB"
                     textcolor = "#1F2937" if agencia else "#9CA3AF"
@@ -441,19 +471,21 @@ else:
                     <div class="cabina-box" style="background:{color};border-color:{border};color:{textcolor};"
                          onclick="window.parent.postMessage({{type:'streamlit:setComponentValue', value:'{num}'}}, '*')">
                         <span>{num}</span>
-                        <span style="font-size:0.55rem; font-weight:600; white-space:nowrap; overflow:hidden;">{agencia or "libre"}</span>
+                        <span style="font-size:0.55rem; font-weight:600; white-space:nowrap; overflow:hidden;">{agencia or "libre"}{pax_txt}</span>
                     </div>'''
                 html += '</div>'
                 
-                # --- PASILLO INTERIOR ---
                 html += '<div class="horizontal-corridor">Pasillo Central de Cubierta</div>'
                 
-                # --- FILA INFERIOR: PARES (Menores a la Derecha) ---
+                # --- FILA INFERIOR: PARES ---
                 html += '<div class="deck-row deck-row-style">'
                 for num in pares_ordenados:
                     info = estadocabina.get(num, {})
                     agencia = info.get("agencia", "")
                     estado = info.get("estado", "LIBRE")
+                    cant_pax = info.get("pax", "")
+                    pax_txt = f" ({cant_pax}p)" if cant_pax and int(cant_pax) > 0 else ""
+                    
                     color = agencias.get(agencia, "#F3F4F6") if agencia else "#F3F4F6"
                     border = "#1F2937" if estado == "VENDIDA" else "#D1D5DB"
                     textcolor = "#1F2937" if agencia else "#9CA3AF"
@@ -461,14 +493,14 @@ else:
                     <div class="cabina-box" style="background:{color};border-color:{border};color:{textcolor};"
                          onclick="window.parent.postMessage({{type:'streamlit:setComponentValue', value:'{num}'}}, '*')">
                         <span>{num}</span>
-                        <span style="font-size:0.55rem; font-weight:600; white-space:nowrap; overflow:hidden;">{agencia or "libre"}</span>
+                        <span style="font-size:0.55rem; font-weight:600; white-space:nowrap; overflow:hidden;">{agencia or "libre"}{pax_txt}</span>
                     </div>'''
                 html += '</div>'
                 
-                html += '</div>' # Cierre deck-layout
+                html += '</div>'
                 st.markdown(html, unsafe_allow_html=True)
 
-            # Panel de Asignación
+            # Panel de Asignación con control cruzado de seguridad
             st.markdown("---")
             st.markdown("#### ✏️ Asignar cabina")
             col1, col2 = st.columns([1, 2])
@@ -479,10 +511,14 @@ else:
             if cabina_input:
                 info = estadocabina.get(cabina_input, {})
                 agencia_actual_cabina = info.get("agencia", "").strip()
+                pax_actual_cabina = int(info.get("pax", 0) or 0)
+                
+                # Identificar la categoría de la cabina que se está operando
+                cat_cabina_actual = next((c[3] for c in cabinas if c[1] == cabina_input), "").strip()
                 
                 permitir_guardado = True
                 if agencia_actual_cabina:
-                    st.error(f"⚠️ **¡Atención!** La cabina {cabina_input} ya se encuentra asignada a la agencia **{agencia_actual_cabina}**.")
+                    st.error(f"⚠️ **¡Atención!** La cabina {cabina_input} ({cat_cabina_actual}) ya se encuentra asignada a la agencia **{agencia_actual_cabina}**.")
                     confirmar_sustitucion = st.checkbox(f"¿Quieres sustituir la asignación de {agencia_actual_cabina}?", value=False)
                     if not confirmar_sustitucion:
                         permitir_guardado = False
@@ -503,13 +539,30 @@ else:
                 with c3:
                     notas_input = st.text_input("Notas", value=info.get("notas", ""), disabled=not permitir_guardado)
 
-                if agencia_sel in cupos_salida:
-                    limite_agencia = cupos_salida[agencia_sel]
-                    ocupadas_ya = ventas_por_agencia[agencia_sel]
-                    se_mantiene = (agencia_sel == agencia_actual_cabina)
+                # VALIDACIONES CRUZADAS ESTRICTAS (Cabinas + Pasajeros por Categoría)
+                if agencia_sel and (agencia_sel, cat_cabina_actual) in cupos_config:
+                    limites = cupos_config[(agencia_sel, cat_cabina_actual)]
+                    max_cabs_autorizadas = limites["cabinas"]
+                    max_pax_autorizados = limites["pax"]
                     
-                    if ocupadas_ya >= limite_agencia and not se_mantiene:
-                        st.error(f"🚫 **Cupo Máximo Superado:** {agencia_sel} ya tiene {ocupadas_ya} cabinas. El límite para esta salida es de {limite_agencia}.")
+                    cabs_actuales_en_cat = cabinas_por_ag_cat[(agencia_sel, cat_cabina_actual)]
+                    pax_actuales_en_cat = pax_por_ag_cat[(agencia_sel, cat_cabina_actual)]
+                    
+                    # Restar valores previos si el usuario modifica datos de la misma agencia
+                    if agencia_sel == agencia_actual_cabina:
+                        cabs_actuales_en_cat -= 1
+                        pax_actuales_en_cat -= pax_actual_cabina
+                    
+                    impacto_cabs = cabs_actuales_en_cat + 1
+                    impacto_pax = pax_actuales_en_cat + pax_input
+                    
+                    # Chequeo 1: Bloqueo por exceso de cabinas
+                    if impacto_cabs > max_cabs_autorizadas:
+                        st.error(f"🚫 **Cupo de Cabinas Superado en {cat_cabina_actual}:** {agencia_sel} tiene asignadas {cabs_actuales_en_cat} de {max_cabs_autorizadas} cabinas autorizadas.")
+                    
+                    # Chequeo 2: Bloqueo por exceso de personas (Pax)
+                    if impacto_pax > max_pax_autorizados:
+                        st.error(f"🚫 **Cupo de Pasajeros Superado en {cat_cabina_actual}:** Agregar {pax_input} personas llevaría el total a {impacto_pax} pax de los {max_pax_autorizados} permitidos.")
 
                 if st.button("💾 Guardar", disabled=not permitir_guardado):
                     rowindex = next((i for i, d in enumerate(datos) if d.get("cabina") == cabina_input), None)
@@ -517,11 +570,11 @@ else:
                         with st.spinner("Guardando..."):
                             guardarcabina(ddmm_sel, rowindex, agencia_sel, pax_input, loc_input, notas_input)
                             st.cache_data.clear()
-                            st.success(f"Cabina {cabina_input} actualizada correctamente.")
+                            st.success(f"Cabina {cabina_input} guardada con éxito.")
                             st.rerun()
 
 # ============================================================
-# PIE DE PÁGINA (BOTÓN NAVEGACIÓN GLOBAL AL RAÍZ)
+# PIE DE PÁGINA
 # ============================================================
 st.markdown("---")
 st.page_link("app.py", label=" Volver al Menú Principal (Selección de Barcos)", icon="🏠")
