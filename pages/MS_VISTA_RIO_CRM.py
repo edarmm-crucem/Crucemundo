@@ -402,7 +402,7 @@ else:
                                 st.metric(label=block_label, value=f"{actuales} / {lim}")
 
             st.markdown(f"### 🚢 Distribución de Cubiertas — Salida {ddmm_sel}")
-            st.caption("◀ Conteo desde la Derecha hacia la Izquierda en ambas filas (Fila Superior: Impares | Fila Inferior: Pares)")
+            
             
             for categoria, nums in porcategoria.items():
                 st.markdown(f'<div class="categoria-label">📍 {categoria}</div>', unsafe_allow_html=True)
