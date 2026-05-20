@@ -1619,7 +1619,7 @@ st.markdown(
 )
 
 if st.button("Pruebas"):
-    st.switch_page("pages/01_page.py")
+    st.switch_page("pages/MS_VISTA_RIO.py")
 
 # st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
