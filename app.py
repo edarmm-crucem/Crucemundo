@@ -1602,16 +1602,17 @@ st.markdown(
     ''',
     unsafe_allow_html=True,
     )
-st.markdown(
-     '''
-     <div class="section-head-row">
-        <span class="web-chip-blue">ACCIONES</span>
-        <a class="web-chip-purple" href="?page=01_page" target="_self">📋 Página 01</a>
-      </div>
-    ''',
-unsafe_allow_html=True,
+    st.markdown(
+        '''
+        <div class="section-head-row">
+            <span class="web-chip-blue">ACCIONES</span>
+        </div>
+        ''',
+        unsafe_allow_html=True,
     )
 
+if st.button("📋 Página 01"):
+    st.switch_page("pages/01_page.py")
 
 # st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
