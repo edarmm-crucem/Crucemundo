@@ -3,6 +3,7 @@ import pytz
 from datetime import datetime
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
+from collections import defaultdict
 
 # ============================================================
 # PAGE CONFIG
@@ -29,6 +30,10 @@ MASTERCABINASID = "1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI"
 CRMBARCO = "1ApNv3qK-_2ANOVwSZoOchAdwWaeQg0Evz-n54s6T2cE"
 LOGOID = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
 LOGOURL = f"https://lh3.googleusercontent.com/d/{LOGOID}"
+
+# 🆕 Nombre del barco dinámico basado en la constante (quitando CRM si lo lleva)
+# Si prefieres basarlo en el nombre del archivo físico (.py), se podría usar __file__
+NOMBRE_BARCO_LIMPIO = BARCO.replace("_CRM", "").replace("_", " ")
 
 # ============================================================
 # UTILIDADES
@@ -99,19 +104,18 @@ def getsalidas():
     spreadsheet = service.spreadsheets().get(spreadsheetId=CRMBARCO).execute()
     return [s["properties"]["title"] for s in spreadsheet.get("sheets", [])]
 
-def crearsalida(ddmm, cabinas, agencias_cupo):
+def crearsalida(ddmm, cabinas):
     service = getsheetsservice()
-    # Crear hoja
     service.spreadsheets().batchUpdate(
         spreadsheetId=CRMBARCO,
         body={"requests": [{"addSheet": {"properties": {"title": ddmm}}}]}
     ).execute()
-    # Cabecera
-    header = [["cabina", "categoria", "estado", "agencia", "pax", "localizador", "notas"]]
-    # Filas por cabina
+    
+    header = [["cabina", "categoria", "estado", "agencia", "pax", "localizador", "notes", "cupo_agencia", "cupo_maximo"]]
     rows = []
     for c in cabinas:
-        rows.append([c[1], c[3], "LIBRE", "", "", "", ""])
+        rows.append([c[1], c[3], "LIBRE", "", "", "", "", "", ""])
+        
     service.spreadsheets().values().update(
         spreadsheetId=CRMBARCO,
         range=f"{ddmm}!A1",
@@ -119,28 +123,59 @@ def crearsalida(ddmm, cabinas, agencias_cupo):
         body={"values": header + rows}
     ).execute()
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=5) # Reducido a 5s para que las pruebas de cupos se vean al instante
 def getdatossalida(ddmm):
     service = getsheetsservice()
     result = service.spreadsheets().values().get(
         spreadsheetId=CRMBARCO,
-        range=f"{ddmm}!A:G"
+        range=f"{ddmm}!A:I"
     ).execute()
     rows = result.get("values", [])
     if len(rows) < 2:
         return []
     header = rows[0]
-    return [dict(zip(header, r + [""] * len(header))) for r in rows[1:]]
+    return [dict(zip(header, r + [""] * (len(header) - len(r)))) for r in rows[1:]]
 
 def guardarcabina(ddmm, rowindex, agencia, pax, localizador, notas):
     service = getsheetsservice()
-    # rowindex es 0-based desde datos, +2 por header y base 1
     fila = rowindex + 2
     service.spreadsheets().values().update(
         spreadsheetId=CRMBARCO,
         range=f"{ddmm}!C{fila}:G{fila}",
         valueInputOption="RAW",
         body={"values": [["VENDIDA" if agencia else "LIBRE", agencia, pax, localizador, notas]]}
+    ).execute()
+
+# 🆕 FUNCIÓN PARA GUARDAR O ACTUALIZAR CUPOS EN LAS COLUMNAS H E I
+def guardar_cupo_sheets(ddmm, datos_completos, agencia, nuevo_limite):
+    service = getsheetsservice()
+    
+    # Buscamos si la agencia ya está registrada en la columna H
+    fila_destino = None
+    for i, d in enumerate(datos_completos):
+        if d.get("cupo_agencia", "").strip() == list(agencias.keys()):
+            pass
+        # Si encontramos una fila donde ya esté la agencia escrita
+        if d.get("cupo_agencia", "").strip() == agencia:
+            fila_destino = i + 2
+            break
+            
+    # Si no existía, buscamos la primera fila libre en la columna H
+    if fila_destino is None:
+        for i, d in enumerate(datos_completos):
+            if not d.get("cupo_agencia", "").strip():
+                fila_destino = i + 2
+                break
+        # Si todo estuviera lleno (raro), escribimos al final
+        if fila_destino is None:
+            fila_destino = len(datos_completos) + 2
+
+    # Actualizamos los valores en el Sheets
+    service.spreadsheets().values().update(
+        spreadsheetId=CRMBARCO,
+        range=f"{ddmm}!H{fila_destino}:I{fila_destino}",
+        valueInputOption="RAW",
+        body={"values": [[agencia, str(nuevo_limite)]]}
     ).execute()
 
 # ============================================================
@@ -176,7 +211,7 @@ st.markdown(
 )
 
 # ============================================================
-# CABECERA
+# CABECERA (Con el nombre del barco limpio dinámico)
 # ============================================================
 st.markdown(
     f'''
@@ -186,8 +221,8 @@ st.markdown(
             <div>
                 <div class="portal-title">{SALUDO}, {DISPLAYUSER}. ¿Qué hacemos hoy?</div>
                 <div class="portal-title-en">{SALUDOEN}, {DISPLAYUSER}. What are we doing today?</div>
-                <div class="portal-subtitle">MS Vista Rio · Gestión de Cabinas</div>
-                <div class="portal-subtitle-en">MS Vista Rio · Cabin Management</div>
+                <div class="portal-subtitle">{NOMBRE_BARCO_LIMPIO} · Panel de Control</div>
+                <div class="portal-subtitle-en">{NOMBRE_BARCO_LIMPIO} · Control Panel</div>
             </div>
         </div>
         <div class="user-top">{DISPLAYUSER}</div>
@@ -206,117 +241,206 @@ agencias = getagencias()
 salidas = getsalidas()
 
 if not cabinas:
-    st.error("No se encontraron cabinas para MS_VISTA_RIO en el master.")
+    st.error(f"No se encontraron cabinas para {BARCO} en el master.")
     st.stop()
 
 # ============================================================
-# SELECTOR: NUEVA SALIDA O EXISTENTE
+# SELECTOR DE MODO INICIAL
 # ============================================================
-modo = st.radio("¿Qué quieres hacer?", ["Salida existente", "Nueva salida"], horizontal=True)
+modo = st.radio(
+    "¿Qué quieres hacer?", 
+    ["Mapa de cabinas", "Ver Cupos", "Configurar Cupos", "Nueva salida"], 
+    horizontal=True
+)
 
+# ------------------------------------------------------------
+# MODO: NUEVA SALIDA
+# ------------------------------------------------------------
 if modo == "Nueva salida":
-    st.markdown("#### Nueva salida")
+    st.markdown("#### Crear una nueva salida")
     ddmm = st.text_input("Fecha de salida (DDMM)", max_chars=4, placeholder="2705")
     if ddmm and len(ddmm) == 4:
         if ddmm in salidas:
             st.warning(f"La salida {ddmm} ya existe.")
         else:
-            st.markdown("**Cupo por agencia (opcional)**")
-            cupos = {}
-            cols = st.columns(4)
-            for i, (cod, color) in enumerate(agencias.items()):
-                with cols[i % 4]:
-                    cupo = st.number_input(cod, min_value=0, max_value=200, value=0, key=f"cupo_{cod}")
-                    if cupo > 0:
-                        cupos[cod] = cupo
             if st.button("✅ Crear salida"):
                 with st.spinner("Creando salida..."):
-                    crearsalida(ddmm, cabinas, cupos)
+                    crearsalida(ddmm, cabinas)
                     st.cache_data.clear()
-                    st.success(f"Salida {ddmm} creada con {len(cabinas)} cabinas.")
+                    st.success(f"Salida {ddmm} creada correctamente.")
                     st.rerun()
 
+# ------------------------------------------------------------
+# MODOS QUE REQUIEREN SELECCIONAR UNA SALIDA EXISTENTE
+# ------------------------------------------------------------
 else:
     if not salidas:
         st.info("No hay salidas creadas todavía.")
         st.stop()
 
-    ddmm_sel = st.selectbox("Selecciona salida", salidas)
+    ddmm_sel = st.selectbox("Selecciona salida para operar", salidas)
 
     if ddmm_sel:
         datos = getdatossalida(ddmm_sel)
+        
         if not datos:
-            st.warning("La salida no tiene datos.")
+            st.warning("La salida seleccionada no contiene datos.")
             st.stop()
 
-        # Mapa de estado por cabina
-        estadocabina = {d.get("cabina", ""): d for d in datos}
+        # Procesar ocupaciones y cupos actuales
+        ventas_por_agencia = defaultdict(int)
+        cupos_salida = {}
+        
+        for d in datos:
+            ag_en_fila = d.get("agencia", "").strip()
+            if ag_en_fila:
+                ventas_por_agencia[ag_en_fila] += 1
+            
+            c_ag = d.get("cupo_agencia", "").strip()
+            c_max = d.get("cupo_maximo", "").strip()
+            if c_ag and c_max:
+                try:
+                    cupos_salida[c_ag] = int(c_max)
+                except ValueError:
+                    pass
 
-        # Agrupar cabinas por categoría
-        from collections import defaultdict
-        porcategoria = defaultdict(list)
-        for c in cabinas:
-            porcategoria[c[3]].append(c[1])  # c[3]=categoria, c[1]=numero cabina
+        # ------------------------------------------------------------
+        # OPCIÓN: VER CUPOS
+        # ------------------------------------------------------------
+        if modo == "Ver Cupos":
+            st.markdown(f"### 📊 Estado de Cupos — Salida {ddmm_sel}")
+            
+            if not cupos_salida:
+                st.info("No hay cupos configurados para esta salida todavía. Ve a la sección 'Configurar Cupos' para asignarlos.")
+            else:
+                # Creación de una tabla limpia de visualización
+                tabla_cupos = []
+                for ag in agencias.keys():
+                    limite = cupos_salida.get(ag, 0)
+                    vendidas = ventas_por_agencia[ag]
+                    disponibles = limite - vendidas
+                    
+                    if limite > 0 or vendidas > 0:
+                        estado = "🚨 Excedido" if disponibles < 0 else "✅ OK"
+                        tabla_cupos.append({
+                            "Agencia": ag,
+                            "Cupo Máximo": limite,
+                            "Cabinas Vendidas": vendidas,
+                            "Disponibles": disponibles,
+                            "Estado": estado
+                        })
+                
+                if tabla_cupos:
+                    st.table(tabla_cupos)
+                else:
+                    st.warning("No hay datos de cupos disponibles de agencias activas.")
 
-        # ============================================================
-        # MAPA DE CABINAS
-        # ============================================================
-        st.markdown(f"### 🚢 Mapa de cabinas — Salida {ddmm_sel}")
-
-        cabina_seleccionada = st.session_state.get("cabina_sel")
-
-        for categoria, nums in porcategoria.items():
-            st.markdown(f'<div class="categoria-label">📦 {categoria}</div>', unsafe_allow_html=True)
-            html = '<div class="cabina-grid">'
-            for num in sorted(nums):
-                info = estadocabina.get(num, {})
-                agencia = info.get("agencia", "")
-                estado = info.get("estado", "LIBRE")
-                color = agencias.get(agencia, "#F3F4F6") if agencia else "#F3F4F6"
-                border = "#1F2937" if estado == "VENDIDA" else "#D1D5DB"
-                textcolor = "#1F2937" if agencia else "#9CA3AF"
-                html += f'''
-                <div class="cabina-box" style="background:{color};border-color:{border};color:{textcolor};"
-                     onclick="window.parent.postMessage({{type:'streamlit:setComponentValue', value:'{num}'}}, '*')">
-                    <span>{num}</span>
-                    <span style="font-size:0.6rem">{agencia or "libre"}</span>
-                </div>'''
-            html += '</div>'
-            st.markdown(html, unsafe_allow_html=True)
-
-        # ============================================================
-        # PANEL ASIGNACIÓN
-        # ============================================================
-        st.markdown("---")
-        st.markdown("#### ✏️ Asignar cabina")
-
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            nums_disponibles = [c[1] for c in cabinas]
-            cabina_input = st.selectbox("Cabina", sorted(nums_disponibles))
-
-        if cabina_input:
-            info = estadocabina.get(cabina_input, {})
-            with col2:
-                agencia_sel = st.selectbox(
-                    "Agencia",
-                    [""] + list(agencias.keys()),
-                    index=list(agencias.keys()).index(info.get("agencia", "")) + 1
-                    if info.get("agencia") in agencias else 0
+        # ------------------------------------------------------------
+        # OPCIÓN: AÑADIR / MODIFICAR CUPOS
+        # ------------------------------------------------------------
+        elif modo == "Configurar Cupos":
+            st.markdown(f"### ⚙️ Añadir / Modificar Cupos — Salida {ddmm_sel}")
+            
+            col_a, col_b = st.columns(2)
+            with col_a:
+                agencia_cupo = st.selectbox("Selecciona la Agencia", list(agencias.keys()))
+            with col_b:
+                cupo_actual_valor = cupos_salida.get(agencia_cupo, 0)
+                nuevo_limite = st.number_input(
+                    f"Cupo máximo para {agencia_cupo}", 
+                    min_value=0, 
+                    max_value=100, 
+                    value=int(cupo_actual_valor)
                 )
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                pax_input = st.number_input("Pax", min_value=0, max_value=10, value=int(info.get("pax", 0) or 0))
-            with c2:
-                loc_input = st.text_input("Localizador", value=info.get("localizador", ""))
-            with c3:
-                notas_input = st.text_input("Notas", value=info.get("notas", ""))
+            
+            if st.button("💾 Guardar Configuración de Cupo"):
+                with st.spinner("Guardando en Sheets..."):
+                    guardar_cupo_sheets(ddmm_sel, datos, agencia_cupo, nuevo_limite)
+                    st.cache_data.clear()
+                    st.success(f"Cupo de {agencia_cupo} actualizado a {nuevo_limite} para la salida {ddmm_sel}.")
+                    st.rerun()
 
-            if st.button("💾 Guardar"):
-                rowindex = next((i for i, d in enumerate(datos) if d.get("cabina") == cabina_input), None)
-                if rowindex is not None:
-                    with st.spinner("Guardando..."):
-                        guardarcabina(ddmm_sel, rowindex, agencia_sel, pax_input, loc_input, notas_input)
-                        st.cache_data.clear()
-                        st.success(f"Cabina {cabina_input} actualizada.")
-                        st.rerun()
+        # ------------------------------------------------------------
+        # OPCIÓN: MAPA DE CABINAS (EL PANEL ORIGINAL)
+        # ------------------------------------------------------------
+        elif modo == "Mapa de cabinas":
+            estadocabina = {d.get("cabina", ""): d for d in datos}
+            porcategoria = defaultdict(list)
+            for c in cabinas:
+                porcategoria[c[3]].append(c[1])
+
+            # Monitor superior rápido
+            if cupos_salida:
+                with st.expander("📊 Vista Rápida de Alertas de Cupos", expanded=True):
+                    c_cups = st.columns(min(len(cupos_salida), 5))
+                    for idx, (ag, lim) in enumerate(cupos_salida.items()):
+                        actuales = ventas_por_agencia[ag]
+                        with c_cups[idx % len(c_cups)]:
+                            if actuales > lim:
+                                st.metric(label=f"🚨 {ag} (Excedido)", value=f"{actuales} / {lim}")
+                            else:
+                                st.metric(label=f"💼 {ag}", value=f"{actuales} / {lim}")
+
+            st.markdown(f"### 🚢 Mapa de cabinas — Salida {ddmm_sel}")
+            for categoria, nums in porcategoria.items():
+                st.markdown(f'<div class="categoria-label">📦 {categoria}</div>', unsafe_allow_html=True)
+                html = '<div class="cabina-grid">'
+                for num in sorted(nums):
+                    info = estadocabina.get(num, {})
+                    agencia = info.get("agencia", "")
+                    estado = info.get("estado", "LIBRE")
+                    color = agencias.get(agencia, "#F3F4F6") if agencia else "#F3F4F6"
+                    border = "#1F2937" if estado == "VENDIDA" else "#D1D5DB"
+                    textcolor = "#1F2937" if agencia else "#9CA3AF"
+                    html += f'''
+                    <div class="cabina-box" style="background:{color};border-color:{border};color:{textcolor};"
+                         onclick="window.parent.postMessage({{type:'streamlit:setComponentValue', value:'{num}'}}, '*')">
+                        <span>{num}</span>
+                        <span style="font-size:0.6rem">{agencia or "libre"}</span>
+                    </div>'''
+                html += '</div>'
+                st.markdown(html, unsafe_allow_html=True)
+
+            # Panel de Asignación
+            st.markdown("---")
+            st.markdown("#### ✏️ Asignar cabina")
+            col1, col2 = st.columns([1, 2])
+            with col1:
+                nums_disponibles = [c[1] for c in cabinas]
+                cabina_input = st.selectbox("Cabina", sorted(nums_disponibles))
+
+            if cabina_input:
+                info = estadocabina.get(cabina_input, {})
+                agencia_actual_cabina = info.get("agencia", "").strip()
+                
+                with col2:
+                    agencia_sel = st.selectbox(
+                        "Agencia",
+                        [""] + list(agencias.keys()),
+                        index=list(agencias.keys()).index(info.get("agencia", "")) + 1
+                        if info.get("agencia") in agencias else 0
+                    )
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    pax_input = st.number_input("Pax", min_value=0, max_value=10, value=int(info.get("pax", 0) or 0))
+                with c2:
+                    loc_input = st.text_input("Localizador", value=info.get("localizador", ""))
+                with c3:
+                    notas_input = st.text_input("Notas", value=info.get("notas", ""))
+
+                if agencia_sel in cupos_salida:
+                    limite_agencia = cupos_salida[agencia_sel]
+                    ocupadas_ya = ventas_por_agencia[agencia_sel]
+                    se_mantiene = (agencia_sel == agencia_actual_cabina)
+                    
+                    if ocupadas_ya >= limite_agencia and not se_mantiene:
+                        st.error(f"🚫 **Cupo Máximo Superado:** {agencia_sel} ya tiene {ocupadas_ya} cabinas. El límite para esta salida es de {limite_agencia}.")
+
+                if st.button("💾 Guardar"):
+                    rowindex = next((i for i, d in enumerate(datos) if d.get("cabina") == cabina_input), None)
+                    if rowindex is not None:
+                        with st.spinner("Guardando..."):
+                            guardarcabina(ddmm_sel, rowindex, agencia_sel, pax_input, loc_input, notas_input)
+                            st.cache_data.clear()
+                            st.success(f"Cabina {cabina_input} actualizada correctamente.")
+                            st.rerun()
