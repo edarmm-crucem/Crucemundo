@@ -187,15 +187,24 @@ st.markdown(
         .ship-subtitle { font-size: 0.75rem; font-weight: 600; color: #4B5563; text-transform: uppercase; margin-top: 0.2rem; letter-spacing: 0.1em; }
         
         section[data-testid="stMain"] > div:first-child { padding-top: 1rem !important; }
-        .cabina-grid { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
+        
+        /* Estructura de Cubierta de Barco Real (Filas horizontales paralelas) */
+        .deck-layout { background: #FFFFFF; padding: 1.2rem; border-radius: 12px; border: 1px solid #E5E7EB; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 1.5rem; }
+        .deck-row { display: flex; flex-wrap: nowrap; gap: 0.5rem; overflow-x: auto; padding: 0.2rem 0; }
+        .deck-row-upper { justify-content: flex-start; } /* Alineación base para las filas */
+        
+        /* Pasillo horizontal central que simula el pasillo interior de la cubierta */
+        .horizontal-corridor { height: 18px; margin: 0.4rem 0; background-image: linear-gradient(to right, #E5E7EB 50%, rgba(255,255,255,0) 0%); background-position: bottom; background-size: 15px 2px; background-repeat: repeat-x; display: flex; align-items: center; padding-left: 0.5rem; font-size: 0.6rem; font-weight: 700; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.15em; }
+        
         .cabina-box {
-            width: 64px; height: 48px; border-radius: 6px; border: 2px solid transparent;
+            min-width: 72px; max-width: 72px; height: 54px; border-radius: 6px; border: 2px solid transparent;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 0.7rem; font-weight: 700; cursor: pointer; transition: all 0.15s;
+            font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.15s;
+            box-sizing: border-box;
         }
         .cabina-libre { background: #F3F4F6; border-color: #D1D5DB; color: #6B7280; }
         .cabina-vendida { border-color: #1F2937 !important; border-width: 3px !important; }
-        .categoria-label { font-size: 0.85rem; font-weight: 700; color: #374151; margin: 0.75rem 0 0.35rem 0; }
+        .categoria-label { font-size: 0.95rem; font-weight: 800; color: #1E3A8A; margin: 1rem 0 0.6rem 0; background: #EFF6FF; padding: 0.4rem 0.8rem; border-radius: 6px; display: inline-block; border-left: 4px solid #3B82F6; }
     </style>
     ''',
     unsafe_allow_html=True,
@@ -237,14 +246,14 @@ if not cabinas:
     st.stop()
 
 # ============================================================
-# SELECTOR DE MODO INICIAL (Añadido "Inicio" a la derecha)
+# SELECTOR DE MODO INICIAL
 # ============================================================
 opciones_modo = ["Mapa de cabinas", "Ver Cupos", "Configurar Cupos", "Nueva salida", "Inicio"]
 
 modo = st.radio(
     "¿Qué quieres hacer?", 
     opciones_modo, 
-    index=4,  # Hace que por defecto se cargue seleccionada la opción "Inicio" (índice 4 de la lista)
+    index=4, 
     horizontal=True
 )
 
@@ -259,7 +268,7 @@ if modo == "Inicio":
         
         Desde este panel centralizado puedes gestionar de forma ágil la ocupación del buque. Utiliza el menú superior para navegar entre las herramientas disponibles:
         
-        *   **🚢 Mapa de cabinas:** Visualiza de forma gráfica el estado de ocupación de las cubiertas y asigna o modifica reservas en tiempo real.
+        *   **🚢 Mapa de cabinas:** Visualiza los planos de las cubiertas orientados de forma realista (Impares arriba ordenados de derecha a izquierda, pares abajo de izquierda a derecha).
         *   **📊 Ver Cupos:** Consulta de manera analítica el estado de los cupos de las agencias comerciales para cualquier salida seleccionada.
         *   **⚙️ Configurar Cupos:** Añade agencias y modifica sus límites de cupos asignados de forma directa sin salir de la plataforma.
         *   **📅 Nueva salida:** Genera la estructura inicial para una nueva fecha operativa del barco en la base de datos.
@@ -284,7 +293,7 @@ elif modo == "Nueva salida":
                     st.rerun()
 
 # ------------------------------------------------------------
-# MODOS QUE REQUIEREN SELECCIONAR UNA SALIDA EXISTENTE
+# MODOS INTERACTIVOS (SALIDAS EXISTENTES)
 # ------------------------------------------------------------
 else:
     if not salidas:
@@ -370,7 +379,7 @@ else:
                     st.rerun()
 
         # ------------------------------------------------------------
-        # OPCIÓN: MAPA DE CABINAS
+        # OPCIÓN: MAPA DE CABINAS (DISTRIBUCIÓN GEOMÉTRICA SOLICITADA)
         # ------------------------------------------------------------
         elif modo == "Mapa de cabinas":
             estadocabina = {d.get("cabina", ""): d for d in datos}
@@ -390,11 +399,40 @@ else:
                                 block_label = f"💼 {ag}"
                                 st.metric(label=block_label, value=f"{actuales} / {lim}")
 
-            st.markdown(f"### 🚢 Mapa de cabinas — Salida {ddmm_sel}")
+            st.markdown(f"### 🚢 Distribución de Cubiertas — Salida {ddmm_sel}")
+            st.caption("Fila Superior: Impares (Derecha a Izquierda) ◄ | Fila Inferior: Pares (Izquierda a Derecha) ►")
+            
             for categoria, nums in porcategoria.items():
-                st.markdown(f'<div class="categoria-label">📦 {categoria}</div>', unsafe_allow_html=True)
-                html = '<div class="cabina-grid">'
-                for num in sorted(nums):
+                st.markdown(f'<div class="categoria-label">📍 {categoria}</div>', unsafe_allow_html=True)
+                
+                # Clasificar numéricamente impares y pares
+                impares = []
+                pares = []
+                
+                for num in nums:
+                    try:
+                        num_limpio = ''.join(filter(str.isdigit, num))
+                        val = int(num_limpio)
+                        if val % 2 != 0:
+                            impares.append((val, num))
+                        else:
+                            pares.append((val, num))
+                    except ValueError:
+                        # Fallback por si hay códigos raros, se asume par
+                        pares.append((999, num))
+
+                # ORDENACIÓN SOLICITADA:
+                # Impares -> De mayor a menor (Derecha a izquierda visualmente)
+                impares_ordenados = [item[1] for item in sorted(impares, key=lambda x: x[0], reverse=True)]
+                # Pares -> De menor a mayor (Izquierda a derecha visualmente)
+                pares_ordenados = [item[1] for item in sorted(pares, key=lambda x: x[0])]
+
+                # Construir HTML de la cubierta completa
+                html = '<div class="deck-layout">'
+                
+                # --- FILA SUPERIOR: IMPARES (Derecha a Izquierda) ---
+                html += '<div class="deck-row deck-row-upper">'
+                for num in impares_ordenados:
                     info = estadocabina.get(num, {})
                     agencia = info.get("agencia", "")
                     estado = info.get("estado", "LIBRE")
@@ -405,9 +443,31 @@ else:
                     <div class="cabina-box" style="background:{color};border-color:{border};color:{textcolor};"
                          onclick="window.parent.postMessage({{type:'streamlit:setComponentValue', value:'{num}'}}, '*')">
                         <span>{num}</span>
-                        <span style="font-size:0.6rem">{agencia or "libre"}</span>
+                        <span style="font-size:0.55rem; font-weight:600; white-space:nowrap; overflow:hidden;">{agencia or "libre"}</span>
                     </div>'''
                 html += '</div>'
+                
+                # --- PASILLO INTERIOR DE LA CUBIERTA ---
+                html += '<div class="horizontal-corridor">Pasillo Central de Cubierta</div>'
+                
+                # --- FILA INFERIOR: PARES (Izquierda a Derecha) ---
+                html += '<div class="deck-row">'
+                for num in pares_ordenados:
+                    info = estadocabina.get(num, {})
+                    agencia = info.get("agencia", "")
+                    estado = info.get("estado", "LIBRE")
+                    color = agencias.get(agencia, "#F3F4F6") if agencia else "#F3F4F6"
+                    border = "#1F2937" if estado == "VENDIDA" else "#D1D5DB"
+                    textcolor = "#1F2937" if agencia else "#9CA3AF"
+                    html += f'''
+                    <div class="cabina-box" style="background:{color};border-color:{border};color:{textcolor};"
+                         onclick="window.parent.postMessage({{type:'streamlit:setComponentValue', value:'{num}'}}, '*')">
+                        <span>{num}</span>
+                        <span style="font-size:0.55rem; font-weight:600; white-space:nowrap; overflow:hidden;">{agencia or "libre"}</span>
+                    </div>'''
+                html += '</div>'
+                
+                html += '</div>' # Cierre deck-layout
                 st.markdown(html, unsafe_allow_html=True)
 
             # Panel de Asignación
