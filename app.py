@@ -1602,14 +1602,15 @@ st.markdown(
     ''',
     unsafe_allow_html=True,
     )
-    st.markdown(
-        '''
-        <div class="section-head-row">
-            <span class="web-chip-blue">ACCIONES</span>
-        </div>
-        ''',
-        unsafe_allow_html=True,
-    )
+
+st.markdown(
+       '''
+    <div class="section-head-row">
+        <span class="web-chip-blue">ACCIONES</span>
+  </div>
+       ''',
+      unsafe_allow_html=True,
+ )
 
 if st.button("📋 Página 01"):
     st.switch_page("pages/01_page.py")
