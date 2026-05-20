@@ -61,6 +61,7 @@ st.markdown(
         .user-top { font-size: 0.72rem; color: #566079; white-space: nowrap; }
     </style>
     ''',
+    section[data-testid="stMain"] > div:first-child { padding-top: 1rem !important; }
     unsafe_allow_html=True,
 )
 
