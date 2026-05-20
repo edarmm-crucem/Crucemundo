@@ -6,7 +6,7 @@ from datetime import datetime
 # PAGE CONFIG
 # ============================================================
 st.set_page_config(
-    page_title="Página 01",
+    page_title="MS_VISTA_RIO CRM",
     page_icon="📋",
     layout="wide",
     initial_sidebar_state="collapsed",
