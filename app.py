@@ -1618,8 +1618,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-if st.button("Pruebas"):
-    st.switch_page("pages/MS_VISTA_RIO.py")
+if st.button("MS_VISTA_RIO_CRM"):
+    st.switch_page("pages/MS_VISTA_RIO_CRM.py")
 
 # st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
