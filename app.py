@@ -1341,6 +1341,7 @@ st.markdown(
     .web-chip { background: #FFE69A; border: 1px solid #F2C94C; color: #7A5900 !important; }
     .web-chip-green { background: #DDF7E6; border: 1px solid #9FDEB4; color: #17663B !important; }
     .web-chip-blue { background: #E0ECFF; border: 1px solid #BFD4FF; color: #1E4FBF !important; cursor: default; }
+    .web-chip-purple { background: #EDE9FE; border: 1px solid #C4B5FD; color: #5B21B6 !important; }
     .user-pill {
         display: inline-flex; align-items: center; gap: 0.4rem; margin: 0.02rem 0 1rem;
         padding: 0.42rem 0.78rem; border-radius: 999px; background: #fff; border: 1px solid #D9E2EC;
@@ -1600,7 +1601,17 @@ st.markdown(
     </div>
     ''',
     unsafe_allow_html=True,
-)
+    )
+    st.markdown(
+        '''
+        <div class="section-head-row">
+            <span class="web-chip-blue">ACCIONES</span>
+            <a class="web-chip-purple" href="/pages/01_page" target="_self">📋 Página 01</a>
+        </div>
+        ''',
+        unsafe_allow_html=True,
+    )
+
 
 # st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
