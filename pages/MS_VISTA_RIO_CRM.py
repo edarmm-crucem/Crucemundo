@@ -188,12 +188,12 @@ st.markdown(
         
         section[data-testid="stMain"] > div:first-child { padding-top: 1rem !important; }
         
-        /* Estructura de Cubierta de Barco Real (Filas horizontales paralelas) */
+        /* Estructura de Cubierta de Barco Real (Filas paralelas) */
         .deck-layout { background: #FFFFFF; padding: 1.2rem; border-radius: 12px; border: 1px solid #E5E7EB; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 1.5rem; }
         .deck-row { display: flex; flex-wrap: nowrap; gap: 0.5rem; overflow-x: auto; padding: 0.2rem 0; }
-        .deck-row-upper { justify-content: flex-start; } /* Alineación base para las filas */
+        .deck-row-style { justify-content: flex-start; } 
         
-        /* Pasillo horizontal central que simula el pasillo interior de la cubierta */
+        /* Pasillo horizontal central */
         .horizontal-corridor { height: 18px; margin: 0.4rem 0; background-image: linear-gradient(to right, #E5E7EB 50%, rgba(255,255,255,0) 0%); background-position: bottom; background-size: 15px 2px; background-repeat: repeat-x; display: flex; align-items: center; padding-left: 0.5rem; font-size: 0.6rem; font-weight: 700; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.15em; }
         
         .cabina-box {
@@ -268,7 +268,7 @@ if modo == "Inicio":
         
         Desde este panel centralizado puedes gestionar de forma ágil la ocupación del buque. Utiliza el menú superior para navegar entre las herramientas disponibles:
         
-        *   **🚢 Mapa de cabinas:** Visualiza los planos de las cubiertas orientados de forma realista (Impares arriba ordenados de derecha a izquierda, pares abajo de izquierda a derecha).
+        *   **🚢 Mapa de cabinas:** Visualiza los planos de las cubiertas orientados de forma realista (Conteo e inicio desde el extremo derecho avanzando hacia la izquierda).
         *   **📊 Ver Cupos:** Consulta de manera analítica el estado de los cupos de las agencias comerciales para cualquier salida seleccionada.
         *   **⚙️ Configurar Cupos:** Añade agencias y modifica sus límites de cupos asignados de forma directa sin salir de la plataforma.
         *   **📅 Nueva salida:** Genera la estructura inicial para una nueva fecha operativa del barco en la base de datos.
@@ -379,7 +379,7 @@ else:
                     st.rerun()
 
         # ------------------------------------------------------------
-        # OPCIÓN: MAPA DE CABINAS (DISTRIBUCIÓN GEOMÉTRICA SOLICITADA)
+        # OPCIÓN: MAPA DE CABINAS (DISTRIBUCIÓN REVERSA COMPLETA)
         # ------------------------------------------------------------
         elif modo == "Mapa de cabinas":
             estadocabina = {d.get("cabina", ""): d for d in datos}
@@ -400,12 +400,11 @@ else:
                                 st.metric(label=block_label, value=f"{actuales} / {lim}")
 
             st.markdown(f"### 🚢 Distribución de Cubiertas — Salida {ddmm_sel}")
-            st.caption("Fila Superior: Impares (Derecha a Izquierda) ◄ | Fila Inferior: Pares (Izquierda a Derecha) ►")
+            st.caption("◀ Conteo desde la Derecha hacia la Izquierda en ambas filas (Fila Superior: Impares | Fila Inferior: Pares)")
             
             for categoria, nums in porcategoria.items():
                 st.markdown(f'<div class="categoria-label">📍 {categoria}</div>', unsafe_allow_html=True)
                 
-                # Clasificar numéricamente impares y pares
                 impares = []
                 pares = []
                 
@@ -418,20 +417,17 @@ else:
                         else:
                             pares.append((val, num))
                     except ValueError:
-                        # Fallback por si hay códigos raros, se asume par
                         pares.append((999, num))
 
-                # ORDENACIÓN SOLICITADA:
-                # Impares -> De mayor a menor (Derecha a izquierda visualmente)
+                # ORDENACIÓN: Ambos de mayor a menor para comenzar con el número más pequeño en la derecha
                 impares_ordenados = [item[1] for item in sorted(impares, key=lambda x: x[0], reverse=True)]
-                # Pares -> De menor a mayor (Izquierda a derecha visualmente)
-                pares_ordenados = [item[1] for item in sorted(pares, key=lambda x: x[0])]
+                pares_ordenados = [item[1] for item in sorted(pares, key=lambda x: x[0], reverse=True)]
 
                 # Construir HTML de la cubierta completa
                 html = '<div class="deck-layout">'
                 
-                # --- FILA SUPERIOR: IMPARES (Derecha a Izquierda) ---
-                html += '<div class="deck-row deck-row-upper">'
+                # --- FILA SUPERIOR: IMPARES (Menores a la Derecha) ---
+                html += '<div class="deck-row deck-row-style">'
                 for num in impares_ordenados:
                     info = estadocabina.get(num, {})
                     agencia = info.get("agencia", "")
@@ -447,11 +443,11 @@ else:
                     </div>'''
                 html += '</div>'
                 
-                # --- PASILLO INTERIOR DE LA CUBIERTA ---
+                # --- PASILLO INTERIOR ---
                 html += '<div class="horizontal-corridor">Pasillo Central de Cubierta</div>'
                 
-                # --- FILA INFERIOR: PARES (Izquierda a Derecha) ---
-                html += '<div class="deck-row">'
+                # --- FILA INFERIOR: PARES (Menores a la Derecha) ---
+                html += '<div class="deck-row deck-row-style">'
                 for num in pares_ordenados:
                     info = estadocabina.get(num, {})
                     agencia = info.get("agencia", "")
