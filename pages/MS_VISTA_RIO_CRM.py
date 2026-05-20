@@ -176,14 +176,17 @@ st.markdown(
         [data-testid="stSidebarNav"] { display: none !important; }
         header[data-testid="stHeader"] { display: none !important; }
         .portal-header { padding: 0.1rem 0 0.55rem 0; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.55rem; }
-        .portal-header-left { display: flex; align-items: center; gap: 0.9rem; }
-        .portal-logo { height: 42px; width: auto; object-fit: contain; display: block; }
-        .portal-title, .portal-title-en { font-size: 0.96rem; font-weight: 800; color: #1F2937; line-height: 1.15; }
-        .portal-title-en { margin-top: 0.12rem; }
-        .portal-subtitle, .portal-subtitle-en { font-size: 0.72rem; color: #667085; line-height: 1.2; }
-        .portal-subtitle { margin-top: 0.12rem; }
-        .portal-subtitle-en { margin-top: 0.08rem; }
-        .user-top { font-size: 0.72rem; color: #566079; white-space: nowrap; }
+        .portal-header-left { display: flex; align-items: center; gap: 1.2rem; }
+        .portal-logo { height: 50px; width: auto; object-fit: contain; display: block; }
+        .portal-title, .portal-title-en { font-size: 0.96rem; font-weight: 500; color: #4B5563; line-height: 1.2; }
+        .portal-title strong, .portal-title-en strong { color: #111827; }
+        .portal-title-en { margin-top: 0.12rem; font-style: italic; color: #6B7280; }
+        
+        /* Estilos para destacar el Barco en grande */
+        .ship-badge-container { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+        .ship-title { font-size: 1.5rem; font-weight: 900; color: #1E3A8A; letter-spacing: 0.05em; line-height: 1; }
+        .ship-subtitle { font-size: 0.75rem; font-weight: 600; color: #4B5563; text-transform: uppercase; margin-top: 0.2rem; letter-spacing: 0.1em; }
+        
         section[data-testid="stMain"] > div:first-child { padding-top: 1rem !important; }
         .cabina-grid { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
         .cabina-box {
@@ -200,7 +203,7 @@ st.markdown(
 )
 
 # ============================================================
-# CABECERA
+# CABECERA OPTIMIZADA CON BARCO DESTACADO
 # ============================================================
 st.markdown(
     f'''
@@ -208,13 +211,14 @@ st.markdown(
         <div class="portal-header-left">
             <img class="portal-logo" src="{LOGOURL}" alt="Logo">
             <div>
-                <div class="portal-title">{SALUDO}, {DISPLAYUSER}. ¿Qué hacemos hoy?</div>
-                <div class="portal-title-en">{SALUDOEN}, {DISPLAYUSER}. What are we doing today?</div>
-                <div class="portal-subtitle">{NOMBRE_BARCO_LIMPIO} · Panel de Control</div>
-                <div class="portal-subtitle-en">{NOMBRE_BARCO_LIMPIO} · Control Panel</div>
+                <div class="portal-title">{SALUDO}, <strong>{DISPLAYUSER}</strong>. ¿Qué hacemos hoy?</div>
+                <div class="portal-title-en">{SALUDOEN}, <strong>{DISPLAYUSER}</strong>. What are we doing today?</div>
             </div>
         </div>
-        <div class="user-top">{DISPLAYUSER}</div>
+        <div class="ship-badge-container">
+            <div class="ship-title">🚢 {NOMBRE_BARCO_LIMPIO}</div>
+            <div class="ship-subtitle">Panel de Control / Control Panel</div>
+        </div>
     </div>
     ''',
     unsafe_allow_html=True,
@@ -392,11 +396,9 @@ else:
                 info = estadocabina.get(cabina_input, {})
                 agencia_actual_cabina = info.get("agencia", "").strip()
                 
-                # 🛠️ DETECTAR SI LA CABINA YA ESTÁ ASIGNADA A OTRA AGENCIA
                 permitir_guardado = True
                 if agencia_actual_cabina:
                     st.error(f"⚠️ **¡Atención!** La cabina {cabina_input} ya se encuentra asignada a la agencia **{agencia_actual_cabina}**.")
-                    # Checkbox obligatorio para desbloquear la sobreescritura
                     confirmar_sustitucion = st.checkbox(f"¿Quieres sustituir la asignación de {agencia_actual_cabina}?", value=False)
                     if not confirmar_sustitucion:
                         permitir_guardado = False
@@ -407,7 +409,7 @@ else:
                         [""] + list(agencias.keys()),
                         index=list(agencias.keys()).index(info.get("agencia", "")) + 1
                         if info.get("agencia") in agencias else 0,
-                        disabled=not permitir_guardado  # Se bloquea si no se confirma la sustitución
+                        disabled=not permitir_guardado
                     )
                 c1, c2, c3 = st.columns(3)
                 with c1:
@@ -417,7 +419,6 @@ else:
                 with c3:
                     notas_input = st.text_input("Notas", value=info.get("notas", ""), disabled=not permitir_guardado)
 
-                # Alerta de límite de cupo
                 if agencia_sel in cupos_salida:
                     limite_agencia = cupos_salida[agencia_sel]
                     ocupadas_ya = ventas_por_agencia[agencia_sel]
@@ -426,7 +427,6 @@ else:
                     if ocupadas_ya >= limite_agencia and not se_mantiene:
                         st.error(f"🚫 **Cupo Máximo Superado:** {agencia_sel} ya tiene {ocupadas_ya} cabinas. El límite para esta salida es de {limite_agencia}.")
 
-                # El botón se deshabilita si la cabina estaba ocupada y el usuario no marcó el checkbox
                 if st.button("💾 Guardar", disabled=not permitir_guardado):
                     rowindex = next((i for i, d in enumerate(datos) if d.get("cabina") == cabina_input), None)
                     if rowindex is not None:
