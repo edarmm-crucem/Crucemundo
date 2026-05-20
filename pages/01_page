@@ -1,26 +1,12 @@
 import streamlit as st
-from supabase import create_client
 
-# conexión
-url = st.secrets["SUPABASE_URL"]
-key = st.secrets["SUPABASE_KEY"]
-supabase = create_client(url, key)
-
-st.title("➕ Nueva confirmación")
-
-# traer agencias
-agencias_data = supabase.table("agencias").select("id, nombre").execute().data
-
-# selectbox
-agencia_seleccionada = st.selectbox(
-    "Agencia",
-    [a["nombre"] for a in agencias_data]
+st.set_page_config(
+    page_title="Página 01",
+    page_icon="📋",
+    layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
-# obtener ID real
-agencia_id = next(
-    a["id"] for a in agencias_data if a["nombre"] == agencia_seleccionada
-)
-
-st.write("Agencia seleccionada:", agencia_seleccionada)
-st.write("ID:", agencia_id)
+st.markdown("# 📋 Página 01")
+st.markdown("---")
+st.info("Esta página está en construcción. Aquí irá el contenido de **Acciones**.")
