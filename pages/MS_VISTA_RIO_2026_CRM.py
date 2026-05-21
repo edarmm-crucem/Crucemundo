@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 import pytz
 from datetime import datetime
 from googleapiclient.discovery import build
@@ -77,7 +78,7 @@ def getcabinas():
     service = getsheetsservice()
     result = service.spreadsheets().values().get(
         spreadsheetId=MASTERCABINASID,
-        range="Hoja 1!A:F"  # Extendido a F para leer la capacidad
+        range="Hoja 1!A:F"
     ).execute()
     rows = result.get("values", [])
     return [r for r in rows if len(r) >= 4 and r[0] == BARCO]
@@ -216,30 +217,28 @@ st.markdown(
             box-sizing: border-box;
         }
 
-        .cabina-num-destacado {
-            font-size: 1.15rem;
-            font-weight: 800;
-            line-height: 1.1;
-        }
-
-        /* LIBRE: gris neutro, borde fino */
+        .cabina-num-destacado { font-size: 1.15rem; font-weight: 800; line-height: 1.1; }
         .cabina-libre { background: #F3F4F6; border-color: #D1D5DB; color: #6B7280; border-style: solid; }
-
-        /* RESERVA: borde naranja discontinuo */
         .cabina-reserva { border-color: #F59E0B !important; border-width: 2px !important; border-style: dashed !important; }
-
-        /* VENDIDA: borde negro grueso sólido */
         .cabina-vendida { border-color: #1F2937 !important; border-width: 3px !important; border-style: solid !important; }
 
         .categoria-label { font-size: 0.95rem; font-weight: 800; color: #1E3A8A; margin: 1rem 0 0.6rem 0; background: #EFF6FF; padding: 0.4rem 0.8rem; border-radius: 6px; display: inline-block; border-left: 4px solid #3B82F6; }
 
-        /* Leyenda visual de estados */
         .leyenda-estados { display: flex; gap: 1.2rem; align-items: center; margin-bottom: 0.8rem; flex-wrap: wrap; }
         .leyenda-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; font-weight: 600; color: #4B5563; }
         .leyenda-box { width: 22px; height: 16px; border-radius: 3px; display: inline-block; }
         .leyenda-libre { background: #F3F4F6; border: 2px solid #D1D5DB; }
         .leyenda-reserva { background: #FFFBEB; border: 2px dashed #F59E0B; }
         .leyenda-vendida { background: #F9FAFB; border: 3px solid #1F2937; }
+
+        /* Estilos específicos para la tabla de Informes */
+        .informe-tabla { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.85rem; }
+        .informe-tabla th { background-color: #F3F4F6; color: #374151; font-weight: 700; padding: 10px; border: 1px solid #E5E7EB; text-align: center; }
+        .informe-tabla td { padding: 8px 10px; border: 1px solid #E5E7EB; text-align: center; vertical-align: middle; }
+        .informe-tabla tr:hover { background-color: #F9FAFB; }
+        .color-block { width: 24px; height: 24px; border-radius: 4px; display: inline-block; border: 1px solid #D1D5DB; }
+        .th-sold { background-color: #FEE2E2 !important; color: #991B1B !important; } /* Tonalidad rojiza sutil para diferenciar las columnas de VENDIDAS */
+        .td-sold { background-color: #FEF2F2; font-weight: bold; color: #B91C1C; }
     </style>
     ''',
     unsafe_allow_html=True,
@@ -256,7 +255,6 @@ if not cabinas:
     st.error(f"No se encontraron cabinas para {BARCO} en el master.")
     st.stop()
 
-# Extraer capacidad total (Fila 1 de este barco, Columna F -> índice 5)
 try:
     capacidad_total = cabinas[0][5].strip() if len(cabinas[0]) >= 6 else "No definida"
 except Exception:
@@ -290,10 +288,10 @@ st.markdown(
 st.markdown("---")
 
 # ============================================================
-# SELECTOR DE MODO INICIAL
+# SELECTOR DE MODO (NUEVO SELECTOR "INFORME" AÑADIDO)
 # ============================================================
-opciones_modo = ["Mapa de cabinas", "Ver Cupos", "Configurar Cupos", "Nueva salida", "Inicio"]
-modo = st.radio("¿Qué quieres hacer?", opciones_modo, index=4, horizontal=True)
+opciones_modo = ["Mapa de cabinas", "Ver Cupos", "Configurar Cupos", "Informe", "Nueva salida", "Inicio"]
+modo = st.radio("¿Qué quieres hacer?", opciones_modo, index=5, horizontal=True)
 
 # ------------------------------------------------------------
 # MODO: INICIO
@@ -309,6 +307,7 @@ if modo == "Inicio":
         * **🚢 Mapa de cabinas:** Visualiza planos con validación cruzada estricta por categoría (Cabinas y Personas asignadas).
         * **📊 Ver Cupos:** Cuadro analítico de disponibilidad segmentado por Agencia, Categoría de Cabina y Pasajeros.
         * **⚙️ Configurar Cupos:** Ajusta las limitaciones comerciales de cabinas y personas por cada categoría del buque.
+        * **📈 Informe:** Cuadro ejecutivo avanzado que cruza colores corporativos, límites de cupo y ventas consolidadas con localizadores.
         * **📅 Nueva salida:** Genera la estructura inicial para una nueva fecha operativa del barco en la base de datos.
         """
     )
@@ -350,25 +349,49 @@ else:
             st.stop()
 
         # --------------------------------------------------------
-        # CONTEOS Y CUPOS
+        # CONTEOS Y CUPOS GLOBALIZADOS
         # --------------------------------------------------------
         cabinas_por_ag_cat = defaultdict(int)
         pax_por_ag_cat = defaultdict(int)
+        sold_por_ag_cat = defaultdict(int)  # Almacena específicamente las cabinas en estado 'VENDIDA'
+        
+        # Diccionarios para recopilar agrupaciones finales de textos libres por agencia
+        localizadores_por_agencia = defaultdict(list)
+        notas_por_agencia = defaultdict(list)
+        
+        # Set para saber qué agencias tienen actividad real en esta salida concreta
+        agencias_activas = set()
         cupos_config = {}
 
         for d in datos:
             cabina_id = d.get("cabina", "").strip()
             ag_en_fila = d.get("agencia", "").strip()
+            estado_en_fila = d.get("estado", "LIBRE").strip()
+            loc_en_fila = d.get("localizador", "").strip()
+            notes_en_fila = d.get("notes", "").strip()
+            
             cat_en_fila = next((c[3] for c in cabinas if c[1] == cabina_id), "").strip()
 
             if ag_en_fila and cat_en_fila:
+                agencias_activas.add(ag_en_fila)
                 cabinas_por_ag_cat[(ag_en_fila, cat_en_fila)] += 1
+                
+                if estado_en_fila == "VENDIDA":
+                    sold_por_ag_cat[(ag_en_fila, cat_en_fila)] += 1
+                    
                 try:
                     pax_cabina = int(d.get("pax", 0) or 0)
                     pax_por_ag_cat[(ag_en_fila, cat_en_fila)] += pax_cabina
                 except ValueError:
                     pass
 
+                # Guardar textos evitando duplicados vacíos
+                if loc_en_fila and loc_en_fila not in localizadores_por_agencia[ag_en_fila]:
+                    localizadores_por_agencia[ag_en_fila].append(loc_en_fila)
+                if notes_en_fila and notes_en_fila not in notas_por_agencia[ag_en_fila]:
+                    notas_por_agencia[ag_en_fila].append(notes_en_fila)
+
+            # Leer la configuración de cupos guardados al final de la hoja
             c_ag = d.get("cupo_agencia", "").strip()
             c_max = d.get("cupo_maximo", "").strip()
 
@@ -376,17 +399,86 @@ else:
                 try:
                     ag_cupo, cat_cupo = c_ag.split("|")
                     max_cab, max_px = c_max.split(",")
-                    cupos_config[(ag_cupo.strip(), cat_cupo.strip())] = {
+                    ag_cupo_strip = ag_cupo.strip()
+                    cat_cupo_strip = cat_cupo.strip()
+                    
+                    cupos_config[(ag_cupo_strip, cat_cupo_strip)] = {
                         "cabinas": int(max_cab),
                         "pax": int(max_px)
                     }
+                    # Si tiene un cupo preestablecido, también cuenta como agencia relevante en la salida
+                    agencias_activas.add(ag_cupo_strip)
                 except ValueError:
                     pass
 
         # ------------------------------------------------------------
+        # NUEVA OPCIÓN: INFORME
+        # ------------------------------------------------------------
+        if modo == "Informe":
+            st.markdown(f"### 📈 Informe de Estado Consolidado — Salida {ddmm_sel}")
+            st.markdown("Este informe dinámico agrupa la información por cada agencia con actividad, reservas o cupos confirmados en la salida actual.")
+
+            if not agencias_activas:
+                st.info("No se registra actividad de ninguna agencia ni cupos en esta salida todavía.")
+            else:
+                # Construcción manual de la tabla HTML para control milimétrico de las celdas y colores
+                html_tabla = '<table class="informe-tabla"><thead><tr>'
+                html_tabla += '<th>Color</th>'
+                html_tabla += '<th>Código Agencia</th>'
+                
+                # Generar cabeceras dinámicas basadas en las categorías del barco
+                for cat in todas_categorias:
+                    html_tabla += f'<th>{cat} (Cupo)</th>'
+                    html_tabla += f'<th>{cat} PAX</th>'
+                    html_tabla += f'<th class="th-sold">{cat} SOLD</th>'
+                    
+                html_tabla += '<th>Localizador</th>'
+                html_tabla += '<th>Notes</th>'
+                html_tabla += '</tr></thead><tbody>'
+
+                # Generar una fila por cada agencia activa hallada
+                for ag_codigo in sorted(list(agencias_activas)):
+                    color_hex = agencias.get(ag_codigo, "#F3F4F6") # Recupera el color maestro asignado
+                    
+                    html_tabla += '<tr>'
+                    # Columna 1: Cuadro con color asignado
+                    html_tabla += f'<td><span class="color-block" style="background-color: {color_hex};"></span></td>'
+                    # Columna 2: Código de la agencia
+                    html_tabla += f'<td style="font-weight: 700; text-align: left;">{ag_codigo}</td>'
+                    
+                    # Columnas dinámicas de categorías
+                    for cat in todas_categorias:
+                        limites = cupos_config.get((ag_codigo, cat), {"cabinas": 0, "pax": 0})
+                        cab_cupo = limites["cabinas"]
+                        pax_cupo = limites["pax"]
+                        cab_sold = sold_por_ag_cat.get((ag_codigo, cat), 0)
+                        
+                        # Si no hay cupo configurado pero tiene registros, mostramos "-" o el número real
+                        val_cupo = cab_cupo if cab_cupo > 0 else "-"
+                        val_pax = pax_cupo if pax_cupo > 0 else "-"
+                        val_sold = cab_sold if cab_sold > 0 else "0"
+                        
+                        html_tabla += f'<td>{val_cupo}</td>'
+                        html_tabla += f'<td>{val_pax}</td>'
+                        html_tabla += f'<td class="td-sold">{val_sold}</td>'
+                        
+                    # Últimas columnas: Cadenas de texto unificadas de localizadores y notas
+                    locs_str = ", ".join(localizadores_por_agencia[ag_codigo]) if localizadores_por_agencia[ag_codigo] else "-"
+                    notes_str = " | ".join(notas_por_agencia[ag_codigo]) if notas_por_agencia[ag_codigo] else "-"
+                    
+                    html_tabla += f'<td style="text-align: left; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{locs_str}">{locs_str}</td>'
+                    html_tabla += f'<td style="text-align: left; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{notes_str}">{notes_str}</td>'
+                    html_tabla += '</tr>'
+                    
+                html_tabla += '</tbody></table>'
+                
+                # Inyección del componente en la interfaz
+                st.markdown(html_tabla, unsafe_allow_html=True)
+
+        # ------------------------------------------------------------
         # OPCIÓN: VER CUPOS
         # ------------------------------------------------------------
-        if modo == "Ver Cupos":
+        elif modo == "Ver Cupos":
             st.markdown(f"### 📊 Cuadro de Mandos de Cupos — Salida {ddmm_sel}")
             if not cupos_config:
                 st.info("No hay cupos configurados para esta salida. Configúralos en la pestaña 'Configurar Cupos'.")
@@ -456,7 +548,6 @@ else:
             for c in cabinas:
                 porcategoria[c[3]].append(c[1])
 
-            # Alertas de cupos
             if cupos_config:
                 with st.expander("📊 Vista Rápida de Alertas de Cupos Avanzados (Categorías)", expanded=True):
                     c_cups = st.columns(min(len(cupos_config), 4))
@@ -475,7 +566,6 @@ else:
             st.markdown(f"### 🚢 Distribución de Cubiertas — Salida {ddmm_sel}")
             st.caption("◀ Conteo desde la Derecha hacia la Izquierda en ambas filas")
 
-            # Leyenda de estados
             st.markdown(
                 '''
                 <div class="leyenda-estados">
@@ -493,9 +583,6 @@ else:
                 unsafe_allow_html=True,
             )
 
-            # --------------------------------------------------------
-            # RENDERIZADO DEL MAPA POR CATEGORÍA
-            # --------------------------------------------------------
             for categoria, nums in porcategoria.items():
                 st.markdown(f'<div class="categoria-label">📍 {categoria}</div>', unsafe_allow_html=True)
 
@@ -557,7 +644,6 @@ else:
 
                 html = '<div class="deck-layout">'
 
-                # Fila superior: impares
                 html += '<div class="deck-row deck-row-style">'
                 for num in impares_ordenados:
                     html += render_cabina(num)
@@ -565,7 +651,6 @@ else:
 
                 html += '<div class="horizontal-corridor">Pasillo Central de Cubierta</div>'
 
-                # Fila inferior: pares
                 html += '<div class="deck-row deck-row-style">'
                 for num in pares_ordenados:
                     html += render_cabina(num)
@@ -615,7 +700,6 @@ else:
                         disabled=not permitir_guardado
                     )
 
-                # --- SELECTOR DE ESTADO ---
                 estado_sel = st.selectbox(
                     "Estado de la reserva",
                     ESTADOS_VALIDOS,
@@ -634,9 +718,8 @@ else:
                 with c2:
                     loc_input = st.text_input("Localizador", value=info.get("localizador", ""), disabled=not permitir_guardado)
                 with c3:
-                    notas_input = st.text_input("Notas", value=info.get("notas", ""), disabled=not permitir_guardado)
+                    notas_input = st.text_input("Notas", value=info.get("notes", ""), disabled=not permitir_guardado) # Ajustado key interna a 'notes' de sheets
 
-                # Validaciones cruzadas de cupos
                 if agencia_sel and (agencia_sel, cat_cabina_actual) in cupos_config:
                     limites = cupos_config[(agencia_sel, cat_cabina_actual)]
                     max_cabs_autorizadas = limites["cabinas"]
