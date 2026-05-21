@@ -153,50 +153,61 @@ def extraer_datos_archivo_conf(spreadsheet_id):
                 datos_conf_agencia[agencia_cod]["localizadores"].add(loc_limpio)
             datos_conf_agencia[agencia_cod]["notes"].add(f"Hoja: {hoja}")
 
-            # Conteo de pax y mapeo por categorías
-            pax_rows = value_ranges[3].get("values", [])
-            cat_rows = value_ranges[4].get("values", [])
+            # ============================================================
+# CONTEO REAL DE PAX Y CATEGORÍAS DESDE CONF
+# ============================================================
+pax_rows = value_ranges[3].get("values", [])
+cat_rows = value_ranges[4].get("values", [])
 
-        max_filas = max(len(pax_rows), len(cat_rows))
-        
-        for idx in range(max_filas):
-        
-            pax_count = 0
-            cat_val = ""
-        
-            # -------------------------------------------------
-            # CONTAR PAX REALES DENTRO DE LA CELDA Gxx
-            # -------------------------------------------------
-            if idx < len(pax_rows) and pax_rows[idx]:
-        
-                texto_pax = pax_rows[idx][0].strip()
-        
-                if texto_pax:
-        
-                    # separa por saltos de línea
-                    lineas_pax = [
-                        x.strip()
-                        for x in texto_pax.split("\n")
-                        if x.strip()
-                    ]
-        
-                    pax_count = len(lineas_pax)
-        
-            # -------------------------------------------------
-            # LEER CATEGORÍA Qxx
-            # -------------------------------------------------
-            if idx < len(cat_rows) and cat_rows[idx]:
-        
-                raw_cat = cat_rows[idx][0].strip()
-        
-                if raw_cat:
-                    cat_val = raw_cat.split("/")[-1].strip() if "/" in raw_cat else raw_cat
-        
-            # -------------------------------------------------
-            # SUMAR PAX A LA CATEGORÍA
-            # -------------------------------------------------
-            if cat_val and pax_count > 0:
-                datos_conf_agencia[agencia_cod]["sold_por_cat"][cat_val] += pax_count
+max_filas = max(len(pax_rows), len(cat_rows))
+
+for idx in range(max_filas):
+
+    pax_count = 0
+    cat_val = ""
+
+    # --------------------------------------------------------
+    # LEER PASAJEROS DESDE G24:G50
+    # CADA LÍNEA DENTRO DE LA CELDA = 1 PAX
+    # --------------------------------------------------------
+    if idx < len(pax_rows) and pax_rows[idx]:
+
+        texto_pax = pax_rows[idx][0].strip()
+
+        if texto_pax:
+
+            # soporta \n y \r\n
+            lineas_pax = [
+                x.strip()
+                for x in re.split(r'[\r\n]+', texto_pax)
+                if x.strip()
+            ]
+
+            pax_count = len(lineas_pax)
+
+    # --------------------------------------------------------
+    # LEER CATEGORÍA DESDE Q24:Q50
+    # --------------------------------------------------------
+    if idx < len(cat_rows) and cat_rows[idx]:
+
+        raw_cat = cat_rows[idx][0].strip()
+
+        if raw_cat:
+
+            # limpia categorías tipo:
+            # SUITE/A  -> A
+            # CAT/B    -> B
+            if "/" in raw_cat:
+                cat_val = raw_cat.split("/")[-1].strip()
+            else:
+                cat_val = raw_cat.strip()
+
+    # --------------------------------------------------------
+    # SUMAR PAX A LA CATEGORÍA
+    # --------------------------------------------------------
+    if cat_val and pax_count > 0:
+
+        datos_conf_agencia[agencia_cod]["sold_por_cat"][cat_val] += pax_count
 
         except Exception:
             continue
