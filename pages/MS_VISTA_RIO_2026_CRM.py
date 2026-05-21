@@ -36,7 +36,7 @@ CRMBARCO = "1ApNv3qK-_2ANOVwSZoOchAdwWaeQg0Evz-n54s6T2cE"
 LOGOID = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
 LOGOURL = f"https://lh3.googleusercontent.com/d/{LOGOID}"
 
-# ID Corregido según tus indicaciones (sin la 'm' al final)
+# ID de la carpeta Raíz de Google Drive
 DRIVE_RAIZ_FOLDER = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEv"
 
 NOMBRE_BARCO_LIMPIO = BARCO.replace("_", " ")
@@ -80,12 +80,12 @@ def getdriveservice():
     return build("drive", "v3", credentials=getgooglecreds())
 
 # ============================================================
-# LÓGICA DE BÚSQUEDA Y EXTRACCIÓN EN DRIVE (RASTREO DE ERRORES)
+# LÓGICA DE BÚSQUEDA Y EXTRACCIÓN EN DRIVE
 # ============================================================
 def buscar_archivo_conf(ddmm):
     """
     Navega por el árbol de carpetas de Drive y devuelve una tupla:
-    (file_id, "Mensaje descriptivo del estado o punto de fallo")
+    (file_id, "Mensaje descriptivo")
     """
     drive_service = getdriveservice()
     
@@ -101,7 +101,7 @@ def buscar_archivo_conf(ddmm):
         carpetas_anio = res_anio.get("files", [])
         
         if not carpetas_anio:
-            return None, f"❌ No se encontró la carpeta del año '{ANIO}' dentro de la carpeta raíz (`{DRIVE_RAIZ_FOLDER}`)."
+            return None, f"❌ No se encontró la carpeta del año '{ANIO}' dentro de la carpeta raíz configurada (`{DRIVE_RAIZ_FOLDER}`)."
         
         folder_anio_id = carpetas_anio[0]["id"]
         
@@ -126,7 +126,10 @@ def buscar_archivo_conf(ddmm):
             return None, f"🔎 Accedido a Raíz ➔ Carpeta '{ANIO}' ➔ Carpeta '{BARCO}', pero NO existe el archivo `{nombre_archivo_esperado}`."
             
     except Exception as e:
-        return None, f"💥 Error de comunicación con Google Drive: {str(e)}"
+        error_msg = str(e)
+        if "404" in error_msg or "notFound" in error_msg:
+            return None, f"💥 **Error de Permisos / Acceso (404):** Google Drive denegó el acceso al ID de la carpeta raíz (`{DRIVE_RAIZ_FOLDER}`). Asegúrate de haber **compartido** la carpeta de Drive con el correo electrónico de tu cuenta de servicio (`gserviceaccount.com`)."
+        return None, f"💥 Error de comunicación con Google Drive: {error_msg}"
 
 @st.cache_data(ttl=60)
 def extraer_datos_archivo_conf(spreadsheet_id):
@@ -285,7 +288,7 @@ def guardar_cupo_sheets(ddmm, datos_completos, clave_cupo, limites_str):
     ).execute()
 
 # ============================================================
-# CSS ESTILOS TRADICIONALES (TIPOGRAFÍA ORIGINAL ENTORNO)
+# CSS ESTILOS TRADICIONALES (TIPOGRAFÍA ORIGINAL RESTABLECIDA)
 # ============================================================
 st.markdown(
     '''
@@ -496,7 +499,6 @@ else:
             st.markdown(f"### 📈 Informe de Estado Consolidado Cruzado — Salida {ddmm_sel}")
             st.markdown(f"Este informe dinámico unifica el **CRM ({CRMBARCO_NAME})** y los ficheros de reservas externas **CONF** de Drive.")
 
-            # Bloque de Diagnóstico Visual solicitado para rastrear el archivo CONF
             with st.spinner("Buscando ficheros de confirmaciones (CONF) en Google Drive..."):
                 archivo_conf_id, mensaje_rastreo = buscar_archivo_conf(ddmm_sel)
                 
@@ -507,7 +509,6 @@ else:
                     st.error(mensaje_rastreo)
                     datos_externos_conf = {}
 
-            # Consolidar todas las agencias
             todas_las_agencias_informe = agencias_activas.union(set(datos_externos_conf.keys()))
 
             if not todas_las_agencias_informe:
