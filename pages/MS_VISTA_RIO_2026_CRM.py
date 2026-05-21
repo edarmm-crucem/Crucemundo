@@ -154,20 +154,24 @@ def extraer_datos_archivo_conf(spreadsheet_id):
                 datos_conf_agencia[agencia_cod]["localizadores"].add(loc_limpio)
             datos_conf_agencia[agencia_cod]["notes"].add(f"Hoja: {hoja}")
 
-            # Conteo de pax y mapeo por categorías
-            pax_rows = value_ranges[3].get("values", [])
-            cat_rows = value_ranges[4].get("values", [])
+            # Contar pax solo en G24 y categoría en Q24
+            # Accedemos directamente al índice 0 de los valores recuperados
+            pax_celda = value_ranges[3].get("values", []) # G24
+            cat_celda = value_ranges[4].get("values", []) # Q24
 
-            max_filas = max(len(pax_rows), len(cat_rows))
-            for idx in range(max_filas):
-                if idx < len(pax_rows) and pax_rows[idx] and pax_rows[idx][0].strip():
-                    cat_val = ""
-                    if idx < len(cat_rows) and cat_rows[idx] and cat_rows[idx][0].strip():
-                        raw_cat = cat_rows[idx][0].strip()
-                        cat_val = raw_cat.split("/")[-1].strip() if "/" in raw_cat else raw_cat
-                    
-                    if cat_val:
-                        datos_conf_agencia[agencia_cod]["sold_por_cat"][cat_val] += 1
+            if pax_celda and pax_celda[0]:
+                contenido_g24 = pax_celda[0][0].strip()
+                # Separamos por salto de línea para contar cada persona
+                lista_pax = [p for p in contenido_g24.split('\n') if p.strip()]
+                
+                # Determinamos la categoría de Q24
+                cat_val = "Sin Categoría"
+                if cat_celda and cat_celda[0]:
+                    raw_cat = cat_celda[0][0].strip()
+                    cat_val = raw_cat.split("/")[-1].strip() if "/" in raw_cat else raw_cat
+
+                # Sumamos al contador tantas veces como personas haya en G24
+                datos_conf_agencia[agencia_cod]["sold_por_cat"][cat_val] += len(lista_pax)
 
         except Exception:
             continue
