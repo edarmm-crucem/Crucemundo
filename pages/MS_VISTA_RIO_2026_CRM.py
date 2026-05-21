@@ -130,14 +130,21 @@ def getdatossalida(ddmm):
     header = rows[0]
     return [dict(zip(header, r + [""] * (len(header) - len(r)))) for r in rows[1:]]
 
-def guardarcabina(ddmm, rowindex, agencia, pax, localizador, notas):
+def guardarcabina(ddmm, rowindex, estado_reserva, agencia, pax, localizador, notas):
     service = getsheetsservice()
     fila = rowindex + 2
+    
+    # Determinar el estado correcto que irá a la columna C de Google Sheets
+    if not agencia:
+        estado_final = "LIBRE"
+    else:
+        estado_final = "VENDIDA" if estado_reserva == "VENDIDA (SOLD)" else "RESERVA"
+        
     service.spreadsheets().values().update(
         spreadsheetId=CRMBARCO,
         range=f"{ddmm}!C{fila}:G{fila}",
         valueInputOption="RAW",
-        body={"values": [["VENDIDA" if agencia else "LIBRE", agencia, str(pax), localizador, notas]]}
+        body={"values": [[estado_final, agencia, str(pax), localizador, notas]]}
     ).execute()
 
 def guardar_cupo_sheets(ddmm, datos_completos, clave_cupo, limites_str):
@@ -191,13 +198,20 @@ st.markdown(
         .horizontal-corridor { height: 18px; margin: 0.4rem 0; background-image: linear-gradient(to right, #E5E7EB 50%, rgba(255,255,255,0) 0%); background-position: bottom; background-size: 15px 2px; background-repeat: repeat-x; display: flex; align-items: center; padding-left: 0.5rem; font-size: 0.6rem; font-weight: 700; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.15em; }
         
         .cabina-box {
-            min-width: 72px; max-width: 72px; height: 54px; border-radius: 6px; border: 2px solid transparent;
+            min-width: 74px; max-width: 74px; height: 58px; border-radius: 6px; border: 2px solid transparent;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.15s;
-            box-sizing: border-box;
+            box-sizing: border-box; line-height: 1.1; overflow: hidden;
         }
         .cabina-libre { background: #F3F4F6; border-color: #D1D5DB; color: #6B7280; }
-        .cabina-vendida { border-color: #1F2937 !important; border-width: 3px !important; }
+        
+        /* Modificaciones del grosor de borde solicitadas */
+        .cabina-vendida-style { border-width: 4px !important; border-style: solid !important; }
+        .cabina-reserva-style { border-width: 2px !important; border-style: dashed !important; }
+        
+        .label-sold { font-size: 0.55rem; font-weight: 900; color: #DC2626; letter-spacing: 0.05em; margin-top: 1px; }
+        .label-rva { font-size: 0.55rem; font-weight: 900; color: #D97706; letter-spacing: 0.05em; margin-top: 1px; }
+        
         .categoria-label { font-size: 0.95rem; font-weight: 800; color: #1E3A8A; margin: 1rem 0 0.6rem 0; background: #EFF6FF; padding: 0.4rem 0.8rem; border-radius: 6px; display: inline-block; border-left: 4px solid #3B82F6; }
     </style>
     ''',
@@ -259,10 +273,10 @@ if modo == "Inicio":
         
         Desde este panel centralizado puedes gestionar de forma ágil la ocupación del buque. Utiliza el menú superior para navegar entre las herramientas disponibles:
         
-        *   **🚢 Mapa de cabinas:** Visualiza planos con validación cruzada estricta por categoría (Cabinas y Personas asignadas).
-        *   **📊 Ver Cupos:** Cuadro analítico de disponibilidad segmentado por Agencia, Categoría de Cabina y Pasajeros.
-        *   **⚙️ Configurar Cupos:** Ajusta las limitaciones comerciales de cabinas y personas por cada categoría del buque.
-        *   **📅 Nueva salida:** Genera la estructura inicial para una nueva fecha operativa del barco en la base de datos.
+        * **🚢 Mapa de cabinas:** Visualiza planos con validación cruzada estricta por categoría (Cabinas y Personas asignadas).
+        * **📊 Ver Cupos:** Cuadro analítico de disponibilidad segmentado por Agencia, Categoría de Cabina y Pasajeros.
+        * **⚙️ Configurar Cupos:** Ajusta las limitaciones comerciales de cabinas y personas por cada categoría del buque.
+        * **📅 Nueva salida:** Genera la estructura inicial para una nueva fecha operativa del barco en la base de datos.
         """
     )
     st.markdown("---")
@@ -302,11 +316,11 @@ else:
             st.warning("La salida seleccionada no contiene datos.")
             st.stop()
 
-        # CONTEOS REVOLUCIONADOS: Segmentación indexada [(agencia, categoria)]
+        # CONTEOS: Segmentación indexada [(agencia, categoria)]
         cabinas_por_ag_cat = defaultdict(int)
         pax_por_ag_cat = defaultdict(int)
         
-        # Diccionario de cupos estructurado: cupos_config[(agencia, categoria)] = {"cabinas": X, "pax": Y}
+        # Diccionario de cupos estructurado
         cupos_config = {}
         
         for d in datos:
@@ -324,9 +338,9 @@ else:
                 except ValueError:
                     pass
             
-            # Procesar la configuración estructurada de cupos (Formato guardado en Sheets: "AGENCIA|CATEGORIA")
+            # Procesar la configuración estructurada de cupos
             c_ag = d.get("cupo_agencia", "").strip()
-            c_max = d.get("cupo_maximo", "").strip() # Almacena "MaxCabinas,MaxPax"
+            c_max = d.get("cupo_maximo", "").strip()
             
             if c_ag and "|" in c_ag and c_max and "," in c_max:
                 try:
@@ -340,7 +354,7 @@ else:
                     pass
 
         # ------------------------------------------------------------
-        # OPCIÓN: VER CUPOS (AVANZADOS POR CATEGORÍA)
+        # OPCIÓN: VER CUPOS
         # ------------------------------------------------------------
         if modo == "Ver Cupos":
             st.markdown(f"### 📊 Cuadro de Mandos de Cupos — Salida {ddmm_sel}")
@@ -460,18 +474,34 @@ else:
                 for num in impares_ordenados:
                     info = estadocabina.get(num, {})
                     agencia = info.get("agencia", "")
-                    estado = info.get("estado", "LIBRE")
+                    estado = info.get("estado", "LIBRE").strip().upper()
                     cant_pax = info.get("pax", "")
                     pax_txt = f" ({cant_pax}p)" if cant_pax and int(cant_pax) > 0 else ""
                     
                     color = agencias.get(agencia, "#F3F4F6") if agencia else "#F3F4F6"
-                    border = "#1F2937" if estado == "VENDIDA" else "#D1D5DB"
                     textcolor = "#1F2937" if agencia else "#9CA3AF"
+                    
+                    # Lógica de Clases e identificadores visuales
+                    clase_estado = "cabina-libre"
+                    label_extra = ""
+                    border_color = "#D1D5DB"
+                    
+                    if agencia:
+                        if estado == "RESERVA":
+                            clase_estado = "cabina-reserva-style"
+                            border_color = "#D97706" # Borde color Ámbar/Naranja para Reservas
+                            label_extra = '<span class="label-rva">RVA</span>'
+                        else:
+                            clase_estado = "cabina-vendida-style"
+                            border_color = "#1F2937" # Borde oscuro grueso para SOLD
+                            label_extra = '<span class="label-sold">SOLD</span>'
+                    
                     html += f'''
-                    <div class="cabina-box" style="background:{color};border-color:{border};color:{textcolor};"
+                    <div class="cabina-box {clase_estado}" style="background:{color}; border-color:{border_color}; color:{textcolor};"
                          onclick="window.parent.postMessage({{type:'streamlit:setComponentValue', value:'{num}'}}, '*')">
                         <span>{num}</span>
-                        <span style="font-size:0.55rem; font-weight:600; white-space:nowrap; overflow:hidden;">{agencia or "libre"}{pax_txt}</span>
+                        <span style="font-size:0.55rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%; text-align:center;">{agencia or "libre"}{pax_txt}</span>
+                        {label_extra}
                     </div>'''
                 html += '</div>'
                 
@@ -482,18 +512,33 @@ else:
                 for num in pares_ordenados:
                     info = estadocabina.get(num, {})
                     agencia = info.get("agencia", "")
-                    estado = info.get("estado", "LIBRE")
+                    estado = info.get("estado", "LIBRE").strip().upper()
                     cant_pax = info.get("pax", "")
                     pax_txt = f" ({cant_pax}p)" if cant_pax and int(cant_pax) > 0 else ""
                     
                     color = agencias.get(agencia, "#F3F4F6") if agencia else "#F3F4F6"
-                    border = "#1F2937" if estado == "VENDIDA" else "#D1D5DB"
                     textcolor = "#1F2937" if agencia else "#9CA3AF"
+                    
+                    clase_estado = "cabina-libre"
+                    label_extra = ""
+                    border_color = "#D1D5DB"
+                    
+                    if agencia:
+                        if estado == "RESERVA":
+                            clase_estado = "cabina-reserva-style"
+                            border_color = "#D97706"
+                            label_extra = '<span class="label-rva">RVA</span>'
+                        else:
+                            clase_estado = "cabina-vendida-style"
+                            border_color = "#1F2937"
+                            label_extra = '<span class="label-sold">SOLD</span>'
+                    
                     html += f'''
-                    <div class="cabina-box" style="background:{color};border-color:{border};color:{textcolor};"
+                    <div class="cabina-box {clase_estado}" style="background:{color}; border-color:{border_color}; color:{textcolor};"
                          onclick="window.parent.postMessage({{type:'streamlit:setComponentValue', value:'{num}'}}, '*')">
                         <span>{num}</span>
-                        <span style="font-size:0.55rem; font-weight:600; white-space:nowrap; overflow:hidden;">{agencia or "libre"}{pax_txt}</span>
+                        <span style="font-size:0.55rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%; text-align:center;">{agencia or "libre"}{pax_txt}</span>
+                        {label_extra}
                     </div>'''
                 html += '</div>'
                 
@@ -511,6 +556,7 @@ else:
             if cabina_input:
                 info = estadocabina.get(cabina_input, {})
                 agencia_actual_cabina = info.get("agencia", "").strip()
+                estado_actual_cabina = info.get("estado", "LIBRE").strip().upper()
                 pax_actual_cabina = int(info.get("pax", 0) or 0)
                 
                 # Identificar la categoría de la cabina que se está operando
@@ -518,7 +564,7 @@ else:
                 
                 permitir_guardado = True
                 if agencia_actual_cabina:
-                    st.error(f"⚠️ **¡Atención!** La cabina {cabina_input} ({cat_cabina_actual}) ya se encuentra asignada a la agencia **{agencia_actual_cabina}**.")
+                    st.error(f"⚠️ **¡Atención!** La cabina {cabina_input} ({cat_cabina_actual}) ya se encuentra asignada a la agencia **{agencia_actual_cabina}** en calidad de **{estado_actual_cabina}**.")
                     confirmar_sustitucion = st.checkbox(f"¿Quieres sustituir la asignación de {agencia_actual_cabina}?", value=False)
                     if not confirmar_sustitucion:
                         permitir_guardado = False
@@ -531,15 +577,30 @@ else:
                         if info.get("agencia") in agencias else 0,
                         disabled=not permitir_guardado
                     )
+                
+                # Selector de Modos de Reserva solicitado
+                modo_reserva = "VENDIDA (SOLD)"
+                if estado_actual_cabina == "RESERVA":
+                    modo_reserva = "MODO RESERVA (RVA)"
+                    
+                estado_reserva_input = st.radio(
+                    "Tipo de Operación / Reserva",
+                    ["MODO RESERVA (RVA)", "VENDIDA (SOLD)"],
+                    index=0 if modo_reserva == "MODO RESERVA (RVA)" else 1,
+                    horizontal=True,
+                    disabled=not agencia_sel or not permitir_guardado,
+                    help="Determina el borde visual y las etiquetas internas en el mapa de cubiertas."
+                )
+
                 c1, c2, c3 = st.columns(3)
                 with c1:
                     pax_input = st.number_input("Pax", min_value=0, max_value=10, value=int(info.get("pax", 0) or 0), disabled=not permitir_guardado)
                 with c2:
                     loc_input = st.text_input("Localizador", value=info.get("localizador", ""), disabled=not permitir_guardado)
                 with c3:
-                    notas_input = st.text_input("Notas", value=info.get("notas", ""), disabled=not permitir_guardado)
+                    notas_input = st.text_input("Notas", value=info.get("notes", ""), disabled=not permitir_guardado)
 
-                # VALIDACIONES CRUZADAS ESTRICTAS (Cabinas + Pasajeros por Categoría)
+                # VALIDACIONES CRUZADAS ESTRICTAS
                 if agencia_sel and (agencia_sel, cat_cabina_actual) in cupos_config:
                     limites = cupos_config[(agencia_sel, cat_cabina_actual)]
                     max_cabs_autorizadas = limites["cabinas"]
@@ -548,7 +609,6 @@ else:
                     cabs_actuales_en_cat = cabinas_por_ag_cat[(agencia_sel, cat_cabina_actual)]
                     pax_actuales_en_cat = pax_por_ag_cat[(agencia_sel, cat_cabina_actual)]
                     
-                    # Restar valores previos si el usuario modifica datos de la misma agencia
                     if agencia_sel == agencia_actual_cabina:
                         cabs_actuales_en_cat -= 1
                         pax_actuales_en_cat -= pax_actual_cabina
@@ -556,11 +616,9 @@ else:
                     impacto_cabs = cabs_actuales_en_cat + 1
                     impacto_pax = pax_actuales_en_cat + pax_input
                     
-                    # Chequeo 1: Bloqueo por exceso de cabinas
                     if impacto_cabs > max_cabs_autorizadas:
                         st.error(f"🚫 **Cupo de Cabinas Superado en {cat_cabina_actual}:** {agencia_sel} tiene asignadas {cabs_actuales_en_cat} de {max_cabs_autorizadas} cabinas autorizadas.")
                     
-                    # Chequeo 2: Bloqueo por exceso de personas (Pax)
                     if impacto_pax > max_pax_autorizados:
                         st.error(f"🚫 **Cupo de Pasajeros Superado en {cat_cabina_actual}:** Agregar {pax_input} personas llevaría el total a {impacto_pax} pax de los {max_pax_autorizados} permitidos.")
 
@@ -568,9 +626,9 @@ else:
                     rowindex = next((i for i, d in enumerate(datos) if d.get("cabina") == cabina_input), None)
                     if rowindex is not None:
                         with st.spinner("Guardando..."):
-                            guardarcabina(ddmm_sel, rowindex, agencia_sel, pax_input, loc_input, notas_input)
+                            guardarcabina(ddmm_sel, rowindex, estado_reserva_input, agencia_sel, pax_input, loc_input, notas_input)
                             st.cache_data.clear()
-                            st.success(f"Cabina {cabina_input} guardada con éxito.")
+                            st.success(f"Cabina {cabina_input} guardada con éxito en modo {estado_reserva_input}.")
                             st.rerun()
 
 # ============================================================
