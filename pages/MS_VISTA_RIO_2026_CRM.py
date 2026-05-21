@@ -28,7 +28,7 @@ if not st.session_state.get("authenticated"):
 # CONSTANTES Y DETECCIÓN DE ENTORNO
 # ============================================================
 BARCO = "MS_VISTA_RIO"
-ANIO = "2026"  # Extraído del contexto de la base de datos CRM del barco
+ANIO = "2026"  
 CRMBARCO_NAME = f"{BARCO}_{ANIO}_CRM"
 
 MASTERCABINASID = "1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI"
@@ -78,13 +78,15 @@ def getdriveservice():
     return build("drive", "v3", credentials=getgooglecreds())
 
 # ============================================================
-# LÓGICA DE BÚSQUEDA Y EXTRACCIÓN EN DRIVE (OTRO SHEET - CONF)
+# LÓGICA DE BÚSQUEDA Y EXTRACCIÓN EN DRIVE (RUSTREO DE ERRORES)
 # ============================================================
 def buscar_archivo_conf(ddmm):
-    """Navega por el árbol de carpetas de Drive para encontrar el archivo BARCO_AAMMDD.ddmm"""
+    """
+    Navega por el árbol de carpetas de Drive y devuelve una tupla:
+    (file_id, "Mensaje descriptivo del estado o punto de fallo")
+    """
     drive_service = getdriveservice()
     
-    # Formatear la fecha esperada del archivo BARCO_AAMMDD (Ej: MS_VISTA_RIO_260527)
     aa = ANIO[2:]
     mm = ddmm[2:4]
     dd = ddmm[0:2]
@@ -95,25 +97,34 @@ def buscar_archivo_conf(ddmm):
         q_anio = f"'{DRIVE_RAIZ_FOLDER}' in parents and name = '{ANIO}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
         res_anio = drive_service.files().list(q=q_anio, fields="files(id)").execute()
         carpetas_anio = res_anio.get("files", [])
-        if not carpetas_anio: return None
+        
+        if not carpetas_anio:
+            return None, f"❌ No se encontró la carpeta del año '{ANIO}' dentro de la carpeta raíz."
+        
         folder_anio_id = carpetas_anio[0]["id"]
         
         # 2. Buscar carpeta del Barco dentro de la carpeta del Año
         q_barco = f"'{folder_anio_id}' in parents and name = '{BARCO}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
         res_barco = drive_service.files().list(q=q_barco, fields="files(id)").execute()
         carpetas_barco = res_barco.get("files", [])
-        if not carpetas_barco: return None
+        
+        if not carpetas_barco:
+            return None, f"📁 Se encontró la carpeta '{ANIO}', pero falta la subcarpeta del barco '{BARCO}' en su interior."
+        
         folder_barco_id = carpetas_barco[0]["id"]
         
         # 3. Buscar el archivo específico dentro de la carpeta del Barco
         q_file = f"'{folder_barco_id}' in parents and name = '{nombre_archivo_esperado}' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false"
-        res_file = drive_service.files().list(q=q_file, fields="files(id)").execute()
+        res_file = drive_service.files().list(q=q_file, fields="files(id, name)").execute()
         archivos = res_file.get("files", [])
+        
         if archivos:
-            return archivos[0]["id"]
-    except Exception:
-        pass
-    return None
+            return archivos[0]["id"], f"✅ Archivo encontrado con éxito: `{archivos[0]['name']}`"
+        else:
+            return None, f"🔎 Accedido a Raíz ➔ Carpeta '{ANIO}' ➔ Carpeta '{BARCO}', pero NO existe el archivo `{nombre_archivo_esperado}`."
+            
+    except Exception as e:
+        return None, f"💥 Error de comunicación con Google Drive: {str(e)}"
 
 @st.cache_data(ttl=60)
 def extraer_datos_archivo_conf(spreadsheet_id):
@@ -129,7 +140,6 @@ def extraer_datos_archivo_conf(spreadsheet_id):
 
     for hoja in hojas:
         try:
-            # Traer los rangos clave de una sola vez para optimizar llamadas
             result = sheets_service.spreadsheets().values().batchGet(
                 spreadsheetId=spreadsheet_id,
                 ranges=[f"'{hoja}'!B2", f"'{hoja}'!P5", f"'{hoja}'!G11", f"'{hoja}'!G24:G50", f"'{hoja}'!Q24:Q50"]
@@ -138,14 +148,12 @@ def extraer_datos_archivo_conf(spreadsheet_id):
             value_ranges = result.get("valueRanges", [])
             b2_val = value_ranges[0].get("values", [[""]])[0][0].strip().upper()
             
-            # Validar si cumple con el criterio de tipo de hoja
             if b2_val not in ["BOOKING", "PROFORMA"]:
                 continue
                 
             agencia_cod = value_ranges[1].get("values", [[""]])[0][0].strip()
             loc_original = value_ranges[2].get("values", [[""]])[0][0].strip()
             
-            # Limpiar localizador quedándose solo con los dígitos finales
             loc_limpio = "".join(re.findall(r'\d+$', loc_original)) or loc_original
 
             if not agencia_cod:
@@ -155,15 +163,13 @@ def extraer_datos_archivo_conf(spreadsheet_id):
                 datos_conf_agencia[agencia_cod]["localizadores"].add(loc_limpio)
             datos_conf_agencia[agencia_cod]["notes"].add(f"Hoja: {hoja}")
 
-            # Procesar listado de pasajeros (G24:G50) y Categorías (Q24:Q50)
             pax_rows = value_ranges[3].get("values", [])
             cat_rows = value_ranges[4].get("values", [])
 
             for idx, r_pax in enumerate(pax_rows):
-                if r_pax and r_pax[0].strip():  # Si hay nombre de pasajero válido en la fila
+                if r_pax and r_pax[0].strip():  
                     cat_val = ""
                     if idx < len(cat_rows) and cat_rows[idx]:
-                        # Extraer categoría del formato: XXXX / CAT -> Quedarse con "CAT"
                         raw_cat = cat_rows[idx][0]
                         if "/" in raw_cat:
                             cat_val = raw_cat.split("/")[-1].strip()
@@ -277,11 +283,14 @@ def guardar_cupo_sheets(ddmm, datos_completos, clave_cupo, limites_str):
     ).execute()
 
 # ============================================================
-# CSS ESTILOS TRADICIONALES
+# CSS ESTILOS TRADICIONALES (FUENTES CENTURY GOTHIC)
 # ============================================================
 st.markdown(
     '''
     <style>
+        html, body, [data-testid="stAppViewContainer"] * {
+            font-family: "Century Gothic", "Century", sans-serif !important;
+        }
         [data-testid="stSidebarNav"] { display: none !important; }
         header[data-testid="stHeader"] { display: none !important; }
         .portal-header { padding: 0.1rem 0 0.55rem 0; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.55rem; }
@@ -427,7 +436,6 @@ else:
             st.warning("La salida seleccionada no contiene datos.")
             st.stop()
 
-        # Conteo e integraciones globales
         cabinas_por_ag_cat = defaultdict(int)
         pax_por_ag_cat = defaultdict(int)
         sold_por_ag_cat = defaultdict(int) 
@@ -483,23 +491,25 @@ else:
                     pass
 
         # ------------------------------------------------------------
-        # MODO: INFORME (CONEXIÓN CRM + DRIVE CONF)
+        # MODO: INFORME
         # ------------------------------------------------------------
         if modo == "Informe":
             st.markdown(f"### 📈 Informe de Estado Consolidado Cruzado — Salida {ddmm_sel}")
             st.markdown(f"Este informe dinámico unifica el **CRM ({CRMBARCO_NAME})** y los ficheros de reservas externas **CONF** de Drive.")
 
-            # Búsqueda externa en Drive en segundo plano
+            # Bloque de Diagnóstico Visual solicitado para rastrear el archivo CONF
             with st.spinner("Buscando ficheros de confirmaciones (CONF) en Google Drive..."):
-                archivo_conf_id = buscar_archivo_conf(ddmm_sel)
+                archivo_conf_id, mensaje_rastreo = buscar_archivo_conf(ddmm_sel)
+                
+                # Desplegar un aviso dinámico según el resultado del árbol de carpetas
                 if archivo_conf_id:
+                    st.success(mensaje_rastreo)
                     datos_externos_conf = extraer_datos_archivo_conf(archivo_conf_id)
-                    st.caption(f"✨ Conectado exitosamente al archivo externo de Drive ID: `{archivo_conf_id}`")
                 else:
+                    st.error(mensaje_rastreo)
                     datos_externos_conf = {}
-                    st.caption("ℹ️ No se localizó un archivo CONF equivalente para esta salida en Google Drive.")
 
-            # Consolidar todas las agencias tanto de CRM como del fichero CONF
+            # Consolidar todas las agencias
             todas_las_agencias_informe = agencias_activas.union(set(datos_externos_conf.keys()))
 
             if not todas_las_agencias_informe:
@@ -522,7 +532,7 @@ else:
                 for ag_codigo in sorted(list(todas_las_agencias_informe)):
                     color_hex = agencias.get(ag_codigo, "#F3F4F6")
                     
-                    # --- FILA ORIGEN: CRM ---
+                    # --- CRM ---
                     if ag_codigo in agencias_activas:
                         html_tabla += '<tr>'
                         html_tabla += '<td style="font-weight:bold; color:#1E3A8A; background:#F0F4FF;">CRM</td>'
@@ -550,7 +560,7 @@ else:
                         html_tabla += f'<td style="text-align: left; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{notes_str}">{notes_str}</td>'
                         html_tabla += '</tr>'
 
-                    # --- FILA ORIGEN: CONF (SI EXISTE EN DRIVE) ---
+                    # --- CONF ---
                     if ag_codigo in datos_externos_conf:
                         conf_node = datos_externos_conf[ag_codigo]
                         html_tabla += '<tr>'
@@ -559,7 +569,6 @@ else:
                         html_tabla += f'<td style="font-weight: 700; text-align: left; color:#15803D;">{ag_codigo}</td>'
                         
                         for cat in todas_categorias:
-                            # CONF no maneja cupos ni pax previstos en las hojas de confirmación directamente
                             val_cupo_conf = "-"
                             val_pax_conf = "-"
                             val_sold_conf = conf_node["sold_por_cat"].get(cat, 0)
@@ -755,9 +764,7 @@ else:
                 html += '</div>'
                 st.markdown(html, unsafe_allow_html=True)
 
-            # --------------------------------------------------------
-            # PANEL DE ASIGNACIÓN INDIVIDUAL
-            # --------------------------------------------------------
+            # Panel individual de guardado
             st.markdown("---")
             st.markdown("#### ✏️ Asignar cabina")
 
