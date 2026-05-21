@@ -77,7 +77,7 @@ def getcabinas():
     service = getsheetsservice()
     result = service.spreadsheets().values().get(
         spreadsheetId=MASTERCABINASID,
-        range="Hoja 1!A:D"
+        range="Hoja 1!A:F"  # Extendido a F para leer la capacidad
     ).execute()
     rows = result.get("values", [])
     return [r for r in rows if len(r) >= 4 and r[0] == BARCO]
@@ -186,6 +186,20 @@ st.markdown(
         .ship-badge-container { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
         .ship-title { font-size: 1.5rem; font-weight: 900; color: #1E3A8A; letter-spacing: 0.05em; line-height: 1; }
         .ship-subtitle { font-size: 0.75rem; font-weight: 600; color: #4B5563; text-transform: uppercase; margin-top: 0.2rem; letter-spacing: 0.1em; }
+        
+        .ship-capacity {
+            margin-top: 0.35rem;
+            background-color: #EFF6FF;
+            color: #1E3A8A;
+            border: 1px solid #BFDBFE;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
 
         section[data-testid="stMain"] > div:first-child { padding-top: 1rem !important; }
 
@@ -232,6 +246,25 @@ st.markdown(
 )
 
 # ============================================================
+# CARGA DE DATOS BASE
+# ============================================================
+cabinas = getcabinas()
+agencias = getagencias()
+salidas = getsalidas()
+
+if not cabinas:
+    st.error(f"No se encontraron cabinas para {BARCO} en el master.")
+    st.stop()
+
+# Extraer capacidad total (Fila 1 de este barco, Columna F -> índice 5)
+try:
+    capacidad_total = cabinas[0][5].strip() if len(cabinas[0]) >= 6 else "No definida"
+except Exception:
+    capacidad_total = "No definida"
+
+todas_categorias = sorted(list(set([c[3] for c in cabinas])))
+
+# ============================================================
 # CABECERA
 # ============================================================
 st.markdown(
@@ -247,6 +280,7 @@ st.markdown(
         <div class="ship-badge-container">
             <div class="ship-title">🚢 {NOMBRE_BARCO_LIMPIO}</div>
             <div class="ship-subtitle">Panel de Control / Control Panel</div>
+            <div class="ship-capacity">👥 Capacidad Máx: {capacidad_total} Pax</div>
         </div>
     </div>
     ''',
@@ -254,19 +288,6 @@ st.markdown(
 )
 
 st.markdown("---")
-
-# ============================================================
-# CARGA DE DATOS BASE
-# ============================================================
-cabinas = getcabinas()
-agencias = getagencias()
-salidas = getsalidas()
-
-if not cabinas:
-    st.error(f"No se encontraron cabinas para {BARCO} en el master.")
-    st.stop()
-
-todas_categorias = sorted(list(set([c[3] for c in cabinas])))
 
 # ============================================================
 # SELECTOR DE MODO INICIAL
@@ -611,7 +632,7 @@ else:
                 with c1:
                     pax_input = st.number_input("Pax", min_value=0, max_value=10, value=int(info.get("pax", 0) or 0), disabled=not permitir_guardado)
                 with c2:
-                    loc_input = st.text_input("Localizador", value=info.get("localizador", ""), disabled=not permitir_guardado)
+                    loc_input = st.text_input("Localizador", value=info.get("localizador", ""), disabled=not permitir_forward=permitir_guardado)
                 with c3:
                     notas_input = st.text_input("Notas", value=info.get("notas", ""), disabled=not permitir_guardado)
 
