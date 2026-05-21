@@ -36,9 +36,6 @@ CRMBARCO = "1ApNv3qK-_2ANOVwSZoOchAdwWaeQg0Evz-n54s6T2cE"
 LOGOID = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
 LOGOURL = f"https://lh3.googleusercontent.com/d/{LOGOID}"
 
-# ID de la carpeta Raíz de Google Drive (Donde están las carpetas por Año)
-DRIVE_RAIZ_FOLDER = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEv"
-
 NOMBRE_BARCO_LIMPIO = BARCO.replace("_", " ")
 ESTADOS_VALIDOS = ["LIBRE", "RESERVA", "VENDIDA"]
 
@@ -80,7 +77,7 @@ def getdriveservice():
     return build("drive", "v3", credentials=getgooglecreds())
 
 # ============================================================
-# LÓGICA DE BÚSQUEDA Y EXTRACCIÓN EN RUTA JERÁRQUICA DE DRIVE
+# LÓGICA DE BÚSQUEDA Y EXTRACCIÓN EN DRIVE DIRECTA
 # ============================================================
 def buscar_archivo_conf(ddmm):
     """
@@ -95,10 +92,8 @@ def buscar_archivo_conf(ddmm):
     nombre_archivo_esperado = f"{BARCO}_{aa}{mm}{dd}"
     
     try:
-        # Consulta directa por nombre y tipo de archivo (Spreadsheet de Google)
         q = f"name = '{nombre_archivo_esperado}' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false"
         
-        # Ejecutamos la búsqueda incluyendo soporte para cualquier tipo de unidad (unidades compartidas o compartidos conmigo)
         res = drive_service.files().list(
             q=q, 
             fields="files(id, name)",
@@ -173,7 +168,16 @@ def extraer_datos_archivo_conf(spreadsheet_id):
         except Exception:
             continue
 
-    return datos_conf_agencia
+    # Transforma los tipos de datos internos a nativos de Python para evitar UnserializableReturnValueError en la caché
+    resultado_serializable = {}
+    for agencia, info in datos_conf_agencia.items():
+        resultado_serializable[agencia] = {
+            "sold_por_cat": dict(info["sold_por_cat"]),
+            "localizadores": list(info["localizadores"]),
+            "notes": list(info["notes"])
+        }
+
+    return resultado_serializable
 
 # ============================================================
 # FUNCIONES INTERNAS SHEETS CRM
@@ -274,11 +278,14 @@ def guardar_cupo_sheets(ddmm, datos_completos, clave_cupo, limites_str):
     ).execute()
 
 # ============================================================
-# CSS ESTILOS TRADICIONALES
+# CSS ESTILOS TRADICIONALES (Century Gothic por defecto)
 # ============================================================
 st.markdown(
     '''
     <style>
+        html, body, [data-testid="stAppViewContainer"] * {
+            font-family: "Century Gothic", "Century", sans-serif !important;
+        }
         [data-testid="stSidebarNav"] { display: none !important; }
         header[data-testid="stHeader"] { display: none !important; }
         .portal-header { padding: 0.1rem 0 0.55rem 0; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.55rem; }
