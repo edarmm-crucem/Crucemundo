@@ -574,8 +574,7 @@ else:
                 if estado_actual_cabina not in ESTADOS_VALIDOS:
                     estado_actual_cabina = "LIBRE"
 
-                cat_cabina_actual = next((c[3] for c in cabinas | c[1] == cabina_input), "").strip()
-
+                ccat_cabina_actual = next((c[3] for c in cabinas if c[1] == cabina_input), "").strip()
                 permitir_guardado = True
                 if agencia_actual_cabina:
                     estado_badge = "🟡 RESERVA" if estado_actual_cabina == "RESERVA" else "🔴 VENDIDA"
