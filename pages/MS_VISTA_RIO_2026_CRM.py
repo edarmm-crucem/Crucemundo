@@ -134,7 +134,7 @@ def extraer_datos_archivo_conf(spreadsheet_id):
             b2_rows = value_ranges[0].get("values", [])
             b2_val = b2_rows[0][0].strip().upper() if b2_rows and b2_rows[0] else ""
             
-            if b2_val not in ["BOOKING", "PROFORMA"]:
+            if not any(x in b2_val for x in ["BOOKING", "PROFORMA"]):
                 continue  # Si no coincide, salta por completo esta hoja sin procesar nada más
             
             # 3. Leer código de la agencia (P5) para agruparlo posteriormente
