@@ -562,4 +562,289 @@ else:
                             # CONF no maneja cupos ni pax previstos en las hojas de confirmación directamente
                             val_cupo_conf = "-"
                             val_pax_conf = "-"
-                            val_sold_conf = conf_node["sold_por_cat"].get(cat,
+                            val_sold_conf = conf_node["sold_por_cat"].get(cat, 0)
+                            
+                            html_tabla += f'<td style="color:#6B7280;">{val_cupo_conf}</td>'
+                            html_tabla += f'<td style="color:#6B7280;">{val_pax_conf}</td>'
+                            html_tabla += f'<td class="td-sold" style="background-color:#F0FDF4; color:#166534;">{val_sold_conf}</td>'
+                            
+                        locs_conf_str = ", ".join(conf_node["localizadores"]) if conf_node["localizadores"] else "-"
+                        notes_conf_str = " | ".join(conf_node["notes"]) if conf_node["notes"] else "-"
+                        
+                        html_tabla += f'<td style="text-align: left; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{locs_conf_str}">{locs_conf_str}</td>'
+                        html_tabla += f'<td style="text-align: left; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{notes_conf_str}">{notes_conf_str}</td>'
+                        html_tabla += '</tr>'
+                        
+                html_tabla += '</tbody></table>'
+                st.markdown(html_tabla, unsafe_allow_html=True)
+
+        # ------------------------------------------------------------
+        # OPCIÓN: VER CUPOS
+        # ------------------------------------------------------------
+        elif modo == "Ver Cupos":
+            st.markdown(f"### 📊 Cuadro de Mandos de Cupos — Salida {ddmm_sel}")
+            if not cupos_config:
+                st.info("No hay cupos configurados para esta salida. Configúralos en la pestaña 'Configurar Cupos'.")
+            else:
+                tabla_cupos = []
+                for (ag, cat), lims in cupos_config.items():
+                    cab_lim = lims["cabinas"]
+                    pax_lim = lims["pax"]
+                    cab_usadas = cabinas_por_ag_cat[(ag, cat)]
+                    pax_usados = pax_por_ag_cat[(ag, cat)]
+                    cab_disp = cab_lim - cab_usadas
+                    pax_disp = pax_lim - pax_usados
+                    status = "✅ OK"
+                    if cab_disp < 0 or pax_disp < 0:
+                        status = "🚨 Excedido"
+
+                    tabla_cupos.append({
+                        "Agencia": ag,
+                        "Categoría": cat,
+                        "Cupo Cabinas": cab_lim,
+                        "Cabinas Ocupadas": cab_usadas,
+                        "Cabinas Disp.": cab_disp,
+                        "Cupo Pax (Personas)": pax_lim,
+                        "Pax Registrados": pax_usados,
+                        "Pax Disp.": pax_disp,
+                        "Estado": status
+                    })
+
+                if tabla_cupos:
+                    st.table(tabla_cupos)
+
+        # ------------------------------------------------------------
+        # OPCIÓN: CONFIGURAR CUPOS
+        # ------------------------------------------------------------
+        elif modo == "Configurar Cupos":
+            st.markdown(f"### ⚙️ Definir Límites por Categoría — Salida {ddmm_sel}")
+            col_a, col_b = st.columns(2)
+            with col_a:
+                agencia_cupo = st.selectbox("1. Selecciona la Agencia", list(agencias.keys()))
+            with col_b:
+                categoria_cupo = st.selectbox("2. Selecciona la Categoría del Buque", todas_categorias)
+
+            valores_actuales = cupos_config.get((agencia_cupo, categoria_cupo), {"cabinas": 0, "pax": 0})
+
+            st.markdown("---")
+            c_l1, c_l2 = st.columns(2)
+            with c_l1:
+                limite_cabinas = st.number_input("Número MÁXIMO de Cabinas autorizadas", min_value=0, max_value=50, value=valores_actuales["cabinas"])
+            with c_l2:
+                limite_pax = st.number_input("Número MÁXIMO de Personas (Pax) autorizadas", min_value=0, max_value=150, value=valores_actuales["pax"])
+
+            if st.button("💾 Guardar Límites de Cupo"):
+                with st.spinner("Sincronizando con base de datos..."):
+                    clave_compuesta = f"{agencia_cupo}|{categoria_cupo}"
+                    datos_limites_str = f"{limite_cabinas},{limite_pax}"
+                    guardar_cupo_sheets(ddmm_sel, datos, clave_compuesta, datos_limites_str)
+                    st.cache_data.clear()
+                    st.success(f"Límites guardados para {agencia_cupo} en {categoria_cupo} ({limite_cabinas} Cabinas / {limite_pax} Pax).")
+                    st.rerun()
+
+        # ------------------------------------------------------------
+        # OPCIÓN: MAPA DE CABINAS
+        # ------------------------------------------------------------
+        elif modo == "Mapa de cabinas":
+            estadocabina = {d.get("cabina", ""): d for d in datos}
+            porcategoria = defaultdict(list)
+            for c in cabinas:
+                porcategoria[c[3]].append(c[1])
+
+            if cupos_config:
+                with st.expander("📊 Vista Rápida de Alertas de Cupos Avanzados (Categorías)", expanded=True):
+                    c_cups = st.columns(min(len(cupos_config), 4))
+                    for idx, ((ag, cat), lims) in enumerate(cupos_config.items()):
+                        c_max = lims["cabinas"]
+                        p_max = lims["pax"]
+                        c_act = cabinas_por_ag_cat[(ag, cat)]
+                        p_act = pax_por_ag_cat[(ag, cat)]
+
+                        with c_cups[idx % len(c_cups)]:
+                            excedido = (c_act > c_max) or (p_act > p_max)
+                            label_tarjeta = f"{'🚨' if excedido else '💼'} {ag} ({cat})"
+                            val_tarjeta = f"Cab: {c_act}/{c_max} | Pax: {p_act}/{p_max}"
+                            st.metric(label=label_tarjeta, value=val_tarjeta)
+
+            st.markdown(f"### 🚢 Distribución de Cubiertas — Salida {ddmm_sel}")
+            st.caption("◀ Conteo desde la Derecha hacia la Izquierda en ambas filas")
+
+            st.markdown(
+                '''
+                <div class="leyenda-estados">
+                    <div class="leyenda-item">
+                        <span class="leyenda-box leyenda-libre"></span> Libre
+                    </div>
+                    <div class="leyenda-item">
+                        <span class="leyenda-box leyenda-reserva"></span> Reserva (RVA)
+                    </div>
+                    <div class="leyenda-item">
+                        <span class="leyenda-box leyenda-vendida"></span> Vendida (SOLD)
+                    </div>
+                </div>
+                ''',
+                unsafe_allow_html=True,
+            )
+
+            for categoria, nums in porcategoria.items():
+                st.markdown(f'<div class="categoria-label">📍 {categoria}</div>', unsafe_allow_html=True)
+
+                impares = []
+                pares = []
+
+                for num in nums:
+                    try:
+                        num_limpio = ''.join(filter(str.isdigit, num))
+                        val = int(num_limpio)
+                        if val % 2 != 0:
+                            impares.append((val, num))
+                        else:
+                            pares.append((val, num))
+                    except ValueError:
+                        pares.append((999, num))
+
+                impares_ordenados = [item[1] for item in sorted(impares, key=lambda x: x[0], reverse=True)]
+                pares_ordenados = [item[1] for item in sorted(pares, key=lambda x: x[0], reverse=True)]
+
+                def render_cabina(num):
+                    info = estadocabina.get(num, {})
+                    agencia = info.get("agencia", "").strip()
+                    estado = info.get("estado", "LIBRE").strip()
+                    cant_pax = info.get("pax", "")
+                    pax_txt = f" ({cant_pax}p)" if cant_pax and str(cant_pax).isdigit() and int(cant_pax) > 0 else ""
+
+                    color = agencias.get(agencia, "#F3F4F6") if agencia else "#F3F4F6"
+                    textcolor = "#1F2937" if agencia else "#9CA3AF"
+
+                    if estado == "VENDIDA":
+                        border_color = "#1F2937"
+                        border_width = "3px"
+                        border_style = "solid"
+                        css_class = "cabina-box cabina-vendida"
+                    elif estado == "RESERVA":
+                        border_color = "#F59E0B"
+                        border_width = "2px"
+                        border_style = "dashed"
+                        css_class = "cabina-box cabina-reserva"
+                    else:
+                        border_color = "#D1D5DB"
+                        border_width = "2px"
+                        border_style = "solid"
+                        css_class = "cabina-box cabina-libre"
+
+                    sublabel = f"{agencia}{pax_txt}" if agencia else ""
+
+                    return f'''
+                    <div class="{css_class}"
+                         style="background:{color};border-color:{border_color};border-width:{border_width};border-style:{border_style};color:{textcolor};"
+                         onclick="window.parent.postMessage({{type:'streamlit:setComponentValue', value:'{num}'}}, '*')">
+                        <span class="cabina-num-destacado">{num}</span>
+                        <span style="font-size:0.58rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:72px; text-align:center; margin-top:2px;">{sublabel}</span>
+                    </div>'''
+
+                html = '<div class="deck-layout">'
+                html += '<div class="deck-row deck-row-style">'
+                for num in impares_ordenados:
+                    html += render_cabina(num)
+                html += '</div>'
+                html += '<div class="horizontal-corridor">Pasillo Central de Cubierta</div>'
+                html += '<div class="deck-row deck-row-style">'
+                for num in pares_ordenados:
+                    html += render_cabina(num)
+                html += '</div>'
+                html += '</div>'
+                st.markdown(html, unsafe_allow_html=True)
+
+            # --------------------------------------------------------
+            # PANEL DE ASIGNACIÓN INDIVIDUAL
+            # --------------------------------------------------------
+            st.markdown("---")
+            st.markdown("#### ✏️ Asignar cabina")
+
+            col1, col2 = st.columns([1, 2])
+            with col1:
+                nums_disponibles = [c[1] for c in cabinas]
+                cabina_input = st.selectbox("Cabina", sorted(nums_disponibles))
+
+            if cabina_input:
+                info = estadocabina.get(cabina_input, {})
+                agencia_actual_cabina = info.get("agencia", "").strip()
+                pax_actual_cabina = int(info.get("pax", 0) or 0)
+                estado_actual_cabina = info.get("estado", "LIBRE").strip()
+                if estado_actual_cabina not in ESTADOS_VALIDOS:
+                    estado_actual_cabina = "LIBRE"
+
+                cat_cabina_actual = next((c[3] for c in cabinas if c[1] == cabina_input), "").strip()
+
+                permitir_guardado = True
+                if agencia_actual_cabina:
+                    estado_badge = "🟡 RESERVA" if estado_actual_cabina == "RESERVA" else "🔴 VENDIDA"
+                    st.error(f"⚠️ **¡Atención!** La cabina {cabina_input} ({cat_cabina_actual}) ya está asignada a **{agencia_actual_cabina}** en estado **{estado_badge}**.")
+                    confirmar_sustitucion = st.checkbox(f"¿Quieres sustituir la asignación de {agencia_actual_cabina}?", value=False)
+                    if not confirmar_sustitucion:
+                        permitir_guardado = False
+
+                with col2:
+                    agencia_sel = st.selectbox(
+                        "Agencia",
+                        [""] + list(agencias.keys()),
+                        index=list(agencias.keys()).index(info.get("agencia", "")) + 1 if info.get("agencia") in agencias else 0,
+                        disabled=not permitir_guardado
+                    )
+
+                estado_sel = st.selectbox(
+                    "Estado de la reserva",
+                    ESTADOS_VALIDOS,
+                    index=ESTADOS_VALIDOS.index(estado_actual_cabina),
+                    format_func=lambda x: {
+                        "LIBRE": "⬜ LIBRE — Sin asignar",
+                        "RESERVA": "🟡 RESERVA (RVA) — Bloqueada para agencia, pendiente de confirmar",
+                        "VENDIDA": "🔴 VENDIDA (SOLD) — Confirmada y cerrada"
+                    }.get(x, x),
+                    disabled=not permitir_guardado
+                )
+
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    pax_input = st.number_input("Pax", min_value=0, max_value=10, value=int(info.get("pax", 0) or 0), disabled=not permitir_guardado)
+                with c2:
+                    loc_input = st.text_input("Localizador", value=info.get("localizador", ""), disabled=not permitir_guardado)
+                with c3:
+                    notas_input = st.text_input("Notas", value=info.get("notes", ""), disabled=not permitir_guardado)
+
+                if agencia_sel and (agencia_sel, cat_cabina_actual) in cupos_config:
+                    limites = cupos_config[(agencia_sel, cat_cabina_actual)]
+                    max_cabs_autorizadas = limites["cabinas"]
+                    max_pax_autorizados = limites["pax"]
+
+                    cabs_actuales_en_cat = cabinas_por_ag_cat[(agencia_sel, cat_cabina_actual)]
+                    pax_actuales_en_cat = pax_por_ag_cat[(agencia_sel, cat_cabina_actual)]
+
+                    if agencia_sel == agencia_actual_cabina:
+                        cabs_actuales_en_cat -= 1
+                        pax_actuales_en_cat -= pax_actual_cabina
+
+                    impacto_cabs = cabs_actuales_en_cat + 1
+                    impacto_pax = pax_actuales_en_cat + pax_input
+
+                    if impacto_cabs > max_cabs_autorizadas:
+                        st.error(f"🚫 **Cupo de Cabinas Superado en {cat_cabina_actual}:** {agencia_sel} tiene asignadas {cabs_actuales_en_cat} de {max_cabs_autorizadas} cabinas autorizadas.")
+
+                    if impacto_pax > max_pax_autorizados:
+                        st.error(f"🚫 **Cupo de Pasajeros Superado en {cat_cabina_actual}:** Agregar {pax_input} personas llevaría el total a {impacto_pax} pax de los {max_pax_autorizados} permitidos.")
+
+                if st.button("💾 Guardar", disabled=not permitir_guardado):
+                    rowindex = next((i for i, d in enumerate(datos) if d.get("cabina") == cabina_input), None)
+                    if rowindex is not None:
+                        estado_final = estado_sel if agencia_sel else "LIBRE"
+                        with st.spinner("Guardando..."):
+                            guardarcabina(ddmm_sel, rowindex, agencia_sel, pax_input, loc_input, notas_input, estado_final)
+                            st.cache_data.clear()
+                            st.success(f"Cabina {cabina_input} guardada como **{estado_final}**.")
+                            st.rerun()
+
+# ============================================================
+# PIE DE PÁGINA
+# ============================================================
+st.markdown("---")
+st.page_link("app.py", label=" Volver al Menú Principal (Selección de Barcos)", icon="🏠")
