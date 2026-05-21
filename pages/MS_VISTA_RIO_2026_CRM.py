@@ -173,7 +173,6 @@ def guardar_cupo_sheets(ddmm, datos_completos, clave_cupo, limites_str):
 st.markdown(
     '''
     <style>
-        * { font-family: 'Century Gothic', sans-serif; }
         [data-testid="stSidebarNav"] { display: none !important; }
         header[data-testid="stHeader"] { display: none !important; }
 
@@ -197,14 +196,14 @@ st.markdown(
         .horizontal-corridor { height: 18px; margin: 0.4rem 0; background-image: linear-gradient(to right, #E5E7EB 50%, rgba(255,255,255,0) 0%); background-position: bottom; background-size: 15px 2px; background-repeat: repeat-x; display: flex; align-items: center; padding-left: 0.5rem; font-size: 0.6rem; font-weight: 700; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.15em; }
 
         .cabina-box {
-            min-width: 80px; max-width: 80px; height: 56px; border-radius: 6px; border: 2px solid transparent;
+            min-width: 76px; max-width: 76px; height: 54px; border-radius: 6px; border: 2px solid transparent;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             cursor: pointer; transition: all 0.15s;
             box-sizing: border-box;
         }
-        
-        /* Número de cabina más grande */
-        .cabina-box span.num-cabina {
+
+        /* Estilo para hacer el número de cabina más grande */
+        .cabina-num-destacado {
             font-size: 1.15rem;
             font-weight: 800;
             line-height: 1.1;
@@ -289,7 +288,7 @@ if modo == "Inicio":
 
         * **🚢 Mapa de cabinas:** Visualiza planos con validación cruzada estricta por categoría (Cabinas y Personas asignadas).
         * **📊 Ver Cupos:** Cuadro analítico de disponibilidad segmentado por Agencia, Categoría de Cabina y Pasajeros.
-        * **⚙️ Configurar Cupos:** Ajusta las limitations comerciales de cabinas y personas por cada categoría del buque.
+        * **⚙️ Configurar Cupos:** Ajusta las limitaciones comerciales de cabinas y personas por cada categoría del buque.
         * **📅 Nueva salida:** Genera la estructura inicial para una nueva fecha operativa del barco en la base de datos.
         """
     )
@@ -461,13 +460,13 @@ else:
                 '''
                 <div class="leyenda-estados">
                     <div class="leyenda-item">
-                        <span class="span leyenda-box leyenda-libre"></span> Libre
+                        <span class="leyenda-box leyenda-libre"></span> Libre
                     </div>
                     <div class="leyenda-item">
-                        <span class="span leyenda-box leyenda-reserva"></span> Reserva
+                        <span class="leyenda-box leyenda-reserva"></span> Reserva (RVA)
                     </div>
                     <div class="leyenda-item">
-                        <span class="span leyenda-box leyenda-vendida"></span> Vendida
+                        <span class="leyenda-box leyenda-vendida"></span> Vendida (SOLD)
                     </div>
                 </div>
                 ''',
@@ -523,7 +522,7 @@ else:
                         border_style = "solid"
                         css_class = "cabina-box cabina-libre"
 
-                    # Solo queda la Agencia y opcionalmente la cantidad de pasajeros
+                    # Se eliminan los textos interiores fijos ("SOLD", "RVA", "libre")
                     if agencia:
                         sublabel = f"{agencia}{pax_txt}"
                     else:
@@ -533,8 +532,8 @@ else:
                     <div class="{css_class}"
                          style="background:{color};border-color:{border_color};border-width:{border_width};border-style:{border_style};color:{textcolor};"
                          onclick="window.parent.postMessage({{type:'streamlit:setComponentValue', value:'{num}'}}, '*')">
-                        <span class="num-cabina">{num}</span>
-                        <span style="font-size:0.58rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:74px; text-align:center; margin-top:1px;">{sublabel}</span>
+                        <span class="cabina-num-destacado">{num}</span>
+                        <span style="font-size:0.58rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:72px; text-align:center; margin-top:2px;">{sublabel}</span>
                     </div>'''
 
                 html = '<div class="deck-layout">'
@@ -575,7 +574,7 @@ else:
                 if estado_actual_cabina not in ESTADOS_VALIDOS:
                     estado_actual_cabina = "LIBRE"
 
-                cat_cabina_actual = next((c[3] for c in cabinas if c[1] == cabina_input), "").strip()
+                cat_cabina_actual = next((c[3] for c in cabinas | c[1] == cabina_input), "").strip()
 
                 permitir_guardado = True
                 if agencia_actual_cabina:
@@ -604,8 +603,8 @@ else:
                     index=ESTADOS_VALIDOS.index(estado_actual_cabina),
                     format_func=lambda x: {
                         "LIBRE": "⬜ LIBRE — Sin asignar",
-                        "RESERVA": "🟡 RESERVA — Bloqueada para agencia, pendiente de confirmar",
-                        "VENDIDA": "🔴 VENDIDA — Confirmada y cerrada"
+                        "RESERVA": "🟡 RESERVA (RVA) — Bloqueada para agencia, pendiente de confirmar",
+                        "VENDIDA": "🔴 VENDIDA (SOLD) — Confirmada y cerrada"
                     }.get(x, x),
                     disabled=not permitir_guardado
                 )
