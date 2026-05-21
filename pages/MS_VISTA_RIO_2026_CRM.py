@@ -202,7 +202,6 @@ st.markdown(
             box-sizing: border-box;
         }
 
-        /* Estilo para hacer el número de cabina más grande */
         .cabina-num-destacado {
             font-size: 1.15rem;
             font-weight: 800;
@@ -522,7 +521,6 @@ else:
                         border_style = "solid"
                         css_class = "cabina-box cabina-libre"
 
-                    # Se eliminan los textos interiores fijos ("SOLD", "RVA", "libre")
                     if agencia:
                         sublabel = f"{agencia}{pax_txt}"
                     else:
@@ -574,7 +572,8 @@ else:
                 if estado_actual_cabina not in ESTADOS_VALIDOS:
                     estado_actual_cabina = "LIBRE"
 
-                ccat_cabina_actual = next((c[3] for c in cabinas if c[1] == cabina_input), "").strip()
+                cat_cabina_actual = next((c[3] for c in cabinas if c[1] == cabina_input), "").strip()
+
                 permitir_guardado = True
                 if agencia_actual_cabina:
                     estado_badge = "🟡 RESERVA" if estado_actual_cabina == "RESERVA" else "🔴 VENDIDA"
