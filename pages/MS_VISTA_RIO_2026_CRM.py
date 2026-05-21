@@ -35,7 +35,9 @@ MASTERCABINASID = "1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI"
 CRMBARCO = "1ApNv3qK-_2ANOVwSZoOchAdwWaeQg0Evz-n54s6T2cE"
 LOGOID = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
 LOGOURL = f"https://lh3.googleusercontent.com/d/{LOGOID}"
-DRIVE_RAIZ_FOLDER = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
+
+# ID Corregido según tus indicaciones (sin la 'm' al final)
+DRIVE_RAIZ_FOLDER = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEv"
 
 NOMBRE_BARCO_LIMPIO = BARCO.replace("_", " ")
 ESTADOS_VALIDOS = ["LIBRE", "RESERVA", "VENDIDA"]
@@ -78,7 +80,7 @@ def getdriveservice():
     return build("drive", "v3", credentials=getgooglecreds())
 
 # ============================================================
-# LÓGICA DE BÚSQUEDA Y EXTRACCIÓN EN DRIVE (RUSTREO DE ERRORES)
+# LÓGICA DE BÚSQUEDA Y EXTRACCIÓN EN DRIVE (RASTREO DE ERRORES)
 # ============================================================
 def buscar_archivo_conf(ddmm):
     """
@@ -99,7 +101,7 @@ def buscar_archivo_conf(ddmm):
         carpetas_anio = res_anio.get("files", [])
         
         if not carpetas_anio:
-            return None, f"❌ No se encontró la carpeta del año '{ANIO}' dentro de la carpeta raíz."
+            return None, f"❌ No se encontró la carpeta del año '{ANIO}' dentro de la carpeta raíz (`{DRIVE_RAIZ_FOLDER}`)."
         
         folder_anio_id = carpetas_anio[0]["id"]
         
@@ -283,14 +285,11 @@ def guardar_cupo_sheets(ddmm, datos_completos, clave_cupo, limites_str):
     ).execute()
 
 # ============================================================
-# CSS ESTILOS TRADICIONALES (FUENTES CENTURY GOTHIC)
+# CSS ESTILOS TRADICIONALES (TIPOGRAFÍA ORIGINAL ENTORNO)
 # ============================================================
 st.markdown(
     '''
     <style>
-        html, body, [data-testid="stAppViewContainer"] * {
-            font-family: "Century Gothic", "Century", sans-serif !important;
-        }
         [data-testid="stSidebarNav"] { display: none !important; }
         header[data-testid="stHeader"] { display: none !important; }
         .portal-header { padding: 0.1rem 0 0.55rem 0; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.55rem; }
@@ -501,7 +500,6 @@ else:
             with st.spinner("Buscando ficheros de confirmaciones (CONF) en Google Drive..."):
                 archivo_conf_id, mensaje_rastreo = buscar_archivo_conf(ddmm_sel)
                 
-                # Desplegar un aviso dinámico según el resultado del árbol de carpetas
                 if archivo_conf_id:
                     st.success(mensaje_rastreo)
                     datos_externos_conf = extraer_datos_archivo_conf(archivo_conf_id)
