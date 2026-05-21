@@ -632,7 +632,7 @@ else:
                 with c1:
                     pax_input = st.number_input("Pax", min_value=0, max_value=10, value=int(info.get("pax", 0) or 0), disabled=not permitir_guardado)
                 with c2:
-                    loc_input = st.text_input("Localizador", value=info.get("localizador", ""), disabled=not permitir_forward=permitir_guardado)
+                    loc_input = st.text_input("Localizador", value=info.get("localizador", ""), disabled=not permitir_guardado)
                 with c3:
                     notas_input = st.text_input("Notas", value=info.get("notas", ""), disabled=not permitir_guardado)
 
