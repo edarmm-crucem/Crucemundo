@@ -80,12 +80,7 @@ def getdriveservice():
 # LÓGICA DE BÚSQUEDA Y EXTRACCIÓN EN DRIVE DIRECTA
 # ============================================================
 def buscar_archivo_conf(ddmm):
-    """
-    Busca el archivo CONF directamente por su nombre exacto en todo el espacio
-    compartido con la cuenta de servicio.
-    """
     drive_service = getdriveservice()
-    
     aa = ANIO[2:]
     mm = ddmm[2:4]
     dd = ddmm[0:2]
@@ -93,7 +88,6 @@ def buscar_archivo_conf(ddmm):
     
     try:
         q = f"name = '{nombre_archivo_esperado}' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false"
-        
         res = drive_service.files().list(
             q=q, 
             fields="files(id, name)",
@@ -103,18 +97,16 @@ def buscar_archivo_conf(ddmm):
         ).execute()
         
         archivos = res.get("files", [])
-        
         if archivos:
             return archivos[0]["id"], f"✅ Archivo CONF localizado y vinculado directamente: `{archivos[0]['name']}`"
         else:
             return None, f"🔎 No se encontró ningún archivo con el nombre exacto `{nombre_archivo_esperado}` al que la cuenta de servicio tenga acceso."
-            
     except Exception as e:
         return None, f"💥 Error de comunicación con la API de Google Drive: {str(e)}"
 
 @st.cache_data(ttl=60)
 def extraer_datos_archivo_conf(spreadsheet_id):
-    """Procesa el contenido de las pestañas del archivo CONF en Drive"""
+    """Procesa el contenido de las pestañas del archivo CONF analizando rigurosamente B2 antes de agrupar por P5"""
     sheets_service = getsheetsservice()
     try:
         spreadsheet = sheets_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
@@ -122,46 +114,56 @@ def extraer_datos_archivo_conf(spreadsheet_id):
     except Exception:
         return {}
 
+    # Diccionario temporal para ir agrupando los datos por código de agencia (P5)
     datos_conf_agencia = defaultdict(lambda: {"sold_por_cat": defaultdict(int), "localizadores": set(), "notes": set()})
 
+    # 1. Ir hoja por hoja
     for hoja in hojas:
         try:
-            # Petición combinada batchGet para optimizar la velocidad de respuesta
+            # Traemos en bloque las celdas clave de la hoja actual
             result = sheets_service.spreadsheets().values().batchGet(
                 spreadsheetId=spreadsheet_id,
                 ranges=[f"'{hoja}'!B2", f"'{hoja}'!P5", f"'{hoja}'!G11", f"'{hoja}'!G24:G50", f"'{hoja}'!Q24:Q50"]
             ).execute()
             
             value_ranges = result.get("valueRanges", [])
-            b2_val = value_ranges[0].get("values", [[""]])[0][0].strip().upper()
-            
-            if b2_val not in ["BOOKING", "PROFORMA"]:
+            if len(value_ranges) < 5:
                 continue
                 
-            agencia_cod = value_ranges[1].get("values", [[""]])[0][0].strip()
-            loc_original = value_ranges[2].get("values", [[""]])[0][0].strip()
+            # 2. Comprobar rigurosamente si la celda B2 contiene BOOKING o PROFORMA
+            b2_rows = value_ranges[0].get("values", [])
+            b2_val = b2_rows[0][0].strip().upper() if b2_rows and b2_rows[0] else ""
             
-            loc_limpio = "".join(re.findall(r'\d+$', loc_original)) or loc_original
-
+            if b2_val not in ["BOOKING", "PROFORMA"]:
+                continue  # Si no coincide, salta por completo esta hoja sin procesar nada más
+            
+            # 3. Leer código de la agencia (P5) para agruparlo posteriormente
+            p5_rows = value_ranges[1].get("values", [])
+            agencia_cod = p5_rows[0][0].strip() if p5_rows and p5_rows[0] else ""
+            
             if not agencia_cod:
-                continue
+                continue # Si la hoja es válida pero no tiene agencia asignada, se descarta
+                
+            # 4. Procesar y extraer la información restante de la hoja confirmada
+            g11_rows = value_ranges[2].get("values", [])
+            loc_original = g11_rows[0][0].strip() if g11_rows and g11_rows[0] else ""
+            loc_limpio = "".join(re.findall(r'\d+$', loc_original)) or loc_original
 
             if loc_limpio:
                 datos_conf_agencia[agencia_cod]["localizadores"].add(loc_limpio)
             datos_conf_agencia[agencia_cod]["notes"].add(f"Hoja: {hoja}")
 
+            # Conteo de pax y mapeo por categorías
             pax_rows = value_ranges[3].get("values", [])
             cat_rows = value_ranges[4].get("values", [])
 
-            for idx, r_pax in enumerate(pax_rows):
-                if r_pax and r_pax[0].strip():  
+            max_filas = max(len(pax_rows), len(cat_rows))
+            for idx in range(max_filas):
+                if idx < len(pax_rows) and pax_rows[idx] and pax_rows[idx][0].strip():
                     cat_val = ""
-                    if idx < len(cat_rows) and cat_rows[idx]:
-                        raw_cat = cat_rows[idx][0]
-                        if "/" in raw_cat:
-                            cat_val = raw_cat.split("/")[-1].strip()
-                        else:
-                            cat_val = raw_cat.strip()
+                    if idx < len(cat_rows) and cat_rows[idx] and cat_rows[idx][0].strip():
+                        raw_cat = cat_rows[idx][0].strip()
+                        cat_val = raw_cat.split("/")[-1].strip() if "/" in raw_cat else raw_cat
                     
                     if cat_val:
                         datos_conf_agencia[agencia_cod]["sold_por_cat"][cat_val] += 1
@@ -169,9 +171,7 @@ def extraer_datos_archivo_conf(spreadsheet_id):
         except Exception:
             continue
 
-    # ============================================================
-    # SOLUCIÓN DEL ERROR: Conversión a tipos nativos para st.cache_data
-    # ============================================================
+    # Conversión limpia a tipos nativos para que Streamlit guarde en caché correctamente
     resultado_serializable = {}
     for agencia, info in datos_conf_agencia.items():
         resultado_serializable[agencia] = {
@@ -281,17 +281,11 @@ def guardar_cupo_sheets(ddmm, datos_completos, clave_cupo, limites_str):
     ).execute()
 
 # ============================================================
-# CSS INYECCIÓN GLOBAL (Century Gothic)
+# CSS INTERFAZ NATIVA ORIGINAL
 # ============================================================
 st.markdown(
     '''
     <style>
-        @import url('https://fonts.cdnfonts.com/css/century-gothic');
-        
-        html, body, [data-testid="stAppViewContainer"], [data-testid="stAppViewContainer"] *, .stMarkdown, p, span, div, h1, h2, h3, h4, h5, h6, input, select, button, table, th, td {
-            font-family: "Century Gothic", "Century", sans-serif !important;
-        }
-        
         [data-testid="stSidebarNav"] { display: none !important; }
         header[data-testid="stHeader"] { display: none !important; }
         .portal-header { padding: 0.1rem 0 0.55rem 0; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.55rem; }
@@ -549,7 +543,7 @@ else:
                             
                             html_tabla += f'<td>{val_cupo}</td>'
                             html_tabla += f'<td>{val_pax}</td>'
-                            html_tabla += f'<td class="td-sold">{val_sold}</td>'
+                            html_tabla += f'<th class="td-sold">{val_sold}</th>'
                             
                         locs_str = ", ".join(localizadores_por_agencia[ag_codigo]) if localizadores_por_agencia[ag_codigo] else "-"
                         notes_str = " | ".join(notas_por_agencia[ag_codigo]) if notas_por_agencia[ag_codigo] else "-"
