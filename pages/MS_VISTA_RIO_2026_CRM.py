@@ -25,7 +25,7 @@ if not st.session_state.get("authenticated"):
     st.stop()
 
 # ============================================================
-# CONSTANTES Y DETECCIÓN DE ENTORNO
+# CONSTANTES Y ENTORNO
 # ============================================================
 BARCO = "MS_VISTA_RIO"
 ANIO = "2026"  
@@ -82,7 +82,7 @@ def getdriveservice():
 def buscar_archivo_conf(ddmm):
     """
     Busca el archivo CONF directamente por su nombre exacto en todo el espacio
-    compartido con la cuenta de servicio, evitando errores 404 de navegación estructural.
+    compartido con la cuenta de servicio.
     """
     drive_service = getdriveservice()
     
@@ -126,6 +126,7 @@ def extraer_datos_archivo_conf(spreadsheet_id):
 
     for hoja in hojas:
         try:
+            # Petición combinada batchGet para optimizar la velocidad de respuesta
             result = sheets_service.spreadsheets().values().batchGet(
                 spreadsheetId=spreadsheet_id,
                 ranges=[f"'{hoja}'!B2", f"'{hoja}'!P5", f"'{hoja}'!G11", f"'{hoja}'!G24:G50", f"'{hoja}'!Q24:Q50"]
@@ -168,7 +169,9 @@ def extraer_datos_archivo_conf(spreadsheet_id):
         except Exception:
             continue
 
-    # Transforma los tipos de datos internos a nativos de Python para evitar UnserializableReturnValueError en la caché
+    # ============================================================
+    # SOLUCIÓN DEL ERROR: Conversión a tipos nativos para st.cache_data
+    # ============================================================
     resultado_serializable = {}
     for agencia, info in datos_conf_agencia.items():
         resultado_serializable[agencia] = {
@@ -180,7 +183,7 @@ def extraer_datos_archivo_conf(spreadsheet_id):
     return resultado_serializable
 
 # ============================================================
-# FUNCIONES INTERNAS SHEETS CRM
+# FUNCIONES INTERNAS CRM SHEETS
 # ============================================================
 @st.cache_data(ttl=60)
 def getcabinas():
@@ -278,14 +281,17 @@ def guardar_cupo_sheets(ddmm, datos_completos, clave_cupo, limites_str):
     ).execute()
 
 # ============================================================
-# CSS ESTILOS TRADICIONALES (Century Gothic por defecto)
+# CSS INYECCIÓN GLOBAL (Century Gothic)
 # ============================================================
 st.markdown(
     '''
     <style>
-        html, body, [data-testid="stAppViewContainer"] * {
+        @import url('https://fonts.cdnfonts.com/css/century-gothic');
+        
+        html, body, [data-testid="stAppViewContainer"], [data-testid="stAppViewContainer"] *, .stMarkdown, p, span, div, h1, h2, h3, h4, h5, h6, input, select, button, table, th, td {
             font-family: "Century Gothic", "Century", sans-serif !important;
         }
+        
         [data-testid="stSidebarNav"] { display: none !important; }
         header[data-testid="stHeader"] { display: none !important; }
         .portal-header { padding: 0.1rem 0 0.55rem 0; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.55rem; }
@@ -524,7 +530,7 @@ else:
                 for ag_codigo in sorted(list(todas_las_agencias_informe)):
                     color_hex = agencias.get(ag_codigo, "#F3F4F6")
                     
-                    # --- CRM ---
+                    # --- CRM FILA ---
                     if ag_codigo in agencias_activas:
                         html_tabla += '<tr>'
                         html_tabla += '<td style="font-weight:bold; color:#1E3A8A; background:#F0F4FF;">CRM</td>'
@@ -552,7 +558,7 @@ else:
                         html_tabla += f'<td style="text-align: left; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{notes_str}">{notes_str}</td>'
                         html_tabla += '</tr>'
 
-                    # --- CONF ---
+                    # --- CONF FILA ---
                     if ag_codigo in datos_externos_conf:
                         conf_node = datos_externos_conf[ag_codigo]
                         html_tabla += '<tr>'
