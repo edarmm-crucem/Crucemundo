@@ -84,8 +84,8 @@ def getdriveservice():
 # ============================================================
 def buscar_archivo_conf(ddmm):
     """
-    Navega estrictamente por la estructura establecida:
-    Raíz (DRIVE_RAIZ_FOLDER) ➔ Carpeta Año (2026) ➔ Carpeta Barco (MS_VISTA_RIO) ➔ Archivo
+    Busca el archivo CONF directamente por su nombre exacto en todo el espacio
+    compartido con la cuenta de servicio, evitando errores 404 de navegación estructural.
     """
     drive_service = getdriveservice()
     
@@ -95,47 +95,27 @@ def buscar_archivo_conf(ddmm):
     nombre_archivo_esperado = f"{BARCO}_{aa}{mm}{dd}"
     
     try:
-        # 1. Buscar carpeta del Año (ej: '2026') dentro de la Raíz compartida
-        q_anio = f"'{DRIVE_RAIZ_FOLDER}' in parents and name = '{ANIO}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
-        res_anio = drive_service.files().list(q=q_anio, fields="files(id)").execute()
-        carpetas_anio = res_anio.get("files", [])
+        # Consulta directa por nombre y tipo de archivo (Spreadsheet de Google)
+        q = f"name = '{nombre_archivo_esperado}' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false"
         
-        # Contingencia de indexación: Si no hereda el "in parents" inmediatamente, busca la carpeta por nombre y valida acceso
-        if not carpetas_anio:
-            q_fallback_anio = f"name = '{ANIO}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
-            res_fallback = drive_service.files().list(q=q_fallback_anio, fields="files(id, parents)").execute()
-            carpetas_anio = [f for f in res_fallback.get("files", []) if DRIVE_RAIZ_FOLDER in f.get("parents", [])]
-
-        if not carpetas_anio:
-            return None, f"❌ Estructura incorrecta: No se localizó la subcarpeta del año '{ANIO}' dentro de la Raíz (`{DRIVE_RAIZ_FOLDER}`)."
+        # Ejecutamos la búsqueda incluyendo soporte para cualquier tipo de unidad (unidades compartidas o compartidos conmigo)
+        res = drive_service.files().list(
+            q=q, 
+            fields="files(id, name)",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
+            pageSize=1
+        ).execute()
         
-        folder_anio_id = carpetas_anio[0]["id"]
-        
-        # 2. Buscar carpeta del Barco (ej: 'MS_VISTA_RIO') dentro de la carpeta del Año
-        q_barco = f"'{folder_anio_id}' in parents and name = '{BARCO}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
-        res_barco = drive_service.files().list(q=q_barco, fields="files(id)").execute()
-        carpetas_barco = res_barco.get("files", [])
-        
-        if not carpetas_barco:
-            return None, f"📁 Se accedió a la carpeta del año '{ANIO}', pero falta la subcarpeta interna del barco '{BARCO}'."
-        
-        folder_barco_id = carpetas_barco[0]["id"]
-        
-        # 3. Buscar el archivo final de confirmación dentro de la carpeta del Barco
-        q_file = f"'{folder_barco_id}' in parents and name = '{nombre_archivo_esperado}' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false"
-        res_file = drive_service.files().list(q=q_file, fields="files(id, name)").execute()
-        archivos = res_file.get("files", [])
+        archivos = res.get("files", [])
         
         if archivos:
-            return archivos[0]["id"], f"✅ Archivo CONF verificado jerárquicamente: `{archivos[0]['name']}`"
+            return archivos[0]["id"], f"✅ Archivo CONF localizado y vinculado directamente: `{archivos[0]['name']}`"
         else:
-            return None, f"🔎 Ruta correcta [Raíz ➔ {ANIO} ➔ {BARCO}], pero el archivo `{nombre_archivo_esperado}` no existe allí."
+            return None, f"🔎 No se encontró ningún archivo con el nombre exacto `{nombre_archivo_esperado}` al que la cuenta de servicio tenga acceso."
             
     except Exception as e:
-        error_msg = str(e)
-        if "404" in error_msg or "notFound" in error_msg:
-            return None, f"💥 **Error de Acceso Estructural (404):** Google Drive rechazó la resolución de la ruta. Verifica si los permisos de `cloud-run-python-sheets@edarmm.iam.gserviceaccount.com` cubren también las subcarpetas heredadas."
-        return None, f"💥 Error en el árbol de directorios de Drive: {error_msg}"
+        return None, f"💥 Error de comunicación con la API de Google Drive: {str(e)}"
 
 @st.cache_data(ttl=60)
 def extraer_datos_archivo_conf(spreadsheet_id):
