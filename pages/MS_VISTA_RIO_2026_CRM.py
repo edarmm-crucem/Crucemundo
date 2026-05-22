@@ -35,6 +35,7 @@ MASTERCABINASID = "1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI"
 CRMBARCO = "1ApNv3qK-_2ANOVwSZoOchAdwWaeQg0Evz-n54s6T2cE"
 LOGOID = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
 LOGOURL = f"https://lh3.googleusercontent.com/d/{LOGOID}"
+ROOT_GROUPS = "1MMNH3y1E3jJIp6uUnxbwV0toAtdr2F2M"
 
 NOMBRE_BARCO_LIMPIO = BARCO.replace("_", " ")
 ESTADOS_VALIDOS = ["LIBRE", "RESERVA", "VENDIDA"]
@@ -186,6 +187,100 @@ def extraer_datos_archivo_conf(spreadsheet_id):
         }
 
     return resultado_serializable
+
+def buscar_archivos_group(ddmm):
+    """Busca archivos MS_FIDELIO_YYMMDD_GROUP dentro de ROOT_GROUPS/{ANIO}_GROUP/{barco}/"""
+    drive_service = getdriveservice()
+    aa = ANIO[2:]
+    mm = ddmm[2:4]
+    dd = ddmm[0:2]
+    nombre_buscado = f"MS_FIDELIO_{aa}{mm}{dd}_GROUP"
+    year_folder_name = f"{ANIO}_GROUP"
+    archivos_encontrados = []
+
+    try:
+        # Nivel 1: carpeta AÑO dentro de ROOT_GROUPS
+        q1 = f"'{ROOT_GROUPS}' in parents and name = '{year_folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+        res1 = drive_service.files().list(q=q1, fields="files(id, name)", supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
+        year_folders = res1.get("files", [])
+
+        for yf in year_folders:
+            # Nivel 2: carpetas de barco
+            q2 = f"'{yf['id']}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+            res2 = drive_service.files().list(q=q2, fields="files(id, name)", supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
+            ship_folders = res2.get("files", [])
+
+            for sf in ship_folders:
+                # Nivel 3: archivo concreto por fecha
+                q3 = f"'{sf['id']}' in parents and name = '{nombre_buscado}' and trashed = false"
+                res3 = drive_service.files().list(q=q3, fields="files(id, name)", supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
+                for f in res3.get("files", []):
+                    archivos_encontrados.append({"id": f["id"], "name": f["name"], "ship": sf["name"]})
+
+    except Exception as e:
+        st.warning(f"⚠️ Error buscando archivos GROUP: {str(e)}")
+
+    return archivos_encontrados
+
+
+CATEGORY_MAP_GROUP = {
+    "PRINCIPAL": "MAIN",
+    "INTERMEDIA": "MID",
+    "SUPERIOR": "UPP",
+}
+
+@st.cache_data(ttl=60)
+def extraer_datos_archivo_group(spreadsheet_id):
+    """Lee un archivo GROUP: agencia en B2, categorías en fila 21 cols G/K/N/P, PAX en fila 22 cols G/K/N/P"""
+    sheets_service = getsheetsservice()
+    PAX_COLS = ["G", "K", "N", "P"]
+    CAT_ROW = 21
+    PAX_ROW = 22
+
+    try:
+        result = sheets_service.spreadsheets().values().batchGet(
+            spreadsheetId=spreadsheet_id,
+            ranges=["B2"] + [f"{col}{CAT_ROW}" for col in PAX_COLS] + [f"{col}{PAX_ROW}" for col in PAX_COLS]
+        ).execute()
+        vr = result.get("valueRanges", [])
+    except Exception:
+        return {}
+
+    def cell(vr_index):
+        rows = vr[vr_index].get("values", []) if vr_index < len(vr) else []
+        return rows[0][0].strip() if rows and rows[0] else ""
+
+    agencia = cell(0)
+    if not agencia:
+        return {}
+
+    datos_group = defaultdict(lambda: {"sold_por_cat": defaultdict(int), "localizadores": [], "notes": []})
+
+    for i, col in enumerate(PAX_COLS):
+        raw_cat = cell(1 + i)           # índices 1-4: categorías
+        raw_pax = cell(1 + len(PAX_COLS) + i)  # índices 5-8: pax
+
+        if not raw_cat or not raw_pax:
+            continue
+
+        cat_upper = raw_cat.upper()
+        category = CATEGORY_MAP_GROUP.get(cat_upper, cat_upper)
+
+        m = re.match(r"(\d+)", raw_pax)
+        if not m:
+            continue
+        pax = int(m.group(1))
+
+        datos_group[agencia]["sold_por_cat"][category] += pax
+
+    resultado = {}
+    for ag, info in datos_group.items():
+        resultado[ag] = {
+            "sold_por_cat": dict(info["sold_por_cat"]),
+            "localizadores": [],
+            "notes": []
+        }
+    return resultado
 
 # ============================================================
 # FUNCIONES INTERNAS CRM SHEETS
@@ -499,7 +594,6 @@ else:
 
             with st.spinner("Buscando ficheros de confirmaciones (CONF) en Google Drive..."):
                 archivo_conf_id, mensaje_rastreo = buscar_archivo_conf(ddmm_sel)
-                
                 if archivo_conf_id:
                     st.success(mensaje_rastreo)
                     datos_externos_conf = extraer_datos_archivo_conf(archivo_conf_id)
@@ -507,7 +601,22 @@ else:
                     st.error(mensaje_rastreo)
                     datos_externos_conf = {}
 
-            todas_las_agencias_informe = agencias_activas.union(set(datos_externos_conf.keys()))
+            with st.spinner("Buscando ficheros GROUP en Google Drive..."):
+                archivos_group = buscar_archivos_group(ddmm_sel)
+                datos_externos_group = {}
+                for ag_file in archivos_group:
+                    parcial = extraer_datos_archivo_group(ag_file["id"])
+                    for ag_cod, ag_data in parcial.items():
+                        if ag_cod not in datos_externos_group:
+                            datos_externos_group[ag_cod] = {"sold_por_cat": defaultdict(int), "localizadores": [], "notes": []}
+                        for cat, pax in ag_data["sold_por_cat"].items():
+                            datos_externos_group[ag_cod]["sold_por_cat"][cat] += pax
+                if archivos_group:
+                    st.success(f"✅ {len(archivos_group)} archivo(s) GROUP localizado(s).")
+                else:
+                    st.info("🔎 No se encontraron archivos GROUP para esta salida.")
+
+            todas_las_agencias_informe = agencias_activas.union(set(datos_externos_conf.keys())).union(set(datos_externos_group.keys()))
 
             if not todas_las_agencias_informe:
                 st.info("No se registra actividad en ninguna base de datos para esta salida.")
@@ -582,6 +691,26 @@ else:
                         html_tabla += '</tr>'
                         
                 html_tabla += '</tbody></table>'
+
+                # --- GROUPS FILA ---
+                    if ag_codigo in datos_externos_group:
+                        group_node = datos_externos_group[ag_codigo]
+                        html_tabla += '<tr>'
+                        html_tabla += '<td style="font-weight:bold; color:#7C3AED; background:#F5F3FF;">GROUPS</td>'
+                        html_tabla += f'<td><span class="color-block" style="background-color: {color_hex};"></span></td>'
+                        html_tabla += f'<td style="font-weight: 700; text-align: left; color:#7C3AED;">{ag_codigo}</td>'
+
+                        for cat in todas_categorias:
+                            val_sold_group = group_node["sold_por_cat"].get(cat, 0)
+                            html_tabla += f'<td style="color:#6B7280;">-</td>'
+                            html_tabla += f'<td style="color:#6B7280;">-</td>'
+                            html_tabla += f'<td class="td-sold" style="background-color:#F5F3FF; color:#6D28D9;">{val_sold_group if val_sold_group else 0}</td>'
+
+                        html_tabla += '<td style="text-align:left;">-</td>'
+                        html_tabla += '<td style="text-align:left;">-</td>'
+                        html_tabla += '</tr>'
+
+                
                 st.markdown(html_tabla, unsafe_allow_html=True)
 
         # ------------------------------------------------------------
@@ -673,7 +802,7 @@ else:
                             st.metric(label=label_tarjeta, value=val_tarjeta)
 
             st.markdown(f"### 🚢 Distribución de Cubiertas — Salida {ddmm_sel}")
-            st.caption("◀ Conteo desde la Derecha hacia la Izquierda en ambas filas")
+            # st.caption("◀ Conteo desde la Derecha hacia la Izquierda en ambas filas")
 
             st.markdown(
                 '''
