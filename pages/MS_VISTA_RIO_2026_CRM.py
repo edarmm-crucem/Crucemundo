@@ -690,9 +690,9 @@ else:
                         html_tabla += f'<td style="text-align: left; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{notes_conf_str}">{notes_conf_str}</td>'
                         html_tabla += '</tr>'
                         
-                html_tabla += '</tbody></table>'
+                        html_tabla += '</tr>'
 
-                # --- GROUPS FILA ---
+                    # --- GROUPS FILA ---
                     if ag_codigo in datos_externos_group:
                         group_node = datos_externos_group[ag_codigo]
                         html_tabla += '<tr>'
@@ -710,7 +710,7 @@ else:
                         html_tabla += '<td style="text-align:left;">-</td>'
                         html_tabla += '</tr>'
 
-                
+                html_tabla += '</tbody></table>'
                 st.markdown(html_tabla, unsafe_allow_html=True)
 
         # ------------------------------------------------------------
