@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 import pytz
 import re
 from datetime import datetime
@@ -7,24 +6,14 @@ from googleapiclient.discovery import build
 from google.oauth2 import service_account
 from collections import defaultdict
 
-st.set_page_config(
-    page_title="MS VISTA RIO",
-    page_icon="favicon1",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
+st.set_page_config(page_title="MS VISTA RIO", page_icon="favicon1", layout="wide", initial_sidebar_state="collapsed")
 
 if not st.session_state.get("authenticated"):
-    st.markdown(
-        """
+    st.markdown("""
         <style>
         [data-testid="stSidebarNav"] { display: none !important; }
         header[data-testid="stHeader"] { display: none !important; }
-        .auth-warn {
-            background: #FEF3C7; border: 1.5px solid #FCD34D; border-radius: 12px;
-            padding: 1rem 1.2rem; margin: 2rem auto; max-width: 480px;
-            font-family: sans-serif;
-        }
+        .auth-warn { background: #FEF3C7; border: 1.5px solid #FCD34D; border-radius: 12px; padding: 1rem 1.2rem; margin: 2rem auto; max-width: 480px; font-family: sans-serif; }
         .auth-warn-title { font-size: 1rem; font-weight: 800; color: #92400E; margin-bottom: 0.3rem; }
         .auth-warn-sub { font-size: 0.82rem; color: #78350F; }
         </style>
@@ -32,10 +21,7 @@ if not st.session_state.get("authenticated"):
             <div class="auth-warn-title">⚠️ Acceso restringido / Restricted access</div>
             <div class="auth-warn-sub">No tienes acceso. Inicia sesión desde el menú principal.<br>
             <em>You don't have access. Please log in from the main menu.</em></div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        </div>""", unsafe_allow_html=True)
     st.stop()
 
 BARCO = "MS_VISTA_RIO"
@@ -55,22 +41,19 @@ def now():
 
 def getsaludo(lang="es"):
     hour = now().hour
-    if 6 <= hour < 14:   return "Buenos días"   if lang == "es" else "Good morning"
-    if 14 <= hour < 21:  return "Buenas tardes"  if lang == "es" else "Good afternoon"
+    if 6 <= hour < 14: return "Buenos días" if lang == "es" else "Good morning"
+    if 14 <= hour < 21: return "Buenas tardes" if lang == "es" else "Good afternoon"
     return "Buenas noches" if lang == "es" else "Good evening"
 
 DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Sin usuario / Unknown user"
-SALUDO   = getsaludo("es")
+SALUDO = getsaludo("es")
 SALUDOEN = getsaludo("en")
 
 @st.cache_resource
 def getgooglecreds():
     return service_account.Credentials.from_service_account_info(
         st.secrets["gcpserviceaccount"],
-        scopes=[
-            "https://www.googleapis.com/auth/drive",
-            "https://www.googleapis.com/auth/spreadsheets",
-        ],
+        scopes=["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/spreadsheets"],
     )
 
 def getsheetsservice():
@@ -82,19 +65,14 @@ def getdriveservice():
 def buscar_archivo_conf(ddmm):
     drive_service = getdriveservice()
     aa = ANIO[2:]; mm = ddmm[2:4]; dd = ddmm[0:2]
-    nombre_archivo_esperado = f"{BARCO}_{aa}{mm}{dd}"
+    nombre = f"{BARCO}_{aa}{mm}{dd}"
     try:
-        q = (f"name = '{nombre_archivo_esperado}' and "
-             f"mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false")
-        res = drive_service.files().list(
-            q=q, fields="files(id, name)",
-            supportsAllDrives=True, includeItemsFromAllDrives=True, pageSize=1
-        ).execute()
+        q = f"name = '{nombre}' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false"
+        res = drive_service.files().list(q=q, fields="files(id, name)", supportsAllDrives=True, includeItemsFromAllDrives=True, pageSize=1).execute()
         archivos = res.get("files", [])
         if archivos:
             return archivos[0]["id"], f"✅ Archivo CONF localizado: `{archivos[0]['name']}`"
-        else:
-            return None, f"🔎 No se encontró `{nombre_archivo_esperado}`. / *File `{nombre_archivo_esperado}` not found.*"
+        return None, f"🔎 No se encontró `{nombre}`. / *File `{nombre}` not found.*"
     except Exception as e:
         return None, f"💥 Error con Google Drive API: {str(e)}"
 
@@ -106,67 +84,52 @@ def extraer_datos_archivo_conf(spreadsheet_id):
         hojas = [s["properties"]["title"] for s in spreadsheet.get("sheets", [])]
     except Exception:
         return {}
-
-    datos_conf_agencia = defaultdict(lambda: {
-        "sold_por_cat": defaultdict(int), "localizadores": set(), "notes": set()
-    })
-
+    datos = defaultdict(lambda: {"sold_por_cat": defaultdict(int), "localizadores": set(), "notes": set()})
     for hoja in hojas:
         try:
             result = sheets_service.spreadsheets().values().batchGet(
                 spreadsheetId=spreadsheet_id,
-                ranges=[f"'{hoja}'!B2", f"'{hoja}'!P5", f"'{hoja}'!G11",
-                        f"'{hoja}'!G24:G50", f"'{hoja}'!Q24:Q50"]
+                ranges=[f"'{hoja}'!B2", f"'{hoja}'!P5", f"'{hoja}'!G11", f"'{hoja}'!G24:G50", f"'{hoja}'!Q24:Q50"]
             ).execute()
-            value_ranges = result.get("valueRanges", [])
-            if len(value_ranges) < 5:
+            vr = result.get("valueRanges", [])
+            if len(vr) < 5:
                 continue
-            b2_rows = value_ranges[0].get("values", [])
-            b2_val = b2_rows[0][0].strip().upper() if b2_rows and b2_rows[0] else ""
+            b2 = vr[0].get("values", [])
+            b2_val = b2[0][0].strip().upper() if b2 and b2[0] else ""
             if not any(k in b2_val for k in ["BOOKING", "PROFORMA"]):
                 continue
-            p5_rows = value_ranges[1].get("values", [])
-            agencia_cod = p5_rows[0][0].strip() if p5_rows and p5_rows[0] else ""
+            p5 = vr[1].get("values", [])
+            agencia_cod = p5[0][0].strip() if p5 and p5[0] else ""
             if not agencia_cod:
                 continue
-            g11_rows = value_ranges[2].get("values", [])
-            loc_original = g11_rows[0][0].strip() if g11_rows and g11_rows[0] else ""
-            loc_limpio = "".join(re.findall(r'\d+$', loc_original)) or loc_original
-            if loc_limpio:
-                datos_conf_agencia[agencia_cod]["localizadores"].add(loc_limpio)
+            g11 = vr[2].get("values", [])
+            loc_raw = g11[0][0].strip() if g11 and g11[0] else ""
+            loc = "".join(re.findall(r'\d+$', loc_raw)) or loc_raw
+            if loc:
+                datos[agencia_cod]["localizadores"].add(loc)
             if agencia_cod == "CONF":
-                datos_conf_agencia[agencia_cod]["notes"].add(f"Hoja: {hoja}")
-            pax_celda = value_ranges[3].get("values", [])
-            cat_celda = value_ranges[4].get("values", [])
-            if pax_celda and pax_celda[0]:
-                contenido_g24 = pax_celda[0][0].strip()
-                lista_pax = [p for p in contenido_g24.split('\n') if p.strip()]
+                datos[agencia_cod]["notes"].add(f"Hoja: {hoja}")
+            pax_c = vr[3].get("values", [])
+            cat_c = vr[4].get("values", [])
+            if pax_c and pax_c[0]:
+                lista_pax = [p for p in pax_c[0][0].strip().split('\n') if p.strip()]
                 cat_val = "Sin Categoría"
-                if cat_celda and cat_celda[0]:
-                    raw_cat = cat_celda[0][0].strip()
+                if cat_c and cat_c[0]:
+                    raw_cat = cat_c[0][0].strip()
                     cat_val = raw_cat.split("/")[-1].strip() if "/" in raw_cat else raw_cat
-                datos_conf_agencia[agencia_cod]["sold_por_cat"][cat_val] += len(lista_pax)
+                datos[agencia_cod]["sold_por_cat"][cat_val] += len(lista_pax)
         except Exception:
             continue
-
-    resultado_serializable = {}
-    for agencia, info in datos_conf_agencia.items():
-        resultado_serializable[agencia] = {
-            "sold_por_cat": dict(info["sold_por_cat"]),
-            "localizadores": list(info["localizadores"]),
-            "notes": list(info["notes"])
-        }
-    return resultado_serializable
+    return {ag: {"sold_por_cat": dict(info["sold_por_cat"]), "localizadores": list(info["localizadores"]), "notes": list(info["notes"])} for ag, info in datos.items()}
 
 def buscar_archivos_group(ddmm):
     drive_service = getdriveservice()
     aa = ANIO[2:]; mm = ddmm[2:4]; dd = ddmm[0:2]
     nombre_buscado = f"MS_FIDELIO_{aa}{mm}{dd}_GROUP"
     year_folder_name = f"{ANIO}_GROUP"
-    archivos_encontrados = []
+    encontrados = []
     try:
-        q1 = (f"'{ROOT_GROUPS}' in parents and name = '{year_folder_name}' and "
-              f"mimeType = 'application/vnd.google-apps.folder' and trashed = false")
+        q1 = f"'{ROOT_GROUPS}' in parents and name = '{year_folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
         res1 = drive_service.files().list(q=q1, fields="files(id, name)", supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
         for yf in res1.get("files", []):
             q2 = f"'{yf['id']}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
@@ -175,10 +138,10 @@ def buscar_archivos_group(ddmm):
                 q3 = f"'{sf['id']}' in parents and name = '{nombre_buscado}' and trashed = false"
                 res3 = drive_service.files().list(q=q3, fields="files(id, name)", supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
                 for f in res3.get("files", []):
-                    archivos_encontrados.append({"id": f["id"], "name": f["name"], "ship": sf["name"]})
+                    encontrados.append({"id": f["id"], "name": f["name"], "ship": sf["name"]})
     except Exception as e:
         st.warning(f"⚠️ Error buscando archivos GROUP / *Error searching GROUP files*: {str(e)}")
-    return archivos_encontrados
+    return encontrados
 
 CATEGORY_MAP_GROUP = {"PRINCIPAL": "MAIN", "INTERMEDIA": "MID", "SUPERIOR": "UPP"}
 
@@ -195,17 +158,14 @@ def extraer_datos_archivo_group(spreadsheet_id):
         vr = result.get("valueRanges", [])
     except Exception:
         return {}
-
     def cell(i):
         rows = vr[i].get("values", []) if i < len(vr) else []
         return rows[0][0].strip() if rows and rows[0] else ""
-
     agencia = cell(0)
     if not agencia:
         return {}
-
     datos_group = defaultdict(lambda: {"sold_por_cat": defaultdict(int), "localizadores": [], "notes": []})
-    for i, col in enumerate(PAX_COLS):
+    for i in range(len(PAX_COLS)):
         raw_cat = cell(1 + i)
         raw_pax = cell(1 + len(PAX_COLS) + i)
         if not raw_cat or not raw_pax:
@@ -215,27 +175,18 @@ def extraer_datos_archivo_group(spreadsheet_id):
         if not m:
             continue
         datos_group[agencia]["sold_por_cat"][category] += int(m.group(1))
-
-    return {
-        ag: {"sold_por_cat": dict(info["sold_por_cat"]), "localizadores": [], "notes": []}
-        for ag, info in datos_group.items()
-    }
+    return {ag: {"sold_por_cat": dict(info["sold_por_cat"]), "localizadores": [], "notes": []} for ag, info in datos_group.items()}
 
 @st.cache_data(ttl=60)
 def getcabinas():
     service = getsheetsservice()
-    result = service.spreadsheets().values().get(
-        spreadsheetId=MASTERCABINASID, range="Hoja 1!A:F"
-    ).execute()
-    rows = result.get("values", [])
-    return [r for r in rows if len(r) >= 4 and r[0] == BARCO]
+    result = service.spreadsheets().values().get(spreadsheetId=MASTERCABINASID, range="Hoja 1!A:F").execute()
+    return [r for r in result.get("values", []) if len(r) >= 4 and r[0] == BARCO]
 
 @st.cache_data(ttl=60)
 def getagencias():
     service = getsheetsservice()
-    result = service.spreadsheets().values().get(
-        spreadsheetId=MASTERCABINASID, range="AGENCIAS!A:B"
-    ).execute()
+    result = service.spreadsheets().values().get(spreadsheetId=MASTERCABINASID, range="AGENCIAS!A:B").execute()
     agencias = {}
     for r in result.get("values", []):
         if len(r) >= 2:
@@ -250,23 +201,15 @@ def getsalidas():
 
 def crearsalida(ddmm, cabinas):
     service = getsheetsservice()
-    service.spreadsheets().batchUpdate(
-        spreadsheetId=CRMBARCO,
-        body={"requests": [{"addSheet": {"properties": {"title": ddmm}}}]}
-    ).execute()
+    service.spreadsheets().batchUpdate(spreadsheetId=CRMBARCO, body={"requests": [{"addSheet": {"properties": {"title": ddmm}}}]}).execute()
     header = [["cabina", "categoria", "estado", "agencia", "pax", "localizador", "notes", "cupo_agencia", "cupo_maximo"]]
     rows = [[c[1], c[3], "LIBRE", "", "", "", "", "", ""] for c in cabinas]
-    service.spreadsheets().values().update(
-        spreadsheetId=CRMBARCO, range=f"{ddmm}!A1",
-        valueInputOption="RAW", body={"values": header + rows}
-    ).execute()
+    service.spreadsheets().values().update(spreadsheetId=CRMBARCO, range=f"{ddmm}!A1", valueInputOption="RAW", body={"values": header + rows}).execute()
 
 @st.cache_data(ttl=5)
 def getdatossalida(ddmm):
     service = getsheetsservice()
-    result = service.spreadsheets().values().get(
-        spreadsheetId=CRMBARCO, range=f"{ddmm}!A:I"
-    ).execute()
+    result = service.spreadsheets().values().get(spreadsheetId=CRMBARCO, range=f"{ddmm}!A:I").execute()
     rows = result.get("values", [])
     if len(rows) < 2:
         return []
@@ -276,10 +219,7 @@ def getdatossalida(ddmm):
 def guardarcabina(ddmm, rowindex, agencia, pax, localizador, notas, estado):
     service = getsheetsservice()
     fila = rowindex + 2
-    service.spreadsheets().values().update(
-        spreadsheetId=CRMBARCO, range=f"{ddmm}!C{fila}:G{fila}",
-        valueInputOption="RAW", body={"values": [[estado, agencia, str(pax), localizador, notas]]}
-    ).execute()
+    service.spreadsheets().values().update(spreadsheetId=CRMBARCO, range=f"{ddmm}!C{fila}:G{fila}", valueInputOption="RAW", body={"values": [[estado, agencia, str(pax), localizador, notas]]}).execute()
 
 def guardar_cupo_sheets(ddmm, datos_completos, clave_cupo, limites_str):
     service = getsheetsservice()
@@ -295,66 +235,60 @@ def guardar_cupo_sheets(ddmm, datos_completos, clave_cupo, limites_str):
                 break
     if fila_destino is None:
         fila_destino = len(datos_completos) + 2
-    service.spreadsheets().values().update(
-        spreadsheetId=CRMBARCO, range=f"{ddmm}!H{fila_destino}:I{fila_destino}",
-        valueInputOption="RAW", body={"values": [[clave_cupo, limites_str]]}
-    ).execute()
+    service.spreadsheets().values().update(spreadsheetId=CRMBARCO, range=f"{ddmm}!H{fila_destino}:I{fila_destino}", valueInputOption="RAW", body={"values": [[clave_cupo, limites_str]]}).execute()
 
-st.markdown(
-    '''
-    <style>
-        [data-testid="stSidebarNav"] { display: none !important; }
-        header[data-testid="stHeader"] { display: none !important; }
-        .portal-header { padding: 0.1rem 0 0.55rem 0; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.55rem; }
-        .portal-header-left { display: flex; align-items: center; gap: 1.2rem; }
-        .portal-logo { height: 50px; width: auto; object-fit: contain; display: block; }
-        .portal-title { font-size: 0.96rem; font-weight: 500; color: #4B5563; line-height: 1.2; }
-        .portal-title strong { color: #111827; }
-        .portal-title-en { margin-top: 0.12rem; font-style: italic; color: #6B7280; font-size: 0.82rem; }
-        .ship-badge-container { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
-        .ship-title { font-size: 1.5rem; font-weight: 900; color: #1E3A8A; letter-spacing: 0.05em; line-height: 1; }
-        .ship-subtitle { font-size: 0.75rem; font-weight: 600; color: #4B5563; text-transform: uppercase; margin-top: 0.2rem; letter-spacing: 0.1em; }
-        .ship-capacity { margin-top: 0.35rem; background-color: #EFF6FF; color: #1E3A8A; border: 1px solid #BFDBFE; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.72rem; font-weight: 700; display: inline-block; text-transform: uppercase; letter-spacing: 0.05em; }
-        section[data-testid="stMain"] > div:first-child { padding-top: 1rem !important; }
-        .deck-layout { background: #FFFFFF; padding: 1.2rem; border-radius: 12px; border: 1px solid #E5E7EB; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 1.5rem; }
-        .deck-row { display: flex; flex-wrap: nowrap; gap: 0.5rem; overflow-x: auto; padding: 0.2rem 0; }
-        .deck-row-style { justify-content: flex-start; }
-        .horizontal-corridor { height: 18px; margin: 0.4rem 0; background-image: linear-gradient(to right, #E5E7EB 50%, rgba(255,255,255,0) 0%); background-position: bottom; background-size: 15px 2px; background-repeat: repeat-x; display: flex; align-items: center; padding-left: 0.5rem; font-size: 0.6rem; font-weight: 700; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.15em; }
-        .cabina-box { min-width: 76px; max-width: 76px; height: 54px; border-radius: 6px; border: 2px solid transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; box-sizing: border-box; }
-        .cabina-num-destacado { font-size: 1.15rem; font-weight: 800; line-height: 1.1; }
-        .cabina-libre    { background: #F3F4F6; border-color: #D1D5DB; color: #6B7280; border-style: solid; }
-        .cabina-reserva  { border-color: #F59E0B !important; border-width: 2px !important; border-style: dashed !important; }
-        .cabina-vendida  { border-color: #1F2937 !important; border-width: 3px !important; border-style: solid !important; }
-        .categoria-label { font-size: 0.95rem; font-weight: 800; color: #1E3A8A; margin: 1rem 0 0.6rem 0; background: #EFF6FF; padding: 0.4rem 0.8rem; border-radius: 6px; display: inline-block; border-left: 4px solid #3B82F6; }
-        .leyenda-estados { display: flex; gap: 1.2rem; align-items: center; margin-bottom: 0.8rem; flex-wrap: wrap; }
-        .leyenda-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; font-weight: 600; color: #4B5563; }
-        .leyenda-sub { font-size: 0.65rem; font-style: italic; color: #9CA3AF; }
-        .leyenda-box { width: 22px; height: 16px; border-radius: 3px; display: inline-block; }
-        .leyenda-libre   { background: #F3F4F6; border: 2px solid #D1D5DB; }
-        .leyenda-reserva { background: #FFFBEB; border: 2px dashed #F59E0B; }
-        .leyenda-vendida { background: #F9FAFB; border: 3px solid #1F2937; }
-        .informe-tabla { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.85rem; }
-        .informe-tabla th { background-color: #F3F4F6; color: #374151; font-weight: 700; padding: 10px; border: 1px solid #E5E7EB; text-align: center; }
-        .informe-tabla td { padding: 8px 10px; border: 1px solid #E5E7EB; text-align: center; vertical-align: middle; }
-        .informe-tabla tr:hover { background-color: #F9FAFB; }
-        .color-block { width: 24px; height: 24px; border-radius: 4px; display: inline-block; border: 1px solid #D1D5DB; }
-        .th-sold { background-color: #FEE2E2 !important; color: #991B1B !important; }
-        .td-sold { background-color: #FEF2F2; font-weight: bold; color: #B91C1C; }
-        .en { font-size: 0.70em; font-style: italic; color: #9CA3AF; display: block; line-height: 1.2; margin-top: 1px; }
-        .th-bilingual { display: flex; flex-direction: column; align-items: center; gap: 1px; }
-        .th-es { font-size: 0.82rem; font-weight: 700; }
-        .th-en { font-size: 0.66rem; font-style: italic; color: #9CA3AF; }
-    </style>
-    ''',
-    unsafe_allow_html=True,
-)
+st.markdown('''
+<style>
+    [data-testid="stSidebarNav"] { display: none !important; }
+    header[data-testid="stHeader"] { display: none !important; }
+    .portal-header { padding: 0.1rem 0 0.55rem 0; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.55rem; }
+    .portal-header-left { display: flex; align-items: center; gap: 1.2rem; }
+    .portal-logo { height: 50px; width: auto; object-fit: contain; display: block; }
+    .portal-title { font-size: 0.96rem; font-weight: 500; color: #4B5563; line-height: 1.2; }
+    .portal-title strong { color: #111827; }
+    .portal-title-en { margin-top: 0.12rem; font-style: italic; color: #6B7280; font-size: 0.82rem; }
+    .ship-badge-container { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+    .ship-title { font-size: 1.5rem; font-weight: 900; color: #1E3A8A; letter-spacing: 0.05em; line-height: 1; }
+    .ship-subtitle { font-size: 0.75rem; font-weight: 600; color: #4B5563; text-transform: uppercase; margin-top: 0.2rem; letter-spacing: 0.1em; }
+    .ship-capacity { margin-top: 0.35rem; background-color: #EFF6FF; color: #1E3A8A; border: 1px solid #BFDBFE; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.72rem; font-weight: 700; display: inline-block; text-transform: uppercase; letter-spacing: 0.05em; }
+    section[data-testid="stMain"] > div:first-child { padding-top: 1rem !important; }
+    .deck-layout { background: #FFFFFF; padding: 1.2rem; border-radius: 12px; border: 1px solid #E5E7EB; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 1.5rem; }
+    .deck-row { display: flex; flex-wrap: nowrap; gap: 0.5rem; overflow-x: auto; padding: 0.2rem 0; }
+    .deck-row-style { justify-content: flex-start; }
+    .horizontal-corridor { height: 18px; margin: 0.4rem 0; background-image: linear-gradient(to right, #E5E7EB 50%, rgba(255,255,255,0) 0%); background-position: bottom; background-size: 15px 2px; background-repeat: repeat-x; display: flex; align-items: center; padding-left: 0.5rem; font-size: 0.6rem; font-weight: 700; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.15em; }
+    .cabina-box { min-width: 76px; max-width: 76px; height: 54px; border-radius: 6px; border: 2px solid transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; box-sizing: border-box; }
+    .cabina-num-destacado { font-size: 1.15rem; font-weight: 800; line-height: 1.1; }
+    .cabina-libre { background: #F3F4F6; border-color: #D1D5DB; color: #6B7280; border-style: solid; }
+    .cabina-reserva { border-color: #F59E0B !important; border-width: 2px !important; border-style: dashed !important; }
+    .cabina-vendida { border-color: #1F2937 !important; border-width: 3px !important; border-style: solid !important; }
+    .categoria-label { font-size: 0.95rem; font-weight: 800; color: #1E3A8A; margin: 1rem 0 0.6rem 0; background: #EFF6FF; padding: 0.4rem 0.8rem; border-radius: 6px; display: inline-block; border-left: 4px solid #3B82F6; }
+    .leyenda-estados { display: flex; gap: 1.2rem; align-items: center; margin-bottom: 0.8rem; flex-wrap: wrap; }
+    .leyenda-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; font-weight: 600; color: #4B5563; }
+    .leyenda-sub { font-size: 0.65rem; font-style: italic; color: #9CA3AF; }
+    .leyenda-box { width: 22px; height: 16px; border-radius: 3px; display: inline-block; }
+    .leyenda-libre { background: #F3F4F6; border: 2px solid #D1D5DB; }
+    .leyenda-reserva { background: #FFFBEB; border: 2px dashed #F59E0B; }
+    .leyenda-vendida { background: #F9FAFB; border: 3px solid #1F2937; }
+    .informe-tabla { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.85rem; }
+    .informe-tabla th { background-color: #F3F4F6; color: #374151; font-weight: 700; padding: 10px; border: 1px solid #E5E7EB; text-align: center; }
+    .informe-tabla td { padding: 8px 10px; border: 1px solid #E5E7EB; text-align: center; vertical-align: middle; }
+    .informe-tabla tr:hover { background-color: #F9FAFB; }
+    .color-block { width: 24px; height: 24px; border-radius: 4px; display: inline-block; border: 1px solid #D1D5DB; }
+    .th-sold { background-color: #FEE2E2 !important; color: #991B1B !important; }
+    .td-sold { background-color: #FEF2F2; font-weight: bold; color: #B91C1C; }
+    .en { font-size: 0.70em; font-style: italic; color: #9CA3AF; display: block; line-height: 1.2; margin-top: 1px; }
+    .th-bilingual { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+    .th-es { font-size: 0.82rem; font-weight: 700; }
+    .th-en { font-size: 0.66rem; font-style: italic; color: #9CA3AF; }
+</style>
+''', unsafe_allow_html=True)
 
-cabinas  = getcabinas()
+cabinas = getcabinas()
 agencias = getagencias()
-salidas  = getsalidas()
+salidas = getsalidas()
 
 if not cabinas:
-    st.error(f"No se encontraron cabinas para {BARCO} en el master. *No cabins found for {BARCO} in the master file.*")
+    st.error(f"No se encontraron cabinas para {BARCO}. / *No cabins found for {BARCO}.*")
     st.stop()
 
 try:
@@ -364,25 +298,22 @@ except Exception:
 
 todas_categorias = sorted(list(set([c[3] for c in cabinas])))
 
-st.markdown(
-    f'''
-    <div class="portal-header">
-        <div class="portal-header-left">
-            <img class="portal-logo" src="{LOGOURL}" alt="Logo">
-            <div>
-                <div class="portal-title">{SALUDO}, <strong>{DISPLAYUSER}</strong>. ¿Qué hacemos hoy?</div>
-                <div class="portal-title-en">{SALUDOEN}, <strong>{DISPLAYUSER}</strong>. What are we doing today?</div>
-            </div>
-        </div>
-        <div class="ship-badge-container">
-            <div class="ship-title">🚢 {NOMBRE_BARCO_LIMPIO}</div>
-            <div class="ship-subtitle">Panel de Control / Control Panel — {ANIO}</div>
-            <div class="ship-capacity">👥 Cap. Máx / Max Cap: {capacidad_total} Pax</div>
+st.markdown(f'''
+<div class="portal-header">
+    <div class="portal-header-left">
+        <img class="portal-logo" src="{LOGOURL}" alt="Logo">
+        <div>
+            <div class="portal-title">{SALUDO}, <strong>{DISPLAYUSER}</strong>. ¿Qué hacemos hoy?</div>
+            <div class="portal-title-en">{SALUDOEN}, <strong>{DISPLAYUSER}</strong>. What are we doing today?</div>
         </div>
     </div>
-    ''',
-    unsafe_allow_html=True,
-)
+    <div class="ship-badge-container">
+        <div class="ship-title">🚢 {NOMBRE_BARCO_LIMPIO}</div>
+        <div class="ship-subtitle">Panel de Control / Control Panel — {ANIO}</div>
+        <div class="ship-capacity">👥 Cap. Máx / Max Cap: {capacidad_total} Pax</div>
+    </div>
+</div>
+''', unsafe_allow_html=True)
 
 st.markdown("---")
 
@@ -400,13 +331,8 @@ def _modo(key):
     return key in modo
 
 if _modo("Inicio"):
-    st.markdown(
-        f"### 👋 Bienvenido al Panel del {NOMBRE_BARCO_LIMPIO} "
-        f"<span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Welcome to the {NOMBRE_BARCO_LIMPIO} Dashboard</span>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f"""
+    st.markdown(f"### 👋 Bienvenido al Panel del {NOMBRE_BARCO_LIMPIO} <span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Welcome to the {NOMBRE_BARCO_LIMPIO} Dashboard</span>", unsafe_allow_html=True)
+    st.markdown(f"""
         Has iniciado sesión como **{DISPLAYUSER}**.
         <span class='en'>You are logged in as **{DISPLAYUSER}**.</span>
 
@@ -414,29 +340,17 @@ if _modo("Inicio"):
         <span class='en'>From this panel you can manage the ship's occupancy.</span>
 
         ---
-
-        * **🗺️ Mapa de cabinas / Cabin Map** — Visualiza planos con validación cruzada por categoría.
-          <span class='en'>Visualise deck plans with cross-validation by category.</span>
-        * **📊 Ver Cupos / View Quotas** — Disponibilidad por Agencia, Categoría y Pasajeros.
-          <span class='en'>Availability by Agency, Category and Passengers.</span>
-        * **⚙️ Configurar Cupos / Configure Quotas** — Límites comerciales por categoría.
-          <span class='en'>Commercial limits per cabin category.</span>
-        * **📈 Informe / Report** — Cruce de CRM + CONF + GROUP.
-          <span class='en'>Cross-data from CRM + CONF + GROUP files.</span>
-        * **📅 Nueva salida / New Departure** — Nueva fecha operativa en {ANIO}.
-          <span class='en'>Create a new operational date for {ANIO}.</span>
-        """,
-        unsafe_allow_html=True,
-    )
+        * **🗺️ Mapa de cabinas / Cabin Map** — Visualiza planos con validación cruzada. <span class='en'>Deck plans with cross-validation by category.</span>
+        * **📊 Ver Cupos / View Quotas** — Disponibilidad por Agencia y Categoría. <span class='en'>Availability by Agency, Category and Passengers.</span>
+        * **⚙️ Configurar Cupos / Configure Quotas** — Límites comerciales por categoría. <span class='en'>Commercial limits per cabin category.</span>
+        * **📈 Informe / Report** — Cruce CRM + CONF + GROUP. <span class='en'>Cross-data from CRM + CONF + GROUP files.</span>
+        * **📅 Nueva salida / New Departure** — Nueva fecha operativa {ANIO}. <span class='en'>Create a new operational date for {ANIO}.</span>
+    """, unsafe_allow_html=True)
     st.markdown("---")
     st.page_link("app.py", label="🏠 Volver al Menú Principal / Back to Main Menu", icon="🏠")
 
 elif _modo("Nueva salida"):
-    st.markdown(
-        "#### 📅 Crear una nueva salida "
-        "<span style='font-size:0.65em;font-style:italic;color:#9CA3AF;'>Create a new departure</span>",
-        unsafe_allow_html=True,
-    )
+    st.markdown("#### 📅 Crear una nueva salida <span style='font-size:0.65em;font-style:italic;color:#9CA3AF;'>Create a new departure</span>", unsafe_allow_html=True)
     ddmm = st.text_input("Fecha de salida (DDMM) / *Departure date (DDMM)*", max_chars=4, placeholder="2705")
     if ddmm and len(ddmm) == 4:
         if ddmm in salidas:
@@ -446,7 +360,7 @@ elif _modo("Nueva salida"):
                 with st.spinner("Creando salida... / *Creating departure...*"):
                     crearsalida(ddmm, cabinas)
                     st.cache_data.clear()
-                    st.success(f"Salida {ddmm} creada correctamente en {ANIO}. / *Departure {ddmm} successfully created for {ANIO}.*")
+                    st.success(f"Salida {ddmm} creada en {ANIO}. / *Departure {ddmm} created for {ANIO}.*")
                     st.rerun()
 
 else:
@@ -458,73 +372,63 @@ else:
 
     if ddmm_sel:
         datos = getdatossalida(ddmm_sel)
-
         if not datos:
-            st.warning("La salida seleccionada no contiene datos. / *The selected departure contains no data.*")
+            st.warning("La salida no contiene datos. / *The departure contains no data.*")
             st.stop()
 
-        cabinas_por_ag_cat  = defaultdict(int)
-        pax_por_ag_cat      = defaultdict(int)
-        sold_por_ag_cat     = defaultdict(int)
+        cabinas_por_ag_cat = defaultdict(int)
+        pax_por_ag_cat = defaultdict(int)
+        sold_por_ag_cat = defaultdict(int)
         localizadores_por_agencia = defaultdict(list)
-        notas_por_agencia         = defaultdict(list)
-        agencias_activas          = set()
-        cupos_config              = {}
+        notas_por_agencia = defaultdict(list)
+        agencias_activas = set()
+        cupos_config = {}
 
         for d in datos:
-            cabina_id      = d.get("cabina", "").strip()
-            ag_en_fila     = d.get("agencia", "").strip()
-            estado_en_fila = d.get("estado", "LIBRE").strip()
-            loc_en_fila    = d.get("localizador", "").strip()
-            notes_en_fila  = d.get("notes", "").strip()
-            cat_en_fila    = next((c[3] for c in cabinas if c[1] == cabina_id), "").strip()
-
-            if ag_en_fila and cat_en_fila:
-                agencias_activas.add(ag_en_fila)
-                cabinas_por_ag_cat[(ag_en_fila, cat_en_fila)] += 1
-                if estado_en_fila == "VENDIDA":
-                    sold_por_ag_cat[(ag_en_fila, cat_en_fila)] += 1
+            cabina_id = d.get("cabina", "").strip()
+            ag = d.get("agencia", "").strip()
+            estado = d.get("estado", "LIBRE").strip()
+            loc = d.get("localizador", "").strip()
+            notes = d.get("notes", "").strip()
+            cat = next((c[3] for c in cabinas if c[1] == cabina_id), "").strip()
+            if ag and cat:
+                agencias_activas.add(ag)
+                cabinas_por_ag_cat[(ag, cat)] += 1
+                if estado == "VENDIDA":
+                    sold_por_ag_cat[(ag, cat)] += 1
                 try:
-                    pax_por_ag_cat[(ag_en_fila, cat_en_fila)] += int(d.get("pax", 0) or 0)
+                    pax_por_ag_cat[(ag, cat)] += int(d.get("pax", 0) or 0)
                 except ValueError:
                     pass
-                if loc_en_fila and loc_en_fila not in localizadores_por_agencia[ag_en_fila]:
-                    localizadores_por_agencia[ag_en_fila].append(loc_en_fila)
-                if notes_en_fila and notes_en_fila not in notas_por_agencia[ag_en_fila]:
-                    notas_por_agencia[ag_en_fila].append(notes_en_fila)
-
-            c_ag  = d.get("cupo_agencia", "").strip()
+                if loc and loc not in localizadores_por_agencia[ag]:
+                    localizadores_por_agencia[ag].append(loc)
+                if notes and notes not in notas_por_agencia[ag]:
+                    notas_por_agencia[ag].append(notes)
+            c_ag = d.get("cupo_agencia", "").strip()
             c_max = d.get("cupo_maximo", "").strip()
             if c_ag and "|" in c_ag and c_max and "," in c_max:
                 try:
                     ag_cupo, cat_cupo = [x.strip() for x in c_ag.split("|")]
-                    max_cab, max_px   = c_max.split(",")
+                    max_cab, max_px = c_max.split(",")
                     cupos_config[(ag_cupo, cat_cupo)] = {"cabinas": int(max_cab), "pax": int(max_px)}
                     agencias_activas.add(ag_cupo)
                 except ValueError:
                     pass
 
-if _modo("Informe"):
-            st.markdown(
-                f"### 📈 Informe Consolidado — Salida {ddmm_sel} "
-                f"<span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Consolidated Report — Departure {ddmm_sel}</span>",
-                unsafe_allow_html=True,
-            )
-            st.markdown(
-                f"Cruza **CRM ({CRMBARCO_NAME})** + ficheros **CONF** + **GROUP** de Drive. "
-                f"<span class='en'>Crosses CRM ({CRMBARCO_NAME}) + CONF + GROUP files from Drive.</span>",
-                unsafe_allow_html=True,
-            )
-            with st.spinner("Buscando ficheros CONF en Drive... / *Searching CONF files in Drive...*"):
-                archivo_conf_id, mensaje_rastreo = buscar_archivo_conf(ddmm_sel)
+        if _modo("Informe"):
+            st.markdown(f"### 📈 Informe Consolidado — Salida {ddmm_sel} <span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Consolidated Report — Departure {ddmm_sel}</span>", unsafe_allow_html=True)
+            st.markdown(f"Cruza **CRM ({CRMBARCO_NAME})** + **CONF** + **GROUP**. <span class='en'>Crosses CRM + CONF + GROUP files from Drive.</span>", unsafe_allow_html=True)
+
+            with st.spinner("Buscando CONF en Drive... / *Searching CONF files...*"):
+                archivo_conf_id, msg = buscar_archivo_conf(ddmm_sel)
                 if archivo_conf_id:
-                    st.success(mensaje_rastreo)
+                    st.success(msg)
                     datos_externos_conf = extraer_datos_archivo_conf(archivo_conf_id)
                 else:
-                    st.error(mensaje_rastreo)
+                    st.error(msg)
                     datos_externos_conf = {}
 
-            with st.spinner("Buscando ficheros GROUP en Drive... / *Searching GROUP files in Drive...*"):
+            with st.spinner("Buscando GROUP en Drive... / *Searching GROUP files...*"):
                 archivos_group = buscar_archivos_group(ddmm_sel)
                 datos_externos_group = {}
                 for ag_file in archivos_group:
@@ -535,110 +439,85 @@ if _modo("Informe"):
                         for cat, pax in ag_data["sold_por_cat"].items():
                             datos_externos_group[ag_cod]["sold_por_cat"][cat] += pax
                 if archivos_group:
-                    st.success(f"✅ {len(archivos_group)} archivo(s) GROUP encontrado(s). / *{len(archivos_group)} GROUP file(s) found.*")
+                    st.success(f"✅ {len(archivos_group)} archivo(s) GROUP. / *{len(archivos_group)} GROUP file(s) found.*")
                 else:
                     st.info("🔎 No se encontraron archivos GROUP. / *No GROUP files found.*")
 
-            todas_las_agencias_informe = agencias_activas.union(set(datos_externos_conf.keys())).union(set(datos_externos_group.keys()))
-
-            if not todas_las_agencias_informe:
-                st.info("No se registra actividad para esta salida. / *No activity recorded for this departure.*")
+            todas = agencias_activas.union(set(datos_externos_conf.keys())).union(set(datos_externos_group.keys()))
+            if not todas:
+                st.info("No se registra actividad. / *No activity recorded.*")
             else:
                 def th(es, en):
-                    return (f'<th><div class="th-bilingual"><span class="th-es">{es}</span><span class="th-en">{en}</span></div></th>')
-
-                html_tabla = '<table class="informe-tabla"><thead><tr>'
-                html_tabla += th("Origen", "Source")
-                html_tabla += th("Color", "Color")
-                html_tabla += th("Código Agencia", "Agency Code")
+                    return f'<th><div class="th-bilingual"><span class="th-es">{es}</span><span class="th-en">{en}</span></div></th>'
+                t = '<table class="informe-tabla"><thead><tr>'
+                t += th("Origen", "Source") + th("Color", "Color") + th("Código Agencia", "Agency Code")
                 for cat in todas_categorias:
-                    html_tabla += th(f"{cat} Cupo", f"{cat} Quota")
-                    html_tabla += th(f"{cat} PAX", f"{cat} PAX")
-                    html_tabla += f'<th class="th-sold"><div class="th-bilingual"><span class="th-es">{cat} SOLD</span><span class="th-en">Sold</span></div></th>'
-                html_tabla += th("Localizador", "Booking Ref")
-                html_tabla += th("Notes", "Notes")
-                html_tabla += '</tr></thead><tbody>'
+                    t += th(f"{cat} Cupo", f"{cat} Quota") + th(f"{cat} PAX", f"{cat} PAX")
+                    t += f'<th class="th-sold"><div class="th-bilingual"><span class="th-es">{cat} SOLD</span><span class="th-en">Sold</span></div></th>'
+                t += th("Localizador", "Booking Ref") + th("Notes", "Notes") + '</tr></thead><tbody>'
 
-                for ag_codigo in sorted(list(todas_las_agencias_informe)):
-                    color_hex = agencias.get(ag_codigo, "#F3F4F6")
-                    if ag_codigo in agencias_activas:
-                        html_tabla += '<tr>'
-                        html_tabla += '<td style="font-weight:bold;color:#1E3A8A;background:#F0F4FF;">CRM</td>'
-                        html_tabla += f'<td><span class="color-block" style="background-color:{color_hex};"></span></td>'
-                        html_tabla += f'<td style="font-weight:700;text-align:left;">{ag_codigo}</td>'
+                for ag_cod in sorted(list(todas)):
+                    color_hex = agencias.get(ag_cod, "#F3F4F6")
+                    if ag_cod in agencias_activas:
+                        t += '<tr>'
+                        t += '<td style="font-weight:bold;color:#1E3A8A;background:#F0F4FF;">CRM</td>'
+                        t += f'<td><span class="color-block" style="background-color:{color_hex};"></span></td>'
+                        t += f'<td style="font-weight:700;text-align:left;">{ag_cod}</td>'
                         for cat in todas_categorias:
-                            lims = cupos_config.get((ag_codigo, cat), {"cabinas": 0, "pax": 0})
-                            v_cupo = lims["cabinas"] if lims["cabinas"] > 0 else "-"
-                            v_pax  = lims["pax"]     if lims["pax"]     > 0 else "-"
-                            v_sold = sold_por_ag_cat.get((ag_codigo, cat), 0)
-                            html_tabla += f'<td>{v_cupo}</td><td>{v_pax}</td><td class="td-sold">{v_sold}</td>'
-                        locs  = ", ".join(localizadores_por_agencia[ag_codigo]) or "-"
-                        notes = " | ".join(notas_por_agencia[ag_codigo]) or "-"
-                        html_tabla += f'<td style="text-align:left;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{locs}">{locs}</td>'
-                        html_tabla += f'<td style="text-align:left;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{notes}">{notes}</td>'
-                        html_tabla += '</tr>'
-                    if ag_codigo in datos_externos_conf:
-                        conf_node = datos_externos_conf[ag_codigo]
-                        html_tabla += '<tr>'
-                        html_tabla += '<td style="font-weight:bold;color:#15803D;background:#F0FDF4;">CONF</td>'
-                        html_tabla += f'<td><span class="color-block" style="background-color:{color_hex};"></span></td>'
-                        html_tabla += f'<td style="font-weight:700;text-align:left;color:#15803D;">{ag_codigo}</td>'
+                            lims = cupos_config.get((ag_cod, cat), {"cabinas": 0, "pax": 0})
+                            v_c = lims["cabinas"] if lims["cabinas"] > 0 else "-"
+                            v_p = lims["pax"] if lims["pax"] > 0 else "-"
+                            v_s = sold_por_ag_cat.get((ag_cod, cat), 0)
+                            t += f'<td>{v_c}</td><td>{v_p}</td><td class="td-sold">{v_s}</td>'
+                        locs = ", ".join(localizadores_por_agencia[ag_cod]) or "-"
+                        nts = " | ".join(notas_por_agencia[ag_cod]) or "-"
+                        t += f'<td style="text-align:left;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{locs}">{locs}</td>'
+                        t += f'<td style="text-align:left;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{nts}">{nts}</td></tr>'
+                    if ag_cod in datos_externos_conf:
+                        cn = datos_externos_conf[ag_cod]
+                        t += '<tr><td style="font-weight:bold;color:#15803D;background:#F0FDF4;">CONF</td>'
+                        t += f'<td><span class="color-block" style="background-color:{color_hex};"></span></td>'
+                        t += f'<td style="font-weight:700;text-align:left;color:#15803D;">{ag_cod}</td>'
                         for cat in todas_categorias:
-                            v_sold = conf_node["sold_por_cat"].get(cat, 0)
-                            html_tabla += f'<td style="color:#6B7280;">-</td><td style="color:#6B7280;">-</td><td class="td-sold" style="background:#F0FDF4;color:#166534;">{v_sold}</td>'
-                        locs_c  = ", ".join(conf_node["localizadores"]) or "-"
-                        notes_c = " | ".join(conf_node["notes"]) or "-"
-                        html_tabla += f'<td style="text-align:left;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{locs_c}">{locs_c}</td>'
-                        html_tabla += f'<td style="text-align:left;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{notes_c}">{notes_c}</td>'
-                        html_tabla += '</tr>'
-                    if ag_codigo in datos_externos_group:
-                        group_node = datos_externos_group[ag_codigo]
-                        html_tabla += '<tr>'
-                        html_tabla += '<td style="font-weight:bold;color:#7C3AED;background:#F5F3FF;">GROUPS</td>'
-                        html_tabla += f'<td><span class="color-block" style="background-color:{color_hex};"></span></td>'
-                        html_tabla += f'<td style="font-weight:700;text-align:left;color:#7C3AED;">{ag_codigo}</td>'
+                            v_s = cn["sold_por_cat"].get(cat, 0)
+                            t += f'<td style="color:#6B7280;">-</td><td style="color:#6B7280;">-</td><td class="td-sold" style="background:#F0FDF4;color:#166534;">{v_s}</td>'
+                        locs_c = ", ".join(cn["localizadores"]) or "-"
+                        nts_c = " | ".join(cn["notes"]) or "-"
+                        t += f'<td style="text-align:left;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{locs_c}">{locs_c}</td>'
+                        t += f'<td style="text-align:left;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{nts_c}">{nts_c}</td></tr>'
+                    if ag_cod in datos_externos_group:
+                        gn = datos_externos_group[ag_cod]
+                        t += '<tr><td style="font-weight:bold;color:#7C3AED;background:#F5F3FF;">GROUPS</td>'
+                        t += f'<td><span class="color-block" style="background-color:{color_hex};"></span></td>'
+                        t += f'<td style="font-weight:700;text-align:left;color:#7C3AED;">{ag_cod}</td>'
                         for cat in todas_categorias:
-                            v_sold = group_node["sold_por_cat"].get(cat, 0)
-                            html_tabla += f'<td style="color:#6B7280;">-</td><td style="color:#6B7280;">-</td><td class="td-sold" style="background:#F5F3FF;color:#6D28D9;">{v_sold if v_sold else 0}</td>'
-                        html_tabla += '<td style="text-align:left;">-</td><td style="text-align:left;">-</td></tr>'
-
-                html_tabla += '</tbody></table>'
-                st.markdown(html_tabla, unsafe_allow_html=True)
+                            v_s = gn["sold_por_cat"].get(cat, 0)
+                            t += f'<td style="color:#6B7280;">-</td><td style="color:#6B7280;">-</td><td class="td-sold" style="background:#F5F3FF;color:#6D28D9;">{v_s if v_s else 0}</td>'
+                        t += '<td style="text-align:left;">-</td><td style="text-align:left;">-</td></tr>'
+                t += '</tbody></table>'
+                st.markdown(t, unsafe_allow_html=True)
 
         elif _modo("Ver Cupos"):
-            st.markdown(
-                f"### 📊 Cuadro de Mandos de Cupos — Salida {ddmm_sel} "
-                f"<span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Quota Dashboard — Departure {ddmm_sel}</span>",
-                unsafe_allow_html=True,
-            )
+            st.markdown(f"### 📊 Cuadro de Mandos de Cupos — Salida {ddmm_sel} <span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Quota Dashboard — Departure {ddmm_sel}</span>", unsafe_allow_html=True)
             if not cupos_config:
                 st.info("No hay cupos configurados. Ve a 'Configurar Cupos'. / *No quotas configured. Go to 'Configure Quotas'.*")
             else:
-                tabla_cupos = []
+                tabla = []
                 for (ag, cat), lims in cupos_config.items():
-                    cab_lim    = lims["cabinas"]
-                    pax_lim    = lims["pax"]
-                    cab_usadas = cabinas_por_ag_cat[(ag, cat)]
-                    pax_usados = pax_por_ag_cat[(ag, cat)]
-                    cab_disp   = cab_lim - cab_usadas
-                    pax_disp   = pax_lim - pax_usados
+                    cab_lim = lims["cabinas"]; pax_lim = lims["pax"]
+                    cab_usadas = cabinas_por_ag_cat[(ag, cat)]; pax_usados = pax_por_ag_cat[(ag, cat)]
+                    cab_disp = cab_lim - cab_usadas; pax_disp = pax_lim - pax_usados
                     status = "✅ OK" if cab_disp >= 0 and pax_disp >= 0 else "🚨 Excedido / Exceeded"
-                    tabla_cupos.append({
-                        "Agencia / Agency": ag, "Categoría / Category": cat,
+                    tabla.append({"Agencia / Agency": ag, "Categoría / Category": cat,
                         "Cupo Cabinas / Cabin Quota": cab_lim, "Cabinas Ocupadas / Used": cab_usadas,
                         "Cabinas Disp. / Avail.": cab_disp, "Cupo Pax / Pax Quota": pax_lim,
                         "Pax Registrados / Registered": pax_usados, "Pax Disp. / Avail.": pax_disp,
-                        "Estado / Status": status,
-                    })
-                if tabla_cupos:
-                    st.table(tabla_cupos)
+                        "Estado / Status": status})
+                if tabla:
+                    st.table(tabla)
 
         elif _modo("Configurar Cupos"):
-            st.markdown(
-                f"### ⚙️ Definir Límites por Categoría — Salida {ddmm_sel} "
-                f"<span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Set Limits by Category — Departure {ddmm_sel}</span>",
-                unsafe_allow_html=True,
-            )
+            st.markdown(f"### ⚙️ Definir Límites por Categoría — Salida {ddmm_sel} <span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Set Limits by Category — Departure {ddmm_sel}</span>", unsafe_allow_html=True)
             col_a, col_b = st.columns(2)
             with col_a:
                 agencia_cupo = st.selectbox("1. Selecciona la Agencia / *Select Agency*", list(agencias.keys()))
@@ -673,19 +552,14 @@ if _modo("Informe"):
                             excedido = (c_act > lims["cabinas"]) or (p_act > lims["pax"])
                             st.metric(label=f"{'🚨' if excedido else '💼'} {ag} ({cat})", value=f"Cab: {c_act}/{lims['cabinas']} | Pax: {p_act}/{lims['pax']}")
 
-            st.markdown(
-                f"### 🚢 Distribución de Cubiertas — Salida {ddmm_sel} "
-                f"<span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Deck Layout — Departure {ddmm_sel}</span>",
-                unsafe_allow_html=True,
-            )
-            st.markdown(
-                '''<div class="leyenda-estados">
+            st.markdown(f"### 🚢 Distribución de Cubiertas — Salida {ddmm_sel} <span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Deck Layout — Departure {ddmm_sel}</span>", unsafe_allow_html=True)
+            st.markdown('''
+                <div class="leyenda-estados">
                     <div class="leyenda-item"><span class="leyenda-box leyenda-libre"></span>Libre <span class="leyenda-sub">/ Free</span></div>
                     <div class="leyenda-item"><span class="leyenda-box leyenda-reserva"></span>Reserva (RVA) <span class="leyenda-sub">/ On Hold</span></div>
                     <div class="leyenda-item"><span class="leyenda-box leyenda-vendida"></span>Vendida (SOLD) <span class="leyenda-sub">/ Sold</span></div>
-                </div>''',
-                unsafe_allow_html=True,
-            )
+                </div>''', unsafe_allow_html=True)
+
             for categoria, nums in porcategoria.items():
                 st.markdown(f'<div class="categoria-label">📍 {categoria}</div>', unsafe_allow_html=True)
                 impares, pares = [], []
@@ -696,96 +570,73 @@ if _modo("Informe"):
                     except ValueError:
                         pares.append((999, num))
                 impares_ord = [x[1] for x in sorted(impares, key=lambda x: x[0], reverse=True)]
-                pares_ord   = [x[1] for x in sorted(pares,   key=lambda x: x[0], reverse=True)]
+                pares_ord = [x[1] for x in sorted(pares, key=lambda x: x[0], reverse=True)]
 
-def render_cabina(num):
-                    info     = estadocabina.get(num, {})
-                    agencia  = info.get("agencia", "").strip()
-                    estado   = info.get("estado",  "LIBRE").strip()
+                def render_cabina(num):
+                    info = estadocabina.get(num, {})
+                    ag = info.get("agencia", "").strip()
+                    est = info.get("estado", "LIBRE").strip()
                     cant_pax = info.get("pax", "")
-                    pax_txt  = (f" ({cant_pax}p)" if cant_pax and str(cant_pax).isdigit() and int(cant_pax) > 0 else "")
-                    color     = agencias.get(agencia, "#F3F4F6") if agencia else "#F3F4F6"
-                    textcolor = "#1F2937" if agencia else "#9CA3AF"
-                    if estado == "VENDIDA":
-                        bc, bw, bs, css = "#1F2937", "3px", "solid",  "cabina-box cabina-vendida"
-                    elif estado == "RESERVA":
+                    pax_txt = (f" ({cant_pax}p)" if cant_pax and str(cant_pax).isdigit() and int(cant_pax) > 0 else "")
+                    color = agencias.get(ag, "#F3F4F6") if ag else "#F3F4F6"
+                    textcolor = "#1F2937" if ag else "#9CA3AF"
+                    if est == "VENDIDA":
+                        bc, bw, bs, css = "#1F2937", "3px", "solid", "cabina-box cabina-vendida"
+                    elif est == "RESERVA":
                         bc, bw, bs, css = "#F59E0B", "2px", "dashed", "cabina-box cabina-reserva"
                     else:
-                        bc, bw, bs, css = "#D1D5DB", "2px", "solid",  "cabina-box cabina-libre"
-                    sublabel = f"{agencia}{pax_txt}" if agencia else ""
-                    return (
-                        f'<div class="{css}" style="background:{color};border-color:{bc};border-width:{bw};border-style:{bs};color:{textcolor};"'
-                        f'onclick="window.parent.postMessage({{type:\'streamlit:setComponentValue\',value:\'{num}\'}},\'*\')">'
-                        f'<span class="cabina-num-destacado">{num}</span>'
-                        f'<span style="font-size:0.58rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px;text-align:center;margin-top:2px;">{sublabel}</span>'
-                        f'</div>'
-                    )
+                        bc, bw, bs, css = "#D1D5DB", "2px", "solid", "cabina-box cabina-libre"
+                    sublabel = f"{ag}{pax_txt}" if ag else ""
+                    return (f'<div class="{css}" style="background:{color};border-color:{bc};border-width:{bw};border-style:{bs};color:{textcolor};"'
+                            f'onclick="window.parent.postMessage({{type:\'streamlit:setComponentValue\',value:\'{num}\'}},\'*\')">'
+                            f'<span class="cabina-num-destacado">{num}</span>'
+                            f'<span style="font-size:0.58rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px;text-align:center;margin-top:2px;">{sublabel}</span>'
+                            f'</div>')
 
-                html = '<div class="deck-layout">'
-                html += '<div class="deck-row deck-row-style">'
+                html = '<div class="deck-layout"><div class="deck-row deck-row-style">'
                 for num in impares_ord:
                     html += render_cabina(num)
-                html += '</div>'
-                html += '<div class="horizontal-corridor">Pasillo Central / Central Corridor</div>'
-                html += '<div class="deck-row deck-row-style">'
+                html += '</div><div class="horizontal-corridor">Pasillo Central / Central Corridor</div><div class="deck-row deck-row-style">'
                 for num in pares_ord:
                     html += render_cabina(num)
                 html += '</div></div>'
                 st.markdown(html, unsafe_allow_html=True)
 
             st.markdown("---")
-            st.markdown(
-                "#### ✏️ Asignar cabina "
-                "<span style='font-size:0.65em;font-style:italic;color:#9CA3AF;'>Assign cabin</span>",
-                unsafe_allow_html=True,
-            )
+            st.markdown("#### ✏️ Asignar cabina <span style='font-size:0.65em;font-style:italic;color:#9CA3AF;'>Assign cabin</span>", unsafe_allow_html=True)
             col1, col2 = st.columns([1, 2])
             with col1:
                 cabina_input = st.selectbox("Cabina / *Cabin*", sorted([c[1] for c in cabinas]))
 
             if cabina_input:
                 info = estadocabina.get(cabina_input, {})
-                agencia_actual_cabina = info.get("agencia", "").strip()
-                pax_actual_cabina     = int(info.get("pax", 0) or 0)
-                estado_actual_cabina  = info.get("estado", "LIBRE").strip()
-                if estado_actual_cabina not in ESTADOS_VALIDOS:
-                    estado_actual_cabina = "LIBRE"
-                cat_cabina_actual = next((c[3] for c in cabinas if c[1] == cabina_input), "").strip()
+                agencia_actual = info.get("agencia", "").strip()
+                pax_actual = int(info.get("pax", 0) or 0)
+                estado_actual = info.get("estado", "LIBRE").strip()
+                if estado_actual not in ESTADOS_VALIDOS:
+                    estado_actual = "LIBRE"
+                cat_actual = next((c[3] for c in cabinas if c[1] == cabina_input), "").strip()
 
                 permitir_guardado = True
-                if agencia_actual_cabina:
-                    estado_badge = "🟡 RESERVA / Hold" if estado_actual_cabina == "RESERVA" else "🔴 VENDIDA / Sold"
-                    st.error(
-                        f"⚠️ **¡Atención! / Warning!** La cabina {cabina_input} "
-                        f"({cat_cabina_actual}) ya está asignada a **{agencia_actual_cabina}** — {estado_badge}."
-                    )
-                    confirmar_sustitucion = st.checkbox(
-                        f"¿Sustituir la asignación de {agencia_actual_cabina}? / *Replace assignment for {agencia_actual_cabina}?*",
-                        value=False,
-                    )
-                    if not confirmar_sustitucion:
+                if agencia_actual:
+                    estado_badge = "🟡 RESERVA / Hold" if estado_actual == "RESERVA" else "🔴 VENDIDA / Sold"
+                    st.error(f"⚠️ **¡Atención! / Warning!** La cabina {cabina_input} ({cat_actual}) ya está asignada a **{agencia_actual}** — {estado_badge}.")
+                    if not st.checkbox(f"¿Sustituir la asignación de {agencia_actual}? / *Replace assignment for {agencia_actual}?*", value=False):
                         permitir_guardado = False
 
                 with col2:
-                    agencia_sel = st.selectbox(
-                        "Agencia / *Agency*",
-                        [""] + list(agencias.keys()),
-                        index=(list(agencias.keys()).index(info.get("agencia", "")) + 1
-                               if info.get("agencia") in agencias else 0),
-                        disabled=not permitir_guardado,
-                    )
+                    agencia_sel = st.selectbox("Agencia / *Agency*", [""] + list(agencias.keys()),
+                        index=(list(agencias.keys()).index(info.get("agencia", "")) + 1 if info.get("agencia") in agencias else 0),
+                        disabled=not permitir_guardado)
 
-                estado_sel = st.selectbox(
-                    "Estado de la reserva / *Booking status*",
-                    ESTADOS_VALIDOS,
-                    index=ESTADOS_VALIDOS.index(estado_actual_cabina),
+                estado_sel = st.selectbox("Estado de la reserva / *Booking status*", ESTADOS_VALIDOS,
+                    index=ESTADOS_VALIDOS.index(estado_actual),
                     format_func=lambda x: {
                         "LIBRE":   "⬜ LIBRE — Sin asignar / Unassigned",
                         "RESERVA": "🟡 RESERVA (RVA) — Bloqueada / On hold, pending confirmation",
                         "VENDIDA": "🔴 VENDIDA (SOLD) — Confirmada / Confirmed and closed",
                     }.get(x, x),
-                    disabled=not permitir_guardado,
-                )
+                    disabled=not permitir_guardado)
 
                 c1, c2, c3 = st.columns(3)
                 with c1:
@@ -795,17 +646,16 @@ def render_cabina(num):
                 with c3:
                     notas_input = st.text_input("Notas / *Notes*", value=info.get("notes", ""), disabled=not permitir_guardado)
 
-                if agencia_sel and (agencia_sel, cat_cabina_actual) in cupos_config:
-                    lims     = cupos_config[(agencia_sel, cat_cabina_actual)]
-                    max_cabs = lims["cabinas"]; max_pax = lims["pax"]
-                    cabs_act = cabinas_por_ag_cat[(agencia_sel, cat_cabina_actual)]
-                    pax_act  = pax_por_ag_cat[(agencia_sel, cat_cabina_actual)]
-                    if agencia_sel == agencia_actual_cabina:
-                        cabs_act -= 1; pax_act -= pax_actual_cabina
-                    if cabs_act + 1 > max_cabs:
-                        st.error(f"🚫 **Cupo de Cabinas Superado / Cabin Quota Exceeded** — {cat_cabina_actual}: {cabs_act}/{max_cabs}. / *{agencia_sel} has {cabs_act} of {max_cabs} authorised cabins.*")
-                    if pax_act + pax_input > max_pax:
-                        st.error(f"🚫 **Cupo de Pasajeros Superado / Passenger Quota Exceeded** — {cat_cabina_actual}: {pax_act + pax_input}/{max_pax}. / *Adding {pax_input} pax would exceed the limit of {max_pax}.*")
+                if agencia_sel and (agencia_sel, cat_actual) in cupos_config:
+                    lims = cupos_config[(agencia_sel, cat_actual)]
+                    cabs_act = cabinas_por_ag_cat[(agencia_sel, cat_actual)]
+                    pax_act = pax_por_ag_cat[(agencia_sel, cat_actual)]
+                    if agencia_sel == agencia_actual:
+                        cabs_act -= 1; pax_act -= pax_actual
+                    if cabs_act + 1 > lims["cabinas"]:
+                        st.error(f"🚫 **Cupo Cabinas Superado / Cabin Quota Exceeded** — {cat_actual}: {cabs_act}/{lims['cabinas']}. / *{agencia_sel} has {cabs_act} of {lims['cabinas']} authorised cabins.*")
+                    if pax_act + pax_input > lims["pax"]:
+                        st.error(f"🚫 **Cupo Pax Superado / Pax Quota Exceeded** — {cat_actual}: {pax_act + pax_input}/{lims['pax']}. / *Adding {pax_input} pax would exceed the limit of {lims['pax']}.*")
 
                 if st.button("💾 Guardar / *Save*", disabled=not permitir_guardado):
                     rowindex = next((i for i, d in enumerate(datos) if d.get("cabina") == cabina_input), None)
@@ -817,8 +667,5 @@ def render_cabina(num):
                             st.success(f"Cabina {cabina_input} guardada como **{estado_final}**. / *Cabin {cabina_input} saved as **{estado_final}**.*")
                             st.rerun()
 
-# ============================================================
-# PIE DE PÁGINA / FOOTER
-# ============================================================
 st.markdown("---")
 st.page_link("app.py", label="🏠 Volver al Menú Principal / Back to Main Menu", icon="🏠")
