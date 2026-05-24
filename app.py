@@ -1801,7 +1801,11 @@ row2_cards = [
         "action": lambda: openpanel("nuevobarco"),
     },
 ]
+st.markdown("---")
 
+row1_cols = st.columns([1.1, 1.1, 1.1, 1.1, 1.1, 1.1], gap="medium")
+for col, card in zip(row1_cols, row1_cards):
+    renderactioncard(col, card)
 row1_cols = st.columns([1.1, 1.1, 1.1, 1.1, 1.1, 1.1], gap="medium")
 for col, card in zip(row1_cols, row1_cards):
     renderactioncard(col, card)
