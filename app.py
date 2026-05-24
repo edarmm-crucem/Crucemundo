@@ -1802,7 +1802,7 @@ row2_cards = [
     },
 ]
 st.markdown(
-    '<hr style="border: none; border-top: 5px solid #E5E7EB; margin: 0.5rem 0;">',
+    '<hr style="border: none; border-top: 5px solid #6B7280; margin: 0.5rem 0;">',
     unsafe_allow_html=True,
 )
 
