@@ -1495,6 +1495,24 @@ st.markdown(
         height: auto !important;
         min-height: 0 !important;
     }
+
+    .crm-btn {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        padding: 0.38rem 1rem; border-radius: 999px;
+        background: #1E3A8A; color: #FFFFFF !important;
+        font-size: 0.75rem; font-weight: 900;
+        font-family: "DM Sans", sans-serif;
+        letter-spacing: 0.06em; text-transform: uppercase;
+        text-decoration: none; white-space: nowrap;
+        border: 2px solid #1E3A8A;
+        box-shadow: 0 2px 8px rgba(30,58,138,0.18);
+        transition: filter 0.15s ease, transform 0.15s ease;
+    }
+    .crm-btn:hover {
+        filter: brightness(1.12);
+        transform: translateY(-1px);
+    }
+        
     </style>
     """,
     unsafe_allow_html=True,
@@ -1609,17 +1627,17 @@ st.markdown(
     unsafe_allow_html=True,
     )
 
-st.markdown(
-    '''
-    <div class="section-head-row">
-        <span class="web-chip-blue">ACCIONES</span>
-    </div>
-    ''',
-    unsafe_allow_html=True,
-)
-
-if st.button("MS_VISTA_RIO_2026_CRM"):
-    st.switch_page("pages/MS_VISTA_RIO_2026_CRM.py")
+    st.markdown(
+        '''
+        <div class="section-head-row">
+            <span class="web-chip-blue">ACCIONES</span>
+            <a class="crm-btn" href="/MS_VISTA_RIO_2026_CRM" target="_self">
+                🚢 MS Vista Rio 2026 — CRM
+            </a>
+        </div>
+        ''',
+        unsafe_allow_html=True,
+    )
 
 # st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
