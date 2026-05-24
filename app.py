@@ -1628,17 +1628,42 @@ st.markdown(
        )
 
 st.markdown(
-'''
-<div class="section-head-row">
-<span class="web-chip-blue">ACCIONES CRM</span>
-<a class="crm-btn" href="/MS_VISTA_RIO_2026_CRM" target="_self">
-🚢 MS Vista Rio 2026 — CRM
-</a>
-</div>
-''',
-unsafe_allow_html=True,
+    '''
+    <div class="section-head-row">
+        <span class="web-chip-blue">ACCIONES</span>
+    </div>
+    ''',
+    unsafe_allow_html=True,
 )
 
+st.markdown(
+    '''
+    <style>
+    div[data-testid="stButton"][id="crm_nav"] button {
+        background: #FDE8F0 !important;
+        color: #1F2937 !important;
+        border: 1px solid #E8789A !important;
+        border-radius: 999px !important;
+        font-size: 0.66rem !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.06em !important;
+        text-transform: uppercase !important;
+        padding: 0.34rem 0.82rem !important;
+        line-height: 1 !important;
+        box-shadow: 0 2px 8px rgba(15,23,42,0.06) !important;
+        min-height: 0 !important;
+        height: auto !important;
+    }
+    </style>
+    ''',
+    unsafe_allow_html=True,
+)
+if st.button("🚢 MS Vista Rio 2026 — CRM", key="crm_nav"):
+    st.switch_page("pages/MS_VISTA_RIO_2026_CRM.py")
+
+
+if st.button("🚢 MS Vista Rio 2026 — CRM", key="crm_nav"):
+    st.switch_page("pages/MS_VISTA_RIO_2026_CRM.py")
 
 # ============================================================
 # BLOQUE 19: TARJETAS DE ACCIÓN — DEFINICIÓN Y RENDER
