@@ -1661,10 +1661,6 @@ st.markdown(
 if st.button("🚢 MS Vista Rio 2026 — CRM", key="crm_nav"):
     st.switch_page("pages/MS_VISTA_RIO_2026_CRM.py")
 
-
-if st.button("🚢 MS Vista Rio 2026 — CRM", key="crm_nav"):
-    st.switch_page("pages/MS_VISTA_RIO_2026_CRM.py")
-
 # ============================================================
 # BLOQUE 19: TARJETAS DE ACCIÓN — DEFINICIÓN Y RENDER
 # ============================================================
