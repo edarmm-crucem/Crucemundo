@@ -1499,13 +1499,13 @@ st.markdown(
     .crm-btn {
         display: inline-flex; align-items: center; gap: 0.4rem;
         padding: 0.38rem 1rem; border-radius: 999px;
-        background: #1E3A8A; color: #FFFFFF !important;
-        font-size: 0.75rem; font-weight: 900;
+        background: #3B5EA6; color: #FFFFFF !important;
+        font-size: 0.66rem; font-weight: 900;
         font-family: "DM Sans", sans-serif;
         letter-spacing: 0.06em; text-transform: uppercase;
         text-decoration: none; white-space: nowrap;
-        border: 2px solid #1E3A8A;
-        box-shadow: 0 2px 8px rgba(30,58,138,0.18);
+        border: 2px solid #3B5EA6;
+        box-shadow: 0 2px 8px rgba(59,94,166,0.15);
         transition: filter 0.15s ease, transform 0.15s ease;
     }
     .crm-btn:hover {
