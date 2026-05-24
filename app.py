@@ -1630,7 +1630,7 @@ st.markdown(
 st.markdown(
     '''
     <div class="section-head-row">
-        <span class="web-chip-blue">ACCIONES</span>
+        <span class="web-chip-blue">ACCIONES CRM</span>
     </div>
     ''',
     unsafe_allow_html=True,
@@ -1659,7 +1659,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-if st.button("🚢 MS Vista Rio 2026 — CRM", key="crm_nav"):
+if st.button("MS Vista Rio 2026 CRM", key="crm_nav"):
     st.switch_page("pages/MS_VISTA_RIO_2026_CRM.py")
 # st.markdown(f'<div class="user-pill">{DISPLAYUSER} · {USEREMAIL}</div>', unsafe_allow_html=True)
 
