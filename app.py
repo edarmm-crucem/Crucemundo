@@ -1632,7 +1632,7 @@ st.markdown(
     <div class="section-head-row">
         <span class="web-chip-blue">ACCIONES</span>
         <a class="crm-btn" href="/MS_VISTA_RIO_2026_CRM" target="_self">
-            🚢 MS Vista Rio 2026 — CRM
+            MS Vista Rio 2026 CRM
         </a>
     </div>
     ''',
