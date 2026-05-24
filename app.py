@@ -1806,9 +1806,6 @@ st.markdown("---")
 row1_cols = st.columns([1.1, 1.1, 1.1, 1.1, 1.1, 1.1], gap="medium")
 for col, card in zip(row1_cols, row1_cards):
     renderactioncard(col, card)
-row1_cols = st.columns([1.1, 1.1, 1.1, 1.1, 1.1, 1.1], gap="medium")
-for col, card in zip(row1_cols, row1_cards):
-    renderactioncard(col, card)
 
 row2_cols = st.columns([1.1, 1.1, 1.1, 1.1, 1.1, 1.1], gap="medium")
 for col, card in zip(row2_cols, row2_cards):
