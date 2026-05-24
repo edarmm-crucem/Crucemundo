@@ -1801,7 +1801,10 @@ row2_cards = [
         "action": lambda: openpanel("nuevobarco"),
     },
 ]
-st.markdown("---")
+st.markdown(
+    '<hr style="border: none; border-top: 2px solid #E5E7EB; margin: 0.5rem 0;">',
+    unsafe_allow_html=True,
+)
 
 row1_cols = st.columns([1.1, 1.1, 1.1, 1.1, 1.1, 1.1], gap="medium")
 for col, card in zip(row1_cols, row1_cards):
