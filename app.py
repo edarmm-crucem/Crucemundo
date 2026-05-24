@@ -1627,17 +1627,17 @@ st.markdown(
     unsafe_allow_html=True,
        )
 
-      st.markdown(
-        '''
-        <div class="section-head-row">
-            <span class="web-chip-blue">ACCIONES CRM</span>
-            <a class="crm-btn" href="/MS_VISTA_RIO_2026_CRM" target="_self">
-                🚢 MS Vista Rio 2026 — CRM
-            </a>
-        </div>
-        ''',
-        unsafe_allow_html=True,
-    )
+st.markdown(
+'''
+<div class="section-head-row">
+<span class="web-chip-blue">ACCIONES CRM</span>
+<a class="crm-btn" href="/MS_VISTA_RIO_2026_CRM" target="_self">
+🚢 MS Vista Rio 2026 — CRM
+</a>
+</div>
+''',
+unsafe_allow_html=True,
+)
 
 
 # ============================================================
