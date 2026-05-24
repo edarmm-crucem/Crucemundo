@@ -1496,23 +1496,23 @@ st.markdown(
         min-height: 0 !important;
     }
 
-    .crm-btn {
+        .crm-btn {
         display: inline-flex; align-items: center; gap: 0.4rem;
-        padding: 0.38rem 1rem; border-radius: 999px;
-        background: #E0ECFF; color: #1E4FBF !important;
-        font-size: 0.66rem; font-weight: 900;
+        padding: 0.34rem 0.82rem; border-radius: 999px;
+        background: #FDE8F0; color: #1F2937 !important;
+        font-size: 0.66rem; font-weight: 800;
         font-family: "DM Sans", sans-serif;
         letter-spacing: 0.06em; text-transform: uppercase;
         text-decoration: none; white-space: nowrap;
-        border: 1px solid #BFD4FF;
+        border: 1px solid #E8789A;
         box-shadow: 0 2px 8px rgba(15,23,42,0.06);
+        line-height: 1;
         transition: filter 0.15s ease, transform 0.15s ease;
     }
     .crm-btn:hover {
         filter: brightness(0.96);
         transform: translateY(-1px);
     }
-        
     </style>
     """,
     unsafe_allow_html=True,
