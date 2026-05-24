@@ -11,6 +11,33 @@ st.set_page_config(page_title="MS VISTA RIO", page_icon="favicon1", layout="wide
 if not st.session_state.get("authenticated"):
     st.markdown("""
         <style>
+        def now_str():
+    return now().strftime("%Y-%m-%d %H:%M:%S")
+
+def safeaudit_crm(action, detail=""):
+    try:
+        service = getsheetsservice()
+        useremail = st.session_state.get("useremail", "")
+        displayname = st.session_state.get("displayname", "")
+        values = [[
+            now_str(),
+            useremail,
+            displayname,
+            "CRM_VISTA_RIO",
+            action,
+            detail,
+        ]]
+        service.spreadsheets().values().append(
+            spreadsheetId=BOATREGISTRYSHEETID,
+            range="CRM_LOG!A:F",
+            valueInputOption="USER_ENTERED",
+            insertDataOption="INSERT_ROWS",
+            body={"values": values},
+        ).execute()
+    except Exception:
+        pass
+
+        
         [data-testid="stSidebarNav"] { display: none !important; }
         header[data-testid="stHeader"] { display: none !important; }
         .auth-warn { background: #FEF3C7; border: 1.5px solid #FCD34D; border-radius: 12px; padding: 1rem 1.2rem; margin: 2rem auto; max-width: 480px; font-family: sans-serif; }
