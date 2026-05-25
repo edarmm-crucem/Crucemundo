@@ -6,38 +6,17 @@ from googleapiclient.discovery import build
 from google.oauth2 import service_account
 from collections import defaultdict
 
+# ============================================================
+# BLOQUE 1: PAGE CONFIG
+# ============================================================
 st.set_page_config(page_title="MS VISTA RIO", page_icon="favicon1", layout="wide", initial_sidebar_state="collapsed")
 
+# ============================================================
+# BLOQUE 2: AUTH
+# ============================================================
 if not st.session_state.get("authenticated"):
     st.markdown("""
         <style>
-        def now_str():
-    return now().strftime("%Y-%m-%d %H:%M:%S")
-
-def safeaudit_crm(action, detail=""):
-    try:
-        service = getsheetsservice()
-        useremail = st.session_state.get("useremail", "")
-        displayname = st.session_state.get("displayname", "")
-        values = [[
-            now_str(),
-            useremail,
-            displayname,
-            "CRM_VISTA_RIO",
-            action,
-            detail,
-        ]]
-        service.spreadsheets().values().append(
-            spreadsheetId=BOATREGISTRYSHEETID,
-            range="CRM_LOG!A:F",
-            valueInputOption="USER_ENTERED",
-            insertDataOption="INSERT_ROWS",
-            body={"values": values},
-        ).execute()
-    except Exception:
-        pass
-
-        
         [data-testid="stSidebarNav"] { display: none !important; }
         header[data-testid="stHeader"] { display: none !important; }
         .auth-warn { background: #FEF3C7; border: 1.5px solid #FCD34D; border-radius: 12px; padding: 1rem 1.2rem; margin: 2rem auto; max-width: 480px; font-family: sans-serif; }
@@ -51,6 +30,9 @@ def safeaudit_crm(action, detail=""):
         </div>""", unsafe_allow_html=True)
     st.stop()
 
+# ============================================================
+# BLOQUE 3: CONSTANTES
+# ============================================================
 BARCO = "MS_VISTA_RIO"
 ANIO = "2026"
 CRMBARCO_NAME = f"{BARCO}_{ANIO}_CRM"
@@ -61,6 +43,10 @@ LOGOURL = f"https://lh3.googleusercontent.com/d/{LOGOID}"
 ROOT_GROUPS = "1MMNH3y1E3jJIp6uUnxbwV0toAtdr2F2M"
 NOMBRE_BARCO_LIMPIO = BARCO.replace("_", " ")
 ESTADOS_VALIDOS = ["LIBRE", "RESERVA", "VENDIDA"]
+
+# ============================================================
+# BLOQUE 4: UTILIDADES
+# ============================================================
 TIMEZONE = pytz.timezone("Europe/Madrid")
 
 def now():
@@ -76,6 +62,9 @@ DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Sin usuario / 
 SALUDO = getsaludo("es")
 SALUDOEN = getsaludo("en")
 
+# ============================================================
+# BLOQUE 5: GOOGLE SERVICES
+# ============================================================
 @st.cache_resource
 def getgooglecreds():
     return service_account.Credentials.from_service_account_info(
@@ -89,6 +78,9 @@ def getsheetsservice():
 def getdriveservice():
     return build("drive", "v3", credentials=getgooglecreds())
 
+# ============================================================
+# BLOQUE 6: BÚSQUEDA CONF EN DRIVE
+# ============================================================
 def buscar_archivo_conf(ddmm):
     drive_service = getdriveservice()
     aa = ANIO[2:]; mm = ddmm[2:4]; dd = ddmm[0:2]
@@ -149,6 +141,9 @@ def extraer_datos_archivo_conf(spreadsheet_id):
             continue
     return {ag: {"sold_por_cat": dict(info["sold_por_cat"]), "localizadores": list(info["localizadores"]), "notes": list(info["notes"])} for ag, info in datos.items()}
 
+# ============================================================
+# BLOQUE 7: BÚSQUEDA GROUP EN DRIVE
+# ============================================================
 def buscar_archivos_group(ddmm):
     drive_service = getdriveservice()
     aa = ANIO[2:]; mm = ddmm[2:4]; dd = ddmm[0:2]
@@ -204,6 +199,9 @@ def extraer_datos_archivo_group(spreadsheet_id):
         datos_group[agencia]["sold_por_cat"][category] += int(m.group(1))
     return {ag: {"sold_por_cat": dict(info["sold_por_cat"]), "localizadores": [], "notes": []} for ag, info in datos_group.items()}
 
+# ============================================================
+# BLOQUE 8: FUNCIONES CRM SHEETS
+# ============================================================
 @st.cache_data(ttl=60)
 def getcabinas():
     service = getsheetsservice()
@@ -264,6 +262,9 @@ def guardar_cupo_sheets(ddmm, datos_completos, clave_cupo, limites_str):
         fila_destino = len(datos_completos) + 2
     service.spreadsheets().values().update(spreadsheetId=CRMBARCO, range=f"{ddmm}!H{fila_destino}:I{fila_destino}", valueInputOption="RAW", body={"values": [[clave_cupo, limites_str]]}).execute()
 
+# ============================================================
+# BLOQUE 9: CSS
+# ============================================================
 st.markdown('''
 <style>
     [data-testid="stSidebarNav"] { display: none !important; }
@@ -310,6 +311,9 @@ st.markdown('''
 </style>
 ''', unsafe_allow_html=True)
 
+# ============================================================
+# BLOQUE 10: CARGA DE DATOS BASE
+# ============================================================
 cabinas = getcabinas()
 agencias = getagencias()
 salidas = getsalidas()
@@ -325,6 +329,9 @@ except Exception:
 
 todas_categorias = sorted(list(set([c[3] for c in cabinas])))
 
+# ============================================================
+# BLOQUE 11: CABECERA VISUAL
+# ============================================================
 st.markdown(f'''
 <div class="portal-header">
     <div class="portal-header-left">
@@ -344,6 +351,9 @@ st.markdown(f'''
 
 st.markdown("---")
 
+# ============================================================
+# BLOQUE 12: SELECTOR DE MODO
+# ============================================================
 opciones_modo = [
     "🗺️ Mapa de cabinas / Cabin Map",
     "📊 Ver Cupos / View Quotas",
@@ -357,6 +367,9 @@ modo = st.radio("¿Qué quieres hacer? / *What would you like to do?*", opciones
 def _modo(key):
     return key in modo
 
+# ============================================================
+# BLOQUE 13: MODO INICIO
+# ============================================================
 if _modo("Inicio"):
     st.markdown(f"### 👋 Bienvenido al Panel del {NOMBRE_BARCO_LIMPIO} <span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Welcome to the {NOMBRE_BARCO_LIMPIO} Dashboard</span>", unsafe_allow_html=True)
     st.markdown(f"""
@@ -376,6 +389,9 @@ if _modo("Inicio"):
     st.markdown("---")
     st.page_link("app.py", label="🏠 Volver al Menú Principal / Back to Main Menu", icon="🏠")
 
+# ============================================================
+# BLOQUE 14: MODO NUEVA SALIDA
+# ============================================================
 elif _modo("Nueva salida"):
     st.markdown("#### 📅 Crear una nueva salida <span style='font-size:0.65em;font-style:italic;color:#9CA3AF;'>Create a new departure</span>", unsafe_allow_html=True)
     ddmm = st.text_input("Fecha de salida (DDMM) / *Departure date (DDMM)*", max_chars=4, placeholder="2705")
@@ -390,6 +406,9 @@ elif _modo("Nueva salida"):
                     st.success(f"Salida {ddmm} creada en {ANIO}. / *Departure {ddmm} created for {ANIO}.*")
                     st.rerun()
 
+# ============================================================
+# BLOQUE 15: MODOS CON SALIDA SELECCIONADA
+# ============================================================
 else:
     if not salidas:
         st.info("No hay salidas creadas todavía. / *No departures have been created yet.*")
@@ -442,6 +461,9 @@ else:
                 except ValueError:
                     pass
 
+        # ============================================================
+        # BLOQUE 16: MODO INFORME
+        # ============================================================
         if _modo("Informe"):
             st.markdown(f"### 📈 Informe Consolidado — Salida {ddmm_sel} <span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Consolidated Report — Departure {ddmm_sel}</span>", unsafe_allow_html=True)
             st.markdown(f"Cruza **CRM ({CRMBARCO_NAME})** + **CONF** + **GROUP**. <span class='en'>Crosses CRM + CONF + GROUP files from Drive.</span>", unsafe_allow_html=True)
@@ -524,6 +546,9 @@ else:
                 t += '</tbody></table>'
                 st.markdown(t, unsafe_allow_html=True)
 
+        # ============================================================
+        # BLOQUE 17: MODO VER CUPOS
+        # ============================================================
         elif _modo("Ver Cupos"):
             st.markdown(f"### 📊 Cuadro de Mandos de Cupos — Salida {ddmm_sel} <span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Quota Dashboard — Departure {ddmm_sel}</span>", unsafe_allow_html=True)
             if not cupos_config:
@@ -543,6 +568,9 @@ else:
                 if tabla:
                     st.table(tabla)
 
+        # ============================================================
+        # BLOQUE 18: MODO CONFIGURAR CUPOS
+        # ============================================================
         elif _modo("Configurar Cupos"):
             st.markdown(f"### ⚙️ Definir Límites por Categoría — Salida {ddmm_sel} <span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Set Limits by Category — Departure {ddmm_sel}</span>", unsafe_allow_html=True)
             col_a, col_b = st.columns(2)
@@ -564,6 +592,9 @@ else:
                     st.success(f"Límites guardados: {agencia_cupo} / {categoria_cupo} — {limite_cabinas} Cab · {limite_pax} Pax. / *Limits saved.*")
                     st.rerun()
 
+        # ============================================================
+        # BLOQUE 19: MODO MAPA DE CABINAS
+        # ============================================================
         elif _modo("Mapa de cabinas"):
             estadocabina = {d.get("cabina", ""): d for d in datos}
             porcategoria = defaultdict(list)
@@ -629,6 +660,9 @@ else:
                 html += '</div></div>'
                 st.markdown(html, unsafe_allow_html=True)
 
+            # ============================================================
+            # BLOQUE 20: PANEL ASIGNAR CABINA
+            # ============================================================
             st.markdown("---")
             st.markdown("#### ✏️ Asignar cabina <span style='font-size:0.65em;font-style:italic;color:#9CA3AF;'>Assign cabin</span>", unsafe_allow_html=True)
             col1, col2 = st.columns([1, 2])
@@ -694,5 +728,8 @@ else:
                             st.success(f"Cabina {cabina_input} guardada como **{estado_final}**. / *Cabin {cabina_input} saved as **{estado_final}**.*")
                             st.rerun()
 
+# ============================================================
+# BLOQUE 21: PIE DE PÁGINA
+# ============================================================
 st.markdown("---")
 st.page_link("app.py", label="🏠 Volver al Menú Principal / Back to Main Menu", icon="🏠")
