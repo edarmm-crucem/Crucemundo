@@ -1692,9 +1692,9 @@ row1_cards = [
     {
         "cardclass": "card-es",
         "icon": "📘",
-        "titlees": "Nueva Confirmación",
-        "titleen": "New Confirmation",
-        "buttonlabel": "Crear Sesión",
+        "titlees": "Nueva Confirmación FIT",
+        "titleen": "New FIT Confirmation",
+        "buttonlabel": "Crear Sesión FIT",
         "key": "btncreares",
         "action": lambda: iniciarproceso("es", TEMPLATEIDES, "MASTER", "Estado del Proceso / Process Status / Crear Sesión MASTERCONFIRMATION"),
     },
