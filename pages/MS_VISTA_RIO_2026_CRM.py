@@ -466,9 +466,9 @@ else:
         # ============================================================
         if _modo("Informe"):
             st.markdown(f"### 📈 Informe Consolidado — Salida {ddmm_sel} <span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Consolidated Report — Departure {ddmm_sel}</span>", unsafe_allow_html=True)
-            st.markdown(f"Cruza **CRM ({CRMBARCO_NAME})** + **CONF** + **GROUP**. <span class='en'>Crosses CRM + CONF + GROUP files from Drive.</span>", unsafe_allow_html=True)
+            st.markdown(f"Cruza **CRM ({CRMBARCO_NAME})** + **FIT** + **GROUP**. <span class='en'>Crosses CRM + FIT + GROUP files from Drive.</span>", unsafe_allow_html=True)
 
-            with st.spinner("Buscando CONF en Drive... / *Searching CONF files...*"):
+            with st.spinner("Buscando FIT en Drive... / *Searching FIT files...*"):
                 archivo_conf_id, msg = buscar_archivo_conf(ddmm_sel)
                 if archivo_conf_id:
                     st.success(msg)
@@ -524,7 +524,7 @@ else:
                         t += f'<td style="text-align:left;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{nts}">{nts}</td></tr>'
                     if ag_cod in datos_externos_conf:
                         cn = datos_externos_conf[ag_cod]
-                        t += '<tr><td style="font-weight:bold;color:#15803D;background:#F0FDF4;">CONF</td>'
+                        t += '<tr><td style="font-weight:bold;color:#15803D;background:#F0FDF4;">FIT</td>'
                         t += f'<td><span class="color-block" style="background-color:{color_hex};"></span></td>'
                         t += f'<td style="font-weight:700;text-align:left;color:#15803D;">{ag_cod}</td>'
                         for cat in todas_categorias:
