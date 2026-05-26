@@ -90,7 +90,7 @@ def buscar_archivo_conf(ddmm):
         res = drive_service.files().list(q=q, fields="files(id, name)", supportsAllDrives=True, includeItemsFromAllDrives=True, pageSize=1).execute()
         archivos = res.get("files", [])
         if archivos:
-            return archivos[0]["id"], f"✅ Archivo CONF localizado: `{archivos[0]['name']}`"
+            return archivos[0]["id"], f"✅ Archivo FIT localizado: `{archivos[0]['name']}`"
         return None, f"🔎 No se encontró `{nombre}`. / *File `{nombre}` not found.*"
     except Exception as e:
         return None, f"💥 Error con Google Drive API: {str(e)}"
