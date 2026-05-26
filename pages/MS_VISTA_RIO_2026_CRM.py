@@ -9,7 +9,7 @@ from collections import defaultdict
 # ============================================================
 # BLOQUE 1: PAGE CONFIG
 # ============================================================
-st.set_page_config(page_title="MS VISTA RIO", page_icon="favicon1", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="MS VISTA RIO", page_icon="favicon1.png", layout="wide", initial_sidebar_state="collapsed")
 
 # ============================================================
 # BLOQUE 2: AUTH
