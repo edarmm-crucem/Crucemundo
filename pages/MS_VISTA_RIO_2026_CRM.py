@@ -607,8 +607,13 @@ else:
                 <tbody>
             """
 
+            cabinas_html = ""
+            localizadores_html = ""
+            pax_html = ""
+            categorias_html = ""
+            
             for d in datos_filtrados:
-
+            
                 cabina = d.get("cabina", "").strip()
                 localizador = d.get("localizador", "").strip() or "-"
                 pax = d.get("pax", "").strip() or "-"
@@ -616,20 +621,20 @@ else:
                     (c[3] for c in cabinas if c[1] == cabina),
                     "-"
                 )
-
-                tabla += f"""
-                <tr>
-                    <td style="font-weight:700;">{cabina}</td>
-                    <td>{localizador}</td>
-                    <td>{pax}</td>
-                    <td>{categoria}</td>
-                </tr>
-                """
-
-            tabla += """
-                </tbody>
-            </table>
-            """
+            
+                cabinas_html += f"{cabina}<br>"
+                localizadores_html += f"{localizador}<br>"
+                pax_html += f"{pax}<br>"
+                categorias_html += f"{categoria}<br>"
+            
+            tabla += f"""
+            <tr>
+                <td style="font-weight:700;">{cabinas_html}</td>
+                <td>{localizadores_html}</td>
+                <td>{pax_html}</td>
+                <td>{categorias_html}</td>
+            </tr>
+"""
 
             st.markdown(tabla, unsafe_allow_html=True)
 
