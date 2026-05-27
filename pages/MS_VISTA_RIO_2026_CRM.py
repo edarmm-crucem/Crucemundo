@@ -465,7 +465,7 @@ else:
         # ============================================================
         # BLOQUE 16: MODO INFORME
         # ============================================================
-        if _modo("Informe"):
+        if modo == "📈 Informe / Report":
             st.markdown(f"### 📈 Informe Consolidado — Salida {ddmm_sel} <span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Consolidated Report — Departure {ddmm_sel}</span>", unsafe_allow_html=True)
             st.markdown(f"Cruza **CRM ({CRMBARCO_NAME})** + **FIT** + **GROUP**. <span class='en'>Crosses CRM + FIT + GROUP files from Drive.</span>", unsafe_allow_html=True)
 
@@ -551,7 +551,7 @@ else:
                 # ============================================================
         # BLOQUE NUEVO: INFORME CABINAS
         # ============================================================
-        elif _modo("Informe Cabinas"):
+        elif modo == "🛏️ Informe Cabinas / Cabin Report":
 
             st.markdown(
                 f"### 🛏️ Informe de Cabinas — Salida {ddmm_sel} "
@@ -636,7 +636,7 @@ else:
         # ============================================================
         # BLOQUE 17: MODO VER CUPOS
         # ============================================================
-        elif _modo("Ver Cupos"):
+        elif modo == "📊 Ver Cupos / View Quotas":
             st.markdown(f"### 📊 Cuadro de Mandos de Cupos — Salida {ddmm_sel} <span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Quota Dashboard — Departure {ddmm_sel}</span>", unsafe_allow_html=True)
             if not cupos_config:
                 st.info("No hay cupos configurados. Ve a 'Configurar Cupos'. / *No quotas configured. Go to 'Configure Quotas'.*")
@@ -658,7 +658,7 @@ else:
         # ============================================================
         # BLOQUE 18: MODO CONFIGURAR CUPOS
         # ============================================================
-        elif _modo("Configurar Cupos"):
+        elif modo == "⚙️ Configurar Cupos / Configure Quotas":
             st.markdown(f"### ⚙️ Definir Límites por Categoría — Salida {ddmm_sel} <span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Set Limits by Category — Departure {ddmm_sel}</span>", unsafe_allow_html=True)
             col_a, col_b = st.columns(2)
             with col_a:
@@ -682,7 +682,7 @@ else:
         # ============================================================
         # BLOQUE 19: MODO MAPA DE CABINAS
         # ============================================================
-        elif _modo("Mapa de cabinas"):
+        elif modo == "🗺️ Mapa de cabinas / Cabin Map":
             estadocabina = {d.get("cabina", ""): d for d in datos}
             porcategoria = defaultdict(list)
             for c in cabinas:
