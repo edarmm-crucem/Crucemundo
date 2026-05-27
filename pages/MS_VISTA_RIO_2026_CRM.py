@@ -358,10 +358,11 @@ opciones_modo = [
     "🗺️ Mapa de cabinas / Cabin Map",
     "📊 Ver Cupos / View Quotas",
     "⚙️ Configurar Cupos / Configure Quotas",
-    "📈 Informe / Report",
+    "📈 Informe Agencias / Agency Report",
+    "🛏️ Informe de Cabinas / Cabin Report",
     "📅 Nueva salida / New Departure",
     "🏠 Inicio / Home",
-    "🛏️ Informe de Cabinas / Cabin Report",
+    
 ]
 modo = st.radio("¿Qué quieres hacer? / *What would you like to do?*", opciones_modo, index=5, horizontal=True)
 
