@@ -729,170 +729,170 @@ else:
                             st.success(f"Cabina {cabina_input} guardada como **{estado_final}**. / *Cabin {cabina_input} saved as **{estado_final}**.*")
                             st.rerun()
 
-# ============================================================
-# BLOQUE 20B: MODO INFORME DE CABINAS
-# ============================================================
-elif _modo("Informe de Cabinas"):
-    st.markdown(
-        f"### 🛏️ Informe de Cabinas Vendidas — Salida {ddmm_sel} "
-        f"<span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>"
-        f"Sold Cabins Report — Departure {ddmm_sel}</span>",
-        unsafe_allow_html=True
-    )
-
-    vendidas = [
-        d for d in datos
-        if d.get("estado", "").strip().upper() == "VENDIDA"
-    ]
-
-    if not vendidas:
-        st.info("No hay cabinas vendidas en esta salida. / *No sold cabins for this departure.*")
-    else:
-        # Métricas resumen
-        col_m1, col_m2, col_m3 = st.columns(3)
-        col_m1.metric("Cabinas vendidas / Sold cabins", len(vendidas))
-        col_m2.metric(
-            "Categorías / Categories",
-            len(set(
-                next((c[3] for c in cabinas if c[1] == d.get("cabina", "")), "—")
-                for d in vendidas
-            ))
-        )
-        col_m3.metric(
-            "Agencias / Agencies",
-            len(set(d.get("agencia", "").strip() for d in vendidas if d.get("agencia", "").strip()))
-        )
-
-        st.markdown("---")
-
-        # Filtros opcionales
-        col_f1, col_f2 = st.columns(2)
-        with col_f1:
-            cats_vendidas = sorted(set(
-                next((c[3] for c in cabinas if c[1] == d.get("cabina", "")), "—")
-                for d in vendidas
-            ))
-            filtro_cat = st.multiselect(
-                "Filtrar por categoría / *Filter by category*",
-                cats_vendidas,
-                default=cats_vendidas
-            )
-        with col_f2:
-            ags_vendidas = sorted(set(
-                d.get("agencia", "").strip() for d in vendidas
-                if d.get("agencia", "").strip()
-            ))
-            filtro_ag = st.multiselect(
-                "Filtrar por agencia / *Filter by agency*",
-                ags_vendidas,
-                default=ags_vendidas
-            )
-
-        # Construir filas filtradas
-        filas = []
-        for d in vendidas:
-            cabina_id = d.get("cabina", "").strip()
-            cat = next((c[3] for c in cabinas if c[1] == cabina_id), "—")
-            ag  = d.get("agencia", "").strip()
-            loc = d.get("localizador", "").strip() or "—"
-            pax = d.get("pax", "") or "—"
-
-            if cat not in filtro_cat:
-                continue
-            if ag and ag not in filtro_ag:
-                continue
-
-            filas.append({
-                "cabina_id": cabina_id,
-                "cat": cat,
-                "ag": ag,
-                "loc": loc,
-                "pax": pax,
-            })
-
-        # Ordenar: categoría → número de cabina
-        def sort_key(f):
-            digits = ''.join(filter(str.isdigit, f["cabina_id"]))
-            return (f["cat"], int(digits) if digits else 0)
-
-        filas.sort(key=sort_key)
-
-        if not filas:
-            st.warning("Sin resultados con los filtros aplicados. / *No results with current filters.*")
-        else:
-            # Tabla HTML
-            t = '''
-            <table style="width:100%;border-collapse:collapse;font-size:0.88rem;margin-top:0.5rem;">
-              <thead>
-                <tr style="background:var(--color-background-secondary);">
-                  <th style="padding:10px 14px;text-align:left;border-bottom:1px solid var(--color-border-tertiary);font-weight:500;color:var(--color-text-secondary);">
-                    Cabina<br><span style="font-size:0.72em;font-style:italic;font-weight:400;">Cabin</span>
-                  </th>
-                  <th style="padding:10px 14px;text-align:left;border-bottom:1px solid var(--color-border-tertiary);font-weight:500;color:var(--color-text-secondary);">
-                    Localizador<br><span style="font-size:0.72em;font-style:italic;font-weight:400;">Booking ref</span>
-                  </th>
-                  <th style="padding:10px 14px;text-align:left;border-bottom:1px solid var(--color-border-tertiary);font-weight:500;color:var(--color-text-secondary);">
-                    Categoría<br><span style="font-size:0.72em;font-style:italic;font-weight:400;">Category</span>
-                  </th>
-                  <th style="padding:10px 14px;text-align:left;border-bottom:1px solid var(--color-border-tertiary);font-weight:500;color:var(--color-text-secondary);">
-                    Agencia<br><span style="font-size:0.72em;font-style:italic;font-weight:400;">Agency</span>
-                  </th>
-                  <th style="padding:10px 14px;text-align:center;border-bottom:1px solid var(--color-border-tertiary);font-weight:500;color:var(--color-text-secondary);">
-                    Pax
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-            '''
-
-            for i, f in enumerate(filas):
-                color_ag = agencias.get(f["ag"], "var(--color-background-secondary)")
-                bg = "var(--color-background-primary)" if i % 2 == 0 else "var(--color-background-secondary)"
-                t += f'''
-                <tr style="background:{bg};">
-                  <td style="padding:9px 14px;border-bottom:0.5px solid var(--color-border-tertiary);
-                             font-weight:500;font-size:1rem;letter-spacing:0.02em;
-                             color:var(--color-text-primary);">{f["cabina_id"]}</td>
-                  <td style="padding:9px 14px;border-bottom:0.5px solid var(--color-border-tertiary);
-                             font-family:monospace;font-size:0.85rem;
-                             color:var(--color-text-primary);">{f["loc"]}</td>
-                  <td style="padding:9px 14px;border-bottom:0.5px solid var(--color-border-tertiary);">
-                    <span style="background:var(--color-background-info);color:var(--color-text-info);
-                                 font-size:0.78rem;font-weight:500;padding:3px 9px;
-                                 border-radius:4px;">{f["cat"]}</span>
-                  </td>
-                  <td style="padding:9px 14px;border-bottom:0.5px solid var(--color-border-tertiary);">
-                    <span style="display:inline-flex;align-items:center;gap:6px;">
-                      <span style="width:12px;height:12px;border-radius:50%;
-                                   background:{color_ag};display:inline-block;
-                                   border:0.5px solid var(--color-border-tertiary);"></span>
-                      {f["ag"] or "—"}
-                    </span>
-                  </td>
-                  <td style="padding:9px 14px;border-bottom:0.5px solid var(--color-border-tertiary);
-                             text-align:center;color:var(--color-text-secondary);">{f["pax"]}</td>
-                </tr>
-                '''
-
-            t += '</tbody></table>'
-            st.markdown(t, unsafe_allow_html=True)
-
-            # Botón exportar CSV
-            st.markdown("<br>", unsafe_allow_html=True)
-            import csv, io
-            buf = io.StringIO()
-            writer = csv.writer(buf)
-            writer.writerow(["Cabina", "Localizador", "Categoría", "Agencia", "Pax"])
-            for f in filas:
-                writer.writerow([f["cabina_id"], f["loc"], f["cat"], f["ag"], f["pax"]])
-            st.download_button(
-                label="⬇️ Exportar CSV / Export CSV",
-                data=buf.getvalue(),
-                file_name=f"cabinas_vendidas_{ddmm_sel}.csv",
-                mime="text/csv"
-            )
-
-
+            # ============================================================
+            # BLOQUE 20B: MODO INFORME DE CABINAS
+            # ============================================================
+            elif _modo("Informe de Cabinas"):
+                st.markdown(
+                    f"### 🛏️ Informe de Cabinas Vendidas — Salida {ddmm_sel} "
+                    f"<span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>"
+                    f"Sold Cabins Report — Departure {ddmm_sel}</span>",
+                    unsafe_allow_html=True
+                )
+            
+                vendidas = [
+                    d for d in datos
+                    if d.get("estado", "").strip().upper() == "VENDIDA"
+                ]
+            
+                if not vendidas:
+                    st.info("No hay cabinas vendidas en esta salida. / *No sold cabins for this departure.*")
+                else:
+                    # Métricas resumen
+                    col_m1, col_m2, col_m3 = st.columns(3)
+                    col_m1.metric("Cabinas vendidas / Sold cabins", len(vendidas))
+                    col_m2.metric(
+                        "Categorías / Categories",
+                        len(set(
+                            next((c[3] for c in cabinas if c[1] == d.get("cabina", "")), "—")
+                            for d in vendidas
+                        ))
+                    )
+                    col_m3.metric(
+                        "Agencias / Agencies",
+                        len(set(d.get("agencia", "").strip() for d in vendidas if d.get("agencia", "").strip()))
+                    )
+            
+                    st.markdown("---")
+            
+                    # Filtros opcionales
+                    col_f1, col_f2 = st.columns(2)
+                    with col_f1:
+                        cats_vendidas = sorted(set(
+                            next((c[3] for c in cabinas if c[1] == d.get("cabina", "")), "—")
+                            for d in vendidas
+                        ))
+                        filtro_cat = st.multiselect(
+                            "Filtrar por categoría / *Filter by category*",
+                            cats_vendidas,
+                            default=cats_vendidas
+                        )
+                    with col_f2:
+                        ags_vendidas = sorted(set(
+                            d.get("agencia", "").strip() for d in vendidas
+                            if d.get("agencia", "").strip()
+                        ))
+                        filtro_ag = st.multiselect(
+                            "Filtrar por agencia / *Filter by agency*",
+                            ags_vendidas,
+                            default=ags_vendidas
+                        )
+            
+                    # Construir filas filtradas
+                    filas = []
+                    for d in vendidas:
+                        cabina_id = d.get("cabina", "").strip()
+                        cat = next((c[3] for c in cabinas if c[1] == cabina_id), "—")
+                        ag  = d.get("agencia", "").strip()
+                        loc = d.get("localizador", "").strip() or "—"
+                        pax = d.get("pax", "") or "—"
+            
+                        if cat not in filtro_cat:
+                            continue
+                        if ag and ag not in filtro_ag:
+                            continue
+            
+                        filas.append({
+                            "cabina_id": cabina_id,
+                            "cat": cat,
+                            "ag": ag,
+                            "loc": loc,
+                            "pax": pax,
+                        })
+            
+                    # Ordenar: categoría → número de cabina
+                    def sort_key(f):
+                        digits = ''.join(filter(str.isdigit, f["cabina_id"]))
+                        return (f["cat"], int(digits) if digits else 0)
+            
+                    filas.sort(key=sort_key)
+            
+                    if not filas:
+                        st.warning("Sin resultados con los filtros aplicados. / *No results with current filters.*")
+                    else:
+                        # Tabla HTML
+                        t = '''
+                        <table style="width:100%;border-collapse:collapse;font-size:0.88rem;margin-top:0.5rem;">
+                          <thead>
+                            <tr style="background:var(--color-background-secondary);">
+                              <th style="padding:10px 14px;text-align:left;border-bottom:1px solid var(--color-border-tertiary);font-weight:500;color:var(--color-text-secondary);">
+                                Cabina<br><span style="font-size:0.72em;font-style:italic;font-weight:400;">Cabin</span>
+                              </th>
+                              <th style="padding:10px 14px;text-align:left;border-bottom:1px solid var(--color-border-tertiary);font-weight:500;color:var(--color-text-secondary);">
+                                Localizador<br><span style="font-size:0.72em;font-style:italic;font-weight:400;">Booking ref</span>
+                              </th>
+                              <th style="padding:10px 14px;text-align:left;border-bottom:1px solid var(--color-border-tertiary);font-weight:500;color:var(--color-text-secondary);">
+                                Categoría<br><span style="font-size:0.72em;font-style:italic;font-weight:400;">Category</span>
+                              </th>
+                              <th style="padding:10px 14px;text-align:left;border-bottom:1px solid var(--color-border-tertiary);font-weight:500;color:var(--color-text-secondary);">
+                                Agencia<br><span style="font-size:0.72em;font-style:italic;font-weight:400;">Agency</span>
+                              </th>
+                              <th style="padding:10px 14px;text-align:center;border-bottom:1px solid var(--color-border-tertiary);font-weight:500;color:var(--color-text-secondary);">
+                                Pax
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                        '''
+            
+                        for i, f in enumerate(filas):
+                            color_ag = agencias.get(f["ag"], "var(--color-background-secondary)")
+                            bg = "var(--color-background-primary)" if i % 2 == 0 else "var(--color-background-secondary)"
+                            t += f'''
+                            <tr style="background:{bg};">
+                              <td style="padding:9px 14px;border-bottom:0.5px solid var(--color-border-tertiary);
+                                         font-weight:500;font-size:1rem;letter-spacing:0.02em;
+                                         color:var(--color-text-primary);">{f["cabina_id"]}</td>
+                              <td style="padding:9px 14px;border-bottom:0.5px solid var(--color-border-tertiary);
+                                         font-family:monospace;font-size:0.85rem;
+                                         color:var(--color-text-primary);">{f["loc"]}</td>
+                              <td style="padding:9px 14px;border-bottom:0.5px solid var(--color-border-tertiary);">
+                                <span style="background:var(--color-background-info);color:var(--color-text-info);
+                                             font-size:0.78rem;font-weight:500;padding:3px 9px;
+                                             border-radius:4px;">{f["cat"]}</span>
+                              </td>
+                              <td style="padding:9px 14px;border-bottom:0.5px solid var(--color-border-tertiary);">
+                                <span style="display:inline-flex;align-items:center;gap:6px;">
+                                  <span style="width:12px;height:12px;border-radius:50%;
+                                               background:{color_ag};display:inline-block;
+                                               border:0.5px solid var(--color-border-tertiary);"></span>
+                                  {f["ag"] or "—"}
+                                </span>
+                              </td>
+                              <td style="padding:9px 14px;border-bottom:0.5px solid var(--color-border-tertiary);
+                                         text-align:center;color:var(--color-text-secondary);">{f["pax"]}</td>
+                            </tr>
+                            '''
+            
+                        t += '</tbody></table>'
+                        st.markdown(t, unsafe_allow_html=True)
+            
+                        # Botón exportar CSV
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        import csv, io
+                        buf = io.StringIO()
+                        writer = csv.writer(buf)
+                        writer.writerow(["Cabina", "Localizador", "Categoría", "Agencia", "Pax"])
+                        for f in filas:
+                            writer.writerow([f["cabina_id"], f["loc"], f["cat"], f["ag"], f["pax"]])
+                        st.download_button(
+                            label="⬇️ Exportar CSV / Export CSV",
+                            data=buf.getvalue(),
+                            file_name=f"cabinas_vendidas_{ddmm_sel}.csv",
+                            mime="text/csv"
+                        )
+            
+            
 
 # ============================================================
 # BLOQUE 21: PIE DE PÁGINA
