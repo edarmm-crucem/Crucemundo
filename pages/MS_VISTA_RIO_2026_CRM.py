@@ -384,7 +384,7 @@ if _modo("Inicio"):
         * **🗺️ Mapa de cabinas / Cabin Map** — Visualiza planos con validación cruzada. <span class='en'>Deck plans with cross-validation by category.</span>
         * **📊 Ver Cupos / View Quotas** — Disponibilidad por Agencia y Categoría. <span class='en'>Availability by Agency, Category and Passengers.</span>
         * **⚙️ Configurar Cupos / Configure Quotas** — Límites comerciales por categoría. <span class='en'>Commercial limits per cabin category.</span>
-        * **📈 Informe / Report** — Cruce CRM + CONF + GROUP. <span class='en'>Cross-data from CRM + CONF + GROUP files.</span>
+        * **📈 Informe / Report** — Cruce CRM + FIT + GROUP. <span class='en'>Cross-data from CRM + FIT + GROUP files.</span>
         * **📅 Nueva salida / New Departure** — Nueva fecha operativa {ANIO}. <span class='en'>Create a new operational date for {ANIO}.</span>
     """, unsafe_allow_html=True)
     st.markdown("---")
