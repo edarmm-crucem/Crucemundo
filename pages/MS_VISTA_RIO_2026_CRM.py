@@ -466,7 +466,7 @@ else:
         # ============================================================
         # BLOQUE 16: MODO INFORME
         # ============================================================
-        if _modo("Informe"):
+        if _modo("Informe Agencias"):
             st.markdown(f"### 📈 Informe Consolidado — Salida {ddmm_sel} <span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Consolidated Report — Departure {ddmm_sel}</span>", unsafe_allow_html=True)
             st.markdown(f"Cruza **CRM ({CRMBARCO_NAME})** + **FIT** + **GROUP**. <span class='en'>Crosses CRM + FIT + GROUP files from Drive.</span>", unsafe_allow_html=True)
 
