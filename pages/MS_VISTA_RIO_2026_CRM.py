@@ -548,95 +548,46 @@ else:
                 st.markdown(t, unsafe_allow_html=True)
 
 
-                # ============================================================
+        # ============================================================
         # BLOQUE NUEVO: INFORME CABINAS
         # ============================================================
         elif modo == "🛏️ Informe Cabinas / Cabin Report":
-
             st.markdown(
                 f"### 🛏️ Informe de Cabinas — Salida {ddmm_sel} "
-                f"<span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Cabin Report — Departure {ddmm_sel}</span>",
+                "<span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Cabin Report</span>",
                 unsafe_allow_html=True
             )
 
-            # ============================================================
-            # SELECTOR NUEVO
-            # ============================================================
-            tipo_informe = st.selectbox(
-                "Selecciona el tipo de informe / *Select report type*",
-                [
-                    "Todas las cabinas",
-                    "Solo VENDIDAS",
-                    "Solo RESERVAS",
-                    "Solo LIBRES"
-                ]
-            )
+            tipo_informe = st.selectbox("Selecciona el tipo de informe / *Select report type*", 
+                                        ["Todas las cabinas", "Solo VENDIDAS", "Solo RESERVAS", "Solo LIBRES"])
 
-            datos_filtrados = []
+            # Filtrado de datos
+            datos_filtrados = [d for d in datos if (tipo_informe == "Todas las cabinas") or 
+                               (tipo_informe == "Solo VENDIDAS" and d.get("estado") == "VENDIDA") or
+                               (tipo_informe == "Solo RESERVAS" and d.get("estado") == "RESERVA") or
+                               (tipo_informe == "Solo LIBRES" and d.get("estado") == "LIBRE")]
 
-            for d in datos:
+            # Definición de función para encabezados bilingües
+            def th(es, en):
+                return f'<th><div class="th-bilingual"><span class="th-es">{es}</span><span class="th-en">{en}</span></div></th>'
 
-                estado = d.get("estado", "LIBRE").strip()
+            # Construcción de la tabla con el estilo del Bloque 16
+            t = '<table class="informe-tabla"><thead><tr>'
+            t += th("Cabina", "Cabin") + th("Agencia", "Agency") + th("PAX", "PAX") + th("Localizador", "Ref") + th("Notas", "Notes")
+            t += '</tr></thead><tbody>'
 
-                if tipo_informe == "Solo VENDIDAS" and estado != "VENDIDA":
-                    continue
-
-                if tipo_informe == "Solo RESERVAS" and estado != "RESERVA":
-                    continue
-
-                if tipo_informe == "Solo LIBRES" and estado != "LIBRE":
-                    continue
-
-                datos_filtrados.append(d)
-
-            datos_filtrados = sorted(
-                datos_filtrados,
-                key=lambda x: int(re.sub(r"[^0-9]", "", x.get("cabina", "0")) or 0)
-            )
-
-            tabla = """
-            <table class="informe-tabla">
-                <thead>
-                    <tr>
-                        <th>Cabina</th>
-                        <th>Localizador</th>
-                        <th>Personas</th>
-                        <th>Categoría</th>
-                    </tr>
-                </thead>
-                <tbody>
-            """
-
-            cabinas_html = ""
-            localizadores_html = ""
-            pax_html = ""
-            categorias_html = ""
+            for d in sorted(datos_filtrados, key=lambda x: int(re.sub(r"[^0-9]", "", x.get("cabina", "0")) or 0)):
+                estado_class = "td-sold" if d.get("estado") == "VENDIDA" else ""
+                t += f'<tr class="{estado_class}">'
+                t += f'<td>{d.get("cabina", "")}</td>'
+                t += f'<td>{d.get("agencia", "-")}</td>'
+                t += f'<td>{d.get("pax", "-")}</td>'
+                t += f'<td>{d.get("localizador", "-")}</td>'
+                t += f'<td>{d.get("notes", "-")}</td>'
+                t += '</tr>'
             
-            for d in datos_filtrados:
-            
-                cabina = d.get("cabina", "").strip()
-                localizador = d.get("localizador", "").strip() or "-"
-                pax = d.get("pax", "").strip() or "-"
-                categoria = next(
-                    (c[3] for c in cabinas if c[1] == cabina),
-                    "-"
-                )
-            
-                cabinas_html += f"{cabina}<br>"
-                localizadores_html += f"{localizador}<br>"
-                pax_html += f"{pax}<br>"
-                categorias_html += f"{categoria}<br>"
-            
-            tabla += f"""
-            <tr>
-                <td style="font-weight:700;">{cabinas_html}</td>
-                <td>{localizadores_html}</td>
-                <td>{pax_html}</td>
-                <td>{categorias_html}</td>
-            </tr>
-"""
-
-            st.markdown(tabla, unsafe_allow_html=True)
+            t += '</tbody></table>'
+            st.markdown(t, unsafe_allow_html=True)
 
         # ============================================================
         # BLOQUE 17: MODO VER CUPOS
