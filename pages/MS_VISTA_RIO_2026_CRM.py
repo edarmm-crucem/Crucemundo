@@ -358,16 +358,14 @@ opciones_modo = [
     "🗺️ Mapa de cabinas / Cabin Map",
     "📊 Ver Cupos / View Quotas",
     "⚙️ Configurar Cupos / Configure Quotas",
-    "📈 Informe Agencias / Agency Report",
-    "🛏️ Informe de Cabinas / Cabin Report",
+    "📈 Informe / Report",
     "📅 Nueva salida / New Departure",
     "🏠 Inicio / Home",
-    
 ]
 modo = st.radio("¿Qué quieres hacer? / *What would you like to do?*", opciones_modo, index=5, horizontal=True)
 
 def _modo(key):
-   return modo.startswith(key) or f"/ {key}" in modo or modo == key or key == modo.split("/")[0].strip().split("️")[-1].strip()
+    return key in modo
 
 # ============================================================
 # BLOQUE 13: MODO INICIO
@@ -466,7 +464,7 @@ else:
         # ============================================================
         # BLOQUE 16: MODO INFORME
         # ============================================================
-        if _modo("Informe Agencias"):
+        if _modo("Informe"):
             st.markdown(f"### 📈 Informe Consolidado — Salida {ddmm_sel} <span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Consolidated Report — Departure {ddmm_sel}</span>", unsafe_allow_html=True)
             st.markdown(f"Cruza **CRM ({CRMBARCO_NAME})** + **FIT** + **GROUP**. <span class='en'>Crosses CRM + FIT + GROUP files from Drive.</span>", unsafe_allow_html=True)
 
@@ -730,130 +728,6 @@ else:
                             st.success(f"Cabina {cabina_input} guardada como **{estado_final}**. / *Cabin {cabina_input} saved as **{estado_final}**.*")
                             st.rerun()
 
-# ============================================================
-        # BLOQUE 20B: MODO INFORME DE CABINAS
-        # ============================================================
-        elif _modo("Informe de Cabinas"):
-            st.markdown(
-                f"### 🛏️ Informe de Cabinas Vendidas — Salida {ddmm_sel} "
-                f"<span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>"
-                f"Sold Cabins Report — Departure {ddmm_sel}</span>",
-                unsafe_allow_html=True
-            )
-
-            vendidas = [
-                d for d in datos
-                if d.get("estado", "").strip().upper() == "VENDIDA"
-            ]
-
-            if not vendidas:
-                st.info("No hay cabinas vendidas en esta salida. / *No sold cabins for this departure.*")
-            else:
-                # Métricas resumen
-                col_m1, col_m2, col_m3 = st.columns(3)
-                col_m1.metric("Cabinas vendidas / Sold cabins", len(vendidas))
-                col_m2.metric(
-                    "Categorías / Categories",
-                    len(set(
-                        next((c[3] for c in cabinas if c[1] == d.get("cabina", "")), "—")
-                        for d in vendidas
-                    ))
-                )
-                col_m3.metric(
-                    "Pax total / Total pax",
-                    sum(int(d.get("pax", 0) or 0) for d in vendidas)
-                )
-
-                st.markdown("---")
-
-                # Construir filas
-                filas = []
-                for d in vendidas:
-                    cabina_id = d.get("cabina", "").strip()
-                    cat  = next((c[3] for c in cabinas if c[1] == cabina_id), "—")
-                    loc  = d.get("localizador", "").strip() or "—"
-                    pax  = d.get("pax", "") or "—"
-                    note = d.get("notes", "").strip() or "—"
-                    filas.append({
-                        "cabina_id": cabina_id,
-                        "cat":  cat,
-                        "loc":  loc,
-                        "pax":  pax,
-                        "note": note,
-                    })
-
-                # Ordenar: categoría → número de cabina
-                def sort_key(f):
-                    digits = ''.join(filter(str.isdigit, f["cabina_id"]))
-                    return (f["cat"], int(digits) if digits else 0)
-
-                filas.sort(key=sort_key)
-
-                # Tabla HTML
-                t = '''
-                <table style="width:100%;border-collapse:collapse;font-size:0.88rem;margin-top:0.5rem;">
-                  <thead>
-                    <tr style="background:#F3F4F6;">
-                      <th style="padding:10px 14px;text-align:left;border-bottom:2px solid #E5E7EB;font-weight:600;color:#374151;">
-                        Cabina<br><span style="font-size:0.72em;font-style:italic;font-weight:400;color:#9CA3AF;">Cabin</span>
-                      </th>
-                      <th style="padding:10px 14px;text-align:left;border-bottom:2px solid #E5E7EB;font-weight:600;color:#374151;">
-                        Localizador<br><span style="font-size:0.72em;font-style:italic;font-weight:400;color:#9CA3AF;">Booking ref</span>
-                      </th>
-                      <th style="padding:10px 14px;text-align:center;border-bottom:2px solid #E5E7EB;font-weight:600;color:#374151;">
-                        Pax
-                      </th>
-                      <th style="padding:10px 14px;text-align:left;border-bottom:2px solid #E5E7EB;font-weight:600;color:#374151;">
-                        Categoría<br><span style="font-size:0.72em;font-style:italic;font-weight:400;color:#9CA3AF;">Category</span>
-                      </th>
-                      <th style="padding:10px 14px;text-align:left;border-bottom:2px solid #E5E7EB;font-weight:600;color:#374151;">
-                        Notes
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                '''
-
-                for i, f in enumerate(filas):
-                    bg = "#FFFFFF" if i % 2 == 0 else "#F9FAFB"
-                    note_color = "#9CA3AF" if f["note"] == "—" else "#111827"
-                    t += f'''
-                    <tr style="background:{bg};">
-                      <td style="padding:9px 14px;border-bottom:1px solid #F3F4F6;
-                                 font-weight:700;font-size:1.05rem;letter-spacing:0.02em;
-                                 color:#111827;">{f["cabina_id"]}</td>
-                      <td style="padding:9px 14px;border-bottom:1px solid #F3F4F6;
-                                 font-family:monospace;font-size:0.88rem;
-                                 color:#1E3A8A;">{f["loc"]}</td>
-                      <td style="padding:9px 14px;border-bottom:1px solid #F3F4F6;
-                                 text-align:center;font-weight:600;color:#374151;">{f["pax"]}</td>
-                      <td style="padding:9px 14px;border-bottom:1px solid #F3F4F6;">
-                        <span style="background:#EFF6FF;color:#1E3A8A;
-                                     font-size:0.78rem;font-weight:600;padding:3px 10px;
-                                     border-radius:4px;">{f["cat"]}</span>
-                      </td>
-                      <td style="padding:9px 14px;border-bottom:1px solid #F3F4F6;
-                                 font-size:0.83rem;font-style:italic;color:{note_color};">{f["note"]}</td>
-                    </tr>
-                    '''
-
-                t += '</tbody></table>'
-                st.markdown(t, unsafe_allow_html=True)
-
-                # Exportar CSV
-                st.markdown("<br>", unsafe_allow_html=True)
-                import csv, io
-                buf = io.StringIO()
-                writer = csv.writer(buf)
-                writer.writerow(["Cabina", "Localizador", "Pax", "Categoría", "Notes"])
-                for f in filas:
-                    writer.writerow([f["cabina_id"], f["loc"], f["pax"], f["cat"], f["note"]])
-                st.download_button(
-                    label="⬇️ Exportar CSV / Export CSV",
-                    data=buf.getvalue(),
-                    file_name=f"cabinas_vendidas_{ddmm_sel}.csv",
-                    mime="text/csv"
-                )
 # ============================================================
 # BLOQUE 21: PIE DE PÁGINA
 # ============================================================
