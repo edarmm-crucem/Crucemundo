@@ -367,7 +367,7 @@ opciones_modo = [
 modo = st.radio("¿Qué quieres hacer? / *What would you like to do?*", opciones_modo, index=5, horizontal=True)
 
 def _modo(key):
-    return key in modo
+   return modo.startswith(key) or f"/ {key}" in modo or modo == key or key == modo.split("/")[0].strip().split("️")[-1].strip()
 
 # ============================================================
 # BLOQUE 13: MODO INICIO
@@ -730,7 +730,7 @@ else:
                             st.success(f"Cabina {cabina_input} guardada como **{estado_final}**. / *Cabin {cabina_input} saved as **{estado_final}**.*")
                             st.rerun()
 
-# ============================================================
+        # ============================================================
         # BLOQUE 20B: MODO INFORME DE CABINAS
         # ============================================================
         elif _modo("Informe de Cabinas"):
