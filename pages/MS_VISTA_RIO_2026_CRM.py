@@ -359,6 +359,7 @@ opciones_modo = [
     "📊 Ver Cupos / View Quotas",
     "⚙️ Configurar Cupos / Configure Quotas",
     "📈 Informe / Report",
+    "🛏️ Informe Cabinas / Cabin Report",
     "📅 Nueva salida / New Departure",
     "🏠 Inicio / Home",
 ]
@@ -545,6 +546,92 @@ else:
                         t += '<td style="text-align:left;">-</td><td style="text-align:left;">-</td></tr>'
                 t += '</tbody></table>'
                 st.markdown(t, unsafe_allow_html=True)
+
+
+                # ============================================================
+        # BLOQUE NUEVO: INFORME CABINAS
+        # ============================================================
+        elif _modo("Informe Cabinas"):
+
+            st.markdown(
+                f"### 🛏️ Informe de Cabinas — Salida {ddmm_sel} "
+                f"<span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Cabin Report — Departure {ddmm_sel}</span>",
+                unsafe_allow_html=True
+            )
+
+            # ============================================================
+            # SELECTOR NUEVO
+            # ============================================================
+            tipo_informe = st.selectbox(
+                "Selecciona el tipo de informe / *Select report type*",
+                [
+                    "Todas las cabinas",
+                    "Solo VENDIDAS",
+                    "Solo RESERVAS",
+                    "Solo LIBRES"
+                ]
+            )
+
+            datos_filtrados = []
+
+            for d in datos:
+
+                estado = d.get("estado", "LIBRE").strip()
+
+                if tipo_informe == "Solo VENDIDAS" and estado != "VENDIDA":
+                    continue
+
+                if tipo_informe == "Solo RESERVAS" and estado != "RESERVA":
+                    continue
+
+                if tipo_informe == "Solo LIBRES" and estado != "LIBRE":
+                    continue
+
+                datos_filtrados.append(d)
+
+            datos_filtrados = sorted(
+                datos_filtrados,
+                key=lambda x: int(re.sub(r"[^0-9]", "", x.get("cabina", "0")) or 0)
+            )
+
+            tabla = """
+            <table class="informe-tabla">
+                <thead>
+                    <tr>
+                        <th>Cabina</th>
+                        <th>Localizador</th>
+                        <th>Personas</th>
+                        <th>Categoría</th>
+                    </tr>
+                </thead>
+                <tbody>
+            """
+
+            for d in datos_filtrados:
+
+                cabina = d.get("cabina", "").strip()
+                localizador = d.get("localizador", "").strip() or "-"
+                pax = d.get("pax", "").strip() or "-"
+                categoria = next(
+                    (c[3] for c in cabinas if c[1] == cabina),
+                    "-"
+                )
+
+                tabla += f"""
+                <tr>
+                    <td style="font-weight:700;">{cabina}</td>
+                    <td>{localizador}</td>
+                    <td>{pax}</td>
+                    <td>{categoria}</td>
+                </tr>
+                """
+
+            tabla += """
+                </tbody>
+            </table>
+            """
+
+            st.markdown(tabla, unsafe_allow_html=True)
 
         # ============================================================
         # BLOQUE 17: MODO VER CUPOS
