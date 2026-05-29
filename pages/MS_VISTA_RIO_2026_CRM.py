@@ -388,8 +388,8 @@ if _modo("Inicio"):
         * **🛏️ Informe Cabinas / Cabin Report** — Lista detallada de cabinas por estado. <span class='en'>Detailed cabin list filtered by status.</span>
         * **📅 Nueva salida / New Departure** — Nueva fecha operativa {ANIO}. <span class='en'>Create a new operational date for {ANIO}.</span>
     """, unsafe_allow_html=True)
-    st.markdown("---")
-    st.page_link("app.py", label="🏠 Volver al Menú Principal / Back to Main Menu", icon="🏠")
+    # st.markdown("---")
+    # st.page_link("app.py", label="🏠 Volver al Menú Principal / Back to Main Menu", icon="🏠")
 
 # ============================================================
 # BLOQUE 14: MODO NUEVA SALIDA
@@ -775,5 +775,5 @@ else:
 # ============================================================
 # BLOQUE 21: PIE DE PÁGINA
 # ============================================================
-# st.markdown("---")
-# st.page_link("app.py", label="🏠 Volver al Menú Principal / Back to Main Menu", icon="🏠")
+st.markdown("---")
+ st.page_link("app.py", label="🏠 Volver al Menú Principal / Back to Main Menu", icon="🏠")
