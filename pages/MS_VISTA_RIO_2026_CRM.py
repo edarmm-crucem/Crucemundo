@@ -775,5 +775,5 @@ else:
 # ============================================================
 # BLOQUE 21: PIE DE PÁGINA
 # ============================================================
-st.markdown("---")
-st.page_link("app.py", label="🏠 Volver al Menú Principal / Back to Main Menu", icon="🏠")
+# st.markdown("---")
+# st.page_link("app.py", label="🏠 Volver al Menú Principal / Back to Main Menu", icon="🏠")
