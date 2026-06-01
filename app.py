@@ -86,7 +86,7 @@ SHIPCODEMAP = {
     "MS_VISTA_GRACIA": "VGR",
     "MS_VISTAMILLA": "VMI",
     "MS_VISTA_RIO": "VRI",
-    "CRUCE_RIO": "CRI",
+    "MS_CRUCE_RIO": "CRI",
 }
 SHIPCODETONAME = {v: k for k, v in SHIPCODEMAP.items()}
 
@@ -1919,6 +1919,7 @@ if st.session_state.get("opencruceroform"):
         )
         if cruceroyear != st.session_state.get("cruceroyear"):
             st.session_state.cruceroyear = cruceroyear
+
         cruceroboats = getboats(cruceroyear) if cruceroyear else []
         currentcboat = st.session_state.get("cruceroboat")
         if currentcboat not in cruceroboats:
@@ -1931,10 +1932,17 @@ if st.session_state.get("opencruceroform"):
         )
         if cruceroboat != st.session_state.get("cruceroboat"):
             st.session_state.cruceroboat = cruceroboat
-        fechasalida = st.date_input("FECHA DE SALIDA / DEPARTURE DATE", value=date.today(), format="DD/MM/YYYY")
+
+        fechasalida = st.date_input(
+            "FECHA DE SALIDA / DEPARTURE DATE",
+            value=date.today(),
+            format="DD/MM/YYYY",
+        )
+
         if cruceroboat and fechasalida:
             previewname = f"{cruceroboat}_{fechasalida.strftime('%y%m%d')}"
             st.caption(f"Nombre previsto / Expected name: {previewname}")
+
         if st.button("Preparar Crucero", key="btncrearcruceroaction", disabled=not (cruceroyear and cruceroboat and fechasalida)):
             if int(cruceroyear) != fechasalida.year:
                 st.error("El año seleccionado no coincide con el año de la fecha / Selected year does not match the date year.")
@@ -1947,7 +1955,9 @@ if st.session_state.get("opencruceroform"):
                 )
                 result = createcrucerofile(cruceroboat, fechasalida)
                 st.session_state.cruceroresult = result
+
         result = st.session_state.get("cruceroresult")
+
         if result:
             if result["status"] == "duplicate":
                 st.warning(f"Ya existe / Already exists: {result['name']}")
@@ -1955,13 +1965,51 @@ if st.session_state.get("opencruceroform"):
                     f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir existente / Open existing</a>',
                     unsafe_allow_html=True,
                 )
+
             elif result["status"] == "needscopy":
                 st.info("Abre el enlace para crear la copia con tu cuenta de Google. La carpeta de destino ya está preparada.")
                 st.markdown(
                     f'<a class="done-link" href="{result["copyurl"]}" target="_blank" rel="noopener noreferrer">Crear copia en Drive / Create copy in Drive</a>',
                     unsafe_allow_html=True,
                 )
-                st.caption(f"Nombre: {result['name']} · Carpeta ID: {result['folderid']}")
+                st.caption(f"Nombre: {result['name']} · Carpeta destino ID: {result['folderid']}")
+                st.markdown("---")
+                st.caption("Una vez creada la copia, pulsa el botón para completar la configuración.")
+                if st.button("Ya he creado la copia — Configurar ahora", key="btnconfigurarcopia"):
+                    archivo = findfilebyname(result["folderid"], result["name"])
+                    if not archivo:
+                        st.error("No se ha encontrado el archivo en la carpeta. Asegúrate de haber creado la copia con el nombre correcto.")
+                    else:
+                        try:
+                            updatecrucerosheet(archivo["id"], result["boat"])
+                            getyears.clear()
+                            getboats.clear()
+                            getdepartures.clear()
+                            st.session_state.cruceroresult = {
+                                "status": "done",
+                                "name": result["name"],
+                                "url": archivo.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{archivo['id']}/edit",
+                                "boat": result["boat"],
+                            }
+                            st.rerun()
+                        except Exception as exc:
+                            st.exception(exc)
+
+            elif result["status"] == "done":
+                st.success(f"Crucero configurado correctamente: {result['name']}")
+                renderkeyvaluegrid(
+                    "process",
+                    [
+                        ("Barco", result.get("boat")),
+                        ("Archivo", result.get("name")),
+                        ("Estado", "Creado y configurado"),
+                    ],
+                )
+                st.markdown(
+                    f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir crucero / Open cruise</a>',
+                    unsafe_allow_html=True,
+                )
+
     except Exception as exc:
         st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
