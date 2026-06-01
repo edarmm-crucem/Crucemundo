@@ -381,8 +381,8 @@ if _modo("Inicio"):
         <span class='en'>From this panel you can manage the ship's occupancy.</span>
 
         ---
-        * **🗺️ Mapa de cabinas / Cabin Map** — Visualiza planos con validación cruzada. <span class='en'>Deck plans with cross-validation by category.</span>
-        * **📊 Ver Cupos / View Quotas** — Disponibilidad por Agencia y Categoría. <span class='en'>Availability by Agency, Category and Passengers.</span>
+        * **🗺️ Mapa de cabinas / Cabin Map** — Visualiza planos  <span class='en'>Deck plans</span>
+        * **📊 Ver Cupos / View Quotas** — por Agencia y Categoría. <span class='en'>Availability by Agency, Category and Passengers.</span>
         * **⚙️ Configurar Cupos / Configure Quotas** — Límites comerciales por categoría. <span class='en'>Commercial limits per cabin category.</span>
         * **📈 Informe / Report** — Cruce CRM + FIT + GROUP. <span class='en'>Cross-data from CRM + FIT + GROUP files.</span>
         * **🛏️ Informe Cabinas / Cabin Report** — Lista detallada de cabinas por estado. <span class='en'>Detailed cabin list filtered by status.</span>
