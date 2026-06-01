@@ -1898,7 +1898,6 @@ if st.session_state.get("opensalidaform"):
         st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
 
-
 # ============================================================
 # BLOQUE 22: PANEL — CREAR CRUCERO
 # ============================================================
@@ -1967,18 +1966,48 @@ if st.session_state.get("opencruceroform"):
                 )
 
             elif result["status"] == "needscopy":
-                st.info("Abre el enlace para crear la copia con tu cuenta de Google. La carpeta de destino ya está preparada.")
                 st.markdown(
-                    f'<a class="done-link" href="{result["copyurl"]}" target="_blank" rel="noopener noreferrer">Crear copia en Drive / Create copy in Drive</a>',
+                    """
+                    <div style="
+                        background:#EFF6FF;
+                        border:1.5px solid #BFDBFE;
+                        border-radius:14px;
+                        padding:1rem 1.1rem;
+                        margin-top:0.75rem;
+                    ">
+                        <div style="font-size:0.82rem;font-weight:800;color:#1E40AF;margin-bottom:0.6rem;">
+                            📋 Pasos para crear el crucero
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:0.45rem;">
+                            <div style="display:flex;gap:0.6rem;align-items:flex-start;">
+                                <span style="background:#1D4ED8;color:#fff;border-radius:999px;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;flex-shrink:0;margin-top:1px;">1</span>
+                                <span style="font-size:0.80rem;color:#1E3A5F;">Pulsa <strong>«Crear copia en Drive»</strong> — se abrirá una nueva pestaña en Google.</span>
+                            </div>
+                            <div style="display:flex;gap:0.6rem;align-items:flex-start;">
+                                <span style="background:#1D4ED8;color:#fff;border-radius:999px;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;flex-shrink:0;margin-top:1px;">2</span>
+                                <span style="font-size:0.80rem;color:#1E3A5F;">En Google, confirma pulsando <strong>«Hacer una copia»</strong>. Puedes <strong>cerrar esa pestaña</strong> inmediatamente después.</span>
+                            </div>
+                            <div style="display:flex;gap:0.6rem;align-items:flex-start;">
+                                <span style="background:#1D4ED8;color:#fff;border-radius:999px;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;flex-shrink:0;margin-top:1px;">3</span>
+                                <span style="font-size:0.80rem;color:#1E3A5F;">Vuelve aquí y pulsa <strong>«Configurar crucero»</strong> para completar la configuración automáticamente.</span>
+                            </div>
+                        </div>
+                    </div>
+                    """,
                     unsafe_allow_html=True,
                 )
+                st.markdown("<div style='margin-top:0.75rem;'>", unsafe_allow_html=True)
+                st.markdown(
+                    f'<a class="done-link" href="{result["copyurl"]}" target="_blank" rel="noopener noreferrer">① Crear copia en Drive / Create copy in Drive</a>',
+                    unsafe_allow_html=True,
+                )
+                st.markdown("</div>", unsafe_allow_html=True)
                 st.caption(f"Nombre: {result['name']} · Carpeta destino ID: {result['folderid']}")
-                st.markdown("---")
-                st.caption("Una vez creada la copia, pulsa el botón para completar la configuración.")
-                if st.button("Ya he creado la copia — Configurar ahora", key="btnconfigurarcopia"):
+
+                if st.button("② Configurar crucero", key="btnconfigurarcopia"):
                     archivo = findfilebyname(result["folderid"], result["name"])
                     if not archivo:
-                        st.error("No se ha encontrado el archivo en la carpeta. Asegúrate de haber creado la copia con el nombre correcto.")
+                        st.error("No se ha encontrado el archivo. Asegúrate de haber completado el paso 1 antes de continuar.")
                     else:
                         try:
                             updatecrucerosheet(archivo["id"], result["boat"])
