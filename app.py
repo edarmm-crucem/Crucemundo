@@ -809,8 +809,7 @@ def createcrucerofile(barco, fechaobj):
     if not barco or not fechaobj:
         raise Exception("Faltan datos de barco o fecha.")
     anio = str(fechaobj.year)
-    nombrenuevo = f"{barco}_{fechaobj.strftime('%y%m%d')}"
-    fechaes = fechaobj.strftime("%d/%m/%Y")
+    nombrenuevo = safefilename(f"{barco}_{fechaobj.strftime('%y%m%d')}")
     carpetaanio = getorcreatefolder(DRIVEROOTID, anio)
     carpetabarco = getorcreatefolder(carpetaanio["id"], barco)
     duplicado = findfilebyname(carpetabarco["id"], nombrenuevo)
@@ -820,22 +819,18 @@ def createcrucerofile(barco, fechaobj):
             "name": nombrenuevo,
             "url": duplicado.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{duplicado['id']}/edit",
         }
-    descripcion = (
-        f"Barco: {barco}\nSalida: {fechaes}\n"
-        f"Creado: {now().strftime('%d/%m/%Y %H:%M:%S')}\n"
-        f"Los archivos de sesión deben borrarse a los 30 días."
+    copyurl = (
+        f"https://docs.google.com/spreadsheets/d/{TEMPLATEIDCRUCERO}/copy"
+        f"?copyDestination={carpetabarco['id']}"
+        f"&title={urllib.parse.quote(nombrenuevo)}"
     )
-    copia = copyfiletofolder(TEMPLATEIDCRUCERO, nombrenuevo, carpetabarco["id"], descripcion)
-    updatecrucerosheet(copia["id"], barco)
-    getyears.clear()
-    getboats.clear()
-    getdepartures.clear()
     return {
-        "status": "created",
+        "status": "needscopy",
         "name": nombrenuevo,
-        "url": copia.get("webViewLink") or f"https://docs.google.com/spreadsheets/d/{copia['id']}/edit",
+        "copyurl": copyurl,
         "year": anio,
         "boat": barco,
+        "folderid": carpetabarco["id"],
     }
 
 
@@ -1916,42 +1911,60 @@ if st.session_state.get("opencruceroform"):
         currentcyear = st.session_state.get("cruceroyear")
         if currentcyear not in years:
             currentcyear = None
-        cruceroyear = st.selectbox("AÑO DESTINO / TARGET YEAR", options=years,
+        cruceroyear = st.selectbox(
+            "AÑO DESTINO / TARGET YEAR", options=years,
             index=years.index(currentcyear) if currentcyear in years else None,
             placeholder="Selecciona un año / Select a year",
-            key="cruceroyearwidget", on_change=oncruceroyearchange)
+            key="cruceroyearwidget", on_change=oncruceroyearchange,
+        )
         if cruceroyear != st.session_state.get("cruceroyear"):
             st.session_state.cruceroyear = cruceroyear
         cruceroboats = getboats(cruceroyear) if cruceroyear else []
         currentcboat = st.session_state.get("cruceroboat")
         if currentcboat not in cruceroboats:
             currentcboat = None
-        cruceroboat = st.selectbox("BARCO / SHIP", options=cruceroboats,
+        cruceroboat = st.selectbox(
+            "BARCO / SHIP", options=cruceroboats,
             index=cruceroboats.index(currentcboat) if currentcboat in cruceroboats else None,
             placeholder="Selecciona un barco / Select a ship",
-            key="cruceroboatwidget", on_change=oncruceroboatchange, disabled=not cruceroyear)
+            key="cruceroboatwidget", on_change=oncruceroboatchange, disabled=not cruceroyear,
+        )
         if cruceroboat != st.session_state.get("cruceroboat"):
             st.session_state.cruceroboat = cruceroboat
         fechasalida = st.date_input("FECHA DE SALIDA / DEPARTURE DATE", value=date.today(), format="DD/MM/YYYY")
         if cruceroboat and fechasalida:
-            previewname = f"{cruceroboat}{fechasalida.strftime('%y%m%d')}"
+            previewname = f"{cruceroboat}_{fechasalida.strftime('%y%m%d')}"
             st.caption(f"Nombre previsto / Expected name: {previewname}")
-        if st.button("Crear Crucero", key="btncrearcruceroaction", disabled=not (cruceroyear and cruceroboat and fechasalida)):
+        if st.button("Preparar Crucero", key="btncrearcruceroaction", disabled=not (cruceroyear and cruceroboat and fechasalida)):
             if int(cruceroyear) != fechasalida.year:
                 st.error("El año seleccionado no coincide con el año de la fecha / Selected year does not match the date year.")
             else:
-                safeaudit("request_create_cruise", f"Petición crear crucero: {cruceroboat} {fechasalida}", panel="crucero", extra={"request_type": "create_cruise"})
+                safeaudit(
+                    "request_create_cruise",
+                    f"Petición crear crucero: {cruceroboat} {fechasalida}",
+                    panel="crucero",
+                    extra={"request_type": "create_cruise"},
+                )
                 result = createcrucerofile(cruceroboat, fechasalida)
-                if result["status"] == "duplicate":
-                    st.warning(f"Ya existe / Already exists: {result['name']}")
-                    st.markdown(f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir archivo existente / Open existing file</a>', unsafe_allow_html=True)
-                else:
-                    st.success(f"Archivo creado / File created: {result['name']}")
-                    st.markdown(f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir crucero / Open cruise</a>', unsafe_allow_html=True)
+                st.session_state.cruceroresult = result
+        result = st.session_state.get("cruceroresult")
+        if result:
+            if result["status"] == "duplicate":
+                st.warning(f"Ya existe / Already exists: {result['name']}")
+                st.markdown(
+                    f'<a class="done-link" href="{result["url"]}" target="_blank" rel="noopener noreferrer">Abrir existente / Open existing</a>',
+                    unsafe_allow_html=True,
+                )
+            elif result["status"] == "needscopy":
+                st.info("Abre el enlace para crear la copia con tu cuenta de Google. La carpeta de destino ya está preparada.")
+                st.markdown(
+                    f'<a class="done-link" href="{result["copyurl"]}" target="_blank" rel="noopener noreferrer">Crear copia en Drive / Create copy in Drive</a>',
+                    unsafe_allow_html=True,
+                )
+                st.caption(f"Nombre: {result['name']} · Carpeta ID: {result['folderid']}")
     except Exception as exc:
         st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
-
 
 # ============================================================
 # BLOQUE 23: PANEL — AÑADIR AGENCIA
