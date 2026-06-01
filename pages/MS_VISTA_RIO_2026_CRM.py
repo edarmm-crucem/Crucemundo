@@ -598,20 +598,54 @@ else:
             if not cupos_config:
                 st.info("No hay cupos configurados. Ve a 'Configurar Cupos'. / *No quotas configured. Go to 'Configure Quotas'.*")
             else:
-                tabla = []
+                # CSS adicional para columnas de cupo
+                st.markdown("""
+                <style>
+                .cupos-tabla { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.85rem; }
+                .cupos-tabla th { background-color: #F3F4F6; color: #374151; font-weight: 700; padding: 10px; border: 1px solid #E5E7EB; text-align: center; }
+                .cupos-tabla td { padding: 8px 10px; border: 1px solid #E5E7EB; text-align: center; vertical-align: middle; }
+                .cupos-tabla tr:hover { background-color: #F9FAFB; }
+                .td-cupo-cab { background-color: #EFF6FF; color: #1E40AF; font-weight: 700; }
+                .td-cupo-pax { background-color: #F0FDF4; color: #166534; font-weight: 700; }
+                .th-cupo-cab { background-color: #DBEAFE !important; color: #1E40AF !important; }
+                .th-cupo-pax { background-color: #DCFCE7 !important; color: #166534 !important; }
+                .td-ok { color: #166534; font-weight: 700; }
+                .td-exc { color: #991B1B; font-weight: 700; }
+                </style>
+                """, unsafe_allow_html=True)
+
+                t = '<table class="cupos-tabla"><thead><tr>'
+                t += '<th>Agencia / Agency</th>'
+                t += '<th>Categoría / Category</th>'
+                t += '<th class="th-cupo-cab">Cupo Cabinas / Cabin Quota</th>'
+                t += '<th>Cabinas Usadas / Used</th>'
+                t += '<th>Cabinas Disp. / Avail.</th>'
+                t += '<th class="th-cupo-pax">Cupo Pax / Pax Quota</th>'
+                t += '<th>Pax Registrados / Registered</th>'
+                t += '<th>Pax Disp. / Avail.</th>'
+                t += '<th>Estado / Status</th>'
+                t += '</tr></thead><tbody>'
+
                 for (ag, cat), lims in cupos_config.items():
                     cab_lim = lims["cabinas"]; pax_lim = lims["pax"]
                     cab_usadas = cabinas_por_ag_cat[(ag, cat)]; pax_usados = pax_por_ag_cat[(ag, cat)]
                     cab_disp = cab_lim - cab_usadas; pax_disp = pax_lim - pax_usados
-                    status = "✅ OK" if cab_disp >= 0 and pax_disp >= 0 else "🚨 Excedido / Exceeded"
-                    tabla.append({"Agencia / Agency": ag, "Categoría / Category": cat,
-                        "Cupo Cabinas / Cabin Quota": cab_lim, "Cabinas Ocupadas / Used": cab_usadas,
-                        "Cabinas Disp. / Avail.": cab_disp, "Cupo Pax / Pax Quota": pax_lim,
-                        "Pax Registrados / Registered": pax_usados, "Pax Disp. / Avail.": pax_disp,
-                        "Estado / Status": status})
-                if tabla:
-                    st.table(tabla)
+                    excedido = cab_disp < 0 or pax_disp < 0
+                    status_html = '<span class="td-exc">🚨 Excedido / Exceeded</span>' if excedido else '<span class="td-ok">✅ OK</span>'
+                    t += '<tr>'
+                    t += f'<td style="font-weight:700;text-align:left;">{ag}</td>'
+                    t += f'<td>{cat}</td>'
+                    t += f'<td class="td-cupo-cab">{cab_lim}</td>'
+                    t += f'<td>{cab_usadas}</td>'
+                    t += f'<td>{"🔴 " if cab_disp < 0 else ""}{cab_disp}</td>'
+                    t += f'<td class="td-cupo-pax">{pax_lim}</td>'
+                    t += f'<td>{pax_usados}</td>'
+                    t += f'<td>{"🔴 " if pax_disp < 0 else ""}{pax_disp}</td>'
+                    t += f'<td>{status_html}</td>'
+                    t += '</tr>'
 
+                t += '</tbody></table>'
+                st.markdown(t, unsafe_allow_html=True)
         # ============================================================
         # BLOQUE 18: MODO CONFIGURAR CUPOS
         # ============================================================
