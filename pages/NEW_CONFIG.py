@@ -8,7 +8,6 @@ import streamlit as st
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
-
 st.set_page_config(
     page_title="Nueva Confirmación",
     page_icon="favicon1.png",
@@ -258,57 +257,8 @@ div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
     font-size: 0.88rem !important; font-weight: 600 !important;
 }
 div[data-testid="stSelectbox"] label {
-    color: #374151 !important;
-    font-size: 0.76rem !important;
-    font-weight: 700 !important;
+    color: #374151 !important; font-size: 0.76rem !important; font-weight: 700 !important;
 }
-
-
-
-/* =========================
-   TABLA AGENCIA (LOCKED)
-========================= */
-
-.agency-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-    margin-top: 10px;
-}
-
-.agency-table th {
-    background-color: #F3F4F6;
-    padding: 8px;
-    border: 1px solid #9CA3AF;
-    text-align: left;
-    font-weight: 600;
-    color: #111827;
-}
-
-.agency-table td {
-    background-color: #FAFAFA;
-    padding: 8px;
-    border: 1px solid #9CA3AF;
-    color: #1F2933;
-    font-weight: 500;
-}
-
-/* Código más técnico */
-.agency-table .code {
-    font-family: monospace;
-    background-color: #EEF2FF;
-}
-
-/* Cabecera sección tipo bloque */
-.agency-header {
-    background-color: #111827;
-    color: white;
-    font-weight: 600;
-    padding: 6px;
-    border: 1px solid #111827;
-}
-
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -464,266 +414,293 @@ if st.session_state.nc_tipo:
     email     = ag.get("Email",     "")
     direccion = ag.get("Direccion", "")
 
-def cell(v, css="value-cell"):
-    return f'<td class="{css}">{v}</td>' if v else '<td class="empty-cell">—</td>'
+    def cell(v, css="value-cell"):
+        return f'<td class="{css}">{v}</td>' if v else '<td class="empty-cell">—</td>'
 
+    st.markdown(f"""
+    <table class="agency-table">
+        <tr>
+            <th colspan="2" style="text-align:left;">AGENCIA</th>
+            <td class="value-cell" style="font-weight:800;font-size:0.88rem;" colspan="2">
+                {nombre or '<span style="color:#9CA3AF;font-style:italic;">sin seleccionar</span>'}
+            </td>
+            <th>COD</th>
+            {cell(codigo, "code-cell")}
+            <th>GRUPO</th>
+            {cell(grupo)}
+        </tr>
+        <tr>
+            <td class="label-cell" colspan="2">Dirección</td>
+            <td class="value-cell" colspan="5">
+                {direccion or '<span style="color:#9CA3AF;font-style:italic;">—</span>'}
+            </td>
+        </tr>
+        <tr>
+            <td class="label-cell" colspan="2">Teléfono</td>
+            {cell(telefono)}
+            <td class="label-cell">Email</td>
+            <td class="value-cell" colspan="4">
+                {email or '<span style="color:#9CA3AF;font-style:italic;">—</span>'}
+            </td>
+        </tr>
+    </table>
+    """, unsafe_allow_html=True)
 
-html = f"""
-<table class="agency-table">
-<tr>
-    <th colspan="8" class="agency-header">AGENCIA</th>
-</tr>
+    if sel:
+        st.markdown('<div class="search-result-card">✅ Agencia cargada correctamente desde la base de datos.</div>', unsafe_allow_html=True)
 
-<tr>
-    <th>Nombre</th>
-    <td colspan="3">{nombre or "—"}</td>
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    <th>Código</th>
-    <td class="code">{codigo or "—"}</td>
+    # ============================================================
+    # AGENTE / CLIENTE
+    # ============================================================
+    st.markdown("<div style='height:0.7rem'></div>", unsafe_allow_html=True)
+    st.markdown('<div class="form-panel">', unsafe_allow_html=True)
+    st.markdown('<div class="form-section-title">Agente / Cliente</div>', unsafe_allow_html=True)
 
-    <th>Grupo</th>
-    <td>{grupo or "—"}</td>
-</tr>
-
-<tr>
-    <th>Dirección</th>
-    <td colspan="7">{direccion or "—"}</td>
-</tr>
-
-<tr>
-    <th>Teléfono</th>
-    <td>{telefono or "—"}</td>
-
-    <th>Email</th>
-    <td colspan="5">{email or "—"}</td>
-</tr>
-
-</table>
-"""
-
-st.components.v1.html(html, height=300)
-
-if sel:
-    st.markdown(
-        '<div class="search-result-card">✅ Agencia cargada correctamente desde la base de datos.</div>',
-        unsafe_allow_html=True
+    agente_cliente = st.text_input(
+        "Nombre del agente o cliente / Agent or client name",
+        value=st.session_state.get("nc_agente_cliente", ""),
+        key="nc_agente_cliente_widget",
+        placeholder="Ej: María García",
     )
+    if agente_cliente != st.session_state.get("nc_agente_cliente", ""):
+        st.session_state.nc_agente_cliente = agente_cliente
 
-st.markdown("</div>", unsafe_allow_html=True)
-# ============================================================
-# AGENTE / CLIENTE
-# ============================================================
-st.markdown("<div style='height:0.7rem'></div>", unsafe_allow_html=True)
-st.markdown('<div class="form-panel">', unsafe_allow_html=True)
-st.markdown('<div class="form-section-title">Agente / Cliente</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-agente_cliente = st.text_input(
-    "Nombre del agente o cliente / Agent or client name",
-    value=st.session_state.get("nc_agente_cliente", ""),
-    key="nc_agente_cliente_widget",
-    placeholder="Ej: María García",
-)
-if agente_cliente != st.session_state.get("nc_agente_cliente", ""):
-    st.session_state.nc_agente_cliente = agente_cliente
+    # ============================================================
+    # ESTADO RESERVA
+    # ============================================================
+    st.markdown('<div class="form-panel">', unsafe_allow_html=True)
+    st.markdown('<div class="form-section-title">Estado de la Reserva / Booking Status</div>', unsafe_allow_html=True)
 
-st.markdown("</div>", unsafe_allow_html=True)
+    ESTADOS = ["", "CONFIRMADO", "NO CONFIRMADO", "CANCELADO"]
+    estado_actual = st.session_state.get("nc_estado_reserva", "")
 
-# ============================================================
-# ESTADO RESERVA
-# ============================================================
-st.markdown('<div class="form-panel">', unsafe_allow_html=True)
-st.markdown('<div class="form-section-title">Estado de la Reserva / Booking Status</div>', unsafe_allow_html=True)
+    estado_sel = st.selectbox(
+        "Estado / Status",
+        options=ESTADOS,
+        index=ESTADOS.index(estado_actual) if estado_actual in ESTADOS else 0,
+        key="nc_estado_reserva_widget",
+        format_func=lambda x: {
+            "":              "— Selecciona un estado —",
+            "CONFIRMADO":    "✅  CONFIRMADO",
+            "NO CONFIRMADO": "⚠️  NO CONFIRMADO",
+            "CANCELADO":     "❌  CANCELADO",
+        }.get(x, x),
+    )
+    if estado_sel != st.session_state.get("nc_estado_reserva", ""):
+        st.session_state.nc_estado_reserva = estado_sel
 
-ESTADOS = ["", "CONFIRMADO", "NO CONFIRMADO", "CANCELADO"]
-estado_actual = st.session_state.get("nc_estado_reserva", "")
+    # Badge visual del estado seleccionado
+    if estado_sel == "CONFIRMADO":
+        st.markdown("""
+        <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
+             padding:0.4rem 1rem;border-radius:999px;background:#DCFCE7;
+             border:1.5px solid #86EFAC;color:#166534;font-weight:800;font-size:0.80rem;">
+            ✅ CONFIRMADO
+        </div>""", unsafe_allow_html=True)
+    elif estado_sel == "NO CONFIRMADO":
+        st.markdown("""
+        <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
+             padding:0.4rem 1rem;border-radius:999px;background:#FEF3C7;
+             border:1.5px solid #FCD34D;color:#92400E;font-weight:800;font-size:0.80rem;">
+            ⚠️ NO CONFIRMADO
+        </div>""", unsafe_allow_html=True)
+    elif estado_sel == "CANCELADO":
+        st.markdown("""
+        <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
+             padding:0.4rem 1rem;border-radius:999px;background:#FEE2E2;
+             border:1.5px solid #FCA5A5;color:#991B1B;font-weight:800;font-size:0.80rem;">
+            ❌ CANCELADO
+        </div>""", unsafe_allow_html=True)
 
-estado_sel = st.selectbox(
-    "Estado / Status",
-    options=ESTADOS,
-    index=ESTADOS.index(estado_actual) if estado_actual in ESTADOS else 0,
-    key="nc_estado_reserva_widget",
-    format_func=lambda x: {
-        "":              "— Selecciona un estado —",
-        "CONFIRMADO":    "✅  CONFIRMADO",
-        "NO CONFIRMADO": "⚠️  NO CONFIRMADO",
-        "CANCELADO":     "❌  CANCELADO",
-    }.get(x, x),
-)
-if estado_sel != st.session_state.get("nc_estado_reserva", ""):
-    st.session_state.nc_estado_reserva = estado_sel
-
-# Badge visual del estado seleccionado
-if estado_sel == "CONFIRMADO":
-    st.markdown("""
-    <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
-         padding:0.4rem 1rem;border-radius:999px;background:#DCFCE7;
-         border:1.5px solid #86EFAC;color:#166534;font-weight:800;font-size:0.80rem;">
-        ✅ CONFIRMADO
-    </div>""", unsafe_allow_html=True)
-elif estado_sel == "NO CONFIRMADO":
-    st.markdown("""
-    <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
-         padding:0.4rem 1rem;border-radius:999px;background:#FEF3C7;
-         border:1.5px solid #FCD34D;color:#92400E;font-weight:800;font-size:0.80rem;">
-        ⚠️ NO CONFIRMADO
-    </div>""", unsafe_allow_html=True)
-elif estado_sel == "CANCELADO":
-    st.markdown("""
-    <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
-         padding:0.4rem 1rem;border-radius:999px;background:#FEE2E2;
-         border:1.5px solid #FCA5A5;color:#991B1B;font-weight:800;font-size:0.80rem;">
-        ❌ CANCELADO
-    </div>""", unsafe_allow_html=True)
-
-st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # ============================================================
-# LOCALIZADOR CRUCEMUNDO
-# ============================================================
+    # LOCALIZADOR CRUCEMUNDO
+    # ============================================================
+    LOCALIZADOR_REMOTE_ID = "1c1oiBTLDRtDAAKQp8hE7uA1FfStp4DJAYhwa7F_yCNQ"
 
-LOCALIZADOR_REMOTE_ID = "1c1oiBTLDRtDAAKQp8hE7uA1FfStp4DJAYhwa7F_yCNQ"
+    SHIPCODEMAP = {
+        "MS_ALBERTINA":     "ALB",
+        "MS_ARENA":         "ARN",
+        "MS_CRUCEVITA":     "CV",
+        "MS_DOURO_CRUISER": "DC",
+        "MS_FIDELIO":       "FID",
+        "MS_LEONORA":       "LEO",
+        "MS_RIVER_DIAMOND": "RDA",
+        "MS_RIVER_SAPPHIRE":"RSA",
+        "MS_SWISS_SPLENDOR":"SPL",
+        "MS_VISTA_GRACIA":  "VGR",
+        "MS_VISTAMILLA":    "VMI",
+        "MS_VISTA_RIO":     "VRI",
+        "MS_CRUCE_RIO":     "CRI",
+    }
 
-SHIPCODEMAP = {
-    "MS_ALBERTINA":     "ALB",
-    "MS_ARENA":         "ARN",
-    "MS_CRUCEVITA":     "CV",
-    "MS_DOURO_CRUISER": "DC",
-    "MS_FIDELIO":       "FID",
-    "MS_LEONORA":       "LEO",
-    "MS_RIVER_DIAMOND": "RDA",
-    "MS_RIVER_SAPPHIRE":"RSA",
-    "MS_SWISS_SPLENDOR":"SPL",
-    "MS_VISTA_GRACIA":  "VGR",
-    "MS_VISTAMILLA":    "VMI",
-    "MS_VISTA_RIO":     "VRI",
-    "MS_CRUCE_RIO":     "CRI",
-}
+    def generar_localizador(barco, fecha_salida):
+        """
+        Replica MASTER_CONFIRMATION_GeneraLOCALIZADOR en Python.
+        - Hoja índice 0 del remoto: contadores  (col A = clave, col B = valor)
+        - Hoja índice 1 del remoto: registro    (timestamp, codigo, barco, fecha)
+        Devuelve el código generado o lanza Exception.
+        """
+        prefijo = SHIPCODEMAP.get(barco)
+        if not prefijo:
+            raise Exception(f"Barco no configurado: {barco}")
 
-def generar_localizador(barco, fecha_salida):
-    prefijo = SHIPCODEMAP.get(barco)
-    if not prefijo:
-        raise Exception(f"Barco no configurado: {barco}")
+        anio2      = fecha_salida.strftime("%y")
+        mes        = fecha_salida.strftime("%m")
+        dia        = fecha_salida.strftime("%d")
+        clave      = prefijo + anio2          # ej: VRI26
+        parte_fecha = anio2 + mes + dia       # ej: 260522
 
-    anio2 = fecha_salida.strftime("%y")
-    mes   = fecha_salida.strftime("%m")
-    dia   = fecha_salida.strftime("%d")
+        service = getsheetsservice()
 
-    clave = prefijo + anio2
-    parte_fecha = anio2 + mes + dia
-
-    service = getsheetsservice()
-
-    spreadsheet = service.spreadsheets().get(
-        spreadsheetId=LOCALIZADOR_REMOTE_ID
-    ).execute()
-
-    sheets = spreadsheet.get("sheets", [])
-    title_cont = sheets[0]["properties"]["title"]
-    title_reg  = sheets[1]["properties"]["title"]
-
-    resp = service.spreadsheets().values().get(
-        spreadsheetId=LOCALIZADOR_REMOTE_ID,
-        range=f"{title_cont}!A:B",
-    ).execute()
-
-    rows = resp.get("values", [])
-
-    contador = 1
-    fila_update = None
-
-    for i, row in enumerate(rows):
-        if row and row[0] == clave:
-            contador = int(row[1]) + 1 if len(row) > 1 else 1
-            fila_update = i + 1
-            break
-
-    if fila_update:
-        service.spreadsheets().values().update(
-            spreadsheetId=LOCALIZADOR_REMOTE_ID,
-            range=f"{title_cont}!B{fila_update}",
-            valueInputOption="RAW",
-            body={"values": [[contador]]},
+        # ── Leer hoja contadores (índice 0) ──────────────────
+        spreadsheet  = service.spreadsheets().get(
+            spreadsheetId=LOCALIZADOR_REMOTE_ID
         ).execute()
-    else:
-        service.spreadsheets().values().append(
+        sheets       = spreadsheet.get("sheets", [])
+        if len(sheets) < 2:
+            raise Exception("El archivo remoto necesita al menos 2 hojas.")
+
+        title_cont = sheets[0]["properties"]["title"]
+        title_reg  = sheets[1]["properties"]["title"]
+
+        resp = service.spreadsheets().values().get(
             spreadsheetId=LOCALIZADOR_REMOTE_ID,
             range=f"{title_cont}!A:B",
+        ).execute()
+        rows = resp.get("values", [])
+
+        contador    = 1
+        fila_update = None
+
+        for i, row in enumerate(rows):
+            if row and str(row[0]).strip() == clave:
+                contador    = int(row[1]) + 1 if len(row) > 1 and str(row[1]).isdigit() else 1
+                fila_update = i + 1   # 1-based
+                break
+
+        # ── Actualizar o crear contador ───────────────────────
+        if fila_update:
+            service.spreadsheets().values().update(
+                spreadsheetId=LOCALIZADOR_REMOTE_ID,
+                range=f"{title_cont}!B{fila_update}",
+                valueInputOption="RAW",
+                body={"values": [[contador]]},
+            ).execute()
+        else:
+            service.spreadsheets().values().append(
+                spreadsheetId=LOCALIZADOR_REMOTE_ID,
+                range=f"{title_cont}!A:B",
+                valueInputOption="RAW",
+                insertDataOption="INSERT_ROWS",
+                body={"values": [[clave, contador]]},
+            ).execute()
+
+        # ── Generar código ────────────────────────────────────
+        codigo = f"{prefijo}{parte_fecha}-{str(contador).zfill(3)}"
+
+        # ── Registrar en hoja índice 1 ────────────────────────
+        from datetime import datetime as dt
+        ahora    = dt.now().strftime("%d/%m/%Y %H:%M")
+        fecha_str = fecha_salida.strftime("%d/%m/%Y")
+
+        service.spreadsheets().values().append(
+            spreadsheetId=LOCALIZADOR_REMOTE_ID,
+            range=f"{title_reg}!A:D",
             valueInputOption="RAW",
             insertDataOption="INSERT_ROWS",
-            body={"values": [[clave, contador]]},
+            body={"values": [[ahora, codigo, barco, fecha_str]]},
         ).execute()
 
-    codigo = f"{prefijo}{parte_fecha}-{str(contador).zfill(3)}"
+        return codigo
 
-    from datetime import datetime as dt
-    ahora = dt.now().strftime("%d/%m/%Y %H:%M")
-    fecha_str = fecha_salida.strftime("%d/%m/%Y")
+    # ── UI del bloque localizador ─────────────────────────────
+    st.markdown('<div class="form-panel">', unsafe_allow_html=True)
+    st.markdown('<div class="form-section-title">Localizador Crucemundo</div>', unsafe_allow_html=True)
 
-    service.spreadsheets().values().append(
-        spreadsheetId=LOCALIZADOR_REMOTE_ID,
-        range=f"{title_reg}!A:D",
-        valueInputOption="RAW",
-        insertDataOption="INSERT_ROWS",
-        body={"values": [[ahora, codigo, barco, fecha_str]]},
-    ).execute()
+    loc_col1, loc_col2, loc_col3 = st.columns([2, 2, 1], gap="medium")
 
-    return codigo
+    with loc_col1:
+        barco_options = [""] + list(SHIPCODEMAP.keys())
+        barco_sel = st.selectbox(
+            "Barco / Ship",
+            options=barco_options,
+            index=barco_options.index(st.session_state.get("nc_barco", ""))
+                  if st.session_state.get("nc_barco", "") in barco_options else 0,
+            key="nc_barco_widget",
+            format_func=lambda x: x.replace("_", " ") if x else "— Selecciona barco —",
+        )
+        if barco_sel != st.session_state.get("nc_barco", ""):
+            st.session_state.nc_barco       = barco_sel
+            st.session_state.nc_localizador = ""
+            st.rerun()
 
+    with loc_col2:
+        fecha_salida_loc = st.date_input(
+            "Fecha de salida / Departure date",
+            value=st.session_state.get("nc_fecha_salida_loc", date.today()),
+            format="DD/MM/YYYY",
+            key="nc_fecha_salida_loc_widget",
+        )
+        st.session_state.nc_fecha_salida_loc = fecha_salida_loc
 
-# ============================================================
-# UI LOCALIZADOR
-# ============================================================
+    with loc_col3:
+        st.markdown("<div style='height:1.82rem'></div>", unsafe_allow_html=True)
+        generar_disabled = not (
+            st.session_state.get("nc_barco") and
+            st.session_state.get("nc_fecha_salida_loc")
+        )
+        if st.button("⚡ Generar", key="btn_generar_localizador", disabled=generar_disabled):
+            if st.session_state.get("nc_localizador"):
+                st.warning("Ya existe un localizador generado para esta confirmación. Reinicia si quieres uno nuevo.")
+            else:
+                try:
+                    with st.spinner("Generando localizador..."):
+                        codigo = generar_localizador(
+                            st.session_state.nc_barco,
+                            st.session_state.nc_fecha_salida_loc,
+                        )
+                    st.session_state.nc_localizador = codigo
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"Error generando localizador: {exc}")
 
-st.markdown('<div class="form-panel">', unsafe_allow_html=True)
-st.markdown('<div class="form-section-title">Localizador Crucemundo</div>', unsafe_allow_html=True)
+    # ── Mostrar resultado ─────────────────────────────────────
+    loc_generado = st.session_state.get("nc_localizador", "")
+    if loc_generado:
+        st.markdown(f"""
+        <div style="margin-top:0.7rem;display:flex;align-items:center;gap:1rem;
+             background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:10px;
+             padding:0.7rem 1rem;">
+            <div style="font-size:0.72rem;font-weight:700;color:#166534;
+                 text-transform:uppercase;letter-spacing:0.08em;">
+                Localizador asignado
+            </div>
+            <div style="font-size:1.15rem;font-weight:900;color:#1E3A8A;
+                 letter-spacing:0.08em;font-family:monospace;">
+                {loc_generado}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div style="margin-top:0.6rem;background:#F8FAFC;border:1.5px dashed #CBD5E1;
+             border-radius:10px;padding:0.65rem 1rem;font-size:0.78rem;
+             color:#94A3B8;font-weight:600;">
+            Selecciona barco y fecha, luego pulsa ⚡ Generar
+        </div>
+        """, unsafe_allow_html=True)
 
-loc_col1, loc_col2, loc_col3 = st.columns([2, 2, 1], gap="medium")
-
-with loc_col1:
-    barco_options = [""] + list(SHIPCODEMAP.keys())
-    barco_sel = st.selectbox(
-        "Barco / Ship",
-        options=barco_options,
-        index=barco_options.index(st.session_state.get("nc_barco", ""))
-        if st.session_state.get("nc_barco", "") in barco_options else 0,
-        key="nc_barco_widget",
-        format_func=lambda x: x.replace("_", " ") if x else "— Selecciona barco —",
-    )
-    st.session_state.nc_barco = barco_sel
-
-with loc_col2:
-    fecha_salida_loc = st.date_input(
-        "Fecha de salida",
-        value=st.session_state.get("nc_fecha_salida_loc", date.today()),
-        format="DD/MM/YYYY",
-        key="nc_fecha_salida_loc_widget",
-    )
-    st.session_state.nc_fecha_salida_loc = fecha_salida_loc
-
-with loc_col3:
-    st.markdown("<div style='height:1.82rem'></div>", unsafe_allow_html=True)
-
-    if st.button(
-        "⚡ Generar",
-        key="btn_generar_localizador",
-        disabled=not (barco_sel and fecha_salida_loc)
-    ):
-        if st.session_state.get("nc_localizador"):
-            st.warning("Ya existe un localizador generado.")
-        else:
-            try:
-                with st.spinner("Generando..."):
-                    codigo = generar_localizador(barco_sel, fecha_salida_loc)
-                st.session_state.nc_localizador = codigo
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error: {e}")
-
-# Resultado
-if st.session_state.get("nc_localizador"):
-    st.success(f"Localizador: {st.session_state.nc_localizador}")
-
-st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown('<div class="form-panel" style="border-color:#FCD34D;background:#FFFBEB;">', unsafe_allow_html=True)
+    st.markdown('<div class="form-section-title" style="color:#92400E;">Localizador Crucemundo</div>', unsafe_allow_html=True)
+    st.warning("⏳ Pendiente de integrar el script de asignación automática de localizador. Pega el script y lo conectamos.")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
     
