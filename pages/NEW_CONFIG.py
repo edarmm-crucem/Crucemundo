@@ -15,18 +15,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-if "nc_barco" not in st.session_state:
-    st.session_state.nc_barco = ""
-
-if "nc_dias" not in st.session_state:
-    st.session_state.nc_dias = 1
-
-if "nc_fecha_salida_loc" not in st.session_state:
-    st.session_state.nc_fecha_salida_loc = date.today()
-
-if "nc_localizador" not in st.session_state:
-    st.session_state.nc_localizador = ""
-    
 # ============================================================
 # AUTH CHECK
 # ============================================================
@@ -574,95 +562,144 @@ if st.session_state.nc_tipo:
         elif estado_sel == "CANCELADO":
             st.markdown('<div style="height:32px;display:flex;align-items:center;padding:0 8px"><span class="status-badge status-cancelled">❌ CANC.</span></div>', unsafe_allow_html=True)
 
-# ============================================================
+    # ============================================================
 # CRUCERO
 # ============================================================
 
-st.markdown('<div class="sh-group-hdr">CRUCERO · FECHAS · LOCALIZADOR</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="sh-group-hdr">CRUCERO · FECHAS · LOCALIZADOR</div>',
+    unsafe_allow_html=True
+)
 
 barcos = getbarcos()
 
 # ------------------------------------------------------------
-# FILA 7 — Barco + Fecha salida
+# FILA 7
 # ------------------------------------------------------------
-r7 = st.columns([0.3, 1, 3, 2], gap="small")
+
+r7 = st.columns([0.3, 1, 3, 1, 2], gap="small")
 
 with r7[0]:
-    st.markdown('<div class="sh-rownum" style="height:32px;">7</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="sh-rownum" style="height:32px;">7</div>',
+        unsafe_allow_html=True
+    )
 
 with r7[1]:
-    st.markdown('<div class="sh-lbl" style="height:32px;">Barco</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="sh-lbl" style="height:32px;">Barco</div>',
+        unsafe_allow_html=True
+    )
 
 with r7[2]:
+
     barco_sel = st.selectbox(
         "barco",
         options=[""] + barcos,
-        index=([""] + barcos).index(st.session_state.get("nc_barco", ""))
-        if st.session_state.get("nc_barco", "") in barcos else 0,
+        index=(
+            [""] + barcos
+        ).index(st.session_state.nc_barco)
+        if st.session_state.nc_barco in barcos
+        else 0,
         key="nc_barco_widget"
     )
+
     st.session_state.nc_barco = barco_sel
 
 with r7[3]:
-    st.markdown('<div class="sh-lbl" style="height:32px;">F. Salida</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="sh-lbl" style="height:32px;">Salida</div>',
+        unsafe_allow_html=True
+    )
 
-fecha_salida = st.date_input(
-    "fecha_salida",
-    value=st.session_state.get("nc_fecha_salida_loc", date.today()),
-    format="DD/MM/YYYY",
-    key="nc_fecha_salida_widget"
-)
-st.session_state.nc_fecha_salida_loc = fecha_salida
+with r7[4]:
 
+    fecha_salida = st.date_input(
+        "fecha_salida",
+        value=st.session_state.nc_fecha_salida_loc,
+        format="DD/MM/YYYY",
+        key="nc_fecha_salida_widget"
+    )
+
+    st.session_state.nc_fecha_salida_loc = fecha_salida
 
 # ------------------------------------------------------------
-# FILA 8 — Días / Noches
+# FILA 8
 # ------------------------------------------------------------
+
 r8 = st.columns([0.3, 1, 1.5, 1, 1.5], gap="small")
 
 with r8[0]:
-    st.markdown('<div class="sh-rownum" style="height:32px;">8</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="sh-rownum" style="height:32px;">8</div>',
+        unsafe_allow_html=True
+    )
 
 with r8[1]:
-    st.markdown('<div class="sh-lbl" style="height:32px;">Días</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="sh-lbl" style="height:32px;">Días</div>',
+        unsafe_allow_html=True
+    )
 
 with r8[2]:
+
     dias = st.number_input(
         "dias",
         min_value=1,
         step=1,
-        value=st.session_state.get("nc_dias", 1),
+        value=st.session_state.nc_dias,
         key="nc_dias_widget"
     )
+
     st.session_state.nc_dias = dias
 
 with r8[3]:
-    st.markdown('<div class="sh-lbl" style="height:32px;">Noches</div>', unsafe_allow_html=True)
-
-with r8[4]:
-    noches = max(dias - 1, 0)
     st.markdown(
-        f'<div class="sh-val-info" style="height:32px;">{noches}</div>',
+        '<div class="sh-lbl" style="height:32px;">Noches</div>',
         unsafe_allow_html=True
     )
 
+with r8[4]:
+
+    noches = max(dias - 1, 0)
+
+    st.markdown(
+        f'''
+        <div class="sh-val-info" style="height:32px;">
+            {noches}
+        </div>
+        ''',
+        unsafe_allow_html=True
+    )
 
 # ------------------------------------------------------------
-# FILA 9 — Llegada automática
+# FILA 9
 # ------------------------------------------------------------
+
 fecha_llegada = fecha_salida + timedelta(days=dias - 1)
 
 r9 = st.columns([0.3, 1, 2], gap="small")
 
 with r9[0]:
-    st.markdown('<div class="sh-rownum" style="height:32px;">9</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="sh-rownum" style="height:32px;">9</div>',
+        unsafe_allow_html=True
+    )
 
 with r9[1]:
-    st.markdown('<div class="sh-lbl" style="height:32px;">Llegada</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="sh-lbl" style="height:32px;">Llegada</div>',
+        unsafe_allow_html=True
+    )
 
 with r9[2]:
+
     st.markdown(
-        f'<div class="sh-val-info" style="height:32px;">{fecha_llegada.strftime("%d/%m/%Y")}</div>',
+        f'''
+        <div class="sh-val-info" style="height:32px;">
+            {fecha_llegada.strftime("%d/%m/%Y")}
+        </div>
+        ''',
         unsafe_allow_html=True
     )
     
@@ -731,8 +768,8 @@ with r10[2]:
                 with st.spinner("Generando localizador..."):
 
                     codigo = generar_localizador(
-                        st.session_state.get("nc_barco", ""),
-                        st.session_state.get("nc_fecha_salida_loc", date.today())
+                        st.session_state.nc_barco,
+                        st.session_state.nc_fecha_salida_loc
                     )
 
                 st.session_state.nc_localizador = codigo
@@ -847,8 +884,8 @@ with r10[3]:
                 try:
                     with st.spinner("Generando..."):
                         codigo = generar_localizador(
-                            st.session_state.get("nc_barco", ""),
-                            st.session_state.get("nc_fecha_salida_loc", date.today()))
+                            st.session_state.nc_barco,
+                            st.session_state.nc_fecha_salida_loc)
                     st.session_state.nc_localizador = codigo
                     st.rerun()
                 except Exception as exc:
