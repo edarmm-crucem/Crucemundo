@@ -660,8 +660,7 @@ else:
             t += th("Pax SOLD", "Pax Sold")
             t += '</tr></thead><tbody>'
         
-            for cat, s in stats_cat.items():
-                # Barra de progreso inline con CSS
+for cat, s in stats_cat.items():
                 pct = s["pct"]
                 if pct < 40:
                     grad = "linear-gradient(90deg, #22C55E, #86EFAC)"
@@ -676,30 +675,37 @@ else:
                     f'<div style="background:{grad};width:{pct}%;height:10px;border-radius:4px;"></div></div>'
                     f'<span style="font-size:0.78rem;font-weight:700;">{pct}%</span>'
                 )
-                    t += '<tr>'
-                    t += f'<td style="font-weight:700;text-align:left;">{cat}</td>'
-                    t += f'<td class="td-total-cab">{s["total"]}</td>'
-                    t += f'<td class="td-sold">{s["vendidas"]}</td>'
-                    t += f'<td style="color:#92400E;font-weight:700;">{s["reservas"]}</td>'
-                    t += f'<td>{s["libres"]}</td>'
-                    t += f'<td style="min-width:120px;">{barra}</td>'
-                    t += f'<td>{s["pax"]}</td>'
-                    t += '</tr>'
-        
-            # Fila TOTAL
-                if tot_pct < 40:
-                    grad_tot = "linear-gradient(90deg, #22C55E, #86EFAC)"
-                elif tot_pct < 70:
-                    grad_tot = "linear-gradient(90deg, #22C55E, #EAB308)"
-                elif tot_pct < 90:
-                    grad_tot = "linear-gradient(90deg, #EAB308, #F97316)"
-                else:
-                    grad_tot = "linear-gradient(90deg, #F97316, #EF4444)"
-                barra_tot = (
-                    f'<div style="background:#E5E7EB;border-radius:4px;height:10px;width:100%;margin-bottom:4px;">'
-                    f'<div style="background:{grad_tot};width:{tot_pct}%;height:10px;border-radius:4px;"></div></div>'
-                    f'<strong style="font-size:0.78rem;">{tot_pct}%</strong>'
-                )
+                t += '<tr>'
+                t += f'<td style="font-weight:700;text-align:left;">{cat}</td>'
+                t += f'<td class="td-total-cab">{s["total"]}</td>'
+                t += f'<td class="td-sold">{s["vendidas"]}</td>'
+                t += f'<td style="color:#92400E;font-weight:700;">{s["reservas"]}</td>'
+                t += f'<td>{s["libres"]}</td>'
+                t += f'<td style="min-width:120px;">{barra}</td>'
+                t += f'<td>{s["pax"]}</td>'
+                t += '</tr>'
+
+            # Fila TOTAL — fuera del for
+            tot_v = sum(s["vendidas"] for s in stats_cat.values())
+            tot_r = sum(s["reservas"] for s in stats_cat.values())
+            tot_l = sum(s["libres"]   for s in stats_cat.values())
+            tot_t = sum(s["total"]    for s in stats_cat.values())
+            tot_p = sum(s["pax"]      for s in stats_cat.values())
+            tot_pct = round(tot_v / tot_t * 100, 1) if tot_t else 0
+
+            if tot_pct < 40:
+                grad_tot = "linear-gradient(90deg, #22C55E, #86EFAC)"
+            elif tot_pct < 70:
+                grad_tot = "linear-gradient(90deg, #22C55E, #EAB308)"
+            elif tot_pct < 90:
+                grad_tot = "linear-gradient(90deg, #EAB308, #F97316)"
+            else:
+                grad_tot = "linear-gradient(90deg, #F97316, #EF4444)"
+            barra_tot = (
+                f'<div style="background:#E5E7EB;border-radius:4px;height:10px;width:100%;margin-bottom:4px;">'
+                f'<div style="background:{grad_tot};width:{tot_pct}%;height:10px;border-radius:4px;"></div></div>'
+                f'<strong style="font-size:0.78rem;">{tot_pct}%</strong>'
+            )
             t += (
                 f'<tr style="background:#F3F4F6;font-weight:800;border-top:2px solid #D1D5DB;">'
                 f'<td style="text-align:left;">TOTAL</td>'
@@ -713,9 +719,6 @@ else:
             )
             t += '</tbody></table>'
             st.markdown(t, unsafe_allow_html=True)
-
-
-
         # ============================================================
         # BLOQUE 17: MODO VER CUPOS
         # ============================================================
