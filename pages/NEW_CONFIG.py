@@ -67,21 +67,6 @@ st.markdown("""
 # ============================================================
 # HEADER (SALUDO + USUARIO + LOGO)
 # ============================================================
-from datetime import datetime
-
-LOGOID = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
-LOGOURL = f"https://lh3.googleusercontent.com/d/{LOGOID}"
-
-def getsaludo():
-    h = datetime.now().hour
-    if h < 14:
-        return "Buenos días"
-    elif h < 21:
-        return "Buenas tardes"
-    return "Buenas noches"
-
-SALUDO = getsaludo()
-
 st.markdown(f"""
 <div style="
     display:flex;
@@ -94,7 +79,7 @@ st.markdown(f"""
 
     <!-- IZQUIERDA -->
     <div style="display:flex;align-items:center;gap:12px;">
-        <img src="{LOGOURL}" style="height:42px;">
+        <img src="https://lh3.googleusercontent.com/d/1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8" style="height:42px;">
         <div>
             <div style="font-size:15px;font-weight:700;color:#111827;">
                 {SALUDO}, {DISPLAYUSER}
@@ -117,7 +102,6 @@ st.markdown(f"""
 
 </div>
 """, unsafe_allow_html=True)
-
 
 
 # ============================================================
