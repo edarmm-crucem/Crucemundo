@@ -592,113 +592,113 @@ else:
             st.markdown(t, unsafe_allow_html=True)
 
 
-        # ============================================================
-# BLOQUE OCUPACIÓN
-# ============================================================
-elif modo == "🛳️ Ocupación / Occupancy":
-    st.markdown(
-        f"### 🛳️ Ocupación del Buque — Salida {ddmm_sel} "
-        "<span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Ship Occupancy — Departure {ddmm_sel}</span>",
-        unsafe_allow_html=True
-    )
-
-    # ── Cálculo de métricas ──────────────────────────────────
-    total_cabinas = len(datos)
-    cab_vendidas  = sum(1 for d in datos if d.get("estado") == "VENDIDA")
-    cab_reservas  = sum(1 for d in datos if d.get("estado") == "RESERVA")
-    cab_libres    = sum(1 for d in datos if d.get("estado") == "LIBRE")
-
-    total_pax     = sum(int(d.get("pax", 0) or 0) for d in datos if d.get("estado") == "VENDIDA")
-    try:
-        cap_max = int(''.join(filter(str.isdigit, capacidad_total.split()[0])))
-    except Exception:
-        cap_max = 0
-
-    pct_cab = round(cab_vendidas / total_cabinas * 100, 1) if total_cabinas else 0
-    pct_pax = round(total_pax / cap_max * 100, 1) if cap_max else 0
-
-    # ── KPIs globales ────────────────────────────────────────
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("🔴 Vendidas / Sold",   f"{cab_vendidas}",  f"{pct_cab}% del total")
-    c2.metric("🟡 Reservas / On Hold", f"{cab_reservas}")
-    c3.metric("⬜ Libres / Free",      f"{cab_libres}")
-    c4.metric("👥 Pax SOLD",           f"{total_pax}",    f"{pct_pax}% cap. máx" if cap_max else "")
-
-    st.markdown("---")
-
-    # ── Ocupación por categoría ──────────────────────────────
-    def th(es, en):
-        return f'<th><div class="th-bilingual"><span class="th-es">{es}</span><span class="th-en">{en}</span></div></th>'
-
-    # Agrupar datos por categoría
-    stats_cat = {}
-    for cat in todas_categorias:
-        cabinas_cat   = [c[1] for c in cabinas if c[3] == cat]
-        n_total       = len(cabinas_cat)
-        n_vendidas    = sum(1 for d in datos if d.get("cabina") in cabinas_cat and d.get("estado") == "VENDIDA")
-        n_reservas    = sum(1 for d in datos if d.get("cabina") in cabinas_cat and d.get("estado") == "RESERVA")
-        n_libres      = sum(1 for d in datos if d.get("cabina") in cabinas_cat and d.get("estado") == "LIBRE")
-        pax_cat       = sum(int(d.get("pax", 0) or 0) for d in datos if d.get("cabina") in cabinas_cat and d.get("estado") == "VENDIDA")
-        pct           = round(n_vendidas / n_total * 100, 1) if n_total else 0
-        stats_cat[cat] = {
-            "total": n_total, "vendidas": n_vendidas,
-            "reservas": n_reservas, "libres": n_libres,
-            "pax": pax_cat, "pct": pct
-        }
-
-    # Tabla por categoría
-    t = '<table class="informe-tabla"><thead><tr>'
-    t += th("Categoría", "Category")
-    t += th("Total Cabinas", "Total Cabins")
-    t += th("Vendidas", "Sold")
-    t += th("Reservas", "On Hold")
-    t += th("Libres", "Free")
-    t += th("% Ocup.", "% Occup.")
-    t += th("Pax SOLD", "Pax Sold")
-    t += '</tr></thead><tbody>'
-
-    for cat, s in stats_cat.items():
-        # Barra de progreso inline con CSS
-        barra = (
-            f'<div style="background:#E5E7EB;border-radius:4px;height:8px;width:100%;margin-bottom:4px;">'
-            f'<div style="background:#1F2937;width:{s["pct"]}%;height:8px;border-radius:4px;"></div></div>'
-            f'{s["pct"]}%'
+    # ============================================================
+    # BLOQUE OCUPACIÓN
+    # ============================================================
+    elif modo == "🛳️ Ocupación / Occupancy":
+        st.markdown(
+            f"### 🛳️ Ocupación del Buque — Salida {ddmm_sel} "
+            "<span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Ship Occupancy — Departure {ddmm_sel}</span>",
+            unsafe_allow_html=True
         )
-        t += '<tr>'
-        t += f'<td style="font-weight:700;text-align:left;">{cat}</td>'
-        t += f'<td>{s["total"]}</td>'
-        t += f'<td class="td-sold">{s["vendidas"]}</td>'
-        t += f'<td style="color:#92400E;font-weight:700;">{s["reservas"]}</td>'
-        t += f'<td>{s["libres"]}</td>'
-        t += f'<td style="min-width:120px;">{barra}</td>'
-        t += f'<td>{s["pax"]}</td>'
-        t += '</tr>'
-
-    # Fila TOTAL
-    tot_v = sum(s["vendidas"] for s in stats_cat.values())
-    tot_r = sum(s["reservas"] for s in stats_cat.values())
-    tot_l = sum(s["libres"]   for s in stats_cat.values())
-    tot_t = sum(s["total"]    for s in stats_cat.values())
-    tot_p = sum(s["pax"]      for s in stats_cat.values())
-    tot_pct = round(tot_v / tot_t * 100, 1) if tot_t else 0
-    barra_tot = (
-        f'<div style="background:#E5E7EB;border-radius:4px;height:8px;width:100%;margin-bottom:4px;">'
-        f'<div style="background:#1F2937;width:{tot_pct}%;height:8px;border-radius:4px;"></div></div>'
-        f'<strong>{tot_pct}%</strong>'
-    )
-    t += (
-        f'<tr style="background:#F3F4F6;font-weight:800;border-top:2px solid #D1D5DB;">'
-        f'<td style="text-align:left;">TOTAL</td>'
-        f'<td>{tot_t}</td>'
-        f'<td class="td-sold">{tot_v}</td>'
-        f'<td style="color:#92400E;font-weight:700;">{tot_r}</td>'
-        f'<td>{tot_l}</td>'
-        f'<td style="min-width:120px;">{barra_tot}</td>'
-        f'<td>{tot_p}</td>'
-        f'</tr>'
-    )
-    t += '</tbody></table>'
-    st.markdown(t, unsafe_allow_html=True)
+    
+        # ── Cálculo de métricas ──────────────────────────────────
+        total_cabinas = len(datos)
+        cab_vendidas  = sum(1 for d in datos if d.get("estado") == "VENDIDA")
+        cab_reservas  = sum(1 for d in datos if d.get("estado") == "RESERVA")
+        cab_libres    = sum(1 for d in datos if d.get("estado") == "LIBRE")
+    
+        total_pax     = sum(int(d.get("pax", 0) or 0) for d in datos if d.get("estado") == "VENDIDA")
+        try:
+            cap_max = int(''.join(filter(str.isdigit, capacidad_total.split()[0])))
+        except Exception:
+            cap_max = 0
+    
+        pct_cab = round(cab_vendidas / total_cabinas * 100, 1) if total_cabinas else 0
+        pct_pax = round(total_pax / cap_max * 100, 1) if cap_max else 0
+    
+        # ── KPIs globales ────────────────────────────────────────
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("🔴 Vendidas / Sold",   f"{cab_vendidas}",  f"{pct_cab}% del total")
+        c2.metric("🟡 Reservas / On Hold", f"{cab_reservas}")
+        c3.metric("⬜ Libres / Free",      f"{cab_libres}")
+        c4.metric("👥 Pax SOLD",           f"{total_pax}",    f"{pct_pax}% cap. máx" if cap_max else "")
+    
+        st.markdown("---")
+    
+        # ── Ocupación por categoría ──────────────────────────────
+        def th(es, en):
+            return f'<th><div class="th-bilingual"><span class="th-es">{es}</span><span class="th-en">{en}</span></div></th>'
+    
+        # Agrupar datos por categoría
+        stats_cat = {}
+        for cat in todas_categorias:
+            cabinas_cat   = [c[1] for c in cabinas if c[3] == cat]
+            n_total       = len(cabinas_cat)
+            n_vendidas    = sum(1 for d in datos if d.get("cabina") in cabinas_cat and d.get("estado") == "VENDIDA")
+            n_reservas    = sum(1 for d in datos if d.get("cabina") in cabinas_cat and d.get("estado") == "RESERVA")
+            n_libres      = sum(1 for d in datos if d.get("cabina") in cabinas_cat and d.get("estado") == "LIBRE")
+            pax_cat       = sum(int(d.get("pax", 0) or 0) for d in datos if d.get("cabina") in cabinas_cat and d.get("estado") == "VENDIDA")
+            pct           = round(n_vendidas / n_total * 100, 1) if n_total else 0
+            stats_cat[cat] = {
+                "total": n_total, "vendidas": n_vendidas,
+                "reservas": n_reservas, "libres": n_libres,
+                "pax": pax_cat, "pct": pct
+            }
+    
+        # Tabla por categoría
+        t = '<table class="informe-tabla"><thead><tr>'
+        t += th("Categoría", "Category")
+        t += th("Total Cabinas", "Total Cabins")
+        t += th("Vendidas", "Sold")
+        t += th("Reservas", "On Hold")
+        t += th("Libres", "Free")
+        t += th("% Ocup.", "% Occup.")
+        t += th("Pax SOLD", "Pax Sold")
+        t += '</tr></thead><tbody>'
+    
+        for cat, s in stats_cat.items():
+            # Barra de progreso inline con CSS
+            barra = (
+                f'<div style="background:#E5E7EB;border-radius:4px;height:8px;width:100%;margin-bottom:4px;">'
+                f'<div style="background:#1F2937;width:{s["pct"]}%;height:8px;border-radius:4px;"></div></div>'
+                f'{s["pct"]}%'
+            )
+            t += '<tr>'
+            t += f'<td style="font-weight:700;text-align:left;">{cat}</td>'
+            t += f'<td>{s["total"]}</td>'
+            t += f'<td class="td-sold">{s["vendidas"]}</td>'
+            t += f'<td style="color:#92400E;font-weight:700;">{s["reservas"]}</td>'
+            t += f'<td>{s["libres"]}</td>'
+            t += f'<td style="min-width:120px;">{barra}</td>'
+            t += f'<td>{s["pax"]}</td>'
+            t += '</tr>'
+    
+        # Fila TOTAL
+        tot_v = sum(s["vendidas"] for s in stats_cat.values())
+        tot_r = sum(s["reservas"] for s in stats_cat.values())
+        tot_l = sum(s["libres"]   for s in stats_cat.values())
+        tot_t = sum(s["total"]    for s in stats_cat.values())
+        tot_p = sum(s["pax"]      for s in stats_cat.values())
+        tot_pct = round(tot_v / tot_t * 100, 1) if tot_t else 0
+        barra_tot = (
+            f'<div style="background:#E5E7EB;border-radius:4px;height:8px;width:100%;margin-bottom:4px;">'
+            f'<div style="background:#1F2937;width:{tot_pct}%;height:8px;border-radius:4px;"></div></div>'
+            f'<strong>{tot_pct}%</strong>'
+        )
+        t += (
+            f'<tr style="background:#F3F4F6;font-weight:800;border-top:2px solid #D1D5DB;">'
+            f'<td style="text-align:left;">TOTAL</td>'
+            f'<td>{tot_t}</td>'
+            f'<td class="td-sold">{tot_v}</td>'
+            f'<td style="color:#92400E;font-weight:700;">{tot_r}</td>'
+            f'<td>{tot_l}</td>'
+            f'<td style="min-width:120px;">{barra_tot}</td>'
+            f'<td>{tot_p}</td>'
+            f'</tr>'
+        )
+        t += '</tbody></table>'
+        st.markdown(t, unsafe_allow_html=True)
 
 
 
