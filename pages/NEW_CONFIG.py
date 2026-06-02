@@ -22,150 +22,477 @@ if not st.session_state.get("authenticated"):
         <style>
         [data-testid="stSidebarNav"] { display: none !important; }
         header[data-testid="stHeader"] { display: none !important; }
+        .auth-warn { background: #FEF3C7; border: 1.5px solid #FCD34D; border-radius: 12px;
+            padding: 1rem 1.2rem; margin: 2rem auto; max-width: 480px; font-family: sans-serif; }
+        .auth-warn-title { font-size: 1rem; font-weight: 800; color: #92400E; margin-bottom: 0.3rem; }
+        .auth-warn-sub { font-size: 0.82rem; color: #78350F; }
         </style>
-        <div style="padding:1rem;background:#FEF3C7;border:1px solid #FCD34D;border-radius:10px;">
-            ⚠️ Acceso restringido
-        </div>
-    """, unsafe_allow_html=True)
+        <div class="auth-warn">
+            <div class="auth-warn-title">⚠️ Acceso restringido / Restricted access</div>
+            <div class="auth-warn-sub">No tienes acceso. Inicia sesión desde el menú principal.<br>
+            <em>You don't have access. Please log in from the main menu.</em></div>
+        </div>""", unsafe_allow_html=True)
     st.stop()
 
 # ============================================================
-# CONSTANTES (mínimas por ahora)
+# CONSTANTES
 # ============================================================
-DISPLAYUSER = st.session_state.get("displayname", "Usuario")
+LOGOID        = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
+LOGOURL       = f"https://lh3.googleusercontent.com/d/{LOGOID}"
+AGENCYSHEETID = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
+AGENCYSHEET   = "Datos"
+
+AGENCYFIELDS  = [
+    "Nombre", "CODIGO", "Grupo Gest", "Telefono", "Email", "Direccion",
+    "COMISION AGENCIA", "COMISION AGENCIA CON OFERTA ", "COMISION AGENCIA OFERTA 2X1 ",
+    "IVA", "IVA SERVICIO OPCIONAL",
+]
+
+DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Usuario"
 
 # ============================================================
-# CSS BASE (vacío inicial controlado)
+# GOOGLE SERVICES
+# ============================================================
+@st.cache_resource
+def getgooglecreds():
+    return service_account.Credentials.from_service_account_info(
+        st.secrets["gcpserviceaccount"],
+        scopes=["https://www.googleapis.com/auth/spreadsheets",
+                "https://www.googleapis.com/auth/drive"],
+    )
+
+@st.cache_resource
+def getsheetsservice():
+    return build("sheets", "v4", credentials=getgooglecreds())
+
+@st.cache_data(ttl=300)
+def getagencias():
+    service = getsheetsservice()
+    response = service.spreadsheets().values().get(
+        spreadsheetId=AGENCYSHEETID,
+        range=f"{AGENCYSHEET}!A:K",
+    ).execute()
+    rows = response.get("values", [])
+    agencies = []
+    for idx, row in enumerate(rows, start=1):
+        row = row + [""] * (11 - len(row))
+        data = {"rownumber": idx}
+        for i, field in enumerate(AGENCYFIELDS):
+            data[field] = row[i]
+        data["searchblob"] = " ".join(
+            str(data.get(f, "") or "").strip().lower()
+            for f in ["Nombre", "CODIGO", "Grupo Gest", "Telefono", "Email"]
+        )
+        agencies.append(data)
+    return agencies
+
+def searchagencias(query):
+    q = str(query or "").strip().lower()
+    if len(q) < 2:
+        return []
+    return [a for a in getagencias() if q in a["searchblob"]]
+
+# ============================================================
+# CSS ESTILO CELDAS TIPO EXCEL
 # ============================================================
 st.markdown("""
 <style>
+
+/* Fuente simple */
+html, body, [class*="css"]  {
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+}
+
+/* Celda etiqueta */
 .cell-label {
     background: #f5f5f5;
     padding: 6px 8px;
     border: 1px solid #d0d0d0;
     font-weight: 600;
-    height: 38px;
-    display:flex;
-    align-items:center;
 }
 
+/* Celda valor info (solo lectura) */
 .cell-value {
-    background: #fff;
+    background: #ffffff;
     padding: 6px 8px;
     border: 1px solid #d0d0d0;
-    height: 38px;
-    display:flex;
-    align-items:center;
 }
 
-.sheet-row {
-    margin-bottom: 6px;
+/* Celda editable (IMPORTANTE) */
+.cell-input {
+    background: #fffdf2;
+    border: 2px solid #f0c040;
+    padding: 3px;
+    border-radius: 4px;
 }
+
+/* separar bloques */
+.block {
+    margin-top: 10px;
+}
+
 </style>
 """, unsafe_allow_html=True)
+``
 
-#### HEADER GLOBAL · MULTIPAGE
+# ============================================================
+# CABECERA
+# ============================================================
+from datetime import date
+today_str = date.today().strftime("%-d/%-m/%Y")
 
-from datetime import datetime
-import streamlit as st
-
-def render_header():
-
-    # ─────────────────────────────
-    # SALUDO DINÁMICO
-    # ─────────────────────────────
-    hora = datetime.now().hour
-
-    if hora < 12:
-        SALUDO = "Buenos días"
-    elif hora < 19:
-        SALUDO = "Buenas tardes"
-    else:
-        SALUDO = "Buenas noches"
-
-    usuario = st.session_state.get("displayname", "").strip() or "Usuario"
-
-    # ─────────────────────────────
-    # RENDER HEADER
-    # ─────────────────────────────
-    st.markdown(f"""
-    <div style="
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        padding:10px 6px 12px 6px;
-        border-bottom:1px solid #e5e7eb;
-        margin-bottom:10px;
-        font-family: Arial;
-    ">
-
-        <!-- IZQUIERDA -->
-        <div style="display:flex;align-items:center;gap:12px;">
-            <img src="https://lh3.googleusercontent.com/d/1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
-                 style="height:42px;">
-
-            <div>
-                <div style="font-size:15px;font-weight:700;color:#111827;">
-                    {SALUDO}, {usuario}. ¿Qué hacemos hoy?
-                </div>
-                <div style="font-size:11px;color:#6b7280;">
-                    Tools and automations · Google Drive backend
-                </div>
-            </div>
-        </div>
-
-        <!-- DERECHA -->
-        <div style="text-align:right;">
-            <div style="font-size:18px;font-weight:800;color:#1f2937;">
-                CRUCEMUNDO
-            </div>
-            <div style="font-size:11px;color:#6b7280;">
-                Herramientas internas / Backoffice
-            </div>
-        </div>
-
+st.markdown(f"""
+<div class="doc-header">
+    <div>
+        <div class="doc-title">📋 PROFORMA · CONFIRMACIÓN</div>
+        <div class="doc-meta">CRUCEMUNDO SL · CRUCEROS FLUVIALES · {today_str}</div>
     </div>
-    """, unsafe_allow_html=True)
+    <img class="doc-logo" src="{LOGOURL}" alt="Logo">
+</div>
+""", unsafe_allow_html=True)
+
+# Nav fila
+nav1, nav2 = st.columns([7, 1])
+with nav1:
+    st.markdown(f'<div style="margin:4px 0 2px 0"><span class="user-pill">👤 {DISPLAYUSER}</span></div>', unsafe_allow_html=True)
+with nav2:
+    if st.button("← Volver", key="btn_back_main"):
+        st.switch_page("app.py")
 
 # ============================================================
-# ESTADO INICIAL
+# INICIO SHEET WRAP
 # ============================================================
-if "nc_tipo" not in st.session_state:
-    st.session_state.nc_tipo = None
+st.markdown('<div class="sheet-wrap">', unsafe_allow_html=True)
 
 # ============================================================
 # FILA 1 — TIPO DE CONFIRMACIÓN
 # ============================================================
-st.markdown("### Tipo de Confirmación / Confirmation Type")
+if "nc_tipo" not in st.session_state:
+    st.session_state.nc_tipo = None
 
-row = st.columns([0.5, 2, 2, 2, 2, 3])
+st.markdown('<div class="sh-group-hdr">TIPO DE CONFIRMACIÓN / CONFIRMATION TYPE</div>', unsafe_allow_html=True)
 
-with row[0]:
-    st.markdown('<div class="cell-label">1</div>', unsafe_allow_html=True)
-
-with row[1]:
-    st.markdown('<div class="cell-label">Tipo</div>', unsafe_allow_html=True)
-
-with row[2]:
-    if st.button("📘 FIT ES"):
-        st.session_state.nc_tipo = "FIT_ES"
-
-with row[3]:
-    if st.button("📗 FIT EN"):
-        st.session_state.nc_tipo = "FIT_EN"
-
-with row[4]:
-    if st.button("👥 GRUPOS"):
-        st.session_state.nc_tipo = "GROUPS"
-
-with row[5]:
+tipo_col = st.columns([0.3, 2, 1, 1, 1, 3], gap="small")
+with tipo_col[0]:
+    st.markdown('<div class="sh-rownum" style="height:38px;">1</div>', unsafe_allow_html=True)
+with tipo_col[1]:
+    st.markdown('<div class="sh-lbl" style="height:38px;">Tipo / Type</div>', unsafe_allow_html=True)
+with tipo_col[2]:
+    if st.button("📘 FIT ES", key="btn_tipo_fit_es"):
+        st.session_state.update({"nc_tipo": "FIT_ES", "nc_agency_query": "", "nc_agency_sel": None, "nc_agency_matches": []})
+        st.rerun()
+with tipo_col[3]:
+    if st.button("📗 FIT EN", key="btn_tipo_fit_en"):
+        st.session_state.update({"nc_tipo": "FIT_EN", "nc_agency_query": "", "nc_agency_sel": None, "nc_agency_matches": []})
+        st.rerun()
+with tipo_col[4]:
+    if st.button("👥 Grupos", key="btn_tipo_groups"):
+        st.session_state.update({"nc_tipo": "GROUPS", "nc_agency_query": "", "nc_agency_sel": None, "nc_agency_matches": []})
+        st.rerun()
+with tipo_col[5]:
     tipo = st.session_state.nc_tipo
-
     if tipo == "FIT_ES":
-        st.markdown("📘 FIT ESPAÑOL seleccionado")
+        st.markdown('<div style="height:38px;display:flex;align-items:center;padding:0 8px"><span class="status-badge status-confirmed">📘 FIT ESPAÑOL seleccionado</span></div>', unsafe_allow_html=True)
     elif tipo == "FIT_EN":
-        st.markdown("📗 FIT ENGLISH selected")
+        st.markdown('<div style="height:38px;display:flex;align-items:center;padding:0 8px"><span class="status-badge" style="background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7;">📗 FIT ENGLISH selected</span></div>', unsafe_allow_html=True)
     elif tipo == "GROUPS":
-        st.markdown("👥 GRUPOS seleccionado")
+        st.markdown('<div style="height:38px;display:flex;align-items:center;padding:0 8px"><span class="status-badge" style="background:#EDE9FE;color:#5B21B6;border:1px solid #C4B5FD;">👥 GRUPOS seleccionado</span></div>', unsafe_allow_html=True)
     else:
-        st.markdown("— sin seleccionar —")
+        st.markdown('<div class="sh-val-info empty" style="height:38px;">— sin seleccionar —</div>', unsafe_allow_html=True)
+
+# ============================================================
+# RESTO DEL FORMULARIO (solo si hay tipo)
+# ============================================================
+if st.session_state.nc_tipo:
+
+    # ── BLOQUE AGENCIA ────────────────────────────────────────
+    st.markdown('<div class="sh-group-hdr">AGENCIA / AGENCY</div>', unsafe_allow_html=True)
+
+    # Fila búsqueda
+    def sh_row(cols_spec):
+        return st.columns(cols_spec, gap="small")
+
+    # Fila 2 — Buscador
+    r2 = st.columns([0.3, 1.5, 4, 1], gap="small")
+    with r2[0]: st.markdown('<div class="sh-rownum" style="height:32px;">2</div>', unsafe_allow_html=True)
+    with r2[1]: st.markdown('<div class="sh-lbl" style="height:32px;">🔎 Buscar agencia</div>', unsafe_allow_html=True)
+    with r2[2]:
+        query = st.text_input("q", value=st.session_state.get("nc_agency_query", ""),
+                              key="nc_agency_query_widget", placeholder="Nombre, código, tel, email...")
+    with r2[3]:
+        if st.button("Buscar", key="btn_buscar_agencia"):
+            matches = searchagencias(query)
+            st.session_state.nc_agency_query   = query
+            st.session_state.nc_agency_matches = matches
+            st.session_state.nc_agency_sel     = matches[0] if len(matches) == 1 else None
+            st.rerun()
+
+    matches = st.session_state.get("nc_agency_matches", [])
+    sel     = st.session_state.get("nc_agency_sel")
+
+    # Selector si hay múltiples
+    if len(matches) > 1 and not sel:
+        r_sel = st.columns([0.3, 1.5, 5], gap="small")
+        with r_sel[0]: st.markdown('<div class="sh-rownum" style="height:32px;">↓</div>', unsafe_allow_html=True)
+        with r_sel[1]: st.markdown('<div class="sh-lbl" style="height:32px;color:#D97706;">⚠ Múltiples resultados</div>', unsafe_allow_html=True)
+        with r_sel[2]:
+            options = [f"{a['Nombre']}  ·  {a['CODIGO']}  ·  {a['Telefono']}" for a in matches]
+            chosen  = st.selectbox("sel", options, index=None, placeholder="Elige una agencia...", key="nc_agency_select")
+            if chosen:
+                st.session_state.nc_agency_sel = matches[options.index(chosen)]
+                st.rerun()
+    elif len(matches) == 0 and st.session_state.get("nc_agency_query"):
+        st.markdown('<div style="background:#FEF9C3;border-bottom:1px solid #CBD5E1;padding:4px 10px;font-size:0.72rem;color:#92400E;font-weight:700;">🔎 Sin coincidencias — prueba otro término</div>', unsafe_allow_html=True)
+
+    # Datos agencia
+    ag        = sel or {}
+    nombre    = ag.get("Nombre", "")
+    codigo    = ag.get("CODIGO", "")
+    grupo     = ag.get("Grupo Gest", "")
+    telefono  = ag.get("Telefono", "")
+    email     = ag.get("Email", "")
+    direccion = ag.get("Direccion", "")
+
+    def info_cell(v, fallback="—"):
+        cls = "sh-val-info" if v else "sh-val-info empty"
+        return f'<div class="{cls}" style="height:32px;">{v or fallback}</div>'
+
+    # Fila 3 — Nombre + Código + Grupo
+    r3 = st.columns([0.3, 1, 3.5, 0.7, 1.2, 0.7, 1.2], gap="small")
+    with r3[0]: st.markdown('<div class="sh-rownum" style="height:32px;">3</div>', unsafe_allow_html=True)
+    with r3[1]: st.markdown('<div class="sh-lbl" style="height:32px;">Agencia</div>', unsafe_allow_html=True)
+    with r3[2]: st.markdown(info_cell(nombre), unsafe_allow_html=True)
+    with r3[3]: st.markdown('<div class="sh-lbl" style="height:32px;">Cód.</div>', unsafe_allow_html=True)
+    with r3[4]: st.markdown(f'<div class="sh-val-code" style="height:32px;">{codigo or "—"}</div>', unsafe_allow_html=True)
+    with r3[5]: st.markdown('<div class="sh-lbl" style="height:32px;">Grupo</div>', unsafe_allow_html=True)
+    with r3[6]: st.markdown(info_cell(grupo), unsafe_allow_html=True)
+
+    # Fila 4 — Teléfono + Email
+    r4 = st.columns([0.3, 1, 1.8, 0.7, 3.7], gap="small")
+    with r4[0]: st.markdown('<div class="sh-rownum" style="height:32px;">4</div>', unsafe_allow_html=True)
+    with r4[1]: st.markdown('<div class="sh-lbl" style="height:32px;">Teléfono</div>', unsafe_allow_html=True)
+    with r4[2]: st.markdown(info_cell(telefono), unsafe_allow_html=True)
+    with r4[3]: st.markdown('<div class="sh-lbl" style="height:32px;">Email</div>', unsafe_allow_html=True)
+    with r4[4]: st.markdown(info_cell(email), unsafe_allow_html=True)
+
+    # Fila 5 — Dirección
+    r5 = st.columns([0.3, 1, 6.7], gap="small")
+    with r5[0]: st.markdown('<div class="sh-rownum" style="height:32px;">5</div>', unsafe_allow_html=True)
+    with r5[1]: st.markdown('<div class="sh-lbl" style="height:32px;">Dirección</div>', unsafe_allow_html=True)
+    with r5[2]: st.markdown(info_cell(direccion), unsafe_allow_html=True)
+
+    if sel:
+        st.markdown('<div style="background:#DCFCE7;border-bottom:1px solid #CBD5E1;padding:3px 10px 3px 36px;font-size:0.68rem;color:#166534;font-weight:700;">✅ Agencia cargada desde base de datos</div>', unsafe_allow_html=True)
+
+    # ── BLOQUE AGENTE / ESTADO ────────────────────────────────
+    st.markdown('<div class="sh-group-hdr">AGENTE · ESTADO · REFERENCIA</div>', unsafe_allow_html=True)
+
+    # Fila 6 — Agente + Estado
+    r6 = st.columns([0.3, 1, 2.5, 0.8, 2.2, 1.2], gap="small")
+    with r6[0]: st.markdown('<div class="sh-rownum" style="height:32px;">6</div>', unsafe_allow_html=True)
+    with r6[1]: st.markdown('<div class="sh-lbl" style="height:32px;">Agente/Cliente</div>', unsafe_allow_html=True)
+    with r6[2]:
+        agente = st.text_input("agente", value=st.session_state.get("nc_agente_cliente", ""),
+                               key="nc_agente_cliente_widget", placeholder="Nombre del agente o cliente...")
+        if agente != st.session_state.get("nc_agente_cliente", ""):
+            st.session_state.nc_agente_cliente = agente
+    with r6[3]: st.markdown('<div class="sh-lbl" style="height:32px;">Estado</div>', unsafe_allow_html=True)
+    with r6[4]:
+        ESTADOS = ["", "CONFIRMADO", "NO CONFIRMADO", "CANCELADO"]
+        estado_actual = st.session_state.get("nc_estado_reserva", "")
+        estado_sel = st.selectbox("estado", options=ESTADOS,
+            index=ESTADOS.index(estado_actual) if estado_actual in ESTADOS else 0,
+            key="nc_estado_reserva_widget",
+            format_func=lambda x: {"": "— estado —", "CONFIRMADO": "✅ CONFIRMADO",
+                                    "NO CONFIRMADO": "⚠️ NO CONFIRMADO", "CANCELADO": "❌ CANCELADO"}.get(x, x))
+        if estado_sel != st.session_state.get("nc_estado_reserva", ""):
+            st.session_state.nc_estado_reserva = estado_sel
+    with r6[5]:
+        if estado_sel == "CONFIRMADO":
+            st.markdown('<div style="height:32px;display:flex;align-items:center;padding:0 8px"><span class="status-badge status-confirmed">✅ OK</span></div>', unsafe_allow_html=True)
+        elif estado_sel == "NO CONFIRMADO":
+            st.markdown('<div style="height:32px;display:flex;align-items:center;padding:0 8px"><span class="status-badge status-pending">⚠️ PEND.</span></div>', unsafe_allow_html=True)
+        elif estado_sel == "CANCELADO":
+            st.markdown('<div style="height:32px;display:flex;align-items:center;padding:0 8px"><span class="status-badge status-cancelled">❌ CANC.</span></div>', unsafe_allow_html=True)
+
+# ============================================================
+# BLOQUE FECHAS + ITINERARIO (FIXED)
+# ============================================================
+
+from datetime import timedelta
+
+st.markdown('<div class="block">', unsafe_allow_html=True)
+
+# ---------- FILA FECHAS ----------
+c1, c2, c3, c4, c5, c6, c7, c8 = st.columns([1,2,1,2,1,2,1,2])
+
+with c1:
+    st.markdown('<div class="cell-label">Fecha salida</div>', unsafe_allow_html=True)
+
+with c2:
+    st.markdown('<div class="cell-input">', unsafe_allow_html=True)
+    fecha_salida = st.date_input("fecha_salida", label_visibility="collapsed")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+with c3:
+    st.markdown('<div class="cell-label">Noches</div>', unsafe_allow_html=True)
+
+with c4:
+    st.markdown('<div class="cell-input">', unsafe_allow_html=True)
+    noches = st.number_input("noches", min_value=1, value=7, step=1, label_visibility="collapsed")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ---------- CÁLCULO AUTOMÁTICO ----------
+fecha_llegada_calc = fecha_salida + timedelta(days=int(noches))
+dias_calc = int(noches) + 1
+
+with c5:
+    st.markdown('<div class="cell-label">Fecha llegada</div>', unsafe_allow_html=True)
+
+with c6:
+    st.markdown(
+        f'<div class="cell-value">{fecha_llegada_calc.strftime("%d/%m/%Y")}</div>',
+        unsafe_allow_html=True
+    )
+
+with c7:
+    st.markdown('<div class="cell-label">Días</div>', unsafe_allow_html=True)
+
+with c8:
+    st.markdown(
+        f'<div class="cell-value">{dias_calc}</div>',
+        unsafe_allow_html=True
+    )
+
+# ---------- ITINERARIO ----------
+c9, c10 = st.columns([1,7])
+
+with c9:
+    st.markdown('<div class="cell-label">Itinerario</div>', unsafe_allow_html=True)
+
+with c10:
+    st.markdown('<div class="cell-input">', unsafe_allow_html=True)
+    itinerario = st.text_area("itinerario", height=100, label_visibility="collapsed")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+    
+    # ── BLOQUE LOCALIZADOR ────────────────────────────────────
+    st.markdown('<div class="sh-group-hdr">LOCALIZADOR CRUCEMUNDO</div>', unsafe_allow_html=True)
+
+    LOCALIZADOR_REMOTE_ID = "1c1oiBTLDRtDAAKQp8hE7uA1FfStp4DJAYhwa7F_yCNQ"
+
+    SHIPCODEMAP = {
+        "MS_ALBERTINA":      "ALB",
+        "MS_ARENA":          "ARN",
+        "MS_CRUCEVITA":      "CV",
+        "MS_DOURO_CRUISER":  "DC",
+        "MS_FIDELIO":        "FID",
+        "MS_LEONORA":        "LEO",
+        "MS_RIVER_DIAMOND":  "RDA",
+        "MS_RIVER_SAPPHIRE": "RSA",
+        "MS_SWISS_SPLENDOR": "SPL",
+        "MS_VISTA_GRACIA":   "VGR",
+        "MS_VISTAMILLA":     "VMI",
+        "MS_VISTA_RIO":      "VRI",
+        "MS_CRUCE_RIO":      "CRI",
+    }
+
+    def generar_localizador(barco, fecha_salida):
+        prefijo = SHIPCODEMAP.get(barco)
+        if not prefijo:
+            raise Exception(f"Barco no configurado: {barco}")
+        anio2       = fecha_salida.strftime("%y")
+        mes         = fecha_salida.strftime("%m")
+        dia         = fecha_salida.strftime("%d")
+        clave       = prefijo + anio2
+        parte_fecha = anio2 + mes + dia
+        service     = getsheetsservice()
+        spreadsheet = service.spreadsheets().get(spreadsheetId=LOCALIZADOR_REMOTE_ID).execute()
+        sheets      = spreadsheet.get("sheets", [])
+        if len(sheets) < 2:
+            raise Exception("El archivo remoto necesita al menos 2 hojas.")
+        title_cont  = sheets[0]["properties"]["title"]
+        title_reg   = sheets[1]["properties"]["title"]
+        resp        = service.spreadsheets().values().get(
+            spreadsheetId=LOCALIZADOR_REMOTE_ID, range=f"{title_cont}!A:B").execute()
+        rows        = resp.get("values", [])
+        contador    = 1
+        fila_update = None
+        for i, row in enumerate(rows):
+            if row and str(row[0]).strip() == clave:
+                contador    = int(row[1]) + 1 if len(row) > 1 and str(row[1]).isdigit() else 1
+                fila_update = i + 1
+                break
+        if fila_update:
+            service.spreadsheets().values().update(
+                spreadsheetId=LOCALIZADOR_REMOTE_ID, range=f"{title_cont}!B{fila_update}",
+                valueInputOption="RAW", body={"values": [[contador]]}).execute()
+        else:
+            service.spreadsheets().values().append(
+                spreadsheetId=LOCALIZADOR_REMOTE_ID, range=f"{title_cont}!A:B",
+                valueInputOption="RAW", insertDataOption="INSERT_ROWS",
+                body={"values": [[clave, contador]]}).execute()
+        codigo    = f"{prefijo}{parte_fecha}-{str(contador).zfill(3)}"
+        from datetime import datetime as dt
+        ahora     = dt.now().strftime("%d/%m/%Y %H:%M")
+        fecha_str = fecha_salida.strftime("%d/%m/%Y")
+        service.spreadsheets().values().append(
+            spreadsheetId=LOCALIZADOR_REMOTE_ID, range=f"{title_reg}!A:D",
+            valueInputOption="RAW", insertDataOption="INSERT_ROWS",
+            body={"values": [[ahora, codigo, barco, fecha_str]]}).execute()
+        return codigo
+
+    # Fila 7 — Barco + Fecha + Generar
+    r7 = st.columns([0.3, 0.8, 2.2, 0.8, 1.6, 0.8, 2], gap="small")
+    with r7[0]: st.markdown('<div class="sh-rownum" style="height:32px;">7</div>', unsafe_allow_html=True)
+    with r7[1]: st.markdown('<div class="sh-lbl" style="height:32px;">Barco</div>', unsafe_allow_html=True)
+    with r7[2]:
+        barco_options = [""] + list(SHIPCODEMAP.keys())
+        barco_sel = st.selectbox("barco", options=barco_options,
+            index=barco_options.index(st.session_state.get("nc_barco", ""))
+                  if st.session_state.get("nc_barco", "") in barco_options else 0,
+            key="nc_barco_widget",
+            format_func=lambda x: x.replace("_", " ") if x else "— barco —")
+        if barco_sel != st.session_state.get("nc_barco", ""):
+            st.session_state.nc_barco = barco_sel
+            st.session_state.nc_localizador = ""
+            st.rerun()
+    with r7[3]: st.markdown('<div class="sh-lbl" style="height:32px;">F. Salida</div>', unsafe_allow_html=True)
+    with r7[4]:
+        fecha_salida_loc = st.date_input("fecha_loc",
+            value=st.session_state.get("nc_fecha_salida_loc", date.today()),
+            format="DD/MM/YYYY", key="nc_fecha_salida_loc_widget")
+        st.session_state.nc_fecha_salida_loc = fecha_salida_loc
+    with r7[5]:
+        generar_disabled = not (st.session_state.get("nc_barco") and st.session_state.get("nc_fecha_salida_loc"))
+        if st.button("⚡ Generar", key="btn_generar_localizador", disabled=generar_disabled):
+            if st.session_state.get("nc_localizador"):
+                st.warning("Ya existe un localizador. Reinicia para generar uno nuevo.")
+            else:
+                try:
+                    with st.spinner("Generando..."):
+                        codigo = generar_localizador(
+                            st.session_state.nc_barco,
+                            st.session_state.nc_fecha_salida_loc)
+                    st.session_state.nc_localizador = codigo
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"Error: {exc}")
+    with r7[6]:
+        loc_generado = st.session_state.get("nc_localizador", "")
+        if loc_generado:
+            st.markdown(f'<div style="height:32px;display:flex;align-items:center;padding:0 4px;"><span class="loc-display">{loc_generado}</span></div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="sh-val-info empty" style="height:32px;">pendiente de generar</div>', unsafe_allow_html=True)
+
+# ============================================================
+# CIERRE SHEET WRAP
+# ============================================================
+st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown("<div style='height:0.4rem'></div>", unsafe_allow_html=True)
+st.info("🚧 Próximas filas: Cabinas, Pax, Fechas de crucero, Observaciones...")
+
