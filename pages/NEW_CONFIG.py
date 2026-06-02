@@ -258,7 +258,53 @@ div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
 }
 div[data-testid="stSelectbox"] label {
     color: #374151 !important; font-size: 0.76rem !important; font-weight: 700 !important;
+
+
+
+/* =========================
+   TABLA AGENCIA
+========================= */
+.agency-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
 }
+
+.agency-table th {
+    background-color: #F3F4F6;
+    padding: 8px;
+    border: 1px solid #D1D5DB;
+    text-align: left;
+    font-weight: 600;
+}
+
+.agency-table td {
+    padding: 8px;
+    border: 1px solid #E5E7EB;
+}
+
+/* 🔒 Datos provenientes de BD */
+.locked {
+    background-color: #F9FAFB;
+    color: #374151;
+    border: 1px solid #D1D5DB;
+}
+
+/* ✏️ Datos editables o recuperables */
+.editable {
+    background-color: #FFFFFF;
+    border: 2px solid #2563EB;
+    font-weight: 500;
+}
+
+/* Código destacado */
+.code {
+    background-color: #EEF2FF;
+    border: 1px solid #C7D2FE;
+    font-family: monospace;
+}
+
+
 </style>
 """, unsafe_allow_html=True)
 
