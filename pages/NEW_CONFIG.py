@@ -472,31 +472,30 @@ st.markdown(f"""
 
 <tr>
     <th>Nombre</th>
-    <td colspan="3">{nombre or '—'}</td>
+    <td colspan="3">{nombre if nombre else "—"}</td>
 
     <th>Código</th>
-    <td class="code">{codigo or '—'}</td>
+    <td class="code">{codigo if codigo else "—"}</td>
 
     <th>Grupo</th>
-    <td>{grupo or '—'}</td>
+    <td>{grupo if grupo else "—"}</td>
 </tr>
 
 <tr>
     <th>Dirección</th>
-    <td colspan="7">{direccion or '—'}</td>
+    <td colspan="7">{direccion if direccion else "—"}</td>
 </tr>
 
 <tr>
     <th>Teléfono</th>
-    <td>{telefono or '—'}</td>
+    <td>{telefono if telefono else "—"}</td>
 
     <th>Email</th>
-    <td colspan="5">{email or '—'}</td>
+    <td colspan="5">{email if email else "—"}</td>
 </tr>
 
 </table>
 """, unsafe_allow_html=True)
-``
 
     if sel:
         st.markdown('<div class="search-result-card">✅ Agencia cargada correctamente desde la base de datos.</div>', unsafe_allow_html=True)
