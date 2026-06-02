@@ -8,6 +8,7 @@ import streamlit as st
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
+
 st.set_page_config(
     page_title="Nueva Confirmación",
     page_icon="favicon1.png",
@@ -464,6 +465,7 @@ if st.session_state.nc_tipo:
         return f'<td class="{css}">{v}</td>' if v else '<td class="empty-cell">—</td>'
 
     st.markdown(f"""
+html = f"""
 <table class="agency-table">
 <tr>
     <th colspan="8" class="agency-header">AGENCIA</th>
