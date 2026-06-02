@@ -6,7 +6,6 @@ import re
 import streamlit as st
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from datetime import date, timedelta
 
 st.set_page_config(
     page_title="Nueva Confirmación",
@@ -87,30 +86,6 @@ def getagencias():
         agencies.append(data)
     return agencies
 
-@st.cache_data(ttl=300)
-def getbarcos():
-    SHEET_ID = "1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI"
-
-    service = getsheetsservice()
-
-    resp = service.spreadsheets().values().get(
-        spreadsheetId=SHEET_ID,
-        range="A:A"
-    ).execute()
-
-    values = resp.get("values", [])
-
-    barcos = []
-
-    for row in values:
-        if row and str(row[0]).strip():
-            barcos.append(str(row[0]).strip())
-
-    # únicos manteniendo orden
-    barcos_unicos = list(dict.fromkeys(barcos))
-
-    return barcos_unicos
-
 def searchagencias(query):
     q = str(query or "").strip().lower()
     if len(q) < 2:
@@ -186,43 +161,37 @@ section[data-testid="stSidebar"] { display: none !important; }
 
 /* ── Celda etiqueta (color informativo) ── */
 .sh-lbl {
-    background: #F8FAFC;
+    background: #EFF6FF;
     border-right: 1px solid #CBD5E1;
-
-    color: #475569;
-
+    color: #1E40AF;
     font-size: 0.65rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.07em;
-
     padding: 0 8px;
-
     display: flex;
     align-items: center;
+    white-space: nowrap;
+    user-select: none;
 }
 /* ── Celda de valor informativo (auto-rellenado) ── */
 .sh-val-info {
-    background: #FFFFFF;
-    border: 1px solid #D1D5DB;
-    color: #111827;
-    font-family: "IBM Plex Sans", sans-serif;
-    font-size: 0.80rem;
+    background: #F8FAFF;
+    border-right: 1px solid #CBD5E1;
+    color: #1E3A8A;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.75rem;
     font-weight: 600;
     padding: 0 8px;
     display: flex;
     align-items: center;
-    border-radius: 4px;
 }
-.sh-val-info.empty {
-    color: #9CA3AF;
-    font-style: italic;
-}
+.sh-val-info.empty { color: #CBD5E1; font-style: italic; }
 /* ── Celda de código destacada ── */
 .sh-val-code {
-    background: #FFFFFF;
-    border: 2px solid #2563EB;
-    color: #2563EB;
+    background: #DBEAFE;
+    border-right: 1px solid #CBD5E1;
+    color: #1D4ED8;
     font-family: "IBM Plex Mono", monospace;
     font-size: 0.80rem;
     font-weight: 800;
@@ -230,7 +199,7 @@ section[data-testid="stSidebar"] { display: none !important; }
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
+    letter-spacing: 0.06em;
 }
 /* ── Sección cabecera de grupo ── */
 .sh-group-hdr {
@@ -273,16 +242,14 @@ section[data-testid="stSidebar"] { display: none !important; }
 /* ── Localizador generado ── */
 .loc-display {
     font-family: "IBM Plex Mono", monospace;
-    font-size: 1rem;
+    font-size: 1.0rem;
     font-weight: 800;
-    color: #111827;
+    color: #1E3A8A;
     letter-spacing: 0.12em;
-
-    background: #FFFFFF;
-    border: 2px solid #111827;
+    background: #DBEAFE;
+    border: 1.5px solid #3B82F6;
     border-radius: 4px;
-
-    padding: 4px 12px;
+    padding: 3px 12px;
     display: inline-block;
 }
 
@@ -562,150 +529,6 @@ if st.session_state.nc_tipo:
         elif estado_sel == "CANCELADO":
             st.markdown('<div style="height:32px;display:flex;align-items:center;padding:0 8px"><span class="status-badge status-cancelled">❌ CANC.</span></div>', unsafe_allow_html=True)
 
-    # ============================================================
-# CRUCERO
-# ============================================================
-
-st.markdown(
-    '<div class="sh-group-hdr">CRUCERO · FECHAS · LOCALIZADOR</div>',
-    unsafe_allow_html=True
-)
-
-barcos = getbarcos()
-
-# ------------------------------------------------------------
-# FILA 7
-# ------------------------------------------------------------
-
-r7 = st.columns([0.3, 1, 3, 1, 2], gap="small")
-
-with r7[0]:
-    st.markdown(
-        '<div class="sh-rownum" style="height:32px;">7</div>',
-        unsafe_allow_html=True
-    )
-
-with r7[1]:
-    st.markdown(
-        '<div class="sh-lbl" style="height:32px;">Barco</div>',
-        unsafe_allow_html=True
-    )
-
-with r7[2]:
-
-    barco_sel = st.selectbox(
-        "barco",
-        options=[""] + barcos,
-        index=(
-            [""] + barcos
-        ).index(st.session_state.nc_barco)
-        if st.session_state.nc_barco in barcos
-        else 0,
-        key="nc_barco_widget"
-    )
-
-    st.session_state.nc_barco = barco_sel
-
-with r7[3]:
-    st.markdown(
-        '<div class="sh-lbl" style="height:32px;">Salida</div>',
-        unsafe_allow_html=True
-    )
-
-with r7[4]:
-
-    fecha_salida = st.date_input(
-        "fecha_salida",
-        value=st.session_state.nc_fecha_salida_loc,
-        format="DD/MM/YYYY",
-        key="nc_fecha_salida_widget"
-    )
-
-    st.session_state.nc_fecha_salida_loc = fecha_salida
-
-# ------------------------------------------------------------
-# FILA 8
-# ------------------------------------------------------------
-
-r8 = st.columns([0.3, 1, 1.5, 1, 1.5], gap="small")
-
-with r8[0]:
-    st.markdown(
-        '<div class="sh-rownum" style="height:32px;">8</div>',
-        unsafe_allow_html=True
-    )
-
-with r8[1]:
-    st.markdown(
-        '<div class="sh-lbl" style="height:32px;">Días</div>',
-        unsafe_allow_html=True
-    )
-
-with r8[2]:
-
-    dias = st.number_input(
-        "dias",
-        min_value=1,
-        step=1,
-        value=st.session_state.nc_dias,
-        key="nc_dias_widget"
-    )
-
-    st.session_state.nc_dias = dias
-
-with r8[3]:
-    st.markdown(
-        '<div class="sh-lbl" style="height:32px;">Noches</div>',
-        unsafe_allow_html=True
-    )
-
-with r8[4]:
-
-    noches = max(dias - 1, 0)
-
-    st.markdown(
-        f'''
-        <div class="sh-val-info" style="height:32px;">
-            {noches}
-        </div>
-        ''',
-        unsafe_allow_html=True
-    )
-
-# ------------------------------------------------------------
-# FILA 9
-# ------------------------------------------------------------
-
-fecha_llegada = fecha_salida + timedelta(days=dias - 1)
-
-r9 = st.columns([0.3, 1, 2], gap="small")
-
-with r9[0]:
-    st.markdown(
-        '<div class="sh-rownum" style="height:32px;">9</div>',
-        unsafe_allow_html=True
-    )
-
-with r9[1]:
-    st.markdown(
-        '<div class="sh-lbl" style="height:32px;">Llegada</div>',
-        unsafe_allow_html=True
-    )
-
-with r9[2]:
-
-    st.markdown(
-        f'''
-        <div class="sh-val-info" style="height:32px;">
-            {fecha_llegada.strftime("%d/%m/%Y")}
-        </div>
-        ''',
-        unsafe_allow_html=True
-    )
-    
-    
-    
-    
     # ── BLOQUE LOCALIZADOR ────────────────────────────────────
     st.markdown('<div class="sh-group-hdr">LOCALIZADOR CRUCEMUNDO</div>', unsafe_allow_html=True)
 
@@ -726,88 +549,6 @@ with r9[2]:
         "MS_VISTA_RIO":      "VRI",
         "MS_CRUCE_RIO":      "CRI",
     }
-
-
-r10 = st.columns([0.3, 1, 1.2, 3], gap="small")
-
-with r10[0]:
-    st.markdown(
-        '<div class="sh-rownum" style="height:32px;">10</div>',
-        unsafe_allow_html=True
-    )
-
-with r10[1]:
-    st.markdown(
-        '<div class="sh-lbl" style="height:32px;">Localizador</div>',
-        unsafe_allow_html=True
-    )
-
-with r10[2]:
-
-    generar_disabled = not (
-        st.session_state.get("nc_barco")
-        and st.session_state.get("nc_fecha_salida_loc")
-    )
-
-    if st.button(
-        "⚡ Generar",
-        key="btn_generar_localizador",
-        disabled=generar_disabled
-    ):
-
-        if st.session_state.get("nc_localizador"):
-
-            st.warning(
-                "Ya existe un localizador generado."
-            )
-
-        else:
-
-            try:
-
-                with st.spinner("Generando localizador..."):
-
-                    codigo = generar_localizador(
-                        st.session_state.nc_barco,
-                        st.session_state.nc_fecha_salida_loc
-                    )
-
-                st.session_state.nc_localizador = codigo
-
-                st.rerun()
-
-            except Exception as exc:
-
-                st.error(str(exc))
-
-with r10[3]:
-
-    localizador = st.session_state.get(
-        "nc_localizador",
-        ""
-    )
-
-    if localizador:
-
-        st.markdown(
-            f'''
-            <div class="loc-display">
-                {localizador}
-            </div>
-            ''',
-            unsafe_allow_html=True
-        )
-
-    else:
-
-        st.markdown(
-            '''
-            <div class="sh-val-info empty" style="height:32px;">
-                pendiente de generar
-            </div>
-            ''',
-            unsafe_allow_html=True
-        )
 
     def generar_localizador(barco, fecha_salida):
         prefijo = SHIPCODEMAP.get(barco)
