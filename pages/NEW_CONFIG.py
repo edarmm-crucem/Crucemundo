@@ -518,7 +518,7 @@ if st.session_state.nc_tipo:
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ============================================================
+    # ============================================================
     # LOCALIZADOR CRUCEMUNDO
     # ============================================================
     LOCALIZADOR_REMOTE_ID = "1c1oiBTLDRtDAAKQp8hE7uA1FfStp4DJAYhwa7F_yCNQ"
@@ -697,10 +697,7 @@ if st.session_state.nc_tipo:
         """, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
-    st.markdown('<div class="form-panel" style="border-color:#FCD34D;background:#FFFBEB;">', unsafe_allow_html=True)
-    st.markdown('<div class="form-section-title" style="color:#92400E;">Localizador Crucemundo</div>', unsafe_allow_html=True)
-    st.warning("⏳ Pendiente de integrar el script de asignación automática de localizador. Pega el script y lo conectamos.")
-    st.markdown("</div>", unsafe_allow_html=True)
+
 
 
     
