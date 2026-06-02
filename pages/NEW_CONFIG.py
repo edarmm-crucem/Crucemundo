@@ -507,23 +507,23 @@ if sel:
     )
 
 st.markdown("</div>", unsafe_allow_html=True)
-    # ============================================================
-    # AGENTE / CLIENTE
-    # ============================================================
-    st.markdown("<div style='height:0.7rem'></div>", unsafe_allow_html=True)
-    st.markdown('<div class="form-panel">', unsafe_allow_html=True)
-    st.markdown('<div class="form-section-title">Agente / Cliente</div>', unsafe_allow_html=True)
+# ============================================================
+# AGENTE / CLIENTE
+# ============================================================
+st.markdown("<div style='height:0.7rem'></div>", unsafe_allow_html=True)
+st.markdown('<div class="form-panel">', unsafe_allow_html=True)
+st.markdown('<div class="form-section-title">Agente / Cliente</div>', unsafe_allow_html=True)
 
-    agente_cliente = st.text_input(
-        "Nombre del agente o cliente / Agent or client name",
-        value=st.session_state.get("nc_agente_cliente", ""),
-        key="nc_agente_cliente_widget",
-        placeholder="Ej: María García",
-    )
-    if agente_cliente != st.session_state.get("nc_agente_cliente", ""):
-        st.session_state.nc_agente_cliente = agente_cliente
+agente_cliente = st.text_input(
+    "Nombre del agente o cliente / Agent or client name",
+    value=st.session_state.get("nc_agente_cliente", ""),
+    key="nc_agente_cliente_widget",
+    placeholder="Ej: María García",
+)
+if agente_cliente != st.session_state.get("nc_agente_cliente", ""):
+    st.session_state.nc_agente_cliente = agente_cliente
 
-    st.markdown("</div>", unsafe_allow_html=True)
+st.markdown("</div>", unsafe_allow_html=True)
 
     # ============================================================
     # ESTADO RESERVA
