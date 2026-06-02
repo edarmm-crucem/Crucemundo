@@ -461,10 +461,10 @@ if st.session_state.nc_tipo:
     email     = ag.get("Email",     "")
     direccion = ag.get("Direccion", "")
 
-    def cell(v, css="value-cell"):
-        return f'<td class="{css}">{v}</td>' if v else '<td class="empty-cell">—</td>'
+def cell(v, css="value-cell"):
+    return f'<td class="{css}">{v}</td>' if v else '<td class="empty-cell">—</td>'
 
-    st.markdown(f"""
+
 html = f"""
 <table class="agency-table">
 <tr>
@@ -500,12 +500,13 @@ html = f"""
 
 st.components.v1.html(html, height=300)
 
+if sel:
+    st.markdown(
+        '<div class="search-result-card">✅ Agencia cargada correctamente desde la base de datos.</div>',
+        unsafe_allow_html=True
+    )
 
-    if sel:
-        st.markdown('<div class="search-result-card">✅ Agencia cargada correctamente desde la base de datos.</div>', unsafe_allow_html=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
+st.markdown("</div>", unsafe_allow_html=True)
     # ============================================================
     # AGENTE / CLIENTE
     # ============================================================
