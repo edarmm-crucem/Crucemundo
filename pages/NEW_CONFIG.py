@@ -20,20 +20,20 @@ st.set_page_config(
 # ============================================================
 if not st.session_state.get("authenticated"):
     st.markdown("""
-        <style>
-        [data-testid="stSidebarNav"] { display: none !important; }
-        header[data-testid="stHeader"] { display: none !important; }
-        .auth-warn { background: #FEF3C7; border: 1.5px solid #FCD34D; border-radius: 12px;
-            padding: 1rem 1.2rem; margin: 2rem auto; max-width: 480px; font-family: sans-serif; }
-        .auth-warn-title { font-size: 1rem; font-weight: 800; color: #92400E; margin-bottom: 0.3rem; }
-        .auth-warn-sub { font-size: 0.82rem; color: #78350F; }
-        </style>
-        """, unsafe_allow_html=True)
-        <div class="auth-warn">
-            <div class="auth-warn-title">⚠️ Acceso restringido / Restricted access</div>
-            <div class="auth-warn-sub">No tienes acceso. Inicia sesión desde el menú principal.<br>
-            <em>You don't have access. Please log in from the main menu.</em></div>
-        </div>""", unsafe_allow_html=True)
+    <style>
+    .auth-warn {
+        background: #FEF3C7;
+        padding: 1rem;
+        border-radius: 10px;
+        text-align:center;
+    }
+    </style>
+
+    <div class="auth-warn">
+        <b>⚠️ Acceso restringido</b><br>
+        No tienes acceso
+    </div>
+    """, unsafe_allow_html=True)
     st.stop()
 
 # ============================================================
@@ -269,141 +269,102 @@ with col_t3:
 # ============================================================
 if st.session_state.nc_tipo:
 
-    tipo        = st.session_state.nc_tipo
-    badge_class = {"FIT_ES": "badge-fit-es", "FIT_EN": "badge-fit-en", "GROUPS": "badge-groups"}[tipo]
-    badge_label = {"FIT_ES": "📘 FIT Español",  "FIT_EN": "📗 FIT English", "GROUPS": "👥 Grupos"}[tipo]
+    tipo = st.session_state.nc_tipo
 
-    st.markdown(f'<div class="badge-tipo {badge_class}">{badge_label}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="badge-tipo">{tipo}</div>', unsafe_allow_html=True)
     st.markdown('<div class="form-panel">', unsafe_allow_html=True)
     st.markdown('<div class="form-section-title">Agencia / Agency</div>', unsafe_allow_html=True)
 
     # ── Buscador ────────────────────────────────────────────
     search_col, btn_col = st.columns([4, 1], gap="small")
+
     with search_col:
         query = st.text_input(
-            "Buscar agencia (nombre, código, teléfono, email...)",
+            "Buscar agencia",
             value=st.session_state.get("nc_agency_query", ""),
             key="nc_agency_query_widget",
-            placeholder="Ej: A Babor, ABB, 912952092...",
         )
+
     with btn_col:
-        st.markdown("<div style='height:1.82rem'></div>", unsafe_allow_html=True)
-        if st.button("🔎 Buscar", key="btn_buscar_agencia"):
+        st.markdown("<div style='height:1.6rem'></div>", unsafe_allow_html=True)
+        if st.button("🔎 Buscar"):
             matches = searchagencias(query)
-            st.session_state.nc_agency_query   = query
+            st.session_state.nc_agency_query = query
             st.session_state.nc_agency_matches = matches
-            st.session_state.nc_agency_sel     = matches[0] if len(matches) == 1 else None
+            st.session_state.nc_agency_sel = matches[0] if len(matches) == 1 else None
             st.rerun()
 
     matches = st.session_state.get("nc_agency_matches", [])
-    sel     = st.session_state.get("nc_agency_sel")
+    sel = st.session_state.get("nc_agency_sel")
 
+    # ── Selección múltiple ─────────────────────────
     if len(matches) > 1 and not sel:
-        st.markdown(f'<div class="search-none-card">⚠️ {len(matches)} coincidencias — selecciona la correcta:</div>', unsafe_allow_html=True)
-        options = [f"{a['Nombre']}  ·  {a['CODIGO']}  ·  {a['Telefono']}" for a in matches]
-        chosen  = st.selectbox("Selecciona agencia", options, index=None,
-                               placeholder="Elige una...", key="nc_agency_select")
+        options = [f"{a['Nombre']} · {a['CODIGO']}" for a in matches]
+        chosen = st.selectbox("Selecciona agencia", options, index=None)
+
         if chosen:
             st.session_state.nc_agency_sel = matches[options.index(chosen)]
             st.rerun()
 
     elif len(matches) == 0 and st.session_state.get("nc_agency_query"):
-        st.markdown('<div class="search-none-card">🔎 No se encontraron coincidencias. Escribe otro término.</div>', unsafe_allow_html=True)
+        st.warning("No hay coincidencias")
 
-    # ── Tabla estilo documento ───────────────────────────────
-    ag        = sel or {}
-    nombre    = ag.get("Nombre",    "")
-    codigo    = ag.get("CODIGO",    "")
-    grupo     = ag.get("Grupo Gest","")
-    telefono  = ag.get("Telefono",  "")
-    email     = ag.get("Email",     "")
+    # ── Tabla agencia ─────────────────────────
+    ag = sel or {}
+
+    nombre = ag.get("Nombre", "")
+    codigo = ag.get("CODIGO", "")
+    grupo = ag.get("Grupo Gest", "")
+    telefono = ag.get("Telefono", "")
+    email = ag.get("Email", "")
     direccion = ag.get("Direccion", "")
-
-def cell(v, css="value-cell"):
-    return f'<td class="{css}">{v}</td>' if v else '<td class="empty-cell">—</td>'
 
     if sel:
         st.markdown(f"""
         <table class="table-doc">
-        
         <tr>
             <th colspan="2">AGENCIA</th>
-            <td colspan="2" class="highlight">{nombre or '—'}</td>
+            <td colspan="2"><b>{nombre or '—'}</b></td>
             <th>COD</th>
-            <td class="highlight">{codigo or '—'}</td>
+            <td><b>{codigo or '—'}</b></td>
         </tr>
-
         <tr>
-            <td class="label">Grupo</td>
-            <td class="value">{grupo or '—'}</td>
-
-            <td class="label">Teléfono</td>
-            <td class="value">{telefono or '—'}</td>
-
-            <td class="label">Email</td>
-            <td class="value">{email or '—'}</td>
+            <td>Grupo</td>
+            <td>{grupo or '—'}</td>
+            <td>Teléfono</td>
+            <td>{telefono or '—'}</td>
+            <td>Email</td>
+            <td>{email or '—'}</td>
         </tr>
-
         <tr>
-            <td class="label">Dirección</td>
-            <td colspan="5" class="value">{direccion or '—'}</td>
+            <td>Dirección</td>
+            <td colspan="5">{direccion or '—'}</td>
         </tr>
-
         </table>
         """, unsafe_allow_html=True)
 
     # ============================================================
     # AGENTE / CLIENTE
     # ============================================================
-    st.markdown("<div style='height:0.7rem'></div>", unsafe_allow_html=True)
-    st.markdown('<div class="form-panel">', unsafe_allow_html=True)
-    st.markdown('<div class="form-section-title">Agente / Cliente</div>', unsafe_allow_html=True)
 
-    agente_cliente = st.text_input(
-        "Nombre del agente o cliente / Agent or client name",
-        value=st.session_state.get("nc_agente_cliente", ""),
-        key="nc_agente_cliente_widget",
-        placeholder="Ej: María García",
-    )
-    if agente_cliente != st.session_state.get("nc_agente_cliente", ""):
-        st.session_state.nc_agente_cliente = agente_cliente
-
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+    agente = st.text_input("Agente / Cliente")
 
     # ============================================================
     # ESTADO RESERVA
     # ============================================================
-    st.markdown('<div class="form-panel">', unsafe_allow_html=True)
-    st.markdown('<div class="form-section-title">Estado de la Reserva / Booking Status</div>', unsafe_allow_html=True)
 
-    ESTADOS = ["", "CONFIRMADO", "NO CONFIRMADO", "CANCELADO"]
-    estado_actual = st.session_state.get("nc_estado_reserva", "")
+    estados = ["", "CONFIRMADO", "NO CONFIRMADO", "CANCELADO"]
+    estado_sel = st.selectbox("Estado", estados)
 
-    estado_sel = st.selectbox(
-        "Estado / Status",
-        options=ESTADOS,
-        index=ESTADOS.index(estado_actual) if estado_actual in ESTADOS else 0,
-        key="nc_estado_reserva_widget",
-        format_func=lambda x: {
-            "":              "— Selecciona un estado —",
-            "CONFIRMADO":    "✅  CONFIRMADO",
-            "NO CONFIRMADO": "⚠️  NO CONFIRMADO",
-            "CANCELADO":     "❌  CANCELADO",
-        }.get(x, x),
-    )
-    if estado_sel != st.session_state.get("nc_estado_reserva", ""):
-        st.session_state.nc_estado_reserva = estado_sel
-
-    # Badge visual del estado seleccionado
     if estado_sel == "CONFIRMADO":
         st.markdown('<div class="badge-ok">✅ CONFIRMADO</div>', unsafe_allow_html=True)
 
-elif estado_sel == "NO CONFIRMADO":
-    st.markdown('<div class="badge-warning">⚠️ NO CONFIRMADO</div>', unsafe_allow_html=True)
+    elif estado_sel == "NO CONFIRMADO":
+        st.markdown('<div class="badge-warning">⚠️ NO CONFIRMADO</div>', unsafe_allow_html=True)
 
-elif estado_sel == "CANCELADO":
-    st.markdown('<div class="badge-error">❌ CANCELADO</div>', unsafe_allow_html=True)
-
+    elif estado_sel == "CANCELADO":
+        st.markdown('<div class="badge-error">❌ CANCELADO</div>', unsafe_allow_html=True)
 
     # ============================================================
     # LOCALIZADOR CRUCEMUNDO
