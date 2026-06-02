@@ -316,46 +316,56 @@ if st.session_state.nc_tipo:
         elif estado_sel == "CANCELADO":
             st.markdown('<div style="height:32px;display:flex;align-items:center;padding:0 8px"><span class="status-badge status-cancelled">❌ CANC.</span></div>', unsafe_allow_html=True)
 
-    # ============================================================
-# BLOQUE FECHAS + ITINERARIO
+# ============================================================
+# BLOQUE FECHAS + ITINERARIO (FIXED)
 # ============================================================
 
 from datetime import timedelta
 
 st.markdown('<div class="block">', unsafe_allow_html=True)
 
-# fila fechas
-c1, c2, c3, c4, c5, c6, c7, c8 = st.columns([1,2,1,2,1,1,1,2])
+# ---------- FILA FECHAS ----------
+c1, c2, c3, c4, c5, c6, c7, c8 = st.columns([1,2,1,2,1,2,1,2])
 
 with c1:
     st.markdown('<div class="cell-label">Fecha salida</div>', unsafe_allow_html=True)
 
 with c2:
-    fecha_salida = st.date_input("fs", key="fecha_salida")
-    
+    st.markdown('<div class="cell-input">', unsafe_allow_html=True)
+    fecha_salida = st.date_input("fecha_salida", label_visibility="collapsed")
+    st.markdown('</div>', unsafe_allow_html=True)
+
 with c3:
     st.markdown('<div class="cell-label">Noches</div>', unsafe_allow_html=True)
 
 with c4:
-    noches = st.number_input("noches", min_value=1, value=7, step=1)
+    st.markdown('<div class="cell-input">', unsafe_allow_html=True)
+    noches = st.number_input("noches", min_value=1, value=7, step=1, label_visibility="collapsed")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# cálculo automático
-fecha_llegada_calc = fecha_salida + timedelta(days=noches)
-dias_calc = noches + 1
+# ---------- CÁLCULO AUTOMÁTICO ----------
+fecha_llegada_calc = fecha_salida + timedelta(days=int(noches))
+dias_calc = int(noches) + 1
 
 with c5:
     st.markdown('<div class="cell-label">Fecha llegada</div>', unsafe_allow_html=True)
 
 with c6:
-    st.markdown(f'<div class="cell-value">{fecha_llegada_calc.strftime("%d/%m/%Y")}</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="cell-value">{fecha_llegada_calc.strftime("%d/%m/%Y")}</div>',
+        unsafe_allow_html=True
+    )
 
 with c7:
     st.markdown('<div class="cell-label">Días</div>', unsafe_allow_html=True)
 
 with c8:
-    st.markdown(f'<div class="cell-value">{dias_calc}</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="cell-value">{dias_calc}</div>',
+        unsafe_allow_html=True
+    )
 
-# ---------------- ITINERARIO ----------------
+# ---------- ITINERARIO ----------
 c9, c10 = st.columns([1,7])
 
 with c9:
@@ -363,11 +373,11 @@ with c9:
 
 with c10:
     st.markdown('<div class="cell-input">', unsafe_allow_html=True)
-    itinerario = st.text_area("itinerario", height=80, label_visibility="collapsed")
+    itinerario = st.text_area("itinerario", height=100, label_visibility="collapsed")
     st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown('</div>', unsafe_allow_html=True)
-    
+
     
     # ── BLOQUE LOCALIZADOR ────────────────────────────────────
     st.markdown('<div class="sh-group-hdr">LOCALIZADOR CRUCEMUNDO</div>', unsafe_allow_html=True)
