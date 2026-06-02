@@ -525,9 +525,9 @@ if agente_cliente != st.session_state.get("nc_agente_cliente", ""):
 
 st.markdown("</div>", unsafe_allow_html=True)
 
-    # ============================================================
-    # ESTADO RESERVA
-    # ============================================================
+# ============================================================
+# ESTADO RESERVA
+# ============================================================
     st.markdown('<div class="form-panel">', unsafe_allow_html=True)
     st.markdown('<div class="form-section-title">Estado de la Reserva / Booking Status</div>', unsafe_allow_html=True)
 
@@ -575,8 +575,8 @@ st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ============================================================
-    # LOCALIZADOR CRUCEMUNDO
-    # ============================================================
+# LOCALIZADOR CRUCEMUNDO
+# ============================================================
     LOCALIZADOR_REMOTE_ID = "1c1oiBTLDRtDAAKQp8hE7uA1FfStp4DJAYhwa7F_yCNQ"
 
     SHIPCODEMAP = {
