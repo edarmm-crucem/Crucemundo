@@ -497,6 +497,7 @@ if st.session_state.nc_tipo:
     </table>
     """, unsafe_allow_html=True)
 
+
     if sel:
         st.markdown('<div class="search-result-card">✅ Agencia cargada correctamente desde la base de datos.</div>', unsafe_allow_html=True)
 
