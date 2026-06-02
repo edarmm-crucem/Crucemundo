@@ -528,51 +528,51 @@ st.markdown("</div>", unsafe_allow_html=True)
 # ============================================================
 # ESTADO RESERVA
 # ============================================================
-    st.markdown('<div class="form-panel">', unsafe_allow_html=True)
-    st.markdown('<div class="form-section-title">Estado de la Reserva / Booking Status</div>', unsafe_allow_html=True)
+st.markdown('<div class="form-panel">', unsafe_allow_html=True)
+st.markdown('<div class="form-section-title">Estado de la Reserva / Booking Status</div>', unsafe_allow_html=True)
 
-    ESTADOS = ["", "CONFIRMADO", "NO CONFIRMADO", "CANCELADO"]
-    estado_actual = st.session_state.get("nc_estado_reserva", "")
+ESTADOS = ["", "CONFIRMADO", "NO CONFIRMADO", "CANCELADO"]
+estado_actual = st.session_state.get("nc_estado_reserva", "")
 
-    estado_sel = st.selectbox(
-        "Estado / Status",
-        options=ESTADOS,
-        index=ESTADOS.index(estado_actual) if estado_actual in ESTADOS else 0,
-        key="nc_estado_reserva_widget",
-        format_func=lambda x: {
-            "":              "— Selecciona un estado —",
-            "CONFIRMADO":    "✅  CONFIRMADO",
-            "NO CONFIRMADO": "⚠️  NO CONFIRMADO",
-            "CANCELADO":     "❌  CANCELADO",
-        }.get(x, x),
-    )
-    if estado_sel != st.session_state.get("nc_estado_reserva", ""):
-        st.session_state.nc_estado_reserva = estado_sel
+estado_sel = st.selectbox(
+    "Estado / Status",
+    options=ESTADOS,
+    index=ESTADOS.index(estado_actual) if estado_actual in ESTADOS else 0,
+    key="nc_estado_reserva_widget",
+    format_func=lambda x: {
+        "":              "— Selecciona un estado —",
+        "CONFIRMADO":    "✅  CONFIRMADO",
+        "NO CONFIRMADO": "⚠️  NO CONFIRMADO",
+        "CANCELADO":     "❌  CANCELADO",
+    }.get(x, x),
+)
+if estado_sel != st.session_state.get("nc_estado_reserva", ""):
+    st.session_state.nc_estado_reserva = estado_sel
 
-    # Badge visual del estado seleccionado
-    if estado_sel == "CONFIRMADO":
-        st.markdown("""
-        <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
-             padding:0.4rem 1rem;border-radius:999px;background:#DCFCE7;
-             border:1.5px solid #86EFAC;color:#166534;font-weight:800;font-size:0.80rem;">
-            ✅ CONFIRMADO
-        </div>""", unsafe_allow_html=True)
-    elif estado_sel == "NO CONFIRMADO":
-        st.markdown("""
-        <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
-             padding:0.4rem 1rem;border-radius:999px;background:#FEF3C7;
-             border:1.5px solid #FCD34D;color:#92400E;font-weight:800;font-size:0.80rem;">
-            ⚠️ NO CONFIRMADO
-        </div>""", unsafe_allow_html=True)
-    elif estado_sel == "CANCELADO":
-        st.markdown("""
-        <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
-             padding:0.4rem 1rem;border-radius:999px;background:#FEE2E2;
-             border:1.5px solid #FCA5A5;color:#991B1B;font-weight:800;font-size:0.80rem;">
-            ❌ CANCELADO
-        </div>""", unsafe_allow_html=True)
+# Badge visual del estado seleccionado
+if estado_sel == "CONFIRMADO":
+    st.markdown("""
+    <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
+         padding:0.4rem 1rem;border-radius:999px;background:#DCFCE7;
+         border:1.5px solid #86EFAC;color:#166534;font-weight:800;font-size:0.80rem;">
+        ✅ CONFIRMADO
+    </div>""", unsafe_allow_html=True)
+elif estado_sel == "NO CONFIRMADO":
+    st.markdown("""
+    <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
+         padding:0.4rem 1rem;border-radius:999px;background:#FEF3C7;
+         border:1.5px solid #FCD34D;color:#92400E;font-weight:800;font-size:0.80rem;">
+        ⚠️ NO CONFIRMADO
+    </div>""", unsafe_allow_html=True)
+elif estado_sel == "CANCELADO":
+    st.markdown("""
+    <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
+         padding:0.4rem 1rem;border-radius:999px;background:#FEE2E2;
+         border:1.5px solid #FCA5A5;color:#991B1B;font-weight:800;font-size:0.80rem;">
+        ❌ CANCELADO
+    </div>""", unsafe_allow_html=True)
 
-    st.markdown("</div>", unsafe_allow_html=True)
+st.markdown("</div>", unsafe_allow_html=True)
 
 # ============================================================
 # LOCALIZADOR CRUCEMUNDO
