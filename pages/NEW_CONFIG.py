@@ -616,7 +616,7 @@ with r7[2]:
         key="nc_barco_widget"
     )
 
-    st.session_state.get("nc_barco", "") = barco_sel
+    st.session_state.nc_barco = barco_sel
 
 with r7[3]:
     st.markdown(
@@ -878,7 +878,7 @@ with r10[3]:
             key="nc_barco_widget",
             format_func=lambda x: x.replace("_", " ") if x else "— barco —")
         if barco_sel != st.session_state.get("nc_barco", ""):
-            st.session_state.get("nc_barco", "") = barco_sel
+            st.session_state.nc_barco = barco_sel
             st.session_state.nc_localizador = ""
             st.rerun()
     with r7[3]: st.markdown('<div class="sh-lbl" style="height:32px;">F. Salida</div>', unsafe_allow_html=True)
@@ -886,7 +886,7 @@ with r10[3]:
         fecha_salida_loc = st.date_input("fecha_loc",
             value=st.session_state.get("nc_fecha_salida_loc", date.today()),
             format="DD/MM/YYYY", key="nc_fecha_salida_loc_widget")
-        st.session_state.get("nc_fecha_salida_loc", date.today()) = fecha_salida_loc
+        st.session_state.nc_fecha_salida_loc = fecha_salida_loc
     with r7[5]:
         generar_disabled = not (st.session_state.get("nc_barco") and st.session_state.get("nc_fecha_salida_loc"))
         if st.button("⚡ Generar", key="btn_generar_localizador", disabled=generar_disabled):
