@@ -360,7 +360,7 @@ opciones_modo = [
     "⚙️ Configurar Cupos / Configure Quotas",
     "📈 Informe / Report",
     "🛏️ Informe Cabinas / Cabin Report",
-    "🏠 Ocupación / Occupancy",          # ← AÑADIR
+    "🛳️ Ocupación / Occupancy",          # ← AÑADIR
     "📅 Nueva salida / New Departure",
     "🏠 Inicio / Home",
 ]
