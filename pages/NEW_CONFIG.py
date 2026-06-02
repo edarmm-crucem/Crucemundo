@@ -464,40 +464,40 @@ if st.session_state.nc_tipo:
         return f'<td class="{css}">{v}</td>' if v else '<td class="empty-cell">—</td>'
 
     st.markdown(f"""
-    <table class="agency-table">
-    
-    <tr>
-        <th colspan="8" class="agency-header">AGENCIA</th>
-    </tr>
-    
+<table class="agency-table">
 
-    <tr>
-        <th>Nombre</th>
-        <td colspan="3">{nombre if nombre else "—"}</td>
-    
-        <th>Código</th>
-        <td class="code">{codigo if codigo else "—"}</td>
-    
-        <th>Grupo</th>
-        <td>{grupo if grupo else "—"}</td>
-    </tr>
+<tr>
+    <th colspan="8" class="agency-header">AGENCIA</th>
+</tr>
 
-    
-    <tr>
-        <th>Dirección</th>
-        <td colspan="7">{direccion if direccion else "—"}</td>
-    </tr>
-    
-    <tr>
-        <th>Teléfono</th>
-        <td>{telefono if telefono else "—"}</td>
-    
-        <th>Email</th>
-        <td colspan="5">{email if email else "—"}</td>
-    </tr>
-    
-    </table>
-    """, unsafe_allow_html=True)
+
+<tr>
+    <th>Nombre</th>
+    <td colspan="3">{nombre if nombre else "—"}</td>
+
+    <th>Código</th>
+    <td class="code">{codigo if codigo else "—"}</td>
+
+    <th>Grupo</th>
+    <td>{grupo if grupo else "—"}</td>
+</tr>
+
+
+<tr>
+    <th>Dirección</th>
+    <td colspan="7">{direccion if direccion else "—"}</td>
+</tr>
+
+<tr>
+    <th>Teléfono</th>
+    <td>{telefono if telefono else "—"}</td>
+
+    <th>Email</th>
+    <td colspan="5">{email if email else "—"}</td>
+</tr>
+
+</table>
+""", unsafe_allow_html=True)
 
 
     if sel:
