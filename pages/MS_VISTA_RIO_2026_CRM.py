@@ -308,6 +308,9 @@ st.markdown('''
     .th-bilingual { display: flex; flex-direction: column; align-items: center; gap: 1px; }
     .th-es { font-size: 0.82rem; font-weight: 700; }
     .th-en { font-size: 0.66rem; font-style: italic; color: #9CA3AF; }
+    .td-total-cab { background-color: #EFF6FF; color: #1E40AF; font-weight: 700; }
+    .th-total-cab { background-color: #DBEAFE !important; color: #1E40AF !important; }
+    
 </style>
 ''', unsafe_allow_html=True)
 
@@ -649,7 +652,7 @@ else:
             # Tabla por categoría
             t = '<table class="informe-tabla"><thead><tr>'
             t += th("Categoría", "Category")
-            t += th("Total Cabinas", "Total Cabins")
+            t += f'<th class="th-total-cab"><div class="th-bilingual"><span class="th-es">Total Cabinas</span><span class="th-en">Total Cabins</span></div></th>'
             t += th("Vendidas", "Sold")
             t += th("Reservas", "On Hold")
             t += th("Libres", "Free")
@@ -659,14 +662,23 @@ else:
         
             for cat, s in stats_cat.items():
                 # Barra de progreso inline con CSS
-                barra = (
-                    f'<div style="background:#E5E7EB;border-radius:4px;height:8px;width:100%;margin-bottom:4px;">'
-                    f'<div style="background:#1F2937;width:{s["pct"]}%;height:8px;border-radius:4px;"></div></div>'
-                    f'{s["pct"]}%'
-                )
+                pct = s["pct"]
+            if pct < 40:
+                grad = "linear-gradient(90deg, #22C55E, #86EFAC)"
+            elif pct < 70:
+                grad = "linear-gradient(90deg, #22C55E, #EAB308)"
+            elif pct < 90:
+                grad = "linear-gradient(90deg, #EAB308, #F97316)"
+            else:
+                grad = "linear-gradient(90deg, #F97316, #EF4444)"
+            barra = (
+                f'<div style="background:#E5E7EB;border-radius:4px;height:10px;width:100%;margin-bottom:4px;">'
+                f'<div style="background:{grad};width:{pct}%;height:10px;border-radius:4px;"></div></div>'
+                f'<span style="font-size:0.78rem;font-weight:700;">{pct}%</span>'
+            )
                 t += '<tr>'
                 t += f'<td style="font-weight:700;text-align:left;">{cat}</td>'
-                t += f'<td>{s["total"]}</td>'
+                t += f'<td class="td-total-cab">{s["total"]}</td>'
                 t += f'<td class="td-sold">{s["vendidas"]}</td>'
                 t += f'<td style="color:#92400E;font-weight:700;">{s["reservas"]}</td>'
                 t += f'<td>{s["libres"]}</td>'
@@ -675,21 +687,23 @@ else:
                 t += '</tr>'
         
             # Fila TOTAL
-            tot_v = sum(s["vendidas"] for s in stats_cat.values())
-            tot_r = sum(s["reservas"] for s in stats_cat.values())
-            tot_l = sum(s["libres"]   for s in stats_cat.values())
-            tot_t = sum(s["total"]    for s in stats_cat.values())
-            tot_p = sum(s["pax"]      for s in stats_cat.values())
-            tot_pct = round(tot_v / tot_t * 100, 1) if tot_t else 0
-            barra_tot = (
-                f'<div style="background:#E5E7EB;border-radius:4px;height:8px;width:100%;margin-bottom:4px;">'
-                f'<div style="background:#1F2937;width:{tot_pct}%;height:8px;border-radius:4px;"></div></div>'
-                f'<strong>{tot_pct}%</strong>'
-            )
+                if tot_pct < 40:
+                    grad_tot = "linear-gradient(90deg, #22C55E, #86EFAC)"
+                elif tot_pct < 70:
+                    grad_tot = "linear-gradient(90deg, #22C55E, #EAB308)"
+                elif tot_pct < 90:
+                    grad_tot = "linear-gradient(90deg, #EAB308, #F97316)"
+                else:
+                    grad_tot = "linear-gradient(90deg, #F97316, #EF4444)"
+                barra_tot = (
+                    f'<div style="background:#E5E7EB;border-radius:4px;height:10px;width:100%;margin-bottom:4px;">'
+                    f'<div style="background:{grad_tot};width:{tot_pct}%;height:10px;border-radius:4px;"></div></div>'
+                    f'<strong style="font-size:0.78rem;">{tot_pct}%</strong>'
+                )
             t += (
                 f'<tr style="background:#F3F4F6;font-weight:800;border-top:2px solid #D1D5DB;">'
                 f'<td style="text-align:left;">TOTAL</td>'
-                f'<td>{tot_t}</td>'
+                f'<td class="td-total-cab">{tot_t}</td>'
                 f'<td class="td-sold">{tot_v}</td>'
                 f'<td style="color:#92400E;font-weight:700;">{tot_r}</td>'
                 f'<td>{tot_l}</td>'
