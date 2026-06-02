@@ -461,8 +461,8 @@ if st.session_state.nc_tipo:
     email     = ag.get("Email",     "")
     direccion = ag.get("Direccion", "")
 
-def cell(v, css="value-cell"):
-    return f'<td class="{css}">{v}</td>' if v else '<td class="empty-cell">—</td>'
+    def cell(v, css="value-cell"):
+        return f'<td class="{css}">{v}</td>' if v else '<td class="empty-cell">—</td>'
 
 
 html = f"""
