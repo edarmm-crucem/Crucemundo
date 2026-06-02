@@ -662,7 +662,7 @@ else:
         
             for cat, s in stats_cat.items():
                 # Barra de progreso inline con CSS
-                pct = s["pct"]
+            pct = s["pct"]
             if pct < 40:
                 grad = "linear-gradient(90deg, #22C55E, #86EFAC)"
             elif pct < 70:
