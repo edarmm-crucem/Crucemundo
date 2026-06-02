@@ -98,167 +98,124 @@ def searchagencias(query):
 # ============================================================
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
 
-* { box-sizing: border-box; }
+/* ===== GLOBAL RESET ===== */
+.block-container {
+    padding-top: 0.8rem;
+    padding-bottom: 0.8rem;
+    max-width: 95%;
+}
+
+/* Espaciado ultra compacto */
+div[data-testid="stVerticalBlock"] > div {
+    gap: 0.35rem;
+}
+
+/* ===== TIPOGRAFÍA ===== */
 html, body, [class*="css"] {
-    font-family: "DM Sans", sans-serif !important;
-    background: #FFFFFF !important;
-}
-[data-testid="stAppViewContainer"] { background: #FFFFFF !important; }
-[data-testid="stHeader"] { background: transparent !important; }
-section[data-testid="stSidebar"] { display: none !important; }
-.block-container, [data-testid="stMainBlockContainer"] {
-    padding-top: 0 !important; padding-bottom: 1rem !important;
-    padding-left: 1rem !important; padding-right: 1rem !important;
-    max-width: 1400px !important; margin: 0 auto !important;
+    font-size: 13px;
 }
 
-/* ── Cabecera documento ── */
-.doc-header {
-    display: flex; align-items: flex-start; justify-content: space-between;
-    padding: 0.9rem 0 0.7rem 0; border-bottom: 3px solid #1E3A8A; margin-bottom: 1rem;
-}
-.doc-header-left { display: flex; flex-direction: column; gap: 0.1rem; }
-.doc-title {
-    font-size: 1.55rem; font-weight: 900; color: #1E3A8A;
-    letter-spacing: 0.04em; text-transform: uppercase; line-height: 1;
-}
-.doc-subtitle { font-size: 0.72rem; font-weight: 600; color: #6B7280; letter-spacing: 0.08em; text-transform: uppercase; }
-.doc-header-center { text-align: center; font-size: 0.68rem; color: #6B7280; line-height: 1.6; }
-.doc-header-right { display: flex; align-items: center; }
-.doc-logo { height: 46px; width: auto; }
-
-/* ── Selector de tipo ── */
-.tipo-btn {
-    width: 100%; padding: 0.85rem 1rem; border-radius: 12px;
-    border: 2px solid #E5E7EB; background: #F9FAFB;
-    text-align: center; margin-bottom: 0.4rem;
-}
-.tipo-btn-icon { font-size: 1.4rem; margin-bottom: 0.2rem; }
-.tipo-btn-label { font-size: 0.80rem; font-weight: 800; color: #1F2937; }
-.tipo-btn-sub   { font-size: 0.65rem; color: #6B7280; margin-top: 0.1rem; }
-
-/* ── Panel formulario ── */
-.form-panel {
-    background: #FAFBFF; border: 1.5px solid #E0E7EF; border-radius: 14px;
-    padding: 1.1rem 1.2rem 1.3rem 1.2rem; margin-bottom: 1rem;
-}
-.form-section-title {
-    font-size: 0.70rem; font-weight: 800; color: #6B7280;
-    text-transform: uppercase; letter-spacing: 0.10em;
-    border-bottom: 1px solid #E5E7EB; padding-bottom: 0.3rem;
-    margin-bottom: 0.8rem; margin-top: 0.2rem;
+/* Títulos */
+h1, h2, h3 {
+    margin-bottom: 4px !important;
 }
 
-/* ── Tabla estilo hoja ── */
-.agency-table {
-    width: 100%; border-collapse: collapse; font-size: 0.82rem;
-    border: 1.5px solid #374151;
+/* ===== INPUTS ===== */
+.stTextInput input, .stSelectbox div {
+    padding: 4px 6px !important;
+    font-size: 12.5px !important;
+    border-radius: 4px !important;
 }
-.agency-table td, .agency-table th {
-    border: 1px solid #9CA3AF; padding: 5px 8px;
+
+/* ===== HEADER STYLE ===== */
+.header-pro {
+    border: 1px solid #9CA3AF;
+    padding: 10px;
+    border-radius: 6px;
+    background: linear-gradient(180deg, #FAFAFA, #F3F4F6);
+    font-size: 12.5px;
+    line-height: 1.25;
+}
+
+/* ===== TARJETAS ===== */
+.card-tipo {
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 12.5px;
+    text-align: center;
+    line-height: 1.2;
+    transition: all 0.15s ease;
+}
+
+.card-tipo:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+/* ===== TABLA PRO ===== */
+.table-doc {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 12.5px;
+}
+
+.table-doc th {
+    background: #E5E7EB;
+    border: 1px solid #6B7280;
+    padding: 5px;
+    text-align: left;
+    font-weight: 600;
+}
+
+.table-doc td {
+    border: 1px solid #9CA3AF;
+    padding: 5px;
     vertical-align: middle;
 }
-.agency-table th {
-    background: #F3F4F6; font-weight: 800; font-size: 0.72rem;
-    color: #374151; text-transform: uppercase; letter-spacing: 0.05em;
-    white-space: nowrap;
-}
-.agency-table td.label-cell {
-    background: #F9FAFB; font-weight: 700; color: #374151;
-    font-size: 0.75rem; white-space: nowrap; width: 100px;
-    text-align: right; padding-right: 10px;
-}
-.agency-table td.value-cell {
-    font-weight: 600; color: #111827; background: #FFFFFF;
-}
-.agency-table td.code-cell {
-    background: #EFF6FF; font-weight: 800; color: #1E40AF;
-    text-align: center; white-space: nowrap;
-}
-.agency-table td.empty-cell {
-    background: #F9FAFB; color: #9CA3AF; font-style: italic;
-    font-size: 0.72rem;
+
+/* labels tipo ERP */
+.table-doc .label {
+    background: #F3F4F6;
+    font-weight: 600;
+    width: 130px;
+    color: #374151;
 }
 
-/* ── Badge tipo activo ── */
-.badge-tipo {
-    display: inline-flex; align-items: center; gap: 0.4rem;
-    padding: 0.3rem 0.8rem; border-radius: 999px;
-    font-size: 0.72rem; font-weight: 800; margin-bottom: 0.9rem;
-}
-.badge-fit-es  { background: #DBEAFE; color: #1D4ED8; border: 1px solid #93C5FD; }
-.badge-fit-en  { background: #D1FAE5; color: #065F46; border: 1px solid #6EE7B7; }
-.badge-groups  { background: #EDE9FE; color: #5B21B6; border: 1px solid #C4B5FD; }
-
-/* ── Inputs ── */
-div[data-testid="stTextInput"] label {
-    color: #374151 !important; font-size: 0.76rem !important; font-weight: 700 !important;
-}
-div[data-testid="stTextInput"] input {
-    background: #FFFFFF !important; border: 1.5px solid #CBD5E1 !important;
-    border-radius: 10px !important; color: #1F2937 !important;
-    min-height: 40px !important; font-family: "DM Sans", sans-serif !important;
-    font-size: 0.88rem !important; font-weight: 600 !important;
-}
-div[data-testid="stTextInput"] input:focus {
-    border-color: #2563EB !important;
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.12) !important;
-}
-div.stButton button {
-    border-radius: 999px !important; font-size: 0.75rem !important;
-    font-weight: 800 !important; font-family: "DM Sans", sans-serif !important;
-    padding: 0 1rem !important; min-height: 34px !important;
-    box-shadow: 0 2px 6px rgba(15,23,42,0.10) !important;
-    border: 2px solid transparent !important;
-    transition: transform 0.15s ease, box-shadow 0.15s ease !important;
-}
-div.stButton button:hover {
-    transform: translateY(-1px) !important;
-    box-shadow: 0 6px 14px rgba(15,23,42,0.13) !important;
+/* valores */
+.table-doc .value {
+    background: #FFFFFF;
 }
 
-/* ── Pill usuario ── */
-.user-pill {
-    display: inline-flex; align-items: center; gap: 0.4rem;
-    padding: 0.3rem 0.7rem; border-radius: 999px;
-    background: #F3F4F6; border: 1px solid #E5E7EB;
-    font-size: 0.70rem; font-weight: 700; color: #4B5565;
+/* resaltado */
+.table-doc .highlight {
+    font-weight: 600;
+    color: #111827;
 }
 
-/* ── Resultado búsqueda ── */
-.search-result-card {
-    background: #F0FDF4; border: 1.5px solid #86EFAC;
-    border-radius: 10px; padding: 0.6rem 0.9rem;
-    font-size: 0.78rem; color: #166534; font-weight: 700;
-    margin-top: 0.6rem;
-}
-.search-none-card {
-    background: #FEF9C3; border: 1.5px solid #FCD34D;
-    border-radius: 10px; padding: 0.6rem 0.9rem;
-    font-size: 0.78rem; color: #92400E; font-weight: 700;
-    margin-bottom: 0.6rem;
+/* ===== BADGES ===== */
+.badge-ok {
+    background: #DCFCE7;
+    border: 1px solid #16A34A;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
 }
 
-/* ── Campos fijos (lectura) vs libres (editable) ── */
-div[data-testid="stTextInput"] input[disabled],
-div[data-testid="stTextInput"] input:read-only {
-    background: #F0F4FF !important;
-    border-color: #BFDBFE !important;
-    color: #1E40AF !important;
-    cursor: default !important;
+.badge-warning {
+    background: #FEF3C7;
+    border: 1px solid #D97706;
+    padding: 4px 8px;
+    border-radius: 4px;
 }
 
-div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-    background: #FFFFFF !important; border: 1.5px solid #CBD5E1 !important;
-    border-radius: 10px !important; color: #1F2937 !important;
-    min-height: 40px !important; font-family: "DM Sans", sans-serif !important;
-    font-size: 0.88rem !important; font-weight: 600 !important;
+.badge-error {
+    background: #FEE2E2;
+    border: 1px solid #DC2626;
+    padding: 4px 8px;
+    border-radius: 4px;
 }
-div[data-testid="stSelectbox"] label {
-    color: #374151 !important; font-size: 0.76rem !important; font-weight: 700 !important;
-}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -418,38 +375,35 @@ if st.session_state.nc_tipo:
         return f'<td class="{css}">{v}</td>' if v else '<td class="empty-cell">—</td>'
 
     st.markdown(f"""
-    <table class="agency-table">
-        <tr>
-            <th colspan="2" style="text-align:left;">AGENCIA</th>
-            <td class="value-cell" style="font-weight:800;font-size:0.88rem;" colspan="2">
-                {nombre or '<span style="color:#9CA3AF;font-style:italic;">sin seleccionar</span>'}
-            </td>
-            <th>COD</th>
-            {cell(codigo, "code-cell")}
-            <th>GRUPO</th>
-            {cell(grupo)}
-        </tr>
-        <tr>
-            <td class="label-cell" colspan="2">Dirección</td>
-            <td class="value-cell" colspan="5">
-                {direccion or '<span style="color:#9CA3AF;font-style:italic;">—</span>'}
-            </td>
-        </tr>
-        <tr>
-            <td class="label-cell" colspan="2">Teléfono</td>
-            {cell(telefono)}
-            <td class="label-cell">Email</td>
-            <td class="value-cell" colspan="4">
-                {email or '<span style="color:#9CA3AF;font-style:italic;">—</span>'}
-            </td>
-        </tr>
-    </table>
-    """, unsafe_allow_html=True)
 
-    if sel:
-        st.markdown('<div class="search-result-card">✅ Agencia cargada correctamente desde la base de datos.</div>', unsafe_allow_html=True)
+<table class="table-doc">
 
-    st.markdown("</div>", unsafe_allow_html=True)
+<tr>
+    <th colspan="2">AGENCIA</th>
+    <td colspan="2" class="highlight">{nombre or '—'}</td>
+    <th>COD</th>
+    <td class="highlight">{codigo or '—'}</td>
+</tr>
+
+<tr>
+    <td class="label">Grupo</td>
+    <td class="value">{grupo or '—'}</td>
+
+    <td class="label">Teléfono</td>
+    <td class="value">{telefono or '—'}</td>
+
+    <td class="label">Email</td>
+    <td class="value">{email or '—'}</td>
+</tr>
+
+<tr>
+    <td class="label">Dirección</td>
+    <td colspan="5" class="value">{direccion or '—'}</td>
+</tr>
+
+</table>
+
+""", unsafe_allow_html=True)
 
     # ============================================================
     # AGENTE / CLIENTE
@@ -495,28 +449,14 @@ if st.session_state.nc_tipo:
 
     # Badge visual del estado seleccionado
     if estado_sel == "CONFIRMADO":
-        st.markdown("""
-        <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
-             padding:0.4rem 1rem;border-radius:999px;background:#DCFCE7;
-             border:1.5px solid #86EFAC;color:#166534;font-weight:800;font-size:0.80rem;">
-            ✅ CONFIRMADO
-        </div>""", unsafe_allow_html=True)
-    elif estado_sel == "NO CONFIRMADO":
-        st.markdown("""
-        <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
-             padding:0.4rem 1rem;border-radius:999px;background:#FEF3C7;
-             border:1.5px solid #FCD34D;color:#92400E;font-weight:800;font-size:0.80rem;">
-            ⚠️ NO CONFIRMADO
-        </div>""", unsafe_allow_html=True)
-    elif estado_sel == "CANCELADO":
-        st.markdown("""
-        <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
-             padding:0.4rem 1rem;border-radius:999px;background:#FEE2E2;
-             border:1.5px solid #FCA5A5;color:#991B1B;font-weight:800;font-size:0.80rem;">
-            ❌ CANCELADO
-        </div>""", unsafe_allow_html=True)
+    st.markdown('<div class="badge-ok">✅ CONFIRMADO</div>', unsafe_allow_html=True)
 
-    st.markdown("</div>", unsafe_allow_html=True)
+elif estado_sel == "NO CONFIRMADO":
+    st.markdown('<div class="badge-warning">⚠️ NO CONFIRMADO</div>', unsafe_allow_html=True)
+
+elif estado_sel == "CANCELADO":
+    st.markdown('<div class="badge-error">❌ CANCELADO</div>', unsafe_allow_html=True)
+
 
 # ============================================================
     # LOCALIZADOR CRUCEMUNDO
