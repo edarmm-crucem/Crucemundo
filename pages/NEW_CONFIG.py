@@ -465,39 +465,38 @@ if st.session_state.nc_tipo:
 
     st.markdown(f"""
 <table class="agency-table">
-
 <tr>
     <th colspan="8" class="agency-header">AGENCIA</th>
 </tr>
 
-
 <tr>
     <th>Nombre</th>
-    <td colspan="3">{nombre if nombre else "—"}</td>
+    <td colspan="3">{nombre or "—"}</td>
 
     <th>Código</th>
-    <td class="code">{codigo if codigo else "—"}</td>
+    <td class="code">{codigo or "—"}</td>
 
     <th>Grupo</th>
-    <td>{grupo if grupo else "—"}</td>
+    <td>{grupo or "—"}</td>
 </tr>
-
 
 <tr>
     <th>Dirección</th>
-    <td colspan="7">{direccion if direccion else "—"}</td>
+    <td colspan="7">{direccion or "—"}</td>
 </tr>
 
 <tr>
     <th>Teléfono</th>
-    <td>{telefono if telefono else "—"}</td>
+    <td>{telefono or "—"}</td>
 
     <th>Email</th>
-    <td colspan="5">{email if email else "—"}</td>
+    <td colspan="5">{email or "—"}</td>
 </tr>
 
 </table>
-""", unsafe_allow_html=True)
+"""
+
+st.components.v1.html(html, height=300)
 
 
     if sel:
