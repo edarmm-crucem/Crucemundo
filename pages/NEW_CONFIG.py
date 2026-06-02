@@ -518,9 +518,185 @@ if st.session_state.nc_tipo:
 
     st.markdown("</div>", unsafe_allow_html=True)
 
+# ============================================================
+    # LOCALIZADOR CRUCEMUNDO
     # ============================================================
-    # LOCALIZADOR — pendiente de script
-    # ============================================================
+    LOCALIZADOR_REMOTE_ID = "1c1oiBTLDRtDAAKQp8hE7uA1FfStp4DJAYhwa7F_yCNQ"
+
+    SHIPCODEMAP = {
+        "MS_ALBERTINA":     "ALB",
+        "MS_ARENA":         "ARN",
+        "MS_CRUCEVITA":     "CV",
+        "MS_DOURO_CRUISER": "DC",
+        "MS_FIDELIO":       "FID",
+        "MS_LEONORA":       "LEO",
+        "MS_RIVER_DIAMOND": "RDA",
+        "MS_RIVER_SAPPHIRE":"RSA",
+        "MS_SWISS_SPLENDOR":"SPL",
+        "MS_VISTA_GRACIA":  "VGR",
+        "MS_VISTAMILLA":    "VMI",
+        "MS_VISTA_RIO":     "VRI",
+        "MS_CRUCE_RIO":     "CRI",
+    }
+
+    def generar_localizador(barco, fecha_salida):
+        """
+        Replica MASTER_CONFIRMATION_GeneraLOCALIZADOR en Python.
+        - Hoja índice 0 del remoto: contadores  (col A = clave, col B = valor)
+        - Hoja índice 1 del remoto: registro    (timestamp, codigo, barco, fecha)
+        Devuelve el código generado o lanza Exception.
+        """
+        prefijo = SHIPCODEMAP.get(barco)
+        if not prefijo:
+            raise Exception(f"Barco no configurado: {barco}")
+
+        anio2      = fecha_salida.strftime("%y")
+        mes        = fecha_salida.strftime("%m")
+        dia        = fecha_salida.strftime("%d")
+        clave      = prefijo + anio2          # ej: VRI26
+        parte_fecha = anio2 + mes + dia       # ej: 260522
+
+        service = getsheetsservice()
+
+        # ── Leer hoja contadores (índice 0) ──────────────────
+        spreadsheet  = service.spreadsheets().get(
+            spreadsheetId=LOCALIZADOR_REMOTE_ID
+        ).execute()
+        sheets       = spreadsheet.get("sheets", [])
+        if len(sheets) < 2:
+            raise Exception("El archivo remoto necesita al menos 2 hojas.")
+
+        title_cont = sheets[0]["properties"]["title"]
+        title_reg  = sheets[1]["properties"]["title"]
+
+        resp = service.spreadsheets().values().get(
+            spreadsheetId=LOCALIZADOR_REMOTE_ID,
+            range=f"{title_cont}!A:B",
+        ).execute()
+        rows = resp.get("values", [])
+
+        contador    = 1
+        fila_update = None
+
+        for i, row in enumerate(rows):
+            if row and str(row[0]).strip() == clave:
+                contador    = int(row[1]) + 1 if len(row) > 1 and str(row[1]).isdigit() else 1
+                fila_update = i + 1   # 1-based
+                break
+
+        # ── Actualizar o crear contador ───────────────────────
+        if fila_update:
+            service.spreadsheets().values().update(
+                spreadsheetId=LOCALIZADOR_REMOTE_ID,
+                range=f"{title_cont}!B{fila_update}",
+                valueInputOption="RAW",
+                body={"values": [[contador]]},
+            ).execute()
+        else:
+            service.spreadsheets().values().append(
+                spreadsheetId=LOCALIZADOR_REMOTE_ID,
+                range=f"{title_cont}!A:B",
+                valueInputOption="RAW",
+                insertDataOption="INSERT_ROWS",
+                body={"values": [[clave, contador]]},
+            ).execute()
+
+        # ── Generar código ────────────────────────────────────
+        codigo = f"{prefijo}{parte_fecha}-{str(contador).zfill(3)}"
+
+        # ── Registrar en hoja índice 1 ────────────────────────
+        from datetime import datetime as dt
+        ahora    = dt.now().strftime("%d/%m/%Y %H:%M")
+        fecha_str = fecha_salida.strftime("%d/%m/%Y")
+
+        service.spreadsheets().values().append(
+            spreadsheetId=LOCALIZADOR_REMOTE_ID,
+            range=f"{title_reg}!A:D",
+            valueInputOption="RAW",
+            insertDataOption="INSERT_ROWS",
+            body={"values": [[ahora, codigo, barco, fecha_str]]},
+        ).execute()
+
+        return codigo
+
+    # ── UI del bloque localizador ─────────────────────────────
+    st.markdown('<div class="form-panel">', unsafe_allow_html=True)
+    st.markdown('<div class="form-section-title">Localizador Crucemundo</div>', unsafe_allow_html=True)
+
+    loc_col1, loc_col2, loc_col3 = st.columns([2, 2, 1], gap="medium")
+
+    with loc_col1:
+        barco_options = [""] + list(SHIPCODEMAP.keys())
+        barco_sel = st.selectbox(
+            "Barco / Ship",
+            options=barco_options,
+            index=barco_options.index(st.session_state.get("nc_barco", ""))
+                  if st.session_state.get("nc_barco", "") in barco_options else 0,
+            key="nc_barco_widget",
+            format_func=lambda x: x.replace("_", " ") if x else "— Selecciona barco —",
+        )
+        if barco_sel != st.session_state.get("nc_barco", ""):
+            st.session_state.nc_barco       = barco_sel
+            st.session_state.nc_localizador = ""
+            st.rerun()
+
+    with loc_col2:
+        fecha_salida_loc = st.date_input(
+            "Fecha de salida / Departure date",
+            value=st.session_state.get("nc_fecha_salida_loc", date.today()),
+            format="DD/MM/YYYY",
+            key="nc_fecha_salida_loc_widget",
+        )
+        st.session_state.nc_fecha_salida_loc = fecha_salida_loc
+
+    with loc_col3:
+        st.markdown("<div style='height:1.82rem'></div>", unsafe_allow_html=True)
+        generar_disabled = not (
+            st.session_state.get("nc_barco") and
+            st.session_state.get("nc_fecha_salida_loc")
+        )
+        if st.button("⚡ Generar", key="btn_generar_localizador", disabled=generar_disabled):
+            if st.session_state.get("nc_localizador"):
+                st.warning("Ya existe un localizador generado para esta confirmación. Reinicia si quieres uno nuevo.")
+            else:
+                try:
+                    with st.spinner("Generando localizador..."):
+                        codigo = generar_localizador(
+                            st.session_state.nc_barco,
+                            st.session_state.nc_fecha_salida_loc,
+                        )
+                    st.session_state.nc_localizador = codigo
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"Error generando localizador: {exc}")
+
+    # ── Mostrar resultado ─────────────────────────────────────
+    loc_generado = st.session_state.get("nc_localizador", "")
+    if loc_generado:
+        st.markdown(f"""
+        <div style="margin-top:0.7rem;display:flex;align-items:center;gap:1rem;
+             background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:10px;
+             padding:0.7rem 1rem;">
+            <div style="font-size:0.72rem;font-weight:700;color:#166534;
+                 text-transform:uppercase;letter-spacing:0.08em;">
+                Localizador asignado
+            </div>
+            <div style="font-size:1.15rem;font-weight:900;color:#1E3A8A;
+                 letter-spacing:0.08em;font-family:monospace;">
+                {loc_generado}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div style="margin-top:0.6rem;background:#F8FAFC;border:1.5px dashed #CBD5E1;
+             border-radius:10px;padding:0.65rem 1rem;font-size:0.78rem;
+             color:#94A3B8;font-weight:600;">
+            Selecciona barco y fecha, luego pulsa ⚡ Generar
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
     st.markdown('<div class="form-panel" style="border-color:#FCD34D;background:#FFFBEB;">', unsafe_allow_html=True)
     st.markdown('<div class="form-section-title" style="color:#92400E;">Localizador Crucemundo</div>', unsafe_allow_html=True)
     st.warning("⏳ Pendiente de integrar el script de asignación automática de localizador. Pega el script y lo conectamos.")
