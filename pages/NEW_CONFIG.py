@@ -28,6 +28,7 @@ if not st.session_state.get("authenticated"):
         .auth-warn-title { font-size: 1rem; font-weight: 800; color: #92400E; margin-bottom: 0.3rem; }
         .auth-warn-sub { font-size: 0.82rem; color: #78350F; }
         </style>
+        """, unsafe_allow_html=True)
         <div class="auth-warn">
             <div class="auth-warn-title">⚠️ Acceso restringido / Restricted access</div>
             <div class="auth-warn-sub">No tienes acceso. Inicia sesión desde el menú principal.<br>
