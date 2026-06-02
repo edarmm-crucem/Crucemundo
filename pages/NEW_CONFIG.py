@@ -161,37 +161,43 @@ section[data-testid="stSidebar"] { display: none !important; }
 
 /* ── Celda etiqueta (color informativo) ── */
 .sh-lbl {
-    background: #EFF6FF;
+    background: #F8FAFC;
     border-right: 1px solid #CBD5E1;
-    color: #1E40AF;
+
+    color: #475569;
+
     font-size: 0.65rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.07em;
+
     padding: 0 8px;
+
     display: flex;
     align-items: center;
-    white-space: nowrap;
-    user-select: none;
 }
 /* ── Celda de valor informativo (auto-rellenado) ── */
 .sh-val-info {
-    background: #F8FAFF;
-    border-right: 1px solid #CBD5E1;
-    color: #1E3A8A;
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 0.75rem;
+    background: #FFFFFF;
+    border: 1px solid #D1D5DB;
+    color: #111827;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.80rem;
     font-weight: 600;
     padding: 0 8px;
     display: flex;
     align-items: center;
+    border-radius: 4px;
 }
-.sh-val-info.empty { color: #CBD5E1; font-style: italic; }
+.sh-val-info.empty {
+    color: #9CA3AF;
+    font-style: italic;
+}
 /* ── Celda de código destacada ── */
 .sh-val-code {
-    background: #DBEAFE;
-    border-right: 1px solid #CBD5E1;
-    color: #1D4ED8;
+    background: #FFFFFF;
+    border: 2px solid #2563EB;
+    color: #2563EB;
     font-family: "IBM Plex Mono", monospace;
     font-size: 0.80rem;
     font-weight: 800;
@@ -199,7 +205,7 @@ section[data-testid="stSidebar"] { display: none !important; }
     display: flex;
     align-items: center;
     justify-content: center;
-    letter-spacing: 0.06em;
+    border-radius: 4px;
 }
 /* ── Sección cabecera de grupo ── */
 .sh-group-hdr {
@@ -242,14 +248,16 @@ section[data-testid="stSidebar"] { display: none !important; }
 /* ── Localizador generado ── */
 .loc-display {
     font-family: "IBM Plex Mono", monospace;
-    font-size: 1.0rem;
+    font-size: 1rem;
     font-weight: 800;
-    color: #1E3A8A;
+    color: #111827;
     letter-spacing: 0.12em;
-    background: #DBEAFE;
-    border: 1.5px solid #3B82F6;
+
+    background: #FFFFFF;
+    border: 2px solid #111827;
     border-radius: 4px;
-    padding: 3px 12px;
+
+    padding: 4px 12px;
     display: inline-block;
 }
 
