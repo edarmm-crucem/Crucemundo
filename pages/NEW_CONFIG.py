@@ -470,6 +470,7 @@ if st.session_state.nc_tipo:
         <th colspan="8" class="agency-header">AGENCIA</th>
     </tr>
     
+
     <tr>
         <th>Nombre</th>
         <td colspan="3">{nombre if nombre else "—"}</td>
@@ -480,6 +481,7 @@ if st.session_state.nc_tipo:
         <th>Grupo</th>
         <td>{grupo if grupo else "—"}</td>
     </tr>
+
     
     <tr>
         <th>Dirección</th>
