@@ -373,37 +373,36 @@ if st.session_state.nc_tipo:
 
     def cell(v, css="value-cell"):
         return f'<td class="{css}">{v}</td>' if v else '<td class="empty-cell">—</td>'
-
+if sel:
     st.markdown(f"""
-
-<table class="table-doc">
-
-<tr>
-    <th colspan="2">AGENCIA</th>
-    <td colspan="2" class="highlight">{nombre or '—'}</td>
-    <th>COD</th>
-    <td class="highlight">{codigo or '—'}</td>
-</tr>
-
-<tr>
-    <td class="label">Grupo</td>
-    <td class="value">{grupo or '—'}</td>
-
-    <td class="label">Teléfono</td>
-    <td class="value">{telefono or '—'}</td>
-
-    <td class="label">Email</td>
-    <td class="value">{email or '—'}</td>
-</tr>
-
-<tr>
-    <td class="label">Dirección</td>
-    <td colspan="5" class="value">{direccion or '—'}</td>
-</tr>
-
-</table>
-
-""", unsafe_allow_html=True)
+    <table class="table-doc">
+    
+    <tr>
+        <th colspan="2">AGENCIA</th>
+        <td colspan="2" class="highlight">{nombre or '—'}</td>
+        <th>COD</th>
+        <td class="highlight">{codigo or '—'}</td>
+    </tr>
+    
+    <tr>
+        <td class="label">Grupo</td>
+        <td class="value">{grupo or '—'}</td>
+    
+        <td class="label">Teléfono</td>
+        <td class="value">{telefono or '—'}</td>
+    
+        <td class="label">Email</td>
+        <td class="value">{email or '—'}</td>
+    </tr>
+    
+    <tr>
+        <td class="label">Dirección</td>
+        <td colspan="5" class="value">{direccion or '—'}</td>
+    </tr>
+    
+    </table>
+    
+    """, unsafe_allow_html=True)
 
     # ============================================================
     # AGENTE / CLIENTE
