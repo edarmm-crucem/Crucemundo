@@ -93,261 +93,48 @@ def searchagencias(query):
     return [a for a in getagencias() if q in a["searchblob"]]
 
 # ============================================================
-# CSS — estilo spreadsheet compacto
+# CSS ESTILO CELDAS TIPO EXCEL
 # ============================================================
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;600;700&display=swap');
 
-* { box-sizing: border-box; }
-html, body, [class*="css"] {
-    font-family: "IBM Plex Sans", sans-serif !important;
-    background: #F0F2F5 !important;
-}
-[data-testid="stAppViewContainer"] { background: #F0F2F5 !important; }
-[data-testid="stHeader"] { background: transparent !important; }
-section[data-testid="stSidebar"] { display: none !important; }
-.block-container, [data-testid="stMainBlockContainer"] {
-    padding-top: 0.5rem !important;
-    padding-bottom: 1rem !important;
-    padding-left: 0.75rem !important;
-    padding-right: 0.75rem !important;
-    max-width: 1280px !important;
-    margin: 0 auto !important;
+/* Fuente simple */
+html, body, [class*="css"]  {
+    font-family: Arial, sans-serif;
+    font-size: 13px;
 }
 
-/* ── Cabecera compacta ── */
-.doc-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #1E3A8A;
-    color: #fff;
-    padding: 0.45rem 0.9rem;
-    border-radius: 6px 6px 0 0;
-    margin-bottom: 0;
-}
-.doc-title {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 0.85rem;
-    font-weight: 700;
-    letter-spacing: 0.10em;
-    text-transform: uppercase;
-    color: #fff;
-}
-.doc-meta {
-    font-size: 0.65rem;
-    color: #93C5FD;
+/* Celda etiqueta */
+.cell-label {
+    background: #f5f5f5;
+    padding: 6px 8px;
+    border: 1px solid #d0d0d0;
     font-weight: 600;
-    letter-spacing: 0.05em;
-}
-.doc-logo { height: 30px; width: auto; filter: brightness(0) invert(1); opacity: 0.9; }
-
-/* ── Grid principal tipo hoja de cálculo ── */
-.sheet-wrap {
-    background: #fff;
-    border: 1.5px solid #94A3B8;
-    border-radius: 0 0 6px 6px;
-    overflow: hidden;
 }
 
-/* ── Fila de hoja ── */
-.sh-row {
-    display: grid;
-    border-bottom: 1px solid #CBD5E1;
-    min-height: 32px;
-}
-.sh-row:last-child { border-bottom: none; }
-
-/* ── Celda etiqueta (color informativo) ── */
-.sh-lbl {
-    background: #EFF6FF;
-    border-right: 1px solid #CBD5E1;
-    color: #1E40AF;
-    font-size: 0.65rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    padding: 0 8px;
-    display: flex;
-    align-items: center;
-    white-space: nowrap;
-    user-select: none;
-}
-/* ── Celda de valor informativo (auto-rellenado) ── */
-.sh-val-info {
-    background: #F8FAFF;
-    border-right: 1px solid #CBD5E1;
-    color: #1E3A8A;
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 0 8px;
-    display: flex;
-    align-items: center;
-}
-.sh-val-info.empty { color: #CBD5E1; font-style: italic; }
-/* ── Celda de código destacada ── */
-.sh-val-code {
-    background: #DBEAFE;
-    border-right: 1px solid #CBD5E1;
-    color: #1D4ED8;
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 0.80rem;
-    font-weight: 800;
-    padding: 0 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    letter-spacing: 0.06em;
-}
-/* ── Sección cabecera de grupo ── */
-.sh-group-hdr {
-    background: #1E3A8A;
-    color: #BFDBFE;
-    font-size: 0.60rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    padding: 3px 10px;
-    border-bottom: 1px solid #2563EB;
-}
-/* ── Row de número de fila (estilo Excel) ── */
-.sh-rownum {
-    background: #F1F5F9;
-    border-right: 1.5px solid #94A3B8;
-    color: #94A3B8;
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 0.60rem;
-    font-weight: 600;
-    width: 26px;
-    min-width: 26px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    user-select: none;
-    flex-shrink: 0;
+/* Celda valor info (solo lectura) */
+.cell-value {
+    background: #ffffff;
+    padding: 6px 8px;
+    border: 1px solid #d0d0d0;
 }
 
-/* ── Badge de estado ── */
-.status-confirmed { background:#DCFCE7; color:#166534; border:1px solid #86EFAC; }
-.status-pending   { background:#FEF3C7; color:#92400E; border:1px solid #FCD34D; }
-.status-cancelled { background:#FEE2E2; color:#991B1B; border:1px solid #FCA5A5; }
-.status-badge {
-    display:inline-flex; align-items:center; gap:0.3rem;
-    padding:2px 10px; border-radius:999px;
-    font-size:0.65rem; font-weight:800; letter-spacing:0.05em;
-}
-
-/* ── Localizador generado ── */
-.loc-display {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 1.0rem;
-    font-weight: 800;
-    color: #1E3A8A;
-    letter-spacing: 0.12em;
-    background: #DBEAFE;
-    border: 1.5px solid #3B82F6;
+/* Celda editable (IMPORTANTE) */
+.cell-input {
+    background: #fffdf2;
+    border: 2px solid #f0c040;
+    padding: 3px;
     border-radius: 4px;
-    padding: 3px 12px;
-    display: inline-block;
 }
 
-/* ── Streamlit input override — ultra compacto ── */
-div[data-testid="stTextInput"] {
-    margin-bottom: 0 !important;
-}
-div[data-testid="stTextInput"] label {
-    display: none !important;
-}
-div[data-testid="stTextInput"] input {
-    background: #FFFBEB !important;
-    border: none !important;
-    border-radius: 0 !important;
-    color: #1F2937 !important;
-    height: 30px !important;
-    min-height: 30px !important;
-    font-family: "IBM Plex Sans", sans-serif !important;
-    font-size: 0.80rem !important;
-    font-weight: 600 !important;
-    padding: 0 8px !important;
-    box-shadow: none !important;
-    outline: none !important;
-}
-div[data-testid="stTextInput"] input:focus {
-    background: #FFFDE7 !important;
-    box-shadow: inset 0 0 0 2px #2563EB !important;
-}
-div[data-testid="stTextInput"] > div {
-    border: none !important;
-    box-shadow: none !important;
+/* separar bloques */
+.block {
+    margin-top: 10px;
 }
 
-div[data-testid="stSelectbox"] {
-    margin-bottom: 0 !important;
-}
-div[data-testid="stSelectbox"] label { display: none !important; }
-div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-    background: #FFFBEB !important;
-    border: none !important;
-    border-radius: 0 !important;
-    height: 30px !important;
-    min-height: 30px !important;
-    font-family: "IBM Plex Sans", sans-serif !important;
-    font-size: 0.80rem !important;
-    font-weight: 600 !important;
-    padding: 0 8px !important;
-    box-shadow: none !important;
-    color: #1F2937 !important;
-}
-
-div[data-testid="stDateInput"] {
-    margin-bottom: 0 !important;
-}
-div[data-testid="stDateInput"] label { display: none !important; }
-div[data-testid="stDateInput"] input {
-    background: #FFFBEB !important;
-    border: none !important;
-    border-radius: 0 !important;
-    height: 30px !important;
-    min-height: 30px !important;
-    font-family: "IBM Plex Sans", sans-serif !important;
-    font-size: 0.80rem !important;
-    font-weight: 600 !important;
-    padding: 0 8px !important;
-    box-shadow: none !important;
-}
-div[data-testid="stDateInput"] > div {
-    border: none !important;
-    box-shadow: none !important;
-}
-
-div.stButton button {
-    font-family: "IBM Plex Sans", sans-serif !important;
-    font-size: 0.68rem !important;
-    font-weight: 700 !important;
-    height: 26px !important;
-    min-height: 26px !important;
-    padding: 0 10px !important;
-    border-radius: 4px !important;
-    border: 1.5px solid transparent !important;
-    box-shadow: none !important;
-    line-height: 1 !important;
-}
-
-/* ── Pill usuario ── */
-.user-pill {
-    display: inline-flex; align-items: center; gap: 0.3rem;
-    padding: 2px 8px; border-radius: 999px;
-    background: #EFF6FF; border: 1px solid #BFDBFE;
-    font-size: 0.65rem; font-weight: 700; color: #1E40AF;
-}
-
-/* Ocultar decoración streamlit */
-div[data-testid="stTextInput"] > div > div { border: none !important; }
-div[data-testid="stSelectbox"] > div > div { border: none !important; }
 </style>
 """, unsafe_allow_html=True)
+``
 
 # ============================================================
 # CABECERA
@@ -529,6 +316,59 @@ if st.session_state.nc_tipo:
         elif estado_sel == "CANCELADO":
             st.markdown('<div style="height:32px;display:flex;align-items:center;padding:0 8px"><span class="status-badge status-cancelled">❌ CANC.</span></div>', unsafe_allow_html=True)
 
+    # ============================================================
+# BLOQUE FECHAS + ITINERARIO
+# ============================================================
+
+from datetime import timedelta
+
+st.markdown('<div class="block">', unsafe_allow_html=True)
+
+# fila fechas
+c1, c2, c3, c4, c5, c6, c7, c8 = st.columns([1,2,1,2,1,1,1,2])
+
+with c1:
+    st.markdown('<div class="cell-label">Fecha salida</div>', unsafe_allow_html=True)
+
+with c2:
+    fecha_salida = st.date_input("fs", key="fecha_salida")
+    
+with c3:
+    st.markdown('<div class="cell-label">Noches</div>', unsafe_allow_html=True)
+
+with c4:
+    noches = st.number_input("noches", min_value=1, value=7, step=1)
+
+# cálculo automático
+fecha_llegada_calc = fecha_salida + timedelta(days=noches)
+dias_calc = noches + 1
+
+with c5:
+    st.markdown('<div class="cell-label">Fecha llegada</div>', unsafe_allow_html=True)
+
+with c6:
+    st.markdown(f'<div class="cell-value">{fecha_llegada_calc.strftime("%d/%m/%Y")}</div>', unsafe_allow_html=True)
+
+with c7:
+    st.markdown('<div class="cell-label">Días</div>', unsafe_allow_html=True)
+
+with c8:
+    st.markdown(f'<div class="cell-value">{dias_calc}</div>', unsafe_allow_html=True)
+
+# ---------------- ITINERARIO ----------------
+c9, c10 = st.columns([1,7])
+
+with c9:
+    st.markdown('<div class="cell-label">Itinerario</div>', unsafe_allow_html=True)
+
+with c10:
+    st.markdown('<div class="cell-input">', unsafe_allow_html=True)
+    itinerario = st.text_area("itinerario", height=80, label_visibility="collapsed")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown('</div>', unsafe_allow_html=True)
+    
+    
     # ── BLOQUE LOCALIZADOR ────────────────────────────────────
     st.markdown('<div class="sh-group-hdr">LOCALIZADOR CRUCEMUNDO</div>', unsafe_allow_html=True)
 
