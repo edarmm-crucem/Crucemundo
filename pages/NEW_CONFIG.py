@@ -262,46 +262,46 @@ div[data-testid="stSelectbox"] label {
 
 
 /* =========================
-   TABLA AGENCIA
+   TABLA AGENCIA (LOCKED)
 ========================= */
+
 .agency-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 14px;
+    margin-top: 10px;
 }
 
 .agency-table th {
     background-color: #F3F4F6;
     padding: 8px;
-    border: 1px solid #D1D5DB;
+    border: 1px solid #9CA3AF;
     text-align: left;
     font-weight: 600;
+    color: #111827;
 }
 
 .agency-table td {
+    background-color: #FAFAFA;
     padding: 8px;
-    border: 1px solid #E5E7EB;
-}
-
-/* 🔒 Datos provenientes de BD */
-.locked {
-    background-color: #F9FAFB;
-    color: #374151;
-    border: 1px solid #D1D5DB;
-}
-
-/* ✏️ Datos editables o recuperables */
-.editable {
-    background-color: #FFFFFF;
-    border: 2px solid #2563EB;
+    border: 1px solid #9CA3AF;
+    color: #1F2933;
     font-weight: 500;
 }
 
-/* Código destacado */
-.code {
-    background-color: #EEF2FF;
-    border: 1px solid #C7D2FE;
+/* Código más técnico */
+.agency-table .code {
     font-family: monospace;
+    background-color: #EEF2FF;
+}
+
+/* Cabecera sección tipo bloque */
+.agency-header {
+    background-color: #111827;
+    color: white;
+    font-weight: 600;
+    padding: 6px;
+    border: 1px solid #111827;
 }
 
 
@@ -464,33 +464,39 @@ if st.session_state.nc_tipo:
         return f'<td class="{css}">{v}</td>' if v else '<td class="empty-cell">—</td>'
 
     st.markdown(f"""
-    <table class="agency-table">
+        <table class="agency-table">
+        
         <tr>
-            <th colspan="2" style="text-align:left;">AGENCIA</th>
-            <td class="value-cell" style="font-weight:800;font-size:0.88rem;" colspan="2">
-                {nombre or '<span style="color:#9CA3AF;font-style:italic;">sin seleccionar</span>'}
-            </td>
-            <th>COD</th>
-            {cell(codigo, "code-cell")}
-            <th>GRUPO</th>
-            {cell(grupo)}
+            <th colspan="8" class="agency-header">AGENCIA</th>
         </tr>
+        
         <tr>
-            <td class="label-cell" colspan="2">Dirección</td>
-            <td class="value-cell" colspan="5">
-                {direccion or '<span style="color:#9CA3AF;font-style:italic;">—</span>'}
-            </td>
+            <th>Nombre</th>
+            <td colspan="3">{nombre or '—'}</td>
+        
+            <th>Código</th>
+            <td class="code">{codigo or '—'}</td>
+        
+            <th>Grupo</th>
+            <td>{grupo or '—'}</td>
         </tr>
+        
         <tr>
-            <td class="label-cell" colspan="2">Teléfono</td>
-            {cell(telefono)}
-            <td class="label-cell">Email</td>
-            <td class="value-cell" colspan="4">
-                {email or '<span style="color:#9CA3AF;font-style:italic;">—</span>'}
-            </td>
+            <th>Dirección</th>
+            <td colspan="7">{direccion or '—'}</td>
         </tr>
-    </table>
-    """, unsafe_allow_html=True)
+        
+        <tr>
+            <th>Teléfono</th>
+            <td>{telefono or '—'}</td>
+        
+            <th>Email</th>
+            <td colspan="5">{email or '—'}</td>
+        </tr>
+        
+        </table>
+        """, unsafe_allow_html=True)
+        ``
 
     if sel:
         st.markdown('<div class="search-result-card">✅ Agencia cargada correctamente desde la base de datos.</div>', unsafe_allow_html=True)
