@@ -660,7 +660,7 @@ else:
             t += th("Pax SOLD", "Pax Sold")
             t += '</tr></thead><tbody>'
         
-for cat, s in stats_cat.items():
+                for cat, s in stats_cat.items():
                 pct = s["pct"]
                 if pct < 40:
                     grad = "linear-gradient(90deg, #22C55E, #86EFAC)"
