@@ -258,7 +258,10 @@ div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
     font-size: 0.88rem !important; font-weight: 600 !important;
 }
 div[data-testid="stSelectbox"] label {
-    color: #374151 !important; font-size: 0.76rem !important; font-weight: 700 !important;
+    color: #374151 !important;
+    font-size: 0.76rem !important;
+    font-weight: 700 !important;
+}
 
 
 
