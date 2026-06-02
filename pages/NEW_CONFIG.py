@@ -240,6 +240,25 @@ div.stButton button:hover {
     font-size: 0.78rem; color: #92400E; font-weight: 700;
     margin-bottom: 0.6rem;
 }
+
+/* ── Campos fijos (lectura) vs libres (editable) ── */
+div[data-testid="stTextInput"] input[disabled],
+div[data-testid="stTextInput"] input:read-only {
+    background: #F0F4FF !important;
+    border-color: #BFDBFE !important;
+    color: #1E40AF !important;
+    cursor: default !important;
+}
+
+div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+    background: #FFFFFF !important; border: 1.5px solid #CBD5E1 !important;
+    border-radius: 10px !important; color: #1F2937 !important;
+    min-height: 40px !important; font-family: "DM Sans", sans-serif !important;
+    font-size: 0.88rem !important; font-weight: 600 !important;
+}
+div[data-testid="stSelectbox"] label {
+    color: #374151 !important; font-size: 0.76rem !important; font-weight: 700 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -431,5 +450,83 @@ if st.session_state.nc_tipo:
         st.markdown('<div class="search-result-card">✅ Agencia cargada correctamente desde la base de datos.</div>', unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+    # ============================================================
+    # AGENTE / CLIENTE
+    # ============================================================
+    st.markdown("<div style='height:0.7rem'></div>", unsafe_allow_html=True)
+    st.markdown('<div class="form-panel">', unsafe_allow_html=True)
+    st.markdown('<div class="form-section-title">Agente / Cliente</div>', unsafe_allow_html=True)
+
+    agente_cliente = st.text_input(
+        "Nombre del agente o cliente / Agent or client name",
+        value=st.session_state.get("nc_agente_cliente", ""),
+        key="nc_agente_cliente_widget",
+        placeholder="Ej: María García",
+    )
+    if agente_cliente != st.session_state.get("nc_agente_cliente", ""):
+        st.session_state.nc_agente_cliente = agente_cliente
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # ============================================================
+    # ESTADO RESERVA
+    # ============================================================
+    st.markdown('<div class="form-panel">', unsafe_allow_html=True)
+    st.markdown('<div class="form-section-title">Estado de la Reserva / Booking Status</div>', unsafe_allow_html=True)
+
+    ESTADOS = ["", "CONFIRMADO", "NO CONFIRMADO", "CANCELADO"]
+    estado_actual = st.session_state.get("nc_estado_reserva", "")
+
+    estado_sel = st.selectbox(
+        "Estado / Status",
+        options=ESTADOS,
+        index=ESTADOS.index(estado_actual) if estado_actual in ESTADOS else 0,
+        key="nc_estado_reserva_widget",
+        format_func=lambda x: {
+            "":              "— Selecciona un estado —",
+            "CONFIRMADO":    "✅  CONFIRMADO",
+            "NO CONFIRMADO": "⚠️  NO CONFIRMADO",
+            "CANCELADO":     "❌  CANCELADO",
+        }.get(x, x),
+    )
+    if estado_sel != st.session_state.get("nc_estado_reserva", ""):
+        st.session_state.nc_estado_reserva = estado_sel
+
+    # Badge visual del estado seleccionado
+    if estado_sel == "CONFIRMADO":
+        st.markdown("""
+        <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
+             padding:0.4rem 1rem;border-radius:999px;background:#DCFCE7;
+             border:1.5px solid #86EFAC;color:#166534;font-weight:800;font-size:0.80rem;">
+            ✅ CONFIRMADO
+        </div>""", unsafe_allow_html=True)
+    elif estado_sel == "NO CONFIRMADO":
+        st.markdown("""
+        <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
+             padding:0.4rem 1rem;border-radius:999px;background:#FEF3C7;
+             border:1.5px solid #FCD34D;color:#92400E;font-weight:800;font-size:0.80rem;">
+            ⚠️ NO CONFIRMADO
+        </div>""", unsafe_allow_html=True)
+    elif estado_sel == "CANCELADO":
+        st.markdown("""
+        <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
+             padding:0.4rem 1rem;border-radius:999px;background:#FEE2E2;
+             border:1.5px solid #FCA5A5;color:#991B1B;font-weight:800;font-size:0.80rem;">
+            ❌ CANCELADO
+        </div>""", unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # ============================================================
+    # LOCALIZADOR — pendiente de script
+    # ============================================================
+    st.markdown('<div class="form-panel" style="border-color:#FCD34D;background:#FFFBEB;">', unsafe_allow_html=True)
+    st.markdown('<div class="form-section-title" style="color:#92400E;">Localizador Crucemundo</div>', unsafe_allow_html=True)
+    st.warning("⏳ Pendiente de integrar el script de asignación automática de localizador. Pega el script y lo conectamos.")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+    
 
     st.info("🚧 Próximos campos: Agente/Cliente, Estado Reserva, Localizador, Barco, Fechas, Cabinas, Pax...")
