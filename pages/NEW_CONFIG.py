@@ -106,7 +106,7 @@ st.markdown("""
     max-width: 95%;
 }
 
-/* Espaciado ultra compacto */
+/* Espaciado compacto */
 div[data-testid="stVerticalBlock"] > div {
     gap: 0.35rem;
 }
@@ -128,32 +128,16 @@ h1, h2, h3 {
     border-radius: 4px !important;
 }
 
-/* ===== HEADER STYLE ===== */
+/* ===== HEADER ===== */
 .header-pro {
     border: 1px solid #9CA3AF;
     padding: 10px;
     border-radius: 6px;
     background: linear-gradient(180deg, #FAFAFA, #F3F4F6);
     font-size: 12.5px;
-    line-height: 1.25;
 }
 
-/* ===== TARJETAS ===== */
-.card-tipo {
-    border-radius: 6px;
-    padding: 8px;
-    font-size: 12.5px;
-    text-align: center;
-    line-height: 1.2;
-    transition: all 0.15s ease;
-}
-
-.card-tipo:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-}
-
-/* ===== TABLA PRO ===== */
+/* ===== TABLA ===== */
 .table-doc {
     border-collapse: collapse;
     width: 100%;
@@ -164,61 +148,24 @@ h1, h2, h3 {
     background: #E5E7EB;
     border: 1px solid #6B7280;
     padding: 5px;
-    text-align: left;
-    font-weight: 600;
 }
 
 .table-doc td {
     border: 1px solid #9CA3AF;
     padding: 5px;
-    vertical-align: middle;
 }
 
-/* labels tipo ERP */
 .table-doc .label {
     background: #F3F4F6;
     font-weight: 600;
-    width: 130px;
-    color: #374151;
 }
 
-/* valores */
-.table-doc .value {
-    background: #FFFFFF;
-}
-
-/* resaltado */
 .table-doc .highlight {
     font-weight: 600;
-    color: #111827;
-}
-
-/* ===== BADGES ===== */
-.badge-ok {
-    background: #DCFCE7;
-    border: 1px solid #16A34A;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-}
-
-.badge-warning {
-    background: #FEF3C7;
-    border: 1px solid #D97706;
-    padding: 4px 8px;
-    border-radius: 4px;
-}
-
-.badge-error {
-    background: #FEE2E2;
-    border: 1px solid #DC2626;
-    padding: 4px 8px;
-    border-radius: 4px;
 }
 
 </style>
 """, unsafe_allow_html=True)
-
 # ============================================================
 # CABECERA — estilo documento
 # ============================================================
