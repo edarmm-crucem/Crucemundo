@@ -64,59 +64,68 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ============================================================
-# HEADER (SALUDO + USUARIO + LOGO)
-# ============================================================
-st.markdown(f"""
-<div style="
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:6px 0 10px 0;
-    border-bottom:1px solid #e5e7eb;
-    margin-bottom:10px;
-">
+#### HEADER GLOBAL · MULTIPAGE
 
-    <!-- IZQUIERDA -->
-    <div style="display:flex;align-items:center;gap:12px;">
-        <img src="https://lh3.googleusercontent.com/d/1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8" style="height:42px;">
-        <div>
-            <div style="font-size:15px;font-weight:700;color:#111827;">
-                {SALUDO}, {DISPLAYUSER}
+from datetime import datetime
+import streamlit as st
+
+def render_header():
+
+    # ─────────────────────────────
+    # SALUDO DINÁMICO
+    # ─────────────────────────────
+    hora = datetime.now().hour
+
+    if hora < 12:
+        SALUDO = "Buenos días"
+    elif hora < 19:
+        SALUDO = "Buenas tardes"
+    else:
+        SALUDO = "Buenas noches"
+
+    usuario = st.session_state.get("displayname", "").strip() or "Usuario"
+
+    # ─────────────────────────────
+    # RENDER HEADER
+    # ─────────────────────────────
+    st.markdown(f"""
+    <div style="
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        padding:10px 6px 12px 6px;
+        border-bottom:1px solid #e5e7eb;
+        margin-bottom:10px;
+        font-family: Arial;
+    ">
+
+        <!-- IZQUIERDA -->
+        <div style="display:flex;align-items:center;gap:12px;">
+            <img src="https://lh3.googleusercontent.com/d/1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
+                 style="height:42px;">
+
+            <div>
+                <div style="font-size:15px;font-weight:700;color:#111827;">
+                    {SALUDO}, {usuario}. ¿Qué hacemos hoy?
+                </div>
+                <div style="font-size:11px;color:#6b7280;">
+                    Tools and automations · Google Drive backend
+                </div>
+            </div>
+        </div>
+
+        <!-- DERECHA -->
+        <div style="text-align:right;">
+            <div style="font-size:18px;font-weight:800;color:#1f2937;">
+                CRUCEMUNDO
             </div>
             <div style="font-size:11px;color:#6b7280;">
-                Nueva Confirmación / New Confirmation
+                Herramientas internas / Backoffice
             </div>
         </div>
+
     </div>
-
-    <!-- DERECHA -->
-    <div style="text-align:right;">
-        <div style="font-size:18px;font-weight:800;color:#1f2937;">
-            CRUCEMUNDO
-        </div>
-        <div style="font-size:11px;color:#6b7280;">
-            Control Panel
-        </div>
-    </div>
-
-</div>
-""", unsafe_allow_html=True)
-
-
-# ============================================================
-# HEADER SIMPLE
-# ============================================================
-st.markdown(f"""
-<div style="display:flex;justify-content:space-between;align-items:center;">
-    <div>
-        <h4>📋 Nueva Confirmación</h4>
-        <small>{DISPLAYUSER}</small>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-st.markdown("---")
+    """, unsafe_allow_html=True)
 
 # ============================================================
 # ESTADO INICIAL
