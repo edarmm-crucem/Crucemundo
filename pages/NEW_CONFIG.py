@@ -371,38 +371,38 @@ if st.session_state.nc_tipo:
     email     = ag.get("Email",     "")
     direccion = ag.get("Direccion", "")
 
-    def cell(v, css="value-cell"):
-        return f'<td class="{css}">{v}</td>' if v else '<td class="empty-cell">—</td>'
-if sel:
-    st.markdown(f"""
-    <table class="table-doc">
-    
-    <tr>
-        <th colspan="2">AGENCIA</th>
-        <td colspan="2" class="highlight">{nombre or '—'}</td>
-        <th>COD</th>
-        <td class="highlight">{codigo or '—'}</td>
-    </tr>
-    
-    <tr>
-        <td class="label">Grupo</td>
-        <td class="value">{grupo or '—'}</td>
-    
-        <td class="label">Teléfono</td>
-        <td class="value">{telefono or '—'}</td>
-    
-        <td class="label">Email</td>
-        <td class="value">{email or '—'}</td>
-    </tr>
-    
-    <tr>
-        <td class="label">Dirección</td>
-        <td colspan="5" class="value">{direccion or '—'}</td>
-    </tr>
-    
-    </table>
-    
-    """, unsafe_allow_html=True)
+def cell(v, css="value-cell"):
+    return f'<td class="{css}">{v}</td>' if v else '<td class="empty-cell">—</td>'
+
+    if sel:
+        st.markdown(f"""
+        <table class="table-doc">
+        
+        <tr>
+            <th colspan="2">AGENCIA</th>
+            <td colspan="2" class="highlight">{nombre or '—'}</td>
+            <th>COD</th>
+            <td class="highlight">{codigo or '—'}</td>
+        </tr>
+
+        <tr>
+            <td class="label">Grupo</td>
+            <td class="value">{grupo or '—'}</td>
+
+            <td class="label">Teléfono</td>
+            <td class="value">{telefono or '—'}</td>
+
+            <td class="label">Email</td>
+            <td class="value">{email or '—'}</td>
+        </tr>
+
+        <tr>
+            <td class="label">Dirección</td>
+            <td colspan="5" class="value">{direccion or '—'}</td>
+        </tr>
+
+        </table>
+        """, unsafe_allow_html=True)
 
     # ============================================================
     # AGENTE / CLIENTE
@@ -448,7 +448,7 @@ if sel:
 
     # Badge visual del estado seleccionado
     if estado_sel == "CONFIRMADO":
-    st.markdown('<div class="badge-ok">✅ CONFIRMADO</div>', unsafe_allow_html=True)
+        st.markdown('<div class="badge-ok">✅ CONFIRMADO</div>', unsafe_allow_html=True)
 
 elif estado_sel == "NO CONFIRMADO":
     st.markdown('<div class="badge-warning">⚠️ NO CONFIRMADO</div>', unsafe_allow_html=True)
@@ -457,7 +457,7 @@ elif estado_sel == "CANCELADO":
     st.markdown('<div class="badge-error">❌ CANCELADO</div>', unsafe_allow_html=True)
 
 
-# ============================================================
+    # ============================================================
     # LOCALIZADOR CRUCEMUNDO
     # ============================================================
     LOCALIZADOR_REMOTE_ID = "1c1oiBTLDRtDAAKQp8hE7uA1FfStp4DJAYhwa7F_yCNQ"
