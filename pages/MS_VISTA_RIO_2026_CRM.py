@@ -662,29 +662,29 @@ else:
         
             for cat, s in stats_cat.items():
                 # Barra de progreso inline con CSS
-            pct = s["pct"]
-            if pct < 40:
-                grad = "linear-gradient(90deg, #22C55E, #86EFAC)"
-            elif pct < 70:
-                grad = "linear-gradient(90deg, #22C55E, #EAB308)"
-            elif pct < 90:
-                grad = "linear-gradient(90deg, #EAB308, #F97316)"
-            else:
-                grad = "linear-gradient(90deg, #F97316, #EF4444)"
-            barra = (
-                f'<div style="background:#E5E7EB;border-radius:4px;height:10px;width:100%;margin-bottom:4px;">'
-                f'<div style="background:{grad};width:{pct}%;height:10px;border-radius:4px;"></div></div>'
-                f'<span style="font-size:0.78rem;font-weight:700;">{pct}%</span>'
-            )
-                t += '<tr>'
-                t += f'<td style="font-weight:700;text-align:left;">{cat}</td>'
-                t += f'<td class="td-total-cab">{s["total"]}</td>'
-                t += f'<td class="td-sold">{s["vendidas"]}</td>'
-                t += f'<td style="color:#92400E;font-weight:700;">{s["reservas"]}</td>'
-                t += f'<td>{s["libres"]}</td>'
-                t += f'<td style="min-width:120px;">{barra}</td>'
-                t += f'<td>{s["pax"]}</td>'
-                t += '</tr>'
+                pct = s["pct"]
+                if pct < 40:
+                    grad = "linear-gradient(90deg, #22C55E, #86EFAC)"
+                elif pct < 70:
+                    grad = "linear-gradient(90deg, #22C55E, #EAB308)"
+                elif pct < 90:
+                    grad = "linear-gradient(90deg, #EAB308, #F97316)"
+                else:
+                    grad = "linear-gradient(90deg, #F97316, #EF4444)"
+                barra = (
+                    f'<div style="background:#E5E7EB;border-radius:4px;height:10px;width:100%;margin-bottom:4px;">'
+                    f'<div style="background:{grad};width:{pct}%;height:10px;border-radius:4px;"></div></div>'
+                    f'<span style="font-size:0.78rem;font-weight:700;">{pct}%</span>'
+                )
+                    t += '<tr>'
+                    t += f'<td style="font-weight:700;text-align:left;">{cat}</td>'
+                    t += f'<td class="td-total-cab">{s["total"]}</td>'
+                    t += f'<td class="td-sold">{s["vendidas"]}</td>'
+                    t += f'<td style="color:#92400E;font-weight:700;">{s["reservas"]}</td>'
+                    t += f'<td>{s["libres"]}</td>'
+                    t += f'<td style="min-width:120px;">{barra}</td>'
+                    t += f'<td>{s["pax"]}</td>'
+                    t += '</tr>'
         
             # Fila TOTAL
                 if tot_pct < 40:
