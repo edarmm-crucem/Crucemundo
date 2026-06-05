@@ -757,22 +757,22 @@ else:
                             f'<span style="font-size:0.58rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px;text-align:center;margin-top:2px;">{sublabel}</span>'
                             f'</div>')
 
-            LABEL_POPA = '<div style="min-width:48px;display:flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:800;color:#9CA3AF;letter-spacing:0.1em;writing-mode:vertical-rl;text-orientation:mixed;">◀ POPA</div>'
-            LABEL_PROA = '<div style="min-width:48px;display:flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:800;color:#9CA3AF;letter-spacing:0.1em;writing-mode:vertical-rl;text-orientation:mixed;">PROA ▶</div>'
-
-            html = '<div class="deck-layout">'
-            html += '<div style="display:flex;align-items:stretch;">'
-            html += LABEL_POPA
-            html += '<div style="flex:1;"><div class="deck-row deck-row-style">'
-            for num in impares_ord:
-                html += render_cabina(num)
-            html += '</div><div class="horizontal-corridor">Pasillo Central / Central Corridor</div><div class="deck-row deck-row-style">'
-            for num in pares_ord:
-                html += render_cabina(num)
-            html += '</div></div>'
-            html += LABEL_PROA
-            html += '</div></div>'
-            st.markdown(html, unsafe_allow_html=True)
+                LABEL_POPA = '<div style="min-width:48px;display:flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:800;color:#9CA3AF;letter-spacing:0.1em;writing-mode:vertical-rl;text-orientation:mixed;">◀ POPA</div>'
+                LABEL_PROA = '<div style="min-width:48px;display:flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:800;color:#9CA3AF;letter-spacing:0.1em;writing-mode:vertical-rl;text-orientation:mixed;">PROA ▶</div>'
+    
+                html = '<div class="deck-layout">'
+                html += '<div style="display:flex;align-items:stretch;">'
+                html += LABEL_POPA
+                html += '<div style="flex:1;"><div class="deck-row deck-row-style">'
+                for num in impares_ord:
+                    html += render_cabina(num)
+                html += '</div><div class="horizontal-corridor">Pasillo Central / Central Corridor</div><div class="deck-row deck-row-style">'
+                for num in pares_ord:
+                    html += render_cabina(num)
+                html += '</div></div>'
+                html += LABEL_PROA
+                html += '</div></div>'
+                st.markdown(html, unsafe_allow_html=True)
 
             #### BLOQUE 22: PANEL ASIGNAR CABINA
             st.markdown("---")
