@@ -707,14 +707,14 @@ else:
             for c in cabinas:
                 porcategoria[c[3]].append(c[1])
 
-            if cupos_config:
-                with st.expander("📊 Vista Rápida de Alertas de Cupos / *Quick Quota Alert View*", expanded=True):
-                    c_cups = st.columns(min(len(cupos_config), 4))
-                    for idx, ((ag, cat), lims) in enumerate(cupos_config.items()):
-                        c_act = cabinas_por_ag_cat[(ag, cat)]; p_act = pax_por_ag_cat[(ag, cat)]
-                        with c_cups[idx % len(c_cups)]:
-                            excedido = (c_act > lims["cabinas"]) or (p_act > lims["pax"])
-                            st.metric(label=f"{'🚨' if excedido else '💼'} {ag} ({cat})", value=f"Cab: {c_act}/{lims['cabinas']} | Pax: {p_act}/{lims['pax']}")
+            ####if cupos_config:
+               #### with st.expander("📊 Vista Rápida de Alertas de Cupos / *Quick Quota Alert View*", expanded=True):
+                   #### c_cups = st.columns(min(len(cupos_config), 4))
+                    ####for idx, ((ag, cat), lims) in enumerate(cupos_config.items()):
+                        ####c_act = cabinas_por_ag_cat[(ag, cat)]; p_act = pax_por_ag_cat[(ag, cat)]
+                        ####with c_cups[idx % len(c_cups)]:
+                            ####excedido = (c_act > lims["cabinas"]) or (p_act > lims["pax"])
+                            ####st.metric(label=f"{'🚨' if excedido else '💼'} {ag} ({cat})", value=f"Cab: {c_act}/{lims['cabinas']} | Pax: {p_act}/{lims['pax']}")
 
             st.markdown(f"### 🚢 Distribución de Cubiertas — Salida {ddmm_sel} <span style='font-size:0.6em;font-style:italic;color:#9CA3AF;'>Deck Layout — Departure {ddmm_sel}</span>", unsafe_allow_html=True)
             st.markdown('''
