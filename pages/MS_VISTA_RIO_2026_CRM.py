@@ -269,7 +269,7 @@ st.markdown('''
     .cabina-box { min-width: 76px; max-width: 76px; height: 54px; border-radius: 6px; border: 2px solid transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; box-sizing: border-box; }
     .cabina-num-destacado { font-size: 1.15rem; font-weight: 800; line-height: 1.1; }
     .cabina-libre { background: #F3F4F6; border-color: #D1D5DB; color: #6B7280; border-style: solid; }
-    .cabina-reserva { border-color: #F59E0B !important; border-width: 2px !important; border-style: dashed !important; }
+    .cabina-reserva { border-color: #1F2937 !important; border-width: 3px !important; border-style: dashed !important; }
     .cabina-vendida { border-color: #1F2937 !important; border-width: 3px !important; border-style: solid !important; }
     .categoria-label { font-size: 0.95rem; font-weight: 800; color: #1E3A8A; margin: 1rem 0 0.6rem 0; background: #EFF6FF; padding: 0.4rem 0.8rem; border-radius: 6px; display: inline-block; border-left: 4px solid #3B82F6; }
     .leyenda-estados { display: flex; gap: 1.2rem; align-items: center; margin-bottom: 0.8rem; flex-wrap: wrap; }
