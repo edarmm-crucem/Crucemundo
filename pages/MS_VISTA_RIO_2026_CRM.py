@@ -765,13 +765,13 @@ else:
                 html = '<div class="deck-layout">'
                 html += '<div style="display:flex;align-items:stretch;">'
                 #html += LABEL_POPA
-                #html += '<div style="flex:1;"><div class="deck-row deck-row-style">'
-                #for num in impares_ord:
-                #    html += render_cabina(num)
-                #html += '</div><div class="horizontal-corridor">Pasillo Central / Central Corridor</div><div class="deck-row deck-row-style">'
-                #for num in pares_ord:
-                   # html += render_cabina(num)
-                #html += '</div></div>'
+                html += '<div style="flex:1;"><div class="deck-row deck-row-style">'
+                for num in impares_ord:
+                    html += render_cabina(num)
+                html += '</div><div class="horizontal-corridor">Pasillo Central / Central Corridor</div><div class="deck-row deck-row-style">'
+                for num in pares_ord:
+                    html += render_cabina(num)
+                html += '</div></div>'
                 html += LABEL_PROA
                 html += '</div></div>'
                 st.markdown(html, unsafe_allow_html=True)
