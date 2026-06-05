@@ -757,9 +757,7 @@ else:
                             f'<span style="font-size:0.58rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px;text-align:center;margin-top:2px;">{sublabel}</span>'
                             f'</div>')
 
-                LABEL_POPA = '<div style="min-width:32px;display:flex;align-items:center;justify-content:center;">'\
-                                         '<div style="width:0;height:0;border-top:30px solid transparent;border-bottom:30px solid transparent;border-right:18px solid #D1D5DB;"></div>'\
-                                         '</div>'
+                LABEL_POPA = '<div style="min-width:24px;width:24px;align-self:stretch;border:2px solid #D1D5DB;border-right:none;border-radius:4px 0 0 4px;"></div>'
                 LABEL_PROA = '<div style="min-width:32px;display:flex;align-items:center;justify-content:center;">'\
                                          '<div style="width:0;height:0;border-top:30px solid transparent;border-bottom:30px solid transparent;border-left:18px solid #D1D5DB;"></div>'\
                                          '</div>'
