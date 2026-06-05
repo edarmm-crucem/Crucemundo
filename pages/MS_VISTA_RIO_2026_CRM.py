@@ -772,7 +772,7 @@ else:
             html += '</div></div>'
             html += LABEL_PROA
             html += '</div></div>'
-                st.markdown(html, unsafe_allow_html=True)
+            st.markdown(html, unsafe_allow_html=True)
 
             #### BLOQUE 22: PANEL ASIGNAR CABINA
             st.markdown("---")
