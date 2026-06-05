@@ -757,8 +757,12 @@ else:
                             f'<span style="font-size:0.58rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px;text-align:center;margin-top:2px;">{sublabel}</span>'
                             f'</div>')
 
-                LABEL_POPA = '<div style="min-width:48px;display:flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:800;color:#9CA3AF;letter-spacing:0.1em;writing-mode:vertical-rl;text-orientation:mixed;">◀ POPA</div>'
-                LABEL_PROA = '<div style="min-width:48px;display:flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:800;color:#9CA3AF;letter-spacing:0.1em;writing-mode:vertical-rl;text-orientation:mixed;">PROA ▶</div>'
+               LABEL_POPA = '<div style="min-width:32px;display:flex;align-items:center;justify-content:center;">'\
+                         '<div style="width:0;height:0;border-top:30px solid transparent;border-bottom:30px solid transparent;border-right:18px solid #D1D5DB;"></div>'\
+                         '</div>'
+                LABEL_PROA = '<div style="min-width:32px;display:flex;align-items:center;justify-content:center;">'\
+                         '<div style="width:0;height:0;border-top:30px solid transparent;border-bottom:30px solid transparent;border-left:18px solid #D1D5DB;"></div>'\
+                         '</div>'
     
                 html = '<div class="deck-layout">'
                 html += '<div style="display:flex;align-items:stretch;">'
