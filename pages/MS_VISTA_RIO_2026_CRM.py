@@ -757,21 +757,21 @@ else:
                             f'<span style="font-size:0.58rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px;text-align:center;margin-top:2px;">{sublabel}</span>'
                             f'</div>')
 
-                LABEL_POPA = '<div style="min-width:24px;width:24px;align-self:stretch;border:2px solid #D1D5DB;border-right:none;border-radius:4px 0 0 4px;"></div>'
+                #LABEL_POPA = '<div style="min-width:24px;width:24px;align-self:stretch;border:2px solid #D1D5DB;border-right:none;border-radius:4px 0 0 4px;"></div>'
                 LABEL_PROA = '<div style="min-width:32px;display:flex;align-items:center;justify-content:center;">'\
                                          '<div style="width:0;height:0;border-top:30px solid transparent;border-bottom:30px solid transparent;border-left:18px solid #D1D5DB;"></div>'\
                                          '</div>'
     
                 html = '<div class="deck-layout">'
                 html += '<div style="display:flex;align-items:stretch;">'
-                html += LABEL_POPA
-                html += '<div style="flex:1;"><div class="deck-row deck-row-style">'
-                for num in impares_ord:
-                    html += render_cabina(num)
-                html += '</div><div class="horizontal-corridor">Pasillo Central / Central Corridor</div><div class="deck-row deck-row-style">'
-                for num in pares_ord:
-                    html += render_cabina(num)
-                html += '</div></div>'
+                #html += LABEL_POPA
+                #html += '<div style="flex:1;"><div class="deck-row deck-row-style">'
+                #for num in impares_ord:
+                #    html += render_cabina(num)
+                #html += '</div><div class="horizontal-corridor">Pasillo Central / Central Corridor</div><div class="deck-row deck-row-style">'
+                #for num in pares_ord:
+                   # html += render_cabina(num)
+                #html += '</div></div>'
                 html += LABEL_PROA
                 html += '</div></div>'
                 st.markdown(html, unsafe_allow_html=True)
