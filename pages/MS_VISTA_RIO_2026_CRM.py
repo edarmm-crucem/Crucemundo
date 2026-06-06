@@ -341,6 +341,7 @@ opciones_modo = [
     "📈 Informe / Report",
     "🛏️ Informe Cabinas / Cabin Report",
     "🛳️ Ocupación / Occupancy",
+    "🔄 Sincronizar CRM → FIT",
     "📅 Nueva salida / New Departure",
     "🏠 Inicio / Home",
 ]
@@ -924,6 +925,142 @@ else:
                                 f"/ *Cabin {cabina_input} saved as {estado_final}.*"
                             )
                             st.rerun()
+elif modo == "🔄 Sincronizar CRM → FIT":
+            st.markdown(
+                f"### 🔄 Sincronizar CRM → FIT — Salida {ddmm_sel} "
+                f"<span class='section-en'>Sync CRM → FIT — Departure {ddmm_sel}</span>",
+                unsafe_allow_html=True
+            )
+
+            st.markdown("""
+            <div style="background:#FFFBEB;border:1.5px solid #FCD34D;border-radius:10px;
+                        padding:0.9rem 1.1rem;margin-bottom:1.4rem;display:flex;
+                        align-items:flex-start;gap:0.8rem;">
+                <span style="font-size:1.5rem;line-height:1.2;">⏳</span>
+                <div>
+                    <div style="font-size:0.9rem;font-weight:800;color:#92400E;">
+                        En espera de viabilidad de implantación
+                        <span style="font-size:0.75rem;font-style:italic;font-weight:400;color:#B45309;">
+                        / Pending technical feasibility assessment</span>
+                    </div>
+                    <div style="font-size:0.8rem;color:#78350F;margin-top:0.3rem;line-height:1.6;">
+                        Esta funcionalidad está planificada pero aún no está en producción.<br>
+                        <em>This feature is planned but not yet in production.</em>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown(
+                "#### ¿Qué hará este módulo? "
+                "<span class='section-en'>What will this module do?</span>",
+                unsafe_allow_html=True
+            )
+            st.markdown("""
+Sincronizará las **cabinas asignadas en el CRM** (identificadas por localizador) con las
+**confirmaciones FIT** correspondientes en Drive, completando automáticamente el campo
+*Cabinas Asignadas* de cada confirmación para facilitar el montaje del Roomlist.
+
+<span class='en-inline'>It will sync CRM cabin assignments (matched by booking reference)
+with the corresponding FIT confirmation files in Drive, automatically filling in the
+*Assigned Cabins* field on each confirmation to streamline Roomlist preparation.</span>
+            """, unsafe_allow_html=True)
+
+            st.markdown("---")
+
+            st.markdown(
+                "#### 📋 Ejemplo de informe preliminar "
+                "<span class='section-en'>Preliminary report example</span>",
+                unsafe_allow_html=True
+            )
+            st.markdown(
+                "El informe cruzará CRM + FIT y clasificará cada confirmación en uno de estos estados: "
+                "<span class='en-inline'>/ The report will cross CRM + FIT data and classify "
+                "each confirmation into one of these statuses:</span>",
+                unsafe_allow_html=True
+            )
+
+            def th(es, en):
+                return (f'<th><div class="th-bilingual"><span class="th-es">{es}</span>'
+                        f'<span class="th-en">{en}</span></div></th>')
+
+            t = '<table class="informe-tabla"><thead><tr>'
+            t += th("Hoja FIT", "FIT Sheet")
+            t += th("Agencia", "Agency")
+            t += th("Localizador", "Booking Ref")
+            t += th("Cabina CRM", "CRM Cabin")
+            t += th("Cabina FIT", "FIT Cabin")
+            t += th("PAX", "PAX")
+            t += th("Estado", "Status")
+            t += th("Detalle", "Detail")
+            t += '</tr></thead><tbody>'
+
+            ejemplos = [
+                ("Hoja3",  "VIAJES_R",  "VRI260412-009", "104",       "—",   2, "ok",       "Lista para pegar"),
+                ("Hoja5",  "VIAJES_R",  "VRI260412-011", "208",       "—",   2, "ok",       "Lista para pegar"),
+                ("Hoja7",  "SEVILL_V",  "SEV260412-014", "305",       "—",   1, "ok",       "Lista para pegar"),
+                ("Hoja2",  "BARNA_T",   "BCN260412-003", "112",       "115", 2, "conflicto","FIT tiene cabina 115 — CRM dice 112"),
+                ("Hoja4",  "MADTRAV",   "MAD260412-007", "201 + 203", "—",   4, "multi",    "Doble/triple con categorías: PRINCIPAL, SUPERIOR"),
+                ("Hoja9",  "BILBAO_V",  "BIL260412-021", "—",         "—",   2, "nocrm",    "Localizador no encontrado en CRM"),
+            ]
+
+            for hoja, ag, loc, cab_crm, cab_fit, pax, estado, detalle in ejemplos:
+                if estado == "ok":
+                    row_bg = ""
+                    badge = ('<span style="background:#D1FAE5;color:#065F46;padding:2px 8px;'
+                             'border-radius:5px;font-size:0.75rem;font-weight:700;">'
+                             '✅ Lista para pegar</span>')
+                elif estado in ("conflicto", "multi"):
+                    row_bg = ' style="background:#FFFBEB;"'
+                    label = "⚠️ Conflicto cabina" if estado == "conflicto" else "⚠️ Doble — cats. distintas"
+                    badge = (f'<span style="background:#FEF3C7;color:#92400E;padding:2px 8px;'
+                             f'border-radius:5px;font-size:0.75rem;font-weight:700;">'
+                             f'{label}</span>')
+                else:
+                    row_bg = ' style="background:#F9FAFB;"'
+                    badge = ('<span style="background:#F3F4F6;color:#6B7280;padding:2px 8px;'
+                             'border-radius:5px;font-size:0.75rem;font-weight:700;">'
+                             '🔎 Sin match CRM</span>')
+
+                t += f'<tr{row_bg}>'
+                t += f'<td style="font-family:monospace;font-size:0.78rem;">{hoja}</td>'
+                t += f'<td style="font-weight:700;text-align:left;">{ag}</td>'
+                t += f'<td style="font-family:monospace;font-size:0.78rem;">{loc}</td>'
+                t += f'<td style="font-weight:700;color:#1E3A8A;">{cab_crm}</td>'
+                t += f'<td style="color:#6B7280;">{cab_fit}</td>'
+                t += f'<td>{pax}</td>'
+                t += f'<td>{badge}</td>'
+                t += f'<td style="font-size:0.78rem;color:#374151;white-space:normal;">{detalle}</td>'
+                t += '</tr>'
+
+            t += '</tbody></table>'
+            st.markdown(t, unsafe_allow_html=True)
+
+            st.markdown("---")
+            st.markdown(
+                "#### 🚀 Acciones previstas "
+                "<span class='section-en'>Planned actions</span>",
+                unsafe_allow_html=True
+            )
+            st.markdown("""
+            <div style="background:#F3F4F6;border-radius:8px;padding:0.8rem 1rem;
+                        font-size:0.82rem;color:#6B7280;margin-bottom:0.8rem;">
+                ⏳ Cuando se active, el sistema pegará automáticamente solo las filas
+                marcadas como <strong>✅ Lista para pegar</strong>.
+                Las filas con conflicto quedarán para revisión manual.<br>
+                <em>/ When activated, only rows marked ✅ will be auto-filled.
+                Conflicting rows will require manual review.</em>
+            </div>
+            """, unsafe_allow_html=True)
+
+            col_b1, col_b2, _ = st.columns([1, 1, 2])
+            with col_b1:
+                st.button("🔗 Pegar cabinas OK / *Paste clean cabins*",
+                          disabled=True, key="btn_pegar_sync")
+            with col_b2:
+                st.button("📥 Exportar informe / *Export report*",
+                          disabled=True, key="btn_export_sync")
+
 
 #### BLOQUE 23: PIE DE PÁGINA
 st.markdown("---")
