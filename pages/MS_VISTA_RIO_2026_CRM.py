@@ -525,7 +525,7 @@ else:
                 unsafe_allow_html=True
             )
             tipo_informe = st.selectbox("Selecciona el tipo de informe / *Select report type*",
-                                        ["Todas las cabinas", "Solo VENDIDAS", "Solo RESERVAS", "Solo LIBRES"])
+                                        ["Todas / All", "Solo VENDIDAS / Sold ", "Solo RESERVAS / Reserved", "Solo LIBRES / Available "])
             datos_filtrados = [d for d in datos if (tipo_informe == "Todas las cabinas") or
                                (tipo_informe == "Solo VENDIDAS" and d.get("estado") == "VENDIDA") or
                                (tipo_informe == "Solo RESERVAS" and d.get("estado") == "RESERVA") or
