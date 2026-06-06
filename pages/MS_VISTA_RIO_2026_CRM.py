@@ -341,6 +341,7 @@ opciones_modo = [
     "📈 Informe / Report",
     "🛏️ Informe Cabinas / Cabin Report",
     "🛳️ Ocupación / Occupancy",
+    "🔄 Sincronizar CRM → FIT",
     "📅 Nueva salida / New Departure",
     "🏠 Inicio / Home",
 ]
@@ -449,7 +450,285 @@ else:
                     agencias_activas.add(ag_cupo)
                 except ValueError:
                     pass
+#### BLOQUE SYNC: SINCRONIZAR CRM → FIT
+# Añadir "🔄 Sincronizar CRM → FIT" a la lista opciones_modo en BLOQUE 12:
+# "🔄 Sincronizar CRM → FIT",
+# Y añadir este bloque al árbol elif del BLOQUE 15 en adelante.
 
+elif modo == "🔄 Sincronizar CRM → FIT":
+    st.markdown(
+        f"### 🔄 Sincronizar CRM → FIT — Salida {ddmm_sel} "
+        f"<span class='section-en'>Sync CRM → FIT — Departure {ddmm_sel}</span>",
+        unsafe_allow_html=True
+    )
+
+    # ── Banner de estado ──────────────────────────────────────────────────────
+    st.markdown("""
+    <div style="
+        background:#FFFBEB;border:1.5px solid #FCD34D;border-radius:10px;
+        padding:0.9rem 1.1rem;margin-bottom:1.2rem;display:flex;align-items:flex-start;gap:0.8rem;">
+        <span style="font-size:1.3rem;line-height:1.3;">⏳</span>
+        <div>
+            <div style="font-size:0.88rem;font-weight:800;color:#92400E;">
+                En espera de viabilidad de implantación
+                <span style="font-size:0.75rem;font-style:italic;font-weight:400;color:#B45309;">
+                / Pending technical feasibility assessment
+                </span>
+            </div>
+            <div style="font-size:0.78rem;color:#78350F;margin-top:0.25rem;">
+                Solo se genera un informe preliminar. Las acciones de escritura están deshabilitadas.<br>
+                <em>Only a preliminary report is generated. Write actions are disabled.</em>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Descripción ───────────────────────────────────────────────────────────
+    st.markdown(
+        "Cruza las **cabinas asignadas en CRM** (con localizador) con los archivos de confirmación **FIT**, "
+        "y propone completar el campo <em>Cabinas Asignadas</em> en cada confirmación para facilitar el montaje del Roomlist. "
+        "Solo se marcan como aptas las asignaciones sin ambigüedad; el resto se señalan para revisión manual. "
+        "<span class='en-inline'>/ Matches CRM cabin assignments (with booking ref) to FIT confirmation files, "
+        "flagging clean matches and conflicts for manual review.</span>",
+        unsafe_allow_html=True
+    )
+    st.markdown("---")
+
+    # ── Búsqueda del archivo FIT ──────────────────────────────────────────────
+    with st.spinner("Buscando archivo FIT en Drive… / *Searching FIT file in Drive…*"):
+        archivo_conf_id, msg_fit = buscar_archivo_conf(ddmm_sel)
+
+    if not archivo_conf_id:
+        st.error(msg_fit)
+        st.stop()
+
+    st.success(msg_fit)
+
+    # ── Lectura del FIT ───────────────────────────────────────────────────────
+    @st.cache_data(ttl=60)
+    def leer_hojas_fit_para_sync(spreadsheet_id):
+        """
+        Devuelve lista de dicts con:
+          hoja, tipo (BOOKING/PROFORMA), agencia_cod, localizador_raw, localizador,
+          cabina_asignada_fit (si ya existe en FIT), pax_lista
+        """
+        sheets_service = getsheetsservice()
+        try:
+            spreadsheet = sheets_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+            hojas = [s["properties"]["title"] for s in spreadsheet.get("sheets", [])]
+        except Exception as e:
+            return [], str(e)
+
+        resultado = []
+        for hoja in hojas:
+            try:
+                result = sheets_service.spreadsheets().values().batchGet(
+                    spreadsheetId=spreadsheet_id,
+                    ranges=[
+                        f"'{hoja}'!B2",   # tipo (BOOKING/PROFORMA)
+                        f"'{hoja}'!P5",   # agencia
+                        f"'{hoja}'!G11",  # localizador
+                        f"'{hoja}'!G24:G50",  # pasajeros
+                        f"'{hoja}'!Q24:Q50",  # categoría
+                        # NOTA: ajusta esta celda a la real del campo "Cabinas Asignadas" en tus FIT
+                        f"'{hoja}'!C11",  # cabina asignada en FIT (pendiente confirmar celda exacta)
+                    ]
+                ).execute()
+                vr = result.get("valueRanges", [])
+                if len(vr) < 5:
+                    continue
+
+                b2_val = (vr[0].get("values") or [[""]])[0][0].strip().upper()
+                if not any(k in b2_val for k in ["BOOKING", "PROFORMA"]):
+                    continue
+
+                agencia_cod = ((vr[1].get("values") or [[""]])[0] or [""])[0].strip()
+                if not agencia_cod:
+                    continue
+
+                loc_raw = ((vr[2].get("values") or [[""]])[0] or [""])[0].strip()
+                loc = "".join(re.findall(r'\d+$', loc_raw)) or loc_raw
+
+                cab_fit_raw = ((vr[5].get("values") or [[""]])[0] or [""])[0].strip() if len(vr) > 5 else ""
+                # Extrae solo dígitos por si tiene texto adicional
+                cab_fit = "".join(re.findall(r'\d+', cab_fit_raw)) or ""
+
+                pax_c = (vr[3].get("values") or [[]])[0] or []
+                pax_lista = [p.strip() for p in pax_c[0].split('\n') if p.strip()] if pax_c else []
+
+                resultado.append({
+                    "hoja": hoja,
+                    "tipo": b2_val,
+                    "agencia_cod": agencia_cod,
+                    "localizador_raw": loc_raw,
+                    "localizador": loc,
+                    "cabina_fit": cab_fit,
+                    "pax_count": len(pax_lista),
+                })
+            except Exception:
+                continue
+        return resultado, None
+
+    hojas_fit, err = leer_hojas_fit_para_sync(archivo_conf_id)
+
+    if err:
+        st.error(f"Error leyendo FIT: {err}")
+        st.stop()
+
+    if not hojas_fit:
+        st.warning("No se encontraron hojas de tipo BOOKING/PROFORMA en el archivo FIT.")
+        st.stop()
+
+    # ── Construir índice CRM: localizador → cabina(s) asignadas ──────────────
+    # Agrupa todas las cabinas CRM que tienen ese localizador
+    crm_loc_a_cabinas = defaultdict(list)
+    crm_loc_a_agencia = {}
+    for d in datos:
+        loc = d.get("localizador", "").strip()
+        cab = d.get("cabina", "").strip()
+        ag  = d.get("agencia", "").strip()
+        est = d.get("estado", "").strip()
+        if loc and cab and est in ["VENDIDA", "RESERVA"]:
+            crm_loc_a_cabinas[loc].append({"cabina": cab, "cat": next((c[3] for c in cabinas if c[1] == cab), "")})
+            crm_loc_a_agencia[loc] = ag
+
+    # ── Cruce y clasificación ─────────────────────────────────────────────────
+    ESTADO_OK       = "ok"
+    ESTADO_CONF_CAB = "conflicto_cabina"
+    ESTADO_MULTI_CAT = "multi_categoria"
+    ESTADO_NO_CRM   = "sin_crm"
+
+    filas_sync = []
+    for h in hojas_fit:
+        loc = h["localizador"]
+        if not loc or loc not in crm_loc_a_cabinas:
+            filas_sync.append({**h, "crm_cabinas": [], "estado_sync": ESTADO_NO_CRM, "descripcion": "Localizador no encontrado en CRM"})
+            continue
+
+        crm_cabs = crm_loc_a_cabinas[loc]
+        cabs_str = " + ".join(c["cabina"] for c in crm_cabs)
+        cats_unicas = set(c["cat"] for c in crm_cabs)
+
+        estado_sync = ESTADO_OK
+        descripcion = "Lista para pegar"
+
+        # Conflicto: FIT ya tiene cabina asignada y difiere
+        if h["cabina_fit"] and h["cabina_fit"] not in [c["cabina"] for c in crm_cabs]:
+            estado_sync = ESTADO_CONF_CAB
+            descripcion = f"FIT tiene cabina {h['cabina_fit']} — CRM dice {cabs_str}"
+
+        # Conflicto: múltiples cabinas con categorías distintas
+        elif len(crm_cabs) > 1 and len(cats_unicas) > 1:
+            estado_sync = ESTADO_MULTI_CAT
+            descripcion = f"Doble/triple con categorías: {', '.join(cats_unicas)}"
+
+        filas_sync.append({
+            **h,
+            "crm_cabinas": cabs_str,
+            "estado_sync": estado_sync,
+            "descripcion": descripcion,
+        })
+
+    # ── KPIs ──────────────────────────────────────────────────────────────────
+    n_total   = len(filas_sync)
+    n_ok      = sum(1 for f in filas_sync if f["estado_sync"] == ESTADO_OK)
+    n_conf    = sum(1 for f in filas_sync if f["estado_sync"] in [ESTADO_CONF_CAB, ESTADO_MULTI_CAT])
+    n_nocrm   = sum(1 for f in filas_sync if f["estado_sync"] == ESTADO_NO_CRM)
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("📋 Confirmaciones FIT", n_total)
+    c2.metric("✅ Listas para pegar", n_ok)
+    c3.metric("⚠️ Requieren revisión", n_conf)
+    c4.metric("🔎 Sin match en CRM", n_nocrm)
+
+    st.markdown("---")
+
+    # ── Tabla de informe ──────────────────────────────────────────────────────
+    def badge_estado(estado):
+        if estado == ESTADO_OK:
+            return '<span style="background:#D1FAE5;color:#065F46;padding:2px 8px;border-radius:5px;font-size:0.75rem;font-weight:700;">✅ Lista para pegar</span>'
+        elif estado == ESTADO_CONF_CAB:
+            return '<span style="background:#FEF3C7;color:#92400E;padding:2px 8px;border-radius:5px;font-size:0.75rem;font-weight:700;">⚠️ Conflicto cabina</span>'
+        elif estado == ESTADO_MULTI_CAT:
+            return '<span style="background:#FEF3C7;color:#92400E;padding:2px 8px;border-radius:5px;font-size:0.75rem;font-weight:700;">⚠️ Doble — cats. distintas</span>'
+        else:
+            return '<span style="background:#F3F4F6;color:#6B7280;padding:2px 8px;border-radius:5px;font-size:0.75rem;font-weight:700;">🔎 Sin match CRM</span>'
+
+    def th(es, en):
+        return f'<th><div class="th-bilingual"><span class="th-es">{es}</span><span class="th-en">{en}</span></div></th>'
+
+    t = '<table class="informe-tabla"><thead><tr>'
+    t += th("Hoja FIT", "FIT Sheet")
+    t += th("Agencia", "Agency")
+    t += th("Localizador", "Booking Ref")
+    t += th("Cabina CRM", "CRM Cabin")
+    t += th("Cabina FIT", "FIT Cabin")
+    t += th("PAX", "PAX")
+    t += th("Estado", "Status")
+    t += th("Detalle", "Detail")
+    t += '</tr></thead><tbody>'
+
+    for f in sorted(filas_sync, key=lambda x: (x["estado_sync"] != ESTADO_OK, x["hoja"])):
+        row_bg = ""
+        if f["estado_sync"] in [ESTADO_CONF_CAB, ESTADO_MULTI_CAT]:
+            row_bg = 'style="background:#FFFBEB;"'
+        elif f["estado_sync"] == ESTADO_NO_CRM:
+            row_bg = 'style="background:#F9FAFB;"'
+
+        t += f'<tr {row_bg}>'
+        t += f'<td style="text-align:left;font-family:monospace;font-size:0.78rem;">{f["hoja"]}</td>'
+        t += f'<td style="font-weight:700;text-align:left;">{f["agencia_cod"]}</td>'
+        t += f'<td style="font-family:monospace;font-size:0.78rem;">{f["localizador"] or "—"}</td>'
+        t += f'<td style="font-weight:700;color:#1E3A8A;">{f["crm_cabinas"] or "—"}</td>'
+        t += f'<td style="color:#6B7280;">{f["cabina_fit"] or "—"}</td>'
+        t += f'<td>{f["pax_count"]}</td>'
+        t += f'<td>{badge_estado(f["estado_sync"])}</td>'
+        t += f'<td style="text-align:left;font-size:0.78rem;color:#374151;max-width:200px;">{f["descripcion"]}</td>'
+        t += '</tr>'
+
+    t += '</tbody></table>'
+    st.markdown(t, unsafe_allow_html=True)
+
+    # ── Resumen de conflictos ─────────────────────────────────────────────────
+    conflictos = [f for f in filas_sync if f["estado_sync"] in [ESTADO_CONF_CAB, ESTADO_MULTI_CAT]]
+    if conflictos:
+        st.markdown("---")
+        st.markdown(
+            "#### ⚠️ Detalle de incidencias "
+            "<span class='section-en'>Conflict detail</span>",
+            unsafe_allow_html=True
+        )
+        for f in conflictos:
+            with st.expander(f"🔶 {f['hoja']} — {f['agencia_cod']} — {f['localizador']}"):
+                st.markdown(f"""
+                - **Localizador:** `{f['localizador']}`
+                - **Cabina(s) CRM:** `{f['crm_cabinas'] or '—'}`
+                - **Cabina en FIT:** `{f['cabina_fit'] or '—'}`
+                - **Motivo:** {f['descripcion']}
+                - **PAX en confirmación:** {f['pax_count']}
+                """)
+                st.info("Revisa manualmente antes de ejecutar la sincronización. / *Please review manually before executing sync.*")
+
+    # ── Botones de acción (deshabilitados) ────────────────────────────────────
+    st.markdown("---")
+    st.markdown(
+        "#### 🚀 Acciones "
+        "<span class='section-en'>Actions</span>",
+        unsafe_allow_html=True
+    )
+    st.markdown("""
+    <div style="background:#F3F4F6;border-radius:8px;padding:0.8rem 1rem;margin-bottom:0.8rem;font-size:0.82rem;color:#6B7280;">
+        ⏳ Las acciones de escritura están pendientes de validación técnica.
+        Cuando se active, el sistema pegará automáticamente solo las filas marcadas como <strong>✅ Lista para pegar</strong>.
+        <br><em>/ Write actions are pending technical validation. When activated, only rows marked ✅ will be auto-filled.</em>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_b1, col_b2, _ = st.columns([1, 1, 2])
+    with col_b1:
+        st.button("🔗 Pegar cabinas OK / *Paste clean cabins*", disabled=True)
+    with col_b2:
+        st.button("📥 Exportar informe / *Export report*", disabled=True)
         #### BLOQUE 16: MODO INFORME (CRM + FIT + GROUP)
         if modo == "📈 Informe / Report":
             st.markdown(
@@ -924,6 +1203,8 @@ else:
                                 f"/ *Cabin {cabina_input} saved as {estado_final}.*"
                             )
                             st.rerun()
+
+
 
 #### BLOQUE 23: PIE DE PÁGINA
 st.markdown("---")
