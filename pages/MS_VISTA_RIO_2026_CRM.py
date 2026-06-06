@@ -996,12 +996,12 @@ with the corresponding FIT confirmation files in Drive, automatically filling in
             t += '</tr></thead><tbody>'
 
             ejemplos = [
-                ("Hoja3",  "VIAJES_R",  "VRI260412-009", "104",       "—",   2, "ok",       "Lista para pegar"),
-                ("Hoja5",  "VIAJES_R",  "VRI260412-011", "208",       "—",   2, "ok",       "Lista para pegar"),
-                ("Hoja7",  "SEVILL_V",  "SEV260412-014", "305",       "—",   1, "ok",       "Lista para pegar"),
-                ("Hoja2",  "BARNA_T",   "BCN260412-003", "112",       "115", 2, "conflicto","FIT tiene cabina 115 — CRM dice 112"),
-                ("Hoja4",  "MADTRAV",   "MAD260412-007", "201 + 203", "—",   4, "multi",    "Doble/triple con categorías: PRINCIPAL, SUPERIOR"),
-                ("Hoja9",  "BILBAO_V",  "BIL260412-021", "—",         "—",   2, "nocrm",    "Localizador no encontrado en CRM"),
+                ("Hoja3",  "VECI",  "VRI260412-009", "104",       "—",   2, "ok",       "Lista para pegar"),
+                ("Hoja5",  "A BABOR",  "VRI260412-011", "208",       "—",   2, "ok",       "Lista para pegar"),
+                ("Hoja7",  "1000 tentaciones",  "VRI260412-109", "305",       "—",   1, "ok",       "Lista para pegar"),
+                ("Hoja2",  "Cruceroclick",   "VRI260412-032", "112",       "115", 2, "conflicto","FIT tiene cabina 115 — CRM dice 112"),
+                ("Hoja4",  "Miramar Cruises SL",   "VRI260412-033", "201 + 203", "—",   4, "multi",    "Doble/triple con categorías: PRINCIPAL, SUPERIOR"),
+                ("Hoja9",  "Turiberia",  "VRI260412-039", "—",         "—",   2, "nocrm",    "Localizador no encontrado en CRM"),
             ]
 
             for hoja, ag, loc, cab_crm, cab_fit, pax, estado, detalle in ejemplos:
