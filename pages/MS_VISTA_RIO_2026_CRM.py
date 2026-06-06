@@ -925,7 +925,7 @@ else:
                                 f"/ *Cabin {cabina_input} saved as {estado_final}.*"
                             )
                             st.rerun()
-elif modo == "🔄 Sincronizar CRM → FIT":
+        elif modo == "🔄 Sincronizar CRM → FIT":
             st.markdown(
                 f"### 🔄 Sincronizar CRM → FIT — Salida {ddmm_sel} "
                 f"<span class='section-en'>Sync CRM → FIT — Departure {ddmm_sel}</span>",
