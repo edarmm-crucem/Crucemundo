@@ -336,7 +336,7 @@ opciones_modo = [
     "🗺️ Mapa de cabinas / Cabin Map",
     "📊 Ver Cupos / View Quotas",
     "⚙️ Configurar Cupos / Configure Quotas",
-    "📈 Informe / Report",
+    "📈 Informe por Agencia / Agency Activity Report",
     "🛏️ Informe Cabinas / Cabin Report",
     "🛳️ Ocupación / Occupancy",
     "📅 Nueva salida / New Departure",
