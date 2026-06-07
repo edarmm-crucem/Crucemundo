@@ -347,7 +347,7 @@ opciones_modo = [
 ]
 modo = st.radio(
     "¿Qué quieres hacer? / *What would you like to do?*",
-    opciones_modo, index=5, horizontal=True
+    opciones_modo, index=8, horizontal=True
 )
 
 def _modo(key):
@@ -368,12 +368,14 @@ if _modo("Inicio"):
         <span class='en'>From this panel you can manage the ship's occupancy.</span>
 
         ---
-        * **🗺️ Mapa de cabinas** <span class='en-inline'>/ Cabin Map</span> — Visualiza planos <span class='en-inline'>/ Deck plans</span>
-        * **📊 Ver Cupos** <span class='en-inline'>/ View Quotas</span> — por Agencia y Categoría. <span class='en-inline'>/ Availability by Agency, Category and Passengers.</span>
-        * **⚙️ Configurar Cupos** <span class='en-inline'>/ Configure Quotas</span> — Límites comerciales por categoría. <span class='en-inline'>/ Commercial limits per cabin category.</span>
-        * **📈 Informe** <span class='en-inline'>/ Report</span> — Cruce CRM + FIT + GROUP. <span class='en-inline'>/ Cross-data from CRM + FIT + GROUP files.</span>
-        * **🛏️ Informe Cabinas** <span class='en-inline'>/ Cabin Report</span> — Lista detallada de cabinas por estado. <span class='en-inline'>/ Detailed cabin list filtered by status.</span>
-        * **📅 Nueva salida** <span class='en-inline'>/ New Departure</span> — Nueva fecha operativa {ANIO}. <span class='en-inline'>/ Create a new operational date for {ANIO}.</span>
+        * **🗺️ Mapa de cabinas** <span class='en-inline'>/ Cabin Map</span> — Visualiza el plano de cubiertas con el estado de cada cabina en tiempo real (libre, reserva, vendida) y permite asignar agencia, pax, localizador y notas directamente sobre el mapa. <span class='en-inline'>/ Shows the deck plan with real-time cabin status (free, on hold, sold) and lets you assign agency, pax, booking ref and notes directly on the map.</span>
+        * **📊 Ver Cupos** <span class='en-inline'>/ View Quotas</span> — Cuadro de mandos de cupos por agencia y categoría: muestra el límite autorizado de cabinas y pax, las unidades ya usadas y las disponibles, con alerta visual si se supera el cupo. <span class='en-inline'>/ Quota dashboard by agency and category: shows authorised cabin and pax limits, units used and remaining, with a visual alert if the quota is exceeded.</span>
+        * **⚙️ Configurar Cupos** <span class='en-inline'>/ Configure Quotas</span> — Define los límites comerciales máximos de cabinas y pasajeros por agencia y categoría para cada salida. Los límites se guardan directamente en el CRM. <span class='en-inline'>/ Set the maximum commercial limits of cabins and passengers per agency and category for each departure. Limits are saved directly to the CRM.</span>
+        * **📈 Informe** <span class='en-inline'>/ Report</span> — Informe consolidado que cruza los datos del CRM con los archivos FIT y GROUP de Drive, mostrando en una sola tabla las cabinas vendidas, cupos, localizadores y notas por agencia y categoría. <span class='en-inline'>/ Consolidated report crossing CRM data with FIT and GROUP files from Drive, showing sold cabins, quotas, booking refs and notes per agency and category in a single table.</span>
+        * **🛏️ Informe Cabinas** <span class='en-inline'>/ Cabin Report</span> — Lista detallada de todas las cabinas de la salida filtrable por estado (todas, vendidas, reservas o libres), con agencia, pax, localizador y notas de cada una. <span class='en-inline'>/ Detailed cabin list for the departure, filterable by status (all, sold, on hold or free), showing agency, pax, booking ref and notes for each cabin.</span>
+        * **🛳️ Ocupación** <span class='en-inline'>/ Occupancy</span> — Panel de ocupación del buque con métricas globales (cabinas vendidas, reservas, libres y pax totales) y tabla por categoría con barra de progreso visual del porcentaje de ocupación. <span class='en-inline'>/ Ship occupancy dashboard with global metrics (sold cabins, on hold, free and total pax) and a per-category table with a visual progress bar showing occupancy percentage.</span>
+        * **🔄 Sincronizar CRM → FIT** — Módulo planificado que cruzará automáticamente las cabinas asignadas en el CRM con las confirmaciones FIT en Drive usando el localizador como clave, y pegará las cabinas en las hojas correspondientes. Las filas con conflicto quedarán marcadas para revisión manual. <span class='en-inline'>/ Planned module that will automatically cross CRM cabin assignments with FIT confirmation files in Drive using the booking ref as key, and paste cabins into the corresponding sheets. Conflicting rows will be flagged for manual review.</span>
+        * **📅 Nueva salida** <span class='en-inline'>/ New Departure</span> — Crea una nueva fecha operativa para {ANIO} en el CRM, inicializando todas las cabinas del buque en estado LIBRE listas para asignar. <span class='en-inline'>/ Creates a new operational date for {ANIO} in the CRM, initialising all ship cabins as FREE and ready to assign.</span>
     """, unsafe_allow_html=True)
 
 #### BLOQUE 14: MODO NUEVA SALIDA
