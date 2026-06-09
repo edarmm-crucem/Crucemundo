@@ -1012,11 +1012,11 @@ def parselocatorinput(locatorraw):
     locator = str(locatorraw or "").strip().upper()
     if not locator:
         raise Exception("Debes introducir un localizador.")
-    isgroup = locator.endswith("_GROUP")
-    core = locator[:-6] if isgroup else locator
+    # Eliminar sufijo _GROUP si viene, pero tratar todo como FIT
+    core = locator[:-6] if locator.endswith("_GROUP") else locator
     m = re.fullmatch(r"([A-Z]{2,3})(\d{6})-(\d{3})", core)
     if not m:
-        raise Exception("Formato de localizador no válido. Debe ser CODIGOBARCOAAMMDD-999 o terminar en _GROUP.")
+        raise Exception("Formato de localizador no válido. Debe ser CODIGOBARCOAAMMDD-999.")
     shipcode, yymmdd, sequence = m.groups()
     boatname = SHIPCODETONAME.get(shipcode)
     if not boatname:
@@ -1024,13 +1024,13 @@ def parselocatorinput(locatorraw):
     yearfull = f"20{yymmdd[:2]}"
     filebase = f"{boatname}_{yymmdd}"
     return {
-        "original": locator, "isgroup": isgroup, "core": core,
+        "original": locator, "isgroup": False, "core": core,
         "shipcode": shipcode, "boatname": boatname, "yymmdd": yymmdd,
         "sequence": sequence, "yearfull": yearfull,
-        "yearfoldername": f"{yearfull}_GROUP" if isgroup else yearfull,
-        "filename": f"{filebase}_GROUP" if isgroup else filebase,
-        "sheetname": f"{core}_GROUP" if isgroup else core,
-        "rootid": GROUPSROOTID if isgroup else DRIVEROOTID,
+        "yearfoldername": yearfull,
+        "filename": filebase,
+        "sheetname": core,
+        "rootid": DRIVEROOTID,
     }
 
 
