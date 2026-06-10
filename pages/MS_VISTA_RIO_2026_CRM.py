@@ -1076,7 +1076,7 @@ else:
                         continue
                 return resultado
 
-            hojas_fit = list({hf["hoja"]: hf for hf in hojas_fit}.values())
+            hojas_fit = list({hf["hoja"]: hf for hf in (hojas_fit or [])}.values())
 
             if not hojas_fit:
                 st.warning("No se encontraron hojas con BOOKING/PROFORMA en B2. / *No BOOKING/PROFORMA sheets found.*")
