@@ -1076,7 +1076,7 @@ else:
                         continue
                 return resultado
 
-            hojas_fit = _leer_hojas_fit(archivo_conf_id)
+            hojas_fit = list({hf["hoja"]: hf for hf in hojas_fit}.values())
 
             if not hojas_fit:
                 st.warning("No se encontraron hojas con BOOKING/PROFORMA en B2. / *No BOOKING/PROFORMA sheets found.*")
@@ -1139,8 +1139,8 @@ else:
                             "tipo_asignacion": "sin_datos",
                             "alerta": "⚠️ Sin info de cabinas en FIT",
                             "sync_status": "error",   # ← añade esto
-                        })
-                        continue 
+                     })
+                    continue 
                     cab_por_cat = _cabinas_por_categoria_fit(q24_raw, es_dsu)
                     dsu_txt = " (DSU: 1 cab/pax)" if es_dsu else ""
                     partes = ", ".join(f"{x['n_cab']} cab × {x['cat']} ({x['n_pax']} pax)" for x in cab_por_cat)
