@@ -54,6 +54,100 @@ DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Sin usuario / 
 SALUDO = getsaludo("es")
 SALUDOEN = getsaludo("en")
 
+# ── Helpers multi-agencia ──────────────────────────────────────────────────────
+
+def split_pipe(val: str) -> list:
+    """Divide un campo separado por | en lista de strings limpios."""
+    if val and "|" in val:
+        return [v.strip() for v in val.split("|")]
+    return [val.strip()] if val and val.strip() else []
+
+def join_pipe(lst: list) -> str:
+    return "|".join(str(v) for v in lst)
+
+def agregar_agencia_a_cabina(datos_cabina: dict, nueva_ag: str, nuevo_pax,
+                              nuevo_loc: str, nuevas_notas: str,
+                              nuevo_estado: str) -> tuple:
+    """
+    Añade una agencia a los campos multi-valor de una cabina.
+    Si la agencia ya existe actualiza sus datos.
+    Devuelve (estado, agencia_str, pax_str, loc_str, notas_str).
+    """
+    ags   = split_pipe(datos_cabina.get("agencia", ""))
+    paxs  = split_pipe(datos_cabina.get("pax", ""))
+    locs  = split_pipe(datos_cabina.get("localizador", ""))
+    notas = split_pipe(datos_cabina.get("notes", ""))
+
+    # Alinear longitudes
+    while len(paxs)  < len(ags): paxs.append("")
+    while len(locs)  < len(ags): locs.append("")
+    while len(notas) < len(ags): notas.append("")
+
+    if nueva_ag in ags:
+        idx = ags.index(nueva_ag)
+        paxs[idx]  = str(nuevo_pax)
+        locs[idx]  = nuevo_loc
+        notas[idx] = nuevas_notas
+    else:
+        ags.append(nueva_ag)
+        paxs.append(str(nuevo_pax))
+        locs.append(nuevo_loc)
+        notas.append(nuevas_notas)
+
+    return (
+        nuevo_estado,
+        join_pipe(ags),
+        join_pipe(paxs),
+        join_pipe(locs),
+        join_pipe(notas),
+    )
+
+def quitar_agencia_de_cabina(datos_cabina: dict, ag_borrar: str) -> tuple:
+    """Elimina una agencia de los campos multi-valor."""
+    ags   = split_pipe(datos_cabina.get("agencia", ""))
+    paxs  = split_pipe(datos_cabina.get("pax", ""))
+    locs  = split_pipe(datos_cabina.get("localizador", ""))
+    notas = split_pipe(datos_cabina.get("notes", ""))
+
+    while len(paxs)  < len(ags): paxs.append("")
+    while len(locs)  < len(ags): locs.append("")
+    while len(notas) < len(ags): notas.append("")
+
+    indices = [i for i, a in enumerate(ags) if a != ag_borrar]
+    ags_n   = [ags[i]   for i in indices]
+    paxs_n  = [paxs[i]  for i in indices]
+    locs_n  = [locs[i]  for i in indices]
+    notas_n = [notas[i] for i in indices]
+
+    estado_final = "LIBRE" if not ags_n else "RESERVA"
+    return (
+        estado_final,
+        join_pipe(ags_n),
+        join_pipe(paxs_n),
+        join_pipe(locs_n),
+        join_pipe(notas_n),
+    )
+
+def color_cabina_html(agencias_dict: dict, ags_lista: list) -> str:
+    """
+    Genera el CSS background para una cabina multi-agencia.
+    1 agencia  → color sólido
+    2-4 agencias → franjas iguales izquierda→derecha
+    """
+    colores = [agencias_dict.get(a, "#F3F4F6") for a in ags_lista]
+    n = len(colores)
+    if n == 0:
+        return "#F3F4F6"
+    if n == 1:
+        return colores[0]
+    stops = []
+    for i, c in enumerate(colores):
+        pct_ini = round(i * 100 / n)
+        pct_fin = round((i + 1) * 100 / n)
+        stops.append(f"{c} {pct_ini}%")
+        stops.append(f"{c} {pct_fin}%")
+    return f"linear-gradient(90deg, {', '.join(stops)})"
+
 #### BLOQUE 5: GOOGLE SERVICES
 @st.cache_resource
 def getgooglecreds():
@@ -294,6 +388,11 @@ st.markdown('''
     .td-total-cab { background-color: #EFF6FF; color: #1E40AF; font-weight: 700; }
     .th-total-cab { background-color: #DBEAFE !important; color: #1E40AF !important; }
     .section-en { font-size: 0.55em; font-style: italic; color: #9CA3AF; font-weight: 400; margin-left: 0.5em; }
+    .cabina-multi { border-color: #6366F1 !important; border-width: 3px !important; border-style: solid !important; }
+    .leyenda-multi { background: linear-gradient(90deg, #60A5FA 50%, #F87171 50%); border: 3px solid #6366F1; }
+    .ag-badge { display:inline-block; padding:1px 7px; border-radius:99px; font-size:0.72rem;
+                font-weight:700; margin:1px 2px; color:#1F2937; border:1px solid rgba(0,0,0,0.15); }
+    .cabina-box { overflow: hidden; }
 </style>
 ''', unsafe_allow_html=True)
 
@@ -447,25 +546,38 @@ else:
 
         for d in datos:
             cabina_id = d.get("cabina", "").strip()
-            ag = d.get("agencia", "").strip()
-            estado = d.get("estado", "LIBRE").strip()
-            loc = d.get("localizador", "").strip()
-            notes = d.get("notes", "").strip()
+            ag_raw    = d.get("agencia", "").strip()
+            estado    = d.get("estado", "LIBRE").strip()
+            loc_raw   = d.get("localizador", "").strip()
+            notes_raw = d.get("notes", "").strip()
+            pax_raw   = d.get("pax", "").strip()
             cat = next((c[3] for c in cabinas if c[1] == cabina_id), "").strip()
-            if ag and cat:
+
+            ags_list  = split_pipe(ag_raw)
+            locs_list = split_pipe(loc_raw)
+            nts_list  = split_pipe(notes_raw)
+            paxs_list = split_pipe(pax_raw)
+
+            for idx, ag in enumerate(ags_list):
+                if not ag or not cat:
+                    continue
                 agencias_activas.add(ag)
                 cabinas_por_ag_cat[(ag, cat)] += 1
                 if estado == "VENDIDA":
                     sold_por_ag_cat[(ag, cat)] += 1
                 try:
-                    pax_por_ag_cat[(ag, cat)] += int(d.get("pax", 0) or 0)
+                    pax_val = int(paxs_list[idx]) if idx < len(paxs_list) else 0
+                    pax_por_ag_cat[(ag, cat)] += pax_val
                 except ValueError:
                     pass
-                if loc and loc not in localizadores_por_agencia[ag]:
-                    localizadores_por_agencia[ag].append(loc)
-                if notes and notes not in notas_por_agencia[ag]:
-                    notas_por_agencia[ag].append(notes)
-            c_ag = d.get("cupo_agencia", "").strip()
+                loc_val = locs_list[idx] if idx < len(locs_list) else ""
+                nt_val  = nts_list[idx]  if idx < len(nts_list)  else ""
+                if loc_val and loc_val not in localizadores_por_agencia[ag]:
+                    localizadores_por_agencia[ag].append(loc_val)
+                if nt_val and nt_val not in notas_por_agencia[ag]:
+                    notas_por_agencia[ag].append(nt_val)
+
+            c_ag  = d.get("cupo_agencia", "").strip()
             c_max = d.get("cupo_maximo", "").strip()
             if c_ag and "|" in c_ag and c_max and "," in c_max:
                 try:
@@ -567,7 +679,7 @@ else:
                 t += '</tbody></table>'
                 st.markdown(t, unsafe_allow_html=True)
 
-        #### BLOQUE 17: MODO INFORME CABINAS
+#### BLOQUE 17: MODO INFORME CABINAS
         elif modo == "🛏️ Informe Cabinas / Cabin Report":
             st.markdown(
                 f"### 🛏️ Informe de Cabinas — Salida {ddmm_sel} "
@@ -595,20 +707,51 @@ else:
                 return f'<th><div class="th-bilingual"><span class="th-es">{es}</span><span class="th-en">{en}</span></div></th>'
 
             t = '<table class="informe-tabla"><thead><tr>'
-            t += th("Cabina", "Cabin") + th("Agencia", "Agency") + th("PAX", "PAX") + th("Localizador", "Ref") + th("Notas", "Notes")
+            t += th("Cabina", "Cabin") + th("Estado", "Status") + th("Agencias", "Agencies")
+            t += th("PAX", "PAX") + th("Localizador(es)", "Ref(s)") + th("Notas", "Notes")
             t += '</tr></thead><tbody>'
+
             for d in sorted(datos_filtrados, key=lambda x: int(re.sub(r"[^0-9]", "", x.get("cabina", "0")) or 0)):
-                estado_class = "td-sold" if d.get("estado") == "VENDIDA" else ""
-                t += f'<tr class="{estado_class}">'
-                t += f'<td>{d.get("cabina", "")}</td>'
-                t += f'<td>{d.get("agencia", "-")}</td>'
-                t += f'<td>{d.get("pax", "-")}</td>'
-                t += f'<td>{d.get("localizador", "-")}</td>'
-                t += f'<td>{d.get("notes", "-")}</td>'
+                ag_raw   = d.get("agencia", "").strip()
+                ags_lst  = split_pipe(ag_raw)
+                locs_lst = split_pipe(d.get("localizador", "").strip())
+                paxs_lst = split_pipe(d.get("pax", "").strip())
+                nts_lst  = split_pipe(d.get("notes", "").strip())
+                estado   = d.get("estado", "LIBRE")
+
+                # Badges de agencias con su color
+                ag_badges = ""
+                for ag in ags_lst:
+                    if not ag: continue
+                    col = agencias.get(ag, "#E5E7EB")
+                    ag_badges += f'<span class="ag-badge" style="background:{col};">{ag}</span>'
+
+                pax_str = " | ".join(p for p in paxs_lst if p) or "-"
+                loc_str = " | ".join(l for l in locs_lst if l) or "-"
+                nt_str  = " | ".join(n for n in nts_lst  if n) or "-"
+
+                estado_cell = {
+                    "VENDIDA": '<span style="color:#991B1B;font-weight:700;">🔴 VENDIDA</span>',
+                    "RESERVA": '<span style="color:#92400E;font-weight:700;">🟡 RESERVA</span>',
+                    "LIBRE":   '<span style="color:#6B7280;">⬜ LIBRE</span>',
+                }.get(estado, estado)
+
+                row_bg = ""
+                if len(ags_lst) > 1:
+                    row_bg = ' style="background:#F5F3FF;"'
+                elif estado == "VENDIDA":
+                    row_bg = ' style="background:#FEF2F2;"'
+
+                t += f'<tr{row_bg}>'
+                t += f'<td style="font-weight:700;">{d.get("cabina", "")}</td>'
+                t += f'<td>{estado_cell}</td>'
+                t += f'<td style="text-align:left;">{ag_badges if ag_badges else "-"}</td>'
+                t += f'<td>{pax_str}</td>'
+                t += f'<td style="text-align:left;font-size:0.78rem;">{loc_str}</td>'
+                t += f'<td style="text-align:left;font-size:0.78rem;">{nt_str}</td>'
                 t += '</tr>'
             t += '</tbody></table>'
             st.markdown(t, unsafe_allow_html=True)
-
         #### BLOQUE 18: MODO OCUPACIÓN
         elif modo == "🛳️ Ocupación / Occupancy":
             st.markdown(
@@ -785,7 +928,7 @@ else:
                     )
                     st.rerun()
 
-        #### BLOQUE 21: MODO MAPA DE CABINAS
+#### BLOQUE 21: MODO MAPA DE CABINAS
         elif modo == "🗺️ Mapa de cabinas / Cabin Map":
             estadocabina = {d.get("cabina", ""): d for d in datos}
             porcategoria = defaultdict(list)
@@ -802,6 +945,7 @@ else:
                     <div class="leyenda-item"><span class="leyenda-box leyenda-libre"></span>Libre <span class="leyenda-sub">/ Free</span></div>
                     <div class="leyenda-item"><span class="leyenda-box leyenda-reserva"></span>Reserva (RVA) <span class="leyenda-sub">/ On Hold</span></div>
                     <div class="leyenda-item"><span class="leyenda-box leyenda-vendida"></span>Vendida (SOLD) <span class="leyenda-sub">/ Sold</span></div>
+                    <div class="leyenda-item"><span class="leyenda-box leyenda-multi"></span>Compartida <span class="leyenda-sub">/ Shared</span></div>
                 </div>''', unsafe_allow_html=True)
 
             for categoria, nums in porcategoria.items():
@@ -817,28 +961,50 @@ else:
                 pares_ord   = [x[1] for x in sorted(pares,   key=lambda x: x[0], reverse=True)]
 
                 def render_cabina(num):
-                    info = estadocabina.get(num, {})
-                    ag = info.get("agencia", "").strip()
-                    est = info.get("estado", "LIBRE").strip()
-                    cant_pax = info.get("pax", "")
-                    pax_txt = (f" ({cant_pax}p)" if cant_pax and str(cant_pax).isdigit() and int(cant_pax) > 0 else "")
-                    color = agencias.get(ag, "#F3F4F6") if ag else "#F3F4F6"
-                    textcolor = "#1F2937" if ag else "#9CA3AF"
-                    if est == "VENDIDA":
-                        bc, bw, bs, css = "#1F2937", "3px", "solid", "cabina-box cabina-vendida"
-                    elif est == "RESERVA":
-                        bc, bw, bs, css = "#F59E0B", "2px", "dashed", "cabina-box cabina-reserva"
+                    info    = estadocabina.get(num, {})
+                    ag_raw  = info.get("agencia", "").strip()
+                    est     = info.get("estado", "LIBRE").strip()
+                    pax_raw = info.get("pax", "")
+                    ags_lst = split_pipe(ag_raw)
+                    n_ags   = len([a for a in ags_lst if a])
+
+                    if n_ags == 0:
+                        bg_css    = "#F3F4F6"
+                        textcolor = "#9CA3AF"
+                        border_css = "border-color:#D1D5DB;border-width:2px;border-style:solid;"
+                        sublabel  = ""
+                    elif n_ags == 1:
+                        bg_css    = agencias.get(ags_lst[0], "#F3F4F6")
+                        textcolor = "#1F2937"
+                        if est == "VENDIDA":
+                            border_css = "border-color:#1F2937;border-width:3px;border-style:solid;"
+                        elif est == "RESERVA":
+                            border_css = "border-color:#F59E0B;border-width:3px;border-style:dashed;"
+                        else:
+                            border_css = "border-color:#D1D5DB;border-width:2px;border-style:solid;"
+                        pax_lst = split_pipe(pax_raw)
+                        pax_txt = f" ({pax_lst[0]}p)" if pax_lst and pax_lst[0].isdigit() and int(pax_lst[0]) > 0 else ""
+                        sublabel = f"{ags_lst[0]}{pax_txt}"
                     else:
-                        bc, bw, bs, css = "#D1D5DB", "2px", "solid", "cabina-box cabina-libre"
-                    sublabel = f"{ag}{pax_txt}" if ag else ""
-                    return (f'<div class="{css}" style="background:{color};border-color:{bc};border-width:{bw};border-style:{bs};color:{textcolor};"'
-                            f'onclick="window.parent.postMessage({{type:\'streamlit:setComponentValue\',value:\'{num}\'}},\'*\')">'
-                            f'<span class="cabina-num-destacado">{num}</span>'
-                            f'<span style="font-size:0.58rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px;text-align:center;margin-top:2px;">{sublabel}</span>'
-                            f'</div>')
+                        ags_validas = [a for a in ags_lst if a]
+                        bg_css     = color_cabina_html(agencias, ags_validas)
+                        textcolor  = "#1F2937"
+                        border_css = "border-color:#6366F1;border-width:3px;border-style:solid;"
+                        sublabel   = "+".join(ags_validas[:4])
+
+                    return (
+                        f'<div class="cabina-box" '
+                        f'style="background:{bg_css};{border_css}color:{textcolor};" '
+                        f'onclick="window.parent.postMessage({{type:\'streamlit:setComponentValue\',value:\'{num}\'}},\'*\')">'
+                        f'<span class="cabina-num-destacado">{num}</span>'
+                        f'<span style="font-size:0.52rem;font-weight:700;white-space:nowrap;overflow:hidden;'
+                        f'text-overflow:ellipsis;max-width:72px;text-align:center;margin-top:2px;">{sublabel}</span>'
+                        f'</div>'
+                    )
 
                 LABEL_PROA = ('<div style="min-width:32px;display:flex;align-items:center;justify-content:center;">'
-                              '<div style="width:0;height:0;border-top:30px solid transparent;border-bottom:30px solid transparent;border-left:18px solid #D1D5DB;"></div>'
+                              '<div style="width:0;height:0;border-top:30px solid transparent;'
+                              'border-bottom:30px solid transparent;border-left:18px solid #D1D5DB;"></div>'
                               '</div>')
 
                 html = '<div class="deck-layout">'
@@ -848,7 +1014,8 @@ else:
                     html += render_cabina(num)
                 html += (
                     '</div>'
-                    '<div class="horizontal-corridor">Pasillo Central <span style="font-style:italic;font-size:0.85em;opacity:0.7;">/ Central Corridor</span></div>'
+                    '<div class="horizontal-corridor">Pasillo Central '
+                    '<span style="font-style:italic;font-size:0.85em;opacity:0.7;">/ Central Corridor</span></div>'
                     '<div class="deck-row deck-row-style">'
                 )
                 for num in pares_ord:
@@ -858,6 +1025,149 @@ else:
                 html += '</div></div>'
                 st.markdown(html, unsafe_allow_html=True)
 
+            #### BLOQUE 22: PANEL ASIGNAR CABINA (multi-agencia)
+            st.markdown("---")
+            st.markdown(
+                "#### ✏️ Asignar cabina "
+                "<span class='section-en'>Assign cabin</span>",
+                unsafe_allow_html=True
+            )
+
+            todas_cabinas_ord = sorted([c[1] for c in cabinas])
+
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                cabinas_sel = st.multiselect(
+                    "Cabinas / *Cabins*",
+                    todas_cabinas_ord,
+                    placeholder="Selecciona una o varias…"
+                )
+            with col2:
+                rango = st.text_input("O rango / *Or range*", placeholder="101-105")
+                if rango and "-" in rango:
+                    try:
+                        ini, fin = rango.split("-")
+                        nums_rango = set(range(int(ini.strip()), int(fin.strip()) + 1))
+                        extras = [c for c in todas_cabinas_ord
+                                  if int(''.join(filter(str.isdigit, c)) or 0) in nums_rango
+                                  and c not in cabinas_sel]
+                        cabinas_sel = cabinas_sel + extras
+                    except ValueError:
+                        st.warning("Rango no válido. Usa formato 101-105.")
+
+            if cabinas_sel:
+                # Mostrar agencias ya asignadas en las cabinas seleccionadas
+                cabinas_con_ags = []
+                for cab in cabinas_sel:
+                    info = estadocabina.get(cab, {})
+                    ags_act = [a for a in split_pipe(info.get("agencia", "").strip()) if a]
+                    if ags_act:
+                        cabinas_con_ags.append(f"**{cab}** → {', '.join(ags_act)}")
+                if cabinas_con_ags:
+                    st.info(
+                        "ℹ️ Cabinas ya asignadas — la nueva agencia se **añadirá** sin sobreescribir:\n" +
+                        " · ".join(cabinas_con_ags) +
+                        "\n\n*Cabins already assigned — new agency will be **added**, not overwritten.*"
+                    )
+
+                col_a, col_b, col_c = st.columns(3)
+                with col_a:
+                    agencia_sel = st.selectbox("Agencia / *Agency*", [""] + list(agencias.keys()))
+                with col_b:
+                    estado_sel = st.selectbox(
+                        "Estado / *Status*",
+                        ESTADOS_VALIDOS,
+                        format_func=lambda x: {
+                            "LIBRE":   "⬜ LIBRE — Sin asignar",
+                            "RESERVA": "🟡 RESERVA — Bloqueada",
+                            "VENDIDA": "🔴 VENDIDA — Confirmada",
+                        }.get(x, x)
+                    )
+                with col_c:
+                    pax_input = st.number_input("Pax / *Pax*", min_value=0, max_value=10, value=2)
+
+                col_d, col_e = st.columns(2)
+                with col_d:
+                    loc_input   = st.text_input("Localizador / *Booking Ref*", value="")
+                with col_e:
+                    notas_input = st.text_input("Notas / *Notes*", value="")
+
+                # Avisos límite 4 agencias
+                for cab in cabinas_sel:
+                    info = estadocabina.get(cab, {})
+                    ags_act = [a for a in split_pipe(info.get("agencia", "")) if a]
+                    if agencia_sel and agencia_sel not in ags_act and len(ags_act) >= 4:
+                        st.warning(f"⚠️ Cabina **{cab}** ya tiene 4 agencias (máximo). / *Cabin {cab} already at 4-agency limit.*")
+
+                if st.button("💾 Añadir agencia / *Add agency*"):
+                    with st.spinner("Guardando… / *Saving…*"):
+                        guardadas, omitidas = [], []
+                        for cab in cabinas_sel:
+                            rowindex = next((i for i, d in enumerate(datos) if d.get("cabina") == cab), None)
+                            if rowindex is None:
+                                continue
+                            info    = estadocabina.get(cab, {})
+                            ags_act = [a for a in split_pipe(info.get("agencia", "")) if a]
+
+                            if not agencia_sel:
+                                # Sin agencia → limpiar cabina
+                                guardarcabina(ddmm_sel, rowindex, "", "", "", "", "LIBRE")
+                                guardadas.append(cab)
+                                continue
+
+                            if agencia_sel not in ags_act and len(ags_act) >= 4:
+                                omitidas.append(cab)
+                                continue
+
+                            estado_f, ag_f, pax_f, loc_f, nt_f = agregar_agencia_a_cabina(
+                                info, agencia_sel, pax_input, loc_input, notas_input, estado_sel
+                            )
+                            guardarcabina(ddmm_sel, rowindex, ag_f, pax_f, loc_f, nt_f, estado_f)
+                            guardadas.append(cab)
+
+                        st.cache_data.clear()
+                        if guardadas:
+                            st.success(f"✅ {len(guardadas)} cabina(s) actualizadas: {', '.join(guardadas)}")
+                        if omitidas:
+                            st.warning(f"⚠️ {len(omitidas)} omitidas por límite de 4 agencias: {', '.join(omitidas)}")
+                        st.rerun()
+
+                # ── Quitar agencia ────────────────────────────────────────────
+                st.markdown("---")
+                st.markdown(
+                    "**🗑️ Quitar agencia de cabina(s)** "
+                    "<span class='section-en'>Remove agency from cabin(s)</span>",
+                    unsafe_allow_html=True
+                )
+                ags_en_seleccion = set()
+                for cab in cabinas_sel:
+                    for ag in split_pipe(estadocabina.get(cab, {}).get("agencia", "")):
+                        if ag: ags_en_seleccion.add(ag)
+
+                col_rm1, col_rm2 = st.columns([2, 1])
+                with col_rm1:
+                    ag_a_quitar = st.selectbox(
+                        "Agencia a eliminar / *Agency to remove*",
+                        ["—"] + sorted(list(ags_en_seleccion))
+                    )
+                with col_rm2:
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    btn_quitar = st.button("🗑️ Quitar / *Remove*", key="btn_quitar_ag")
+
+                if btn_quitar and ag_a_quitar != "—":
+                    with st.spinner("Quitando… / *Removing…*"):
+                        for cab in cabinas_sel:
+                            rowindex = next((i for i, d in enumerate(datos) if d.get("cabina") == cab), None)
+                            if rowindex is None:
+                                continue
+                            info = estadocabina.get(cab, {})
+                            if ag_a_quitar not in split_pipe(info.get("agencia", "")):
+                                continue
+                            estado_f, ag_f, pax_f, loc_f, nt_f = quitar_agencia_de_cabina(info, ag_a_quitar)
+                            guardarcabina(ddmm_sel, rowindex, ag_f, pax_f, loc_f, nt_f, estado_f)
+                        st.cache_data.clear()
+                        st.success(f"✅ Agencia **{ag_a_quitar}** eliminada. / *Agency removed.*")
+                        st.rerun()
             #### BLOQUE 22: PANEL ASIGNAR CABINA
             st.markdown("---")
             st.markdown(
