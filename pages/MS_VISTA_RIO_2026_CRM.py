@@ -773,7 +773,8 @@ else:
 
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("🔴 Vendidas / Sold",   f"{cab_vendidas}", f"{pct_cab}% del total / of total")
-            c2.metric("🟡 Reservas / On Hold", f"{cab_reservas}")
+            pct_res = round(cab_reservas / total_cabinas * 100, 1) if total_cabinas else 0
+            c2.metric("🟡 Reservas / On Hold", f"{cab_reservas}", f"{pct_res}% del total / of total")
             c3.metric("⬜ Libres / Free",      f"{cab_libres}")
             c4.metric("👥 Pax SOLD",           f"{total_pax}", f"{pct_pax}% cap. máx / max cap" if cap_max else "")
             st.markdown("---")
