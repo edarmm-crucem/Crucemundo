@@ -865,92 +865,89 @@ else:
                 "<span class='section-en'>Assign cabin</span>",
                 unsafe_allow_html=True
             )
-            col1, col2 = st.columns([1, 2])
+            
+            todas_cabinas_ord = sorted([c[1] for c in cabinas])
+            
+            col1, col2 = st.columns([2, 1])
             with col1:
-                cabina_input = st.selectbox("Cabina / *Cabin*", sorted([c[1] for c in cabinas]))
-
-            if cabina_input:
-                info = estadocabina.get(cabina_input, {})
-                agencia_actual = info.get("agencia", "").strip()
-                pax_actual = int(info.get("pax", 0) or 0)
-                estado_actual = info.get("estado", "LIBRE").strip()
-                if estado_actual not in ESTADOS_VALIDOS:
-                    estado_actual = "LIBRE"
-                cat_actual = next((c[3] for c in cabinas if c[1] == cabina_input), "").strip()
-
-                permitir_guardado = True
-                if agencia_actual:
-                    estado_badge = "🟡 RESERVA / On Hold" if estado_actual == "RESERVA" else "🔴 VENDIDA / Sold"
-                    st.error(
-                        f"⚠️ **¡Atención! / *Warning!*** La cabina **{cabina_input}** ({cat_actual}) "
-                        f"ya está asignada a **{agencia_actual}** — {estado_badge}."
-                    )
-                    if not st.checkbox(
-                        f"¿Sustituir la asignación de {agencia_actual}? / *Replace assignment for {agencia_actual}?*",
-                        value=False
-                    ):
-                        permitir_guardado = False
-
-                with col2:
-                    agencia_sel = st.selectbox(
-                        "Agencia / *Agency*",
-                        [""] + list(agencias.keys()),
-                        index=(list(agencias.keys()).index(info.get("agencia", "")) + 1 if info.get("agencia") in agencias else 0),
-                        disabled=not permitir_guardado
-                    )
-
-                estado_sel = st.selectbox(
-                    "Estado de la reserva / *Booking status*",
-                    ESTADOS_VALIDOS,
-                    index=ESTADOS_VALIDOS.index(estado_actual),
-                    format_func=lambda x: {
-                        "LIBRE":   "⬜ LIBRE — Sin asignar / Unassigned",
-                        "RESERVA": "🟡 RESERVA (RVA) — Bloqueada / On hold, pending confirmation",
-                        "VENDIDA": "🔴 VENDIDA (SOLD) — Confirmada / Confirmed and closed",
-                    }.get(x, x),
-                    disabled=not permitir_guardado
+                cabinas_sel = st.multiselect(
+                    "Cabinas / *Cabins*",
+                    todas_cabinas_ord,
+                    placeholder="Selecciona una o varias…"
                 )
-
-                c1, c2, c3 = st.columns(3)
-                with c1:
-                    pax_input = st.number_input("Pax", min_value=0, max_value=10, value=int(info.get("pax", 0) or 0), disabled=not permitir_guardado)
-                with c2:
-                    loc_input = st.text_input("Localizador / *Booking Ref*", value=info.get("localizador", ""), disabled=not permitir_guardado)
-                with c3:
-                    notas_input = st.text_input("Notas / *Notes*", value=info.get("notes", ""), disabled=not permitir_guardado)
-
-                if agencia_sel and (agencia_sel, cat_actual) in cupos_config:
-                    lims = cupos_config[(agencia_sel, cat_actual)]
-                    cabs_act = cabinas_por_ag_cat[(agencia_sel, cat_actual)]
-                    pax_act = pax_por_ag_cat[(agencia_sel, cat_actual)]
-                    if agencia_sel == agencia_actual:
-                        cabs_act -= 1; pax_act -= pax_actual
-                    if cabs_act + 1 > lims["cabinas"]:
-                        st.error(
-                            f"🚫 **Cupo Cabinas Superado / *Cabin Quota Exceeded*** — "
-                            f"{cat_actual}: {cabs_act}/{lims['cabinas']}. "
-                            f"/ *{agencia_sel} has {cabs_act} of {lims['cabinas']} authorised cabins.*"
+            with col2:
+                rango = st.text_input("O rango / *Or range*", placeholder="101-105")
+                if rango and "-" in rango:
+                    try:
+                        ini, fin = rango.split("-")
+                        nums_rango = set(range(int(ini.strip()), int(fin.strip()) + 1))
+                        extras = [c for c in todas_cabinas_ord
+                                  if int(''.join(filter(str.isdigit, c)) or 0) in nums_rango
+                                  and c not in cabinas_sel]
+                        cabinas_sel = cabinas_sel + extras
+                    except ValueError:
+                        st.warning("Rango no válido. Usa formato 101-105.")
+            
+            if cabinas_sel:
+                # Campos comunes para todas las cabinas seleccionadas
+                col_a, col_b, col_c = st.columns(3)
+                with col_a:
+                    agencia_sel = st.selectbox("Agencia / *Agency*", [""] + list(agencias.keys()))
+                with col_b:
+                    estado_sel = st.selectbox(
+                        "Estado / *Status*",
+                        ESTADOS_VALIDOS,
+                        format_func=lambda x: {
+                            "LIBRE":   "⬜ LIBRE — Sin asignar",
+                            "RESERVA": "🟡 RESERVA — Bloqueada",
+                            "VENDIDA": "🔴 VENDIDA — Confirmada",
+                        }.get(x, x)
+                    )
+                with col_c:
+                    pax_input = st.number_input("Pax por cabina / *Pax per cabin*", min_value=0, max_value=10, value=2)
+            
+                col_d, col_e = st.columns(2)
+                with col_d:
+                    loc_input = st.text_input("Localizador / *Booking Ref*", value="")
+                with col_e:
+                    notas_input = st.text_input("Notas / *Notes*", value="")
+            
+                # Resumen de cabinas seleccionadas con advertencias
+                conflictos = []
+                for cab in cabinas_sel:
+                    info = estadocabina.get(cab, {})
+                    ag_act = info.get("agencia", "").strip()
+                    est_act = info.get("estado", "LIBRE").strip()
+                    if ag_act and est_act == "VENDIDA":
+                        conflictos.append(f"**{cab}** — ya VENDIDA a {ag_act}")
+                    elif ag_act and est_act == "RESERVA":
+                        pass  # solapamiento permitido en RESERVA
+            
+                if conflictos:
+                    st.warning(
+                        "⚠️ Las siguientes cabinas están VENDIDAS y se sobreescribirán:\n" +
+                        " · ".join(conflictos) +
+                        "\n\n*The following cabins are SOLD and will be overwritten.*"
+                    )
+                    confirmar_conflicto = st.checkbox("Confirmo sobreescribir las cabinas VENDIDAS / *I confirm overwriting SOLD cabins*")
+                else:
+                    confirmar_conflicto = True
+            
+                if st.button("💾 Guardar todas / *Save all*", disabled=not confirmar_conflicto):
+                    with st.spinner("Guardando… / *Saving…*"):
+                        guardadas = []
+                        for cab in cabinas_sel:
+                            rowindex = next((i for i, d in enumerate(datos) if d.get("cabina") == cab), None)
+                            if rowindex is not None:
+                                estado_final = estado_sel if agencia_sel else "LIBRE"
+                                guardarcabina(ddmm_sel, rowindex, agencia_sel, pax_input, loc_input, notas_input, estado_final)
+                                guardadas.append(cab)
+                        st.cache_data.clear()
+                        st.success(
+                            f"✅ {len(guardadas)} cabina(s) guardadas como **{estado_final}**: {', '.join(guardadas)} "
+                            f"/ *{len(guardadas)} cabin(s) saved as {estado_final}.*"
                         )
-                    if pax_act + pax_input > lims["pax"]:
-                        st.error(
-                            f"🚫 **Cupo Pax Superado / *Pax Quota Exceeded*** — "
-                            f"{cat_actual}: {pax_act + pax_input}/{lims['pax']}. "
-                            f"/ *Adding {pax_input} pax would exceed the limit of {lims['pax']}.*"
-                        )
-
-                if st.button("💾 Guardar / *Save*", disabled=not permitir_guardado):
-                    rowindex = next((i for i, d in enumerate(datos) if d.get("cabina") == cabina_input), None)
-                    if rowindex is not None:
-                        estado_final = estado_sel if agencia_sel else "LIBRE"
-                        with st.spinner("Guardando… / *Saving…*"):
-                            guardarcabina(ddmm_sel, rowindex, agencia_sel, pax_input, loc_input, notas_input, estado_final)
-                            st.cache_data.clear()
-                            st.success(
-                                f"Cabina **{cabina_input}** guardada como **{estado_final}**. "
-                                f"/ *Cabin {cabina_input} saved as {estado_final}.*"
-                            )
-                            st.rerun()
-
+                        st.rerun()
 
 #### BLOQUE 21-SYNC: MODO SINCRONIZAR CABINAS FIT/GROUP → CRM → FIT/GROUP
         elif modo == "🔄 Sincronizar Cabinas FIT / GROUP → CRM → FIT / GROUP":
