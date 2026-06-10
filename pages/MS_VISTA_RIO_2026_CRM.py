@@ -1355,7 +1355,7 @@ else:
 
                     # Escribir cabinas asignadas en G56 del FIT
                     if cabinas_asignadas:
-                        cabinas_str = " + ".join(cabinas_asignadas)
+                        cabinas_str = " / ".join(cabinas_asignadas)
                         try:
                             svc_sheets.spreadsheets().values().update(
                                 spreadsheetId=archivo_conf_id,
