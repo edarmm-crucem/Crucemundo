@@ -341,7 +341,7 @@ opciones_modo = [
     "📈 Informe / Report",
     "🛏️ Informe Cabinas / Cabin Report",
     "🛳️ Ocupación / Occupancy",
-    "🔄 Sincronizar CRM → FIT",
+    "🔄 Sincronizar Cabinas FIT / GROUP → CRM → FIT / GROUP",
     "📅 Nueva salida / New Departure",
     "🏠 Inicio / Home",
 ]
@@ -950,142 +950,497 @@ else:
                                 f"/ *Cabin {cabina_input} saved as {estado_final}.*"
                             )
                             st.rerun()
-        elif modo == "🔄 Sincronizar CRM → FIT":
+
+
+#### BLOQUE 21-SYNC: MODO SINCRONIZAR CABINAS FIT/GROUP → CRM → FIT/GROUP
+        elif modo == "🔄 Sincronizar Cabinas FIT / GROUP → CRM → FIT / GROUP":
             st.markdown(
-                f"### 🔄 Sincronizar CRM → FIT — Salida {ddmm_sel} "
-                f"<span class='section-en'>Sync CRM → FIT — Departure {ddmm_sel}</span>",
+                f"### 🔄 Sincronizar Cabinas FIT/GROUP ↔ CRM — Salida {ddmm_sel} "
+                f"<span class='section-en'>Sync FIT/GROUP Cabins ↔ CRM — Departure {ddmm_sel}</span>",
                 unsafe_allow_html=True
             )
 
-            st.markdown("""
-            <div style="background:#FFFBEB;border:1.5px solid #FCD34D;border-radius:10px;
-                        padding:0.9rem 1.1rem;margin-bottom:1.4rem;display:flex;
-                        align-items:flex-start;gap:0.8rem;">
-                <span style="font-size:1.5rem;line-height:1.2;">⏳</span>
-                <div>
-                    <div style="font-size:0.9rem;font-weight:800;color:#92400E;">
-                        En espera de viabilidad de implantación
-                        <span style="font-size:0.75rem;font-style:italic;font-weight:400;color:#B45309;">
-                        / Pending technical feasibility assessment</span>
-                    </div>
-                    <div style="font-size:0.8rem;color:#78350F;margin-top:0.3rem;line-height:1.6;">
-                        Esta funcionalidad está planificada pero aún no está en producción.<br>
-                        <em>This feature is planned but not yet in production.</em>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            # ── Helpers internos ──────────────────────────────────────────────
 
+            def _es_group(localizador: str) -> bool:
+                """El localizador termina en GROUP → estado RESERVA."""
+                return localizador.upper().endswith("GROUP")
+
+            def _cabinas_libres_de_categoria(cat: str, datos_crm: list) -> list:
+                """Devuelve lista de IDs de cabinas libres de una categoría."""
+                cabinas_cat = {c[1] for c in cabinas if c[3] == cat}
+                return [
+                    d["cabina"] for d in datos_crm
+                    if d.get("cabina") in cabinas_cat
+                    and d.get("estado", "LIBRE") == "LIBRE"
+                    and not d.get("agencia", "").strip()
+                ]
+
+            def _extraer_pax_q24(raw_q24: str) -> list:
+                """
+                Parsea el contenido de Q24 (multilínea) con formato  XXX / YYYY
+                donde YYYY es la categoría. Devuelve lista de (categoria, n_pax).
+                Cada LÍNEA es 1 persona salvo DSU en G24 (1 cabina/persona).
+                """
+                lineas = [l.strip() for l in raw_q24.strip().splitlines() if l.strip()]
+                por_cat = defaultdict(int)
+                for l in lineas:
+                    if "/" in l:
+                        partes = l.split("/")
+                        cat_raw = partes[-1].strip()
+                        cat_raw = cat_raw.split()[0] if cat_raw else cat_raw
+                        por_cat[cat_raw] += 1
+                return list(por_cat.items())   # [(cat, n_pax), ...]
+
+            def _cabinas_por_categoria_fit(raw_q24: str, es_dsu: bool) -> list:
+                """
+                Convierte las líneas de Q24 a cabinas necesarias por categoría.
+                - Normal:  1 cabina cada 2 personas de la misma categoría
+                - DSU:     1 cabina por persona
+                Devuelve lista de dict {cat, n_cabinas, n_pax}
+                """
+                pax_por_cat = _extraer_pax_q24(raw_q24)
+                resultado = []
+                for cat, n_pax in pax_por_cat:
+                    if es_dsu:
+                        n_cab = n_pax
+                    else:
+                        n_cab = max(1, round(n_pax / 2))
+                    resultado.append({"cat": cat, "n_cab": n_cab, "n_pax": n_pax})
+                return resultado
+
+            # ── 1. Cargar archivo FIT del Drive ───────────────────────────────
+            with st.spinner("Buscando archivo FIT en Drive… / *Looking for FIT file…*"):
+                archivo_conf_id, msg_fit = buscar_archivo_conf(ddmm_sel)
+
+            if not archivo_conf_id:
+                st.error(msg_fit)
+                st.stop()
+
+            st.success(msg_fit)
+
+            # ── 2. Leer todas las hojas relevantes del FIT ────────────────────
+            @st.cache_data(ttl=30)
+            def _leer_hojas_fit(spreadsheet_id: str) -> list:
+                """
+                Por cada hoja que tenga BOOKING o PROFORMA en B2 extrae:
+                hoja, agencia(P5), localizador(G11), cabina_g56(G56),
+                q24_raw(Q24), g24_raw(G24 primer valor)
+                """
+                svc = getsheetsservice()
+                try:
+                    meta = svc.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+                    hojas = [s["properties"]["title"] for s in meta.get("sheets", [])]
+                except Exception:
+                    return []
+
+                resultado = []
+                for hoja in hojas:
+                    try:
+                        vr = svc.spreadsheets().values().batchGet(
+                            spreadsheetId=spreadsheet_id,
+                            ranges=[
+                                f"'{hoja}'!B2",       # 0 tipo doc
+                                f"'{hoja}'!P5",       # 1 agencia
+                                f"'{hoja}'!G11",      # 2 localizador
+                                f"'{hoja}'!G56",      # 3 cabina asignada en FIT
+                                f"'{hoja}'!Q24",      # 4 lista pax/categoría
+                                f"'{hoja}'!G24",      # 5 primer campo pax (para DSU)
+                            ]
+                        ).execute().get("valueRanges", [])
+
+                        def cv(i):
+                            rows = vr[i].get("values", []) if i < len(vr) else []
+                            return rows[0][0].strip() if rows and rows[0] else ""
+
+                        b2 = cv(0).upper()
+                        if not any(k in b2 for k in ["BOOKING", "PROFORMA"]):
+                            continue
+
+                        agencia    = cv(1)
+                        loc_raw    = cv(2)
+                        loc        = "".join(re.findall(r'\d+$', loc_raw)) or loc_raw
+                        cabina_g56 = cv(3).strip()
+                        q24_raw    = vr[4].get("values", [[""]])[0][0].strip() if len(vr) > 4 and vr[4].get("values") else ""
+                        g24_raw    = cv(5).upper()
+
+                        resultado.append({
+                            "hoja":        hoja,
+                            "agencia":     agencia,
+                            "localizador": loc,
+                            "cabina_g56":  cabina_g56,
+                            "q24_raw":     q24_raw,
+                            "es_dsu":      "DSU" in g24_raw,
+                        })
+                    except Exception:
+                        continue
+                return resultado
+
+            hojas_fit = _leer_hojas_fit(archivo_conf_id)
+
+            if not hojas_fit:
+                st.warning("No se encontraron hojas con BOOKING/PROFORMA en B2. / *No BOOKING/PROFORMA sheets found.*")
+                st.stop()
+
+            # ── 3. Valoración inicial ─────────────────────────────────────────
             st.markdown(
-                "#### ¿Qué hará este módulo? "
-                "<span class='section-en'>What will this module do?</span>",
+                "#### 🔍 Valoración inicial "
+                "<span class='section-en'>Initial assessment</span>",
                 unsafe_allow_html=True
             )
-            st.markdown("""
-Sincronizará las **cabinas asignadas en el CRM** (identificadas por localizador) con las
-**confirmaciones FIT** correspondientes en Drive, completando automáticamente el campo
-*Cabinas Asignadas* de cada confirmación para facilitar el montaje del Roomlist.
-
-<span class='en-inline'>It will sync CRM cabin assignments (matched by booking reference)
-with the corresponding FIT confirmation files in Drive, automatically filling in the
-*Assigned Cabins* field on each confirmation to streamline Roomlist preparation.</span>
-            """, unsafe_allow_html=True)
-
-            st.markdown("---")
-
             st.markdown(
-                "#### 📋 Ejemplo de informe preliminar "
-                "<span class='section-en'>Preliminary report example</span>",
-                unsafe_allow_html=True
-            )
-            st.markdown(
-                "El informe cruzará CRM + FIT y clasificará cada confirmación en uno de estos estados: "
-                "<span class='en-inline'>/ The report will cross CRM + FIT data and classify "
-                "each confirmation into one of these statuses:</span>",
+                "Revisión de cada confirmación antes de ejecutar cambios. "
+                "<span class='en-inline'>/ Review of each confirmation before applying any changes.</span>",
                 unsafe_allow_html=True
             )
 
-            def th(es, en):
-                return (f'<th><div class="th-bilingual"><span class="th-es">{es}</span>'
-                        f'<span class="th-en">{en}</span></div></th>')
+            def th(es, en=""):
+                inner = (f'<div class="th-bilingual"><span class="th-es">{es}</span>'
+                         f'<span class="th-en">{en}</span></div>') if en else es
+                return f"<th>{inner}</th>"
 
+            filas_valoracion = []
+            datos_crm_live = getdatossalida(ddmm_sel)
+
+            crm_por_loc = {}
+            for d in datos_crm_live:
+                loc_crm = d.get("localizador", "").strip()
+                if loc_crm:
+                    crm_por_loc.setdefault(loc_crm, []).append(d)
+
+            for hf in hojas_fit:
+                hoja       = hf["hoja"]
+                agencia    = hf["agencia"]
+                loc        = hf["localizador"]
+                cab_g56    = hf["cabina_g56"]
+                q24_raw    = hf["q24_raw"]
+                es_dsu     = hf["es_dsu"]
+                es_group   = _es_group(loc)
+                estado_destino = "RESERVA" if es_group else "VENDIDA"
+
+                crm_entries = crm_por_loc.get(loc, [])
+                crm_cabinas = [e["cabina"] for e in crm_entries]
+
+                if cab_g56:
+                    numeros_g56 = re.findall(r'\d+', cab_g56)
+                    n_cabinas_fit = len(numeros_g56)
+                    descripcion_origen = f"G56: cabina(s) **{cab_g56}**"
+                    cabinas_solicitadas = [{"cat": None, "n_cab": n_cabinas_fit,
+                                            "n_pax": None, "numeros": numeros_g56}]
+                    tipo_asignacion = "g56"
+                else:
+                    if not q24_raw:
+                        filas_valoracion.append({
+                            "hoja": hoja, "agencia": agencia, "loc": loc,
+                            "estado_destino": estado_destino,
+                            "descripcion_origen": "Sin datos en G56 ni Q24",
+                            "cabinas_solicitadas": [],
+                            "crm_cabinas": crm_cabinas,
+                            "tipo_asignacion": "sin_datos",
+                            "alerta": "⚠️ Sin info de cabinas en FIT",
+                        })
+                        continue
+                    cab_por_cat = _cabinas_por_categoria_fit(q24_raw, es_dsu)
+                    dsu_txt = " (DSU: 1 cab/pax)" if es_dsu else ""
+                    partes = ", ".join(f"{x['n_cab']} cab × {x['cat']} ({x['n_pax']} pax)" for x in cab_por_cat)
+                    descripcion_origen = f"Q24{dsu_txt}: {partes}"
+                    cabinas_solicitadas = cab_por_cat
+                    tipo_asignacion = "q24"
+
+                if crm_cabinas and cab_g56 and any(c in crm_cabinas for c in re.findall(r'\d+', cab_g56)):
+                    sync_status = "sincronizado"
+                elif crm_cabinas:
+                    sync_status = "parcial"
+                else:
+                    sync_status = "pendiente"
+
+                filas_valoracion.append({
+                    "hoja": hoja, "agencia": agencia, "loc": loc,
+                    "estado_destino": estado_destino,
+                    "descripcion_origen": descripcion_origen,
+                    "cabinas_solicitadas": cabinas_solicitadas,
+                    "crm_cabinas": crm_cabinas,
+                    "tipo_asignacion": tipo_asignacion,
+                    "cab_g56": cab_g56,
+                    "q24_raw": q24_raw,
+                    "es_dsu": es_dsu,
+                    "sync_status": sync_status,
+                    "alerta": "",
+                })
+
+            # Render tabla valoración
             t = '<table class="informe-tabla"><thead><tr>'
-            t += th("Hoja FIT", "FIT Sheet")
+            t += th("Hoja", "Sheet")
             t += th("Agencia", "Agency")
-            t += th("Localizador", "Booking Ref")
-            t += th("Cabina CRM", "CRM Cabin")
-            t += th("Cabina FIT", "FIT Cabin")
-            t += th("PAX", "PAX")
-            t += th("Estado", "Status")
-            t += th("Detalle", "Detail")
+            t += th("Localizador", "Ref")
+            t += th("Tipo", "Type")
+            t += th("Cabinas solicitadas (FIT)", "Requested cabins (FIT)")
+            t += th("CRM actual", "Current CRM")
+            t += th("Estado destino", "Target status")
+            t += th("Acción", "Action")
             t += '</tr></thead><tbody>'
 
-            ejemplos = [
-                ("Hoja3",  "VECI",  "VRI260412-009", "104",       "—",   2, "ok",       "Lista para pegar"),
-                ("Hoja5",  "A BABOR",  "VRI260412-011", "208",       "—",   2, "ok",       "Lista para pegar"),
-                ("Hoja7",  "1000 tentaciones",  "VRI260412-109", "305",       "—",   1, "ok",       "Lista para pegar"),
-                ("Hoja2",  "Cruceroclick",   "VRI260412-032", "112",       "115", 2, "conflicto","FIT tiene cabina 115 — CRM dice 112"),
-                ("Hoja4",  "Miramar Cruises SL",   "VRI260412-033", "201 + 203", "—",   4, "multi",    "Doble/triple con categorías: PRINCIPAL, SUPERIOR"),
-                ("Hoja9",  "Turiberia",  "VRI260412-039", "—",         "—",   2, "nocrm",    "Localizador no encontrado en CRM"),
-            ]
+            for fv in filas_valoracion:
+                ss     = fv.get("sync_status", "error")
+                alerta = fv.get("alerta", "")
 
-            for hoja, ag, loc, cab_crm, cab_fit, pax, estado, detalle in ejemplos:
-                if estado == "ok":
-                    row_bg = ""
-                    badge = ('<span style="background:#D1FAE5;color:#065F46;padding:2px 8px;'
-                             'border-radius:5px;font-size:0.75rem;font-weight:700;">'
-                             '✅ Lista para pegar</span>')
-                elif estado in ("conflicto", "multi"):
-                    row_bg = ' style="background:#FFFBEB;"'
-                    label = "⚠️ Conflicto cabina" if estado == "conflicto" else "⚠️ Doble — cats. distintas"
-                    badge = (f'<span style="background:#FEF3C7;color:#92400E;padding:2px 8px;'
-                             f'border-radius:5px;font-size:0.75rem;font-weight:700;">'
-                             f'{label}</span>')
+                if alerta:
+                    badge   = f'<span style="background:#FEF3C7;color:#92400E;padding:2px 8px;border-radius:5px;font-size:0.75rem;font-weight:700;">{alerta}</span>'
+                    row_bg  = ' style="background:#FFFBEB;"'
+                elif ss == "sincronizado":
+                    badge   = '<span style="background:#D1FAE5;color:#065F46;padding:2px 8px;border-radius:5px;font-size:0.75rem;font-weight:700;">✅ Sincronizado</span>'
+                    row_bg  = ' style="background:#F0FDF4;"'
+                elif ss == "parcial":
+                    badge   = '<span style="background:#FEF3C7;color:#92400E;padding:2px 8px;border-radius:5px;font-size:0.75rem;font-weight:700;">⚠️ Parcial / revisión</span>'
+                    row_bg  = ' style="background:#FFFBEB;"'
                 else:
-                    row_bg = ' style="background:#F9FAFB;"'
-                    badge = ('<span style="background:#F3F4F6;color:#6B7280;padding:2px 8px;'
-                             'border-radius:5px;font-size:0.75rem;font-weight:700;">'
-                             '🔎 Sin match CRM</span>')
+                    badge   = '<span style="background:#DBEAFE;color:#1E3A8A;padding:2px 8px;border-radius:5px;font-size:0.75rem;font-weight:700;">🔵 Listo para asignar</span>'
+                    row_bg  = ""
+
+                tipo_txt = "GROUP 🟡" if fv.get("estado_destino") == "RESERVA" else "FIT 🔴"
+                crm_txt  = ", ".join(fv.get("crm_cabinas", [])) or "—"
+                estado_dst_html = (
+                    '<span style="color:#92400E;font-weight:700;">🟡 RESERVA</span>'
+                    if fv.get("estado_destino") == "RESERVA"
+                    else '<span style="color:#991B1B;font-weight:700;">🔴 VENDIDA</span>'
+                )
 
                 t += f'<tr{row_bg}>'
-                t += f'<td style="font-family:monospace;font-size:0.78rem;">{hoja}</td>'
-                t += f'<td style="font-weight:700;text-align:left;">{ag}</td>'
-                t += f'<td style="font-family:monospace;font-size:0.78rem;">{loc}</td>'
-                t += f'<td style="font-weight:700;color:#1E3A8A;">{cab_crm}</td>'
-                t += f'<td style="color:#6B7280;">{cab_fit}</td>'
-                t += f'<td>{pax}</td>'
+                t += f'<td style="font-family:monospace;font-size:0.78rem;">{fv["hoja"]}</td>'
+                t += f'<td style="font-weight:700;text-align:left;">{fv["agencia"]}</td>'
+                t += f'<td style="font-family:monospace;font-size:0.78rem;">{fv["loc"]}</td>'
+                t += f'<td style="font-size:0.78rem;">{tipo_txt}</td>'
+                t += f'<td style="text-align:left;font-size:0.78rem;">{fv["descripcion_origen"]}</td>'
+                t += f'<td style="font-weight:700;color:#1E3A8A;">{crm_txt}</td>'
+                t += f'<td>{estado_dst_html}</td>'
                 t += f'<td>{badge}</td>'
-                t += f'<td style="font-size:0.78rem;color:#374151;white-space:normal;">{detalle}</td>'
                 t += '</tr>'
 
             t += '</tbody></table>'
             st.markdown(t, unsafe_allow_html=True)
 
+            # ── 4. Botones de ejecución ───────────────────────────────────────
             st.markdown("---")
             st.markdown(
-                "#### 🚀 Acciones previstas "
-                "<span class='section-en'>Planned actions</span>",
+                "#### ⚡ Ejecutar sincronización "
+                "<span class='section-en'>Run synchronisation</span>",
                 unsafe_allow_html=True
             )
-            st.markdown("""
-            <div style="background:#F3F4F6;border-radius:8px;padding:0.8rem 1rem;
-                        font-size:0.82rem;color:#6B7280;margin-bottom:0.8rem;">
-                ⏳ Cuando se active, el sistema pegará automáticamente solo las filas
-                marcadas como <strong>✅ Lista para pegar</strong>.
-                Las filas con conflicto quedarán para revisión manual.<br>
-                <em>/ When activated, only rows marked ✅ will be auto-filled.
-                Conflicting rows will require manual review.</em>
-            </div>
-            """, unsafe_allow_html=True)
 
-            col_b1, col_b2, _ = st.columns([1, 1, 2])
-            with col_b1:
-                st.button("🔗 Pegar cabinas OK / *Paste clean cabins*",
-                          disabled=True, key="btn_pegar_sync")
-            with col_b2:
-                st.button("📥 Exportar informe / *Export report*",
-                          disabled=True, key="btn_export_sync")
+            pendientes = [fv for fv in filas_valoracion
+                          if fv.get("sync_status") == "pendiente" and not fv.get("alerta")]
+            n_pendientes = len(pendientes)
+            n_total      = len(filas_valoracion)
 
+            col_info, col_btn = st.columns([3, 1])
+            with col_info:
+                st.markdown(
+                    f"**{n_pendientes}** de **{n_total}** confirmaciones listas para asignar. "
+                    f"<span class='en-inline'>/ {n_pendientes} of {n_total} confirmations ready to assign.</span>",
+                    unsafe_allow_html=True
+                )
+            with col_btn:
+                ejecutar_todo = st.button(
+                    f"🚀 Asignar todas ({n_pendientes}) / *Assign all*",
+                    disabled=(n_pendientes == 0),
+                    key="btn_sync_all"
+                )
+
+            st.markdown(
+                "O procesa una a una: "
+                "<span class='en-inline'>/ Or process one by one:</span>",
+                unsafe_allow_html=True
+            )
+
+            ejecutar_individual = {}
+            for fv in filas_valoracion:
+                if fv.get("sync_status") == "pendiente" and not fv.get("alerta"):
+                    col_label, col_boton = st.columns([4, 1])
+                    with col_label:
+                        st.markdown(
+                            f"📄 **{fv['hoja']}** — {fv['agencia']} — `{fv['loc']}` — {fv['descripcion_origen']}"
+                        )
+                    with col_boton:
+                        ejecutar_individual[fv["hoja"]] = st.button(
+                            "▶ Asignar",
+                            key=f"btn_sync_{fv['hoja']}"
+                        )
+
+            # ── 5. Lógica de ejecución ────────────────────────────────────────
+
+            def _asignar_confirmacion(fv: dict, datos_crm: list) -> dict:
+                svc_sheets = getsheetsservice()
+                agencia    = fv["agencia"]
+                loc        = fv["loc"]
+                estado_dst = fv["estado_destino"]
+                tipo       = fv["tipo_asignacion"]
+                cab_g56    = fv.get("cab_g56", "")
+                q24_raw    = fv.get("q24_raw", "")
+                es_dsu     = fv.get("es_dsu", False)
+
+                cabinas_asignadas = []
+                errores   = []
+                warnings  = []
+
+                # Caso A: G56 tiene cabina(s)
+                if tipo == "g56":
+                    numeros_g56 = re.findall(r'\d+', cab_g56)
+                    if len(numeros_g56) > 1:
+                        warnings.append(
+                            f"G56 contiene {len(numeros_g56)} cabinas ({cab_g56}). "
+                            f"Solo se asignará la primera; el resto deben hacerse manualmente."
+                        )
+                    num_cab = numeros_g56[0] if numeros_g56 else None
+                    if not num_cab:
+                        errores.append("No se pudo extraer número de cabina de G56.")
+                        return {"ok": False, "cabinas_asignadas": [], "errores": errores, "warnings": warnings}
+
+                    rowindex = next((i for i, d in enumerate(datos_crm) if d.get("cabina") == num_cab), None)
+                    if rowindex is None:
+                        errores.append(f"Cabina {num_cab} de G56 no existe en CRM.")
+                        return {"ok": False, "cabinas_asignadas": [], "errores": errores, "warnings": warnings}
+
+                    d_crm = datos_crm[rowindex]
+                    if d_crm.get("agencia", "").strip():
+                        warnings.append(
+                            f"Cabina {num_cab} ya tiene agencia '{d_crm['agencia']}' en CRM — no se sobreescribe."
+                        )
+                    else:
+                        guardarcabina(ddmm_sel, rowindex, agencia, "", loc, "", estado_dst)
+                        cabinas_asignadas.append(num_cab)
+
+                    for extra in numeros_g56[1:]:
+                        warnings.append(f"⚠️ Cabina adicional en G56: **{extra}** — asignación manual necesaria.")
+
+                # Caso B: sin G56, usar Q24
+                elif tipo == "q24":
+                    cab_por_cat = _cabinas_por_categoria_fit(q24_raw, es_dsu)
+                    todas_asignadas_en_vuelta = []
+                    for item in cab_por_cat:
+                        cat        = item["cat"]
+                        n_cab      = item["n_cab"]
+                        n_pax_item = item["n_pax"]
+                        libres     = _cabinas_libres_de_categoria(cat, datos_crm)
+                        # Excluir las ya asignadas en esta misma ejecución
+                        libres = [c for c in libres if c not in todas_asignadas_en_vuelta]
+                        if len(libres) < n_cab:
+                            errores.append(
+                                f"Categoría {cat}: se necesitan {n_cab} cabinas libres, "
+                                f"solo hay {len(libres)}."
+                            )
+                            continue
+                        asignadas_cat  = libres[:n_cab]
+                        pax_por_cab    = max(1, round(n_pax_item / n_cab)) if n_pax_item else ""
+                        for cab_num in asignadas_cat:
+                            rowindex = next((i for i, d in enumerate(datos_crm) if d.get("cabina") == cab_num), None)
+                            if rowindex is None:
+                                errores.append(f"No se encontró fila CRM para cabina {cab_num}.")
+                                continue
+                            guardarcabina(ddmm_sel, rowindex, agencia, pax_por_cab, loc, "", estado_dst)
+                            cabinas_asignadas.append(cab_num)
+                            todas_asignadas_en_vuelta.append(cab_num)
+                            # Actualiza snapshot local
+                            datos_crm[rowindex]["agencia"]     = agencia
+                            datos_crm[rowindex]["estado"]      = estado_dst
+                            datos_crm[rowindex]["localizador"] = loc
+
+                    # Escribir cabinas asignadas en G56 del FIT
+                    if cabinas_asignadas:
+                        cabinas_str = " + ".join(cabinas_asignadas)
+                        try:
+                            svc_sheets.spreadsheets().values().update(
+                                spreadsheetId=archivo_conf_id,
+                                range=f"'{fv['hoja']}'!G56",
+                                valueInputOption="RAW",
+                                body={"values": [[cabinas_str]]}
+                            ).execute()
+                        except Exception as e_write:
+                            warnings.append(f"No se pudo escribir G56 en FIT: {str(e_write)}")
+
+                else:
+                    errores.append("Sin datos de cabinas (G56 vacío y Q24 vacío).")
+
+                ok = len(cabinas_asignadas) > 0 and not errores
+                return {"ok": ok, "cabinas_asignadas": cabinas_asignadas,
+                        "errores": errores, "warnings": warnings}
+
+            # ── Determinar qué ejecutar ───────────────────────────────────────
+            hojas_a_ejecutar = []
+            if ejecutar_todo:
+                hojas_a_ejecutar = [fv["hoja"] for fv in filas_valoracion
+                                    if fv.get("sync_status") == "pendiente" and not fv.get("alerta")]
+            else:
+                for hoja_key, clicked in ejecutar_individual.items():
+                    if clicked:
+                        hojas_a_ejecutar.append(hoja_key)
+
+            if hojas_a_ejecutar:
+                st.markdown("---")
+                st.markdown(
+                    "#### 📋 Informe de ejecución "
+                    "<span class='section-en'>Execution report</span>",
+                    unsafe_allow_html=True
+                )
+
+                st.cache_data.clear()
+                datos_crm_exec = getdatossalida(ddmm_sel)
+                resultados_ejecucion = []
+
+                for hoja_exec in hojas_a_ejecutar:
+                    fv_exec = next((fv for fv in filas_valoracion if fv["hoja"] == hoja_exec), None)
+                    if not fv_exec:
+                        continue
+                    with st.spinner(f"Procesando {hoja_exec}… / *Processing {hoja_exec}…*"):
+                        res = _asignar_confirmacion(fv_exec, datos_crm_exec)
+                    resultados_ejecucion.append({**fv_exec, **res})
+
+                t2 = '<table class="informe-tabla"><thead><tr>'
+                t2 += th("Hoja", "Sheet")
+                t2 += th("Agencia", "Agency")
+                t2 += th("Localizador", "Ref")
+                t2 += th("Cabinas asignadas", "Assigned cabins")
+                t2 += th("Estado", "Status")
+                t2 += th("Avisos / Errores", "Warnings / Errors")
+                t2 += '</tr></thead><tbody>'
+
+                for r in resultados_ejecucion:
+                    cab_txt   = ", ".join(r.get("cabinas_asignadas", [])) or "—"
+                    errores_r = r.get("errores", [])
+                    warnings_r = r.get("warnings", [])
+                    if r.get("ok"):
+                        badge2  = '<span style="background:#D1FAE5;color:#065F46;padding:2px 8px;border-radius:5px;font-size:0.75rem;font-weight:700;">✅ Asignado</span>'
+                        row_bg2 = ' style="background:#F0FDF4;"'
+                    elif errores_r:
+                        badge2  = '<span style="background:#FEE2E2;color:#991B1B;padding:2px 8px;border-radius:5px;font-size:0.75rem;font-weight:700;">❌ Error</span>'
+                        row_bg2 = ' style="background:#FEF2F2;"'
+                    else:
+                        badge2  = '<span style="background:#FEF3C7;color:#92400E;padding:2px 8px;border-radius:5px;font-size:0.75rem;font-weight:700;">⚠️ Parcial</span>'
+                        row_bg2 = ' style="background:#FFFBEB;"'
+
+                    msgs = []
+                    for e in errores_r:
+                        msgs.append(f'<span style="color:#991B1B;">❌ {e}</span>')
+                    for w in warnings_r:
+                        msgs.append(f'<span style="color:#92400E;">⚠️ {w}</span>')
+                    msgs_html = "<br>".join(msgs) if msgs else "—"
+
+                    t2 += f'<tr{row_bg2}>'
+                    t2 += f'<td style="font-family:monospace;font-size:0.78rem;">{r["hoja"]}</td>'
+                    t2 += f'<td style="font-weight:700;text-align:left;">{r["agencia"]}</td>'
+                    t2 += f'<td style="font-family:monospace;font-size:0.78rem;">{r["loc"]}</td>'
+                    t2 += f'<td style="font-weight:700;color:#1E3A8A;">{cab_txt}</td>'
+                    t2 += f'<td>{badge2}</td>'
+                    t2 += f'<td style="text-align:left;font-size:0.78rem;">{msgs_html}</td>'
+                    t2 += '</tr>'
+
+                t2 += '</tbody></table>'
+                st.markdown(t2, unsafe_allow_html=True)
+
+                st.cache_data.clear()
+                st.success(
+                    "✅ Sincronización completada. / *Synchronisation complete.* "
+                    "Recarga la página para ver el CRM actualizado."
+                )
 
 #### BLOQUE 23: PIE DE PÁGINA
 st.markdown("---")
