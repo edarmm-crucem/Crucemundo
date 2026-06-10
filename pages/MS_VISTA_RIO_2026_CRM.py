@@ -111,7 +111,7 @@ def extraer_datos_archivo_conf(spreadsheet_id):
                 continue
             g11 = vr[2].get("values", [])
             loc_raw = g11[0][0].strip() if g11 and g11[0] else ""
-            loc = "".join(re.findall(r'\d+$', loc_raw)) or loc_raw
+            loc = loc_raw
             if loc:
                 datos[agencia_cod]["localizadores"].add(loc)
             if agencia_cod == "CONF":
@@ -1170,9 +1170,8 @@ else:
 
             # Render tabla valoración
             t = '<table class="informe-tabla"><thead><tr>'
-            t += th("Hoja", "Sheet")
+            t += th("Hoja / Localizador", "Sheet / Ref")
             t += th("Agencia", "Agency")
-            t += th("Localizador", "Ref")
             t += th("Tipo", "Type")
             t += th("Cabinas solicitadas (FIT)", "Requested cabins (FIT)")
             t += th("CRM actual", "Current CRM")
@@ -1206,9 +1205,11 @@ else:
                 )
 
                 t += f'<tr{row_bg}>'
-                t += f'<td style="font-family:monospace;font-size:0.78rem;">{fv["hoja"]}</td>'
+                t += (f'<td style="font-family:monospace;font-size:0.78rem;text-align:left;">'
+                      f'{fv["hoja"]}<br>'
+                      f'<span style="color:#6B7280;font-size:0.72rem;">{fv["loc"]}</span>'
+                      f'</td>')
                 t += f'<td style="font-weight:700;text-align:left;">{fv["agencia"]}</td>'
-                t += f'<td style="font-family:monospace;font-size:0.78rem;">{fv["loc"]}</td>'
                 t += f'<td style="font-size:0.78rem;">{tipo_txt}</td>'
                 t += f'<td style="text-align:left;font-size:0.78rem;">{fv["descripcion_origen"]}</td>'
                 t += f'<td style="font-weight:700;color:#1E3A8A;">{crm_txt}</td>'
@@ -1395,9 +1396,8 @@ else:
                     resultados_ejecucion.append({**fv_exec, **res})
 
                 t2 = '<table class="informe-tabla"><thead><tr>'
-                t2 += th("Hoja", "Sheet")
+                t2 += th("Hoja / Localizador", "Sheet / Ref")
                 t2 += th("Agencia", "Agency")
-                t2 += th("Localizador", "Ref")
                 t2 += th("Cabinas asignadas", "Assigned cabins")
                 t2 += th("Estado", "Status")
                 t2 += th("Avisos / Errores", "Warnings / Errors")
@@ -1425,9 +1425,11 @@ else:
                     msgs_html = "<br>".join(msgs) if msgs else "—"
 
                     t2 += f'<tr{row_bg2}>'
-                    t2 += f'<td style="font-family:monospace;font-size:0.78rem;">{r["hoja"]}</td>'
+                    t2 += (f'<td style="font-family:monospace;font-size:0.78rem;text-align:left;">'
+                           f'{r["hoja"]}<br>'
+                           f'<span style="color:#6B7280;font-size:0.72rem;">{r["loc"]}</span>'
+                           f'</td>')
                     t2 += f'<td style="font-weight:700;text-align:left;">{r["agencia"]}</td>'
-                    t2 += f'<td style="font-family:monospace;font-size:0.78rem;">{r["loc"]}</td>'
                     t2 += f'<td style="font-weight:700;color:#1E3A8A;">{cab_txt}</td>'
                     t2 += f'<td>{badge2}</td>'
                     t2 += f'<td style="text-align:left;font-size:0.78rem;">{msgs_html}</td>'
