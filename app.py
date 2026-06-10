@@ -69,6 +69,7 @@ AGENCYFIELDS = [
     "COMISION AGENCIA OFERTA 2X1 ",
     "IVA",
     "IVA SERVICIO OPCIONAL",
+    "NIF",
 ]
 
 CLIENTFIELDS = ["Nombre", "Apellidos", "Documento", "Region", "Localizador"]
@@ -2071,6 +2072,9 @@ if st.session_state.get("opennuevaagenciaform"):
             agemail = st.text_input("Email", key="agemail")
         with rowc2:
             agdireccion = st.text_input("Direccion", key="agdireccion")
+        rowd_nif1, rowd_nif2 = st.columns(2, gap="medium")
+        with rowd_nif1:
+            agnif = st.text_input("NIF", key="agnif")
         st.markdown("#### Comisiones e IVA")
         rowd1, rowd2, rowd3 = st.columns(3, gap="medium")
         with rowd1:
@@ -2100,6 +2104,7 @@ if st.session_state.get("opennuevaagenciaform"):
                     "COMISION AGENCIA OFERTA 2X1 ": percenttosheetdecimal(agcomision2x1),
                     "IVA": percenttosheetdecimal(agiva),
                     "IVA SERVICIO OPCIONAL": percenttosheetdecimal(agivaservicioopcional),
+                    "NIF": agnif.strip(),
                 }
                 try:
                     appendagencyrow(agencydata)
