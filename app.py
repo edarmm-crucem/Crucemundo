@@ -1648,10 +1648,11 @@ st.markdown(
 chip_col, crm_col1, crm_col2 = st.columns([0.25, 1, 1], gap="small")
 
 with chip_col:
-    st.markdown(
-        '<span class="web-chip-blue">CRM</span>',
-        unsafe_allow_html=True
-    )
+    st.markdown("""
+    <div style="margin-top:-6px;">
+        <span class="web-chip-blue">CRM</span>
+    </div>
+    """, unsafe_allow_html=True)
 
 with crm_col1:
     if st.button("MS Vista Rio 2026 CRM", key="crm_nav", use_container_width=True):
