@@ -1356,7 +1356,7 @@ else:
                     key = _normalizar_loc(loc_crm)
                     crm_por_loc.setdefault(key, []).append(d)
 
-for hf in hojas_fit:
+            for hf in hojas_fit:
                 hoja       = hf["hoja"]
                 agencia    = hf["agencia"]
                 loc        = hf["localizador"]
