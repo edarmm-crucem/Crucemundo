@@ -791,7 +791,6 @@ else:
                 "</div>"
             )
             c1.markdown(html_semaforo, unsafe_allow_html=True)
-La barra naranja oscura es vendidas, la amarilla clara es reservas. Cuando reservas supera el 100% la barra se queda al tope visual pero aparece el aviso ⚠️ Reservas >100% en texto debajo.
             c2.metric("🟡 Reservas / On Hold", f"{cab_reservas}", f"{pct_res}% del total / of total")
             c3.metric("⬜ Libres / Free",      f"{cab_libres}")
             c4.metric("👥 Pax SOLD",           f"{total_pax}", f"{pct_pax}% cap. máx / max cap" if cap_max else "")
