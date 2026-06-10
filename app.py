@@ -1611,8 +1611,7 @@ st.markdown(
     f'''
     <div class="section-head-row-green">
         <span class="web-chip-blue">ENLACES INTERNOS</span>
-        <a class="web-chip-green" href="{driverooturl}" target="_blank" rel="noopener noreferrer">📁 Drive Root</a>
-        #<a class="web-chip-green" href="{groupsrooturl}" target="_blank" rel="noopener noreferrer">📁 Drive Groups</a>
+        <a class="web-chip-green" href="{driverooturl}" target="_blank" rel="noopener noreferrer">📁 Drive Root</a>        
         <a class="web-chip-green" href="{cvcfitfolderurl}" target="_blank" rel="noopener noreferrer">📁 Folder Sesiones</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-TnE3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊MASTER Cabinas</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊Excursiones</a>
