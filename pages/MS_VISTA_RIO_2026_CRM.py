@@ -1102,11 +1102,19 @@ else:
             filas_valoracion = []
             datos_crm_live = getdatossalida(ddmm_sel)
 
+            def _normalizar_loc(loc: str) -> str:
+                """Extrae la parte final tras el último guión, quitando ceros a la izquierda."""
+                loc = loc.strip()
+                if "-" in loc:
+                    loc = loc.rsplit("-", 1)[-1]
+                return loc.lstrip("0") or loc  # evita que "000" quede vacío
+            
             crm_por_loc = {}
             for d in datos_crm_live:
                 loc_crm = d.get("localizador", "").strip()
                 if loc_crm:
-                    crm_por_loc.setdefault(loc_crm, []).append(d)
+                    key = _normalizar_loc(loc_crm)
+                    crm_por_loc.setdefault(key, []).append(d)
 
             for hf in hojas_fit:
                 hoja       = hf["hoja"]
@@ -1118,7 +1126,7 @@ else:
                 es_group   = _es_group(loc)
                 estado_destino = "RESERVA" if es_group else "VENDIDA"
 
-                crm_entries = crm_por_loc.get(loc, [])
+                crm_entries = crm_por_loc.get(_normalizar_loc(loc), [])
                 crm_cabinas = [e["cabina"] for e in crm_entries]
 
                 if cab_g56:
