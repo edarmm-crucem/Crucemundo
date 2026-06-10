@@ -1043,7 +1043,8 @@ else:
                     placeholder="Selecciona una o varias…"
                 )
             with col2:
-                rango = st.text_input("O rango / *Or range*", placeholder="101-105")
+                # DESPUÉS
+                rango = st.text_input("O rango / *Or range*", placeholder="101-105", key="rango_map")
                 if rango and "-" in rango:
                     try:
                         ini, fin = rango.split("-")
@@ -1181,9 +1182,10 @@ else:
             col1, col2 = st.columns([2, 1])
             with col1:
                 cabinas_sel = st.multiselect(
-                    "Cabinas / *Cabins*",
-                    todas_cabinas_ord,
-                    placeholder="Selecciona una o varias…"
+                "Cabinas / *Cabins*",
+                todas_cabinas_ord,
+                placeholder="Selecciona una o varias…",
+                key="cabinas_sel_map"
                 )
             with col2:
                 rango = st.text_input("O rango / *Or range*", placeholder="101-105")
