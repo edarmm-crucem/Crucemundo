@@ -968,20 +968,20 @@ else:
                     ags_lst = split_pipe(ag_raw)
                     n_ags   = len([a for a in ags_lst if a])
 
+                    if est == "VENDIDA":
+                        border_css = "border-color:#1F2937;border-width:3px;border-style:solid;"
+                    elif est == "RESERVA":
+                        border_css = "border-color:#1F2937;border-width:3px;border-style:dashed;"
+                    else:
+                        border_css = "border-color:#D1D5DB;border-width:2px;border-style:solid;"
+
                     if n_ags == 0:
                         bg_css    = "#F3F4F6"
                         textcolor = "#9CA3AF"
-                        border_css = "border-color:#D1D5DB;border-width:2px;border-style:solid;"
                         sublabel  = ""
                     elif n_ags == 1:
                         bg_css    = agencias.get(ags_lst[0], "#F3F4F6")
                         textcolor = "#1F2937"
-                        if est == "VENDIDA":
-                            border_css = "border-color:#1F2937;border-width:3px;border-style:solid;"
-                        elif est == "RESERVA":
-                            border_css = "border-color:#F59E0B;border-width:3px;border-style:dashed;"
-                        else:
-                            border_css = "border-color:#D1D5DB;border-width:2px;border-style:solid;"
                         pax_lst = split_pipe(pax_raw)
                         pax_txt = f" ({pax_lst[0]}p)" if pax_lst and pax_lst[0].isdigit() and int(pax_lst[0]) > 0 else ""
                         sublabel = f"{ags_lst[0]}{pax_txt}"
@@ -989,7 +989,6 @@ else:
                         ags_validas = [a for a in ags_lst if a]
                         bg_css     = color_cabina_html(agencias, ags_validas)
                         textcolor  = "#1F2937"
-                        border_css = "border-color:#6366F1;border-width:3px;border-style:solid;"
                         sublabel   = "+".join(ags_validas[:4])
 
                     return (
