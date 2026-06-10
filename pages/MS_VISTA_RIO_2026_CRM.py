@@ -1529,7 +1529,7 @@ else:
 
             # ── 5. Lógica de ejecución ────────────────────────────────────────
 
-           def _asignar_confirmacion(fv: dict, datos_crm: list) -> dict:
+            def _asignar_confirmacion(fv: dict, datos_crm: list) -> dict:
                 svc_sheets = getsheetsservice()
                 agencia    = fv["agencia"]
                 loc        = fv["loc"]
