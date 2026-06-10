@@ -126,7 +126,7 @@ def quitar_agencia_de_cabina(datos_cabina: dict, ag_borrar: str) -> tuple:
         join_pipe(paxs_n),
         join_pipe(locs_n),
         join_pipe(notas_n),
-    )
+        )
 
 def color_cabina_html(agencias_dict: dict, ags_lista: list) -> str:
     """
