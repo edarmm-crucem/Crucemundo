@@ -777,21 +777,20 @@ else:
             barra_sold = min(pct_cab, 100)
             barra_res = min(pct_res, 100)
             c1.metric("🔴 Vendidas / Sold", f"{cab_vendidas}", f"{pct_cab}% del total / of total")
-            html_semaforo = (
-                "<div style='margin-top:0.3rem;'>"
-                "<div style='font-size:0.72rem;font-weight:700;color:#92400E;margin-bottom:3px;'>"
-                "🟡 Reservas: " + str(cab_reservas) + " (" + str(pct_res) + "%)</div>"
-                "<div style='background:#E5E7EB;border-radius:4px;height:8px;width:100%;margin-bottom:4px;'>"
-                "<div style='background:#EF4444;width:" + str(barra_sold) + "%;height:8px;border-radius:4px;'></div>"
-                "</div>"
-                "<div style='background:#E5E7EB;border-radius:4px;height:8px;width:100%;'>"
-                "<div style='background:#F59E0B;width:" + str(barra_res) + "%;height:8px;border-radius:4px;'></div>"
-                "</div>"
-                "<div style='font-size:0.65rem;color:#B45309;margin-top:3px;font-style:italic;'>" + alerta_res + "</div>"
-                "</div>"
-            )
-            c1.markdown(html_semaforo, unsafe_allow_html=True)
+            partes_sold = []
+            partes_sold.append("<div style=\"margin-top:0.3rem;\">")
+            partes_sold.append("<div style=\"background:#E5E7EB;border-radius:4px;height:8px;width:100%;\">")
+            partes_sold.append("<div style=\"background:#EF4444;width:" + str(barra_sold) + "%;height:8px;border-radius:4px;\"></div></div>")
+            partes_sold.append("</div>")
+            c1.markdown("".join(partes_sold), unsafe_allow_html=True)
             c2.metric("🟡 Reservas / On Hold", f"{cab_reservas}", f"{pct_res}% del total / of total")
+            partes_res = []
+            partes_res.append("<div style=\"margin-top:0.3rem;\">")
+            partes_res.append("<div style=\"background:#E5E7EB;border-radius:4px;height:8px;width:100%;\">")
+            partes_res.append("<div style=\"background:#F59E0B;width:" + str(barra_res) + "%;height:8px;border-radius:4px;\"></div></div>")
+            partes_res.append("<div style=\"font-size:0.65rem;color:#B45309;margin-top:3px;\">" + alerta_res + "</div>")
+            partes_res.append("</div>")
+            c2.markdown("".join(partes_res), unsafe_allow_html=True)
             c3.metric("⬜ Libres / Free",      f"{cab_libres}")
             c4.metric("👥 Pax SOLD",           f"{total_pax}", f"{pct_pax}% cap. máx / max cap" if cap_max else "")
             st.markdown("---")
