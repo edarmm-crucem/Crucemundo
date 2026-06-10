@@ -1059,7 +1059,7 @@ else:
 
                         agencia    = cv(1)
                         loc_raw    = cv(2)
-                        loc        = "".join(re.findall(r'\d+$', loc_raw)) or loc_raw
+                        loc         = loc_raw
                         cabina_g56 = cv(3).strip()
                         q24_raw    = vr[4].get("values", [[""]])[0][0].strip() if len(vr) > 4 and vr[4].get("values") else ""
                         g24_raw    = cv(5).upper()
