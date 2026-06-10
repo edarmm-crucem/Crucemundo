@@ -1238,13 +1238,11 @@ else:
 
             # ── 2. Leer todas las hojas relevantes del FIT ────────────────────
             @st.cache_data(ttl=30)
+            @st.cache_data(ttl=30)
             def _leer_hojas_fit(spreadsheet_id: str) -> list:
-                """
-                Por cada hoja que tenga BOOKING o PROFORMA en B2 extrae:
-                hoja, agencia(P5), localizador(G11), cabina_g56(G56),
-                q24_raw(Q24), g24_raw(G24 primer valor)
-                """
                 svc = getsheetsservice()
+                CAT_MAP = {"PRINCIPAL": "MAIN", "INTERMEDIA": "MID", "SUPERIOR": "UPP"}
+                COLS_GROUP = ["G", "K", "N", "O"]
                 try:
                     meta = svc.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
                     hojas = [s["properties"]["title"] for s in meta.get("sheets", [])]
@@ -1257,12 +1255,17 @@ else:
                         vr = svc.spreadsheets().values().batchGet(
                             spreadsheetId=spreadsheet_id,
                             ranges=[
-                                f"'{hoja}'!B2",       # 0 tipo doc
-                                f"'{hoja}'!P5",       # 1 agencia
-                                f"'{hoja}'!G11",      # 2 localizador
-                                f"'{hoja}'!G56",      # 3 cabina asignada en FIT
-                                f"'{hoja}'!Q24",      # 4 lista pax/categoría
-                                f"'{hoja}'!G24",      # 5 primer campo pax (para DSU)
+                                f"'{hoja}'!B2",   # 0 tipo doc
+                                f"'{hoja}'!P5",   # 1 agencia
+                                f"'{hoja}'!G11",  # 2 localizador
+                                f"'{hoja}'!G56",  # 3 cabina asignada
+                                f"'{hoja}'!Q24",  # 4 lista pax/categoría (FIT)
+                                f"'{hoja}'!G24",  # 5 primer campo pax DSU (FIT)
+                                # GROUP filas 20/21/22 por columna
+                                f"'{hoja}'!G20", f"'{hoja}'!G21", f"'{hoja}'!G22",  # 6,7,8
+                                f"'{hoja}'!K20", f"'{hoja}'!K21", f"'{hoja}'!K22",  # 9,10,11
+                                f"'{hoja}'!N20", f"'{hoja}'!N21", f"'{hoja}'!N22",  # 12,13,14
+                                f"'{hoja}'!O20", f"'{hoja}'!O21", f"'{hoja}'!O22",  # 15,16,17
                             ]
                         ).execute().get("valueRanges", [])
 
@@ -1274,25 +1277,45 @@ else:
                         if not any(k in b2 for k in ["BOOKING", "PROFORMA"]):
                             continue
 
-                        agencia    = cv(1)
-                        loc_raw    = cv(2)
-                        loc         = loc_raw
-                        cabina_g56 = cv(3).strip()
-                        q24_raw    = vr[4].get("values", [[""]])[0][0].strip() if len(vr) > 4 and vr[4].get("values") else ""
-                        g24_raw    = cv(5).upper()
+                        loc      = cv(2)
+                        es_group = loc.upper().endswith("GROUP")
+                        cab_g56  = cv(3)
+
+                        # Construir preview GROUP desde filas 20-22
+                        group_preview = []
+                        group_cats    = []   # lista de {cat, n_cab, n_pax} para ejecución
+                        if es_group:
+                            for i, col in enumerate(COLS_GROUP):
+                                base    = 6 + i * 3
+                                raw_cab = cv(base)
+                                raw_cat = cv(base + 1).upper()
+                                raw_pax = cv(base + 2)
+                                if not raw_cab or not raw_cat:
+                                    continue
+                                m_cab = re.match(r"(\d+)", raw_cab)
+                                m_pax = re.match(r"(\d+)", raw_pax) if raw_pax else None
+                                if not m_cab:
+                                    continue
+                                cat   = CAT_MAP.get(raw_cat, raw_cat)
+                                n_cab = int(m_cab.group(1))
+                                n_pax = int(m_pax.group(1)) if m_pax else 0
+                                group_preview.append(f"{n_cab} cab × {cat} ({n_pax} pax)")
+                                group_cats.append({"cat": cat, "n_cab": n_cab, "n_pax": n_pax})
 
                         resultado.append({
-                            "hoja":        hoja,
-                            "agencia":     agencia,
-                            "localizador": loc,
-                            "cabina_g56":  cabina_g56,
-                            "q24_raw":     q24_raw,
-                            "es_dsu":      "DSU" in g24_raw,
+                            "hoja":          hoja,
+                            "agencia":       cv(1),
+                            "localizador":   loc,
+                            "cabina_g56":    cab_g56,
+                            "q24_raw":       vr[4].get("values", [[""]])[0][0].strip() if len(vr) > 4 and vr[4].get("values") else "",
+                            "es_dsu":        "DSU" in cv(5).upper(),
+                            "es_group":      es_group,
+                            "group_preview": group_preview,
+                            "group_cats":    group_cats,
                         })
                     except Exception:
                         continue
                 return resultado
-
             hojas_fit = _leer_hojas_fit(archivo_conf_id)
 
             if not hojas_fit:
@@ -1333,26 +1356,35 @@ else:
                     key = _normalizar_loc(loc_crm)
                     crm_por_loc.setdefault(key, []).append(d)
 
-            for hf in hojas_fit:
+for hf in hojas_fit:
                 hoja       = hf["hoja"]
                 agencia    = hf["agencia"]
                 loc        = hf["localizador"]
                 cab_g56    = hf["cabina_g56"]
                 q24_raw    = hf["q24_raw"]
                 es_dsu     = hf["es_dsu"]
-                es_group   = _es_group(loc)
+                es_group   = hf.get("es_group", False)
                 estado_destino = "RESERVA" if es_group else "VENDIDA"
 
                 crm_entries = crm_por_loc.get(_normalizar_loc(loc), [])
                 crm_cabinas = [e["cabina"] for e in crm_entries]
 
-                if cab_g56:
+                # ── Descripción origen ─────────────────────────────────────
+                if es_group:
+                    preview_parts = hf.get("group_preview", [])
+                    desc_cabinas  = ", ".join(preview_parts) if preview_parts else "⚠️ Sin datos en filas 20-22"
+                    g56_txt       = f" · G56: {cab_g56}" if cab_g56 else " · G56: —"
+                    descripcion_origen  = f"{desc_cabinas}{g56_txt}"
+                    tipo_asignacion     = "group"
+                    cabinas_solicitadas = hf.get("group_cats", [])
+
+                elif cab_g56:
                     numeros_g56 = re.findall(r'\d+', cab_g56)
-                    n_cabinas_fit = len(numeros_g56)
-                    descripcion_origen = f"G56: cabina(s) **{cab_g56}**"
-                    cabinas_solicitadas = [{"cat": None, "n_cab": n_cabinas_fit,
+                    descripcion_origen  = f"G56: cabina(s) {cab_g56}"
+                    cabinas_solicitadas = [{"cat": None, "n_cab": len(numeros_g56),
                                             "n_pax": None, "numeros": numeros_g56}]
-                    tipo_asignacion = "g56"
+                    tipo_asignacion     = "g56"
+
                 else:
                     if not q24_raw:
                         filas_valoracion.append({
@@ -1367,11 +1399,12 @@ else:
                         continue
                     cab_por_cat = _cabinas_por_categoria_fit(q24_raw, es_dsu)
                     dsu_txt = " (DSU: 1 cab/pax)" if es_dsu else ""
-                    partes = ", ".join(f"{x['n_cab']} cab × {x['cat']} ({x['n_pax']} pax)" for x in cab_por_cat)
-                    descripcion_origen = f"Q24{dsu_txt}: {partes}"
+                    partes  = ", ".join(f"{x['n_cab']} cab × {x['cat']} ({x['n_pax']} pax)" for x in cab_por_cat)
+                    descripcion_origen  = f"Q24{dsu_txt}: {partes}"
                     cabinas_solicitadas = cab_por_cat
-                    tipo_asignacion = "q24"
+                    tipo_asignacion     = "q24"
 
+                # ── Estado sync ────────────────────────────────────────────
                 if crm_cabinas and cab_g56 and any(c in crm_cabinas for c in re.findall(r'\d+', cab_g56)):
                     sync_status = "sincronizado"
                 elif crm_cabinas:
@@ -1389,6 +1422,8 @@ else:
                     "cab_g56": cab_g56,
                     "q24_raw": q24_raw,
                     "es_dsu": es_dsu,
+                    "es_group": es_group,
+                    "group_cats": hf.get("group_cats", []),
                     "sync_status": sync_status,
                     "alerta": "",
                 })
@@ -1494,7 +1529,7 @@ else:
 
             # ── 5. Lógica de ejecución ────────────────────────────────────────
 
-            def _asignar_confirmacion(fv: dict, datos_crm: list) -> dict:
+           def _asignar_confirmacion(fv: dict, datos_crm: list) -> dict:
                 svc_sheets = getsheetsservice()
                 agencia    = fv["agencia"]
                 loc        = fv["loc"]
@@ -1503,12 +1538,56 @@ else:
                 cab_g56    = fv.get("cab_g56", "")
                 q24_raw    = fv.get("q24_raw", "")
                 es_dsu     = fv.get("es_dsu", False)
+                es_group   = fv.get("es_group", False)
 
                 cabinas_asignadas = []
                 errores   = []
                 warnings  = []
 
-                # Caso A: G56 tiene cabina(s)
+                # ── CASO GROUP ────────────────────────────────────────────────
+                if es_group:
+                    cab_por_cat = fv.get("group_cats", [])
+                    if not cab_por_cat:
+                        errores.append("No se encontraron datos de cabinas en filas 20-22.")
+                        return {"ok": False, "cabinas_asignadas": [], "errores": errores, "warnings": warnings}
+
+                    todas_asignadas_en_vuelta = []
+                    for item in cab_por_cat:
+                        cat        = item["cat"]
+                        n_cab      = item["n_cab"]
+                        n_pax_item = item["n_pax"]
+                        libres     = _cabinas_libres_de_categoria(cat, datos_crm)
+                        libres     = [c for c in libres if c not in todas_asignadas_en_vuelta]
+                        if len(libres) < n_cab:
+                            errores.append(
+                                f"Categoría {cat}: se necesitan {n_cab} cabinas libres, "
+                                f"solo hay {len(libres)}."
+                            )
+                            continue
+                        asignadas_cat = libres[:n_cab]
+                        pax_por_cab   = max(1, round(n_pax_item / n_cab)) if n_pax_item else ""
+                        for cab_num in asignadas_cat:
+                            rowindex = next((i for i, d in enumerate(datos_crm) if d.get("cabina") == cab_num), None)
+                            if rowindex is None:
+                                errores.append(f"No se encontró fila CRM para cabina {cab_num}.")
+                                continue
+                            d_crm = datos_crm[rowindex]
+                            estado_f, ag_f, pax_f, loc_f, nt_f = agregar_agencia_a_cabina(
+                                d_crm, agencia, pax_por_cab, loc, "", estado_dst
+                            )
+                            guardarcabina(ddmm_sel, rowindex, ag_f, pax_f, loc_f, nt_f, estado_f)
+                            cabinas_asignadas.append(cab_num)
+                            todas_asignadas_en_vuelta.append(cab_num)
+                            datos_crm[rowindex].update({"agencia": ag_f, "estado": estado_f, "localizador": loc_f})
+
+                    return {
+                        "ok": len(cabinas_asignadas) > 0 and not errores,
+                        "cabinas_asignadas": cabinas_asignadas,
+                        "errores": errores,
+                        "warnings": warnings,
+                    }
+
+                # ── CASO FIT G56 ──────────────────────────────────────────────
                 if tipo == "g56":
                     numeros_g56 = re.findall(r'\d+', cab_g56)
                     if len(numeros_g56) > 1:
@@ -1526,19 +1605,22 @@ else:
                         errores.append(f"Cabina {num_cab} de G56 no existe en CRM.")
                         return {"ok": False, "cabinas_asignadas": [], "errores": errores, "warnings": warnings}
 
-                    d_crm = datos_crm[rowindex]
-                    if d_crm.get("agencia", "").strip():
-                        warnings.append(
-                            f"Cabina {num_cab} ya tiene agencia '{d_crm['agencia']}' en CRM — no se sobreescribe."
-                        )
+                    d_crm   = datos_crm[rowindex]
+                    ags_act = [a for a in split_pipe(d_crm.get("agencia", "")) if a]
+                    if len(ags_act) >= 4 and agencia not in ags_act:
+                        warnings.append(f"Cabina {num_cab} ya tiene 4 agencias — no se añade más.")
                     else:
-                        guardarcabina(ddmm_sel, rowindex, agencia, "", loc, "", estado_dst)
+                        estado_f, ag_f, pax_f, loc_f, nt_f = agregar_agencia_a_cabina(
+                            d_crm, agencia, "", loc, "", estado_dst
+                        )
+                        guardarcabina(ddmm_sel, rowindex, ag_f, pax_f, loc_f, nt_f, estado_f)
                         cabinas_asignadas.append(num_cab)
+                        datos_crm[rowindex].update({"agencia": ag_f, "estado": estado_f, "localizador": loc_f})
 
                     for extra in numeros_g56[1:]:
-                        warnings.append(f"⚠️ Cabina adicional en G56: **{extra}** — asignación manual necesaria.")
+                        warnings.append(f"⚠️ Cabina adicional en G56: {extra} — asignación manual necesaria.")
 
-                # Caso B: sin G56, usar Q24
+                # ── CASO FIT Q24 ──────────────────────────────────────────────
                 elif tipo == "q24":
                     cab_por_cat = _cabinas_por_categoria_fit(q24_raw, es_dsu)
                     todas_asignadas_en_vuelta = []
@@ -1547,30 +1629,29 @@ else:
                         n_cab      = item["n_cab"]
                         n_pax_item = item["n_pax"]
                         libres     = _cabinas_libres_de_categoria(cat, datos_crm)
-                        # Excluir las ya asignadas en esta misma ejecución
-                        libres = [c for c in libres if c not in todas_asignadas_en_vuelta]
+                        libres     = [c for c in libres if c not in todas_asignadas_en_vuelta]
                         if len(libres) < n_cab:
                             errores.append(
                                 f"Categoría {cat}: se necesitan {n_cab} cabinas libres, "
                                 f"solo hay {len(libres)}."
                             )
                             continue
-                        asignadas_cat  = libres[:n_cab]
-                        pax_por_cab    = max(1, round(n_pax_item / n_cab)) if n_pax_item else ""
+                        asignadas_cat = libres[:n_cab]
+                        pax_por_cab   = max(1, round(n_pax_item / n_cab)) if n_pax_item else ""
                         for cab_num in asignadas_cat:
                             rowindex = next((i for i, d in enumerate(datos_crm) if d.get("cabina") == cab_num), None)
                             if rowindex is None:
                                 errores.append(f"No se encontró fila CRM para cabina {cab_num}.")
                                 continue
-                            guardarcabina(ddmm_sel, rowindex, agencia, pax_por_cab, loc, "", estado_dst)
+                            d_crm = datos_crm[rowindex]
+                            estado_f, ag_f, pax_f, loc_f, nt_f = agregar_agencia_a_cabina(
+                                d_crm, agencia, pax_por_cab, loc, "", estado_dst
+                            )
+                            guardarcabina(ddmm_sel, rowindex, ag_f, pax_f, loc_f, nt_f, estado_f)
                             cabinas_asignadas.append(cab_num)
                             todas_asignadas_en_vuelta.append(cab_num)
-                            # Actualiza snapshot local
-                            datos_crm[rowindex]["agencia"]     = agencia
-                            datos_crm[rowindex]["estado"]      = estado_dst
-                            datos_crm[rowindex]["localizador"] = loc
+                            datos_crm[rowindex].update({"agencia": ag_f, "estado": estado_f, "localizador": loc_f})
 
-                    # Escribir cabinas asignadas en G56 del FIT
                     if cabinas_asignadas:
                         cabinas_str = " / ".join(cabinas_asignadas)
                         try:
