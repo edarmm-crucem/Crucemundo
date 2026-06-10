@@ -775,22 +775,22 @@ else:
             pct_res = round(cab_reservas / total_cabinas * 100, 1) if total_cabinas else 0
             alerta_res = "⚠️ Reservas >100%" if pct_res > 100 else ""
             barra_sold = min(pct_cab, 100)
-            barra_res  = min(pct_res, 100)
+            barra_res = min(pct_res, 100)
             c1.metric("🔴 Vendidas / Sold", f"{cab_vendidas}", f"{pct_cab}% del total / of total")
-            c1.markdown(
-                f"<div style='margin-top:0.3rem;'>"
-                f"<div style='font-size:0.72rem;font-weight:700;color:#92400E;margin-bottom:3px;'>"
-                f"🟡 Reservas: {cab_reservas} ({pct_res}%)</div>"
-                f"<div style='background:#E5E7EB;border-radius:4px;height:8px;width:100%;margin-bottom:4px;'>"
-                f"<div style='background:#EF4444;width:{barra_sold}%;height:8px;border-radius:4px;'></div>"
-                f"</div>"
-                f"<div style='background:#E5E7EB;border-radius:4px;height:8px;width:100%;'>"
-                f"<div style='background:#F59E0B;width:{barra_res}%;height:8px;border-radius:4px;'></div>"
-                f"</div>"
-                f"<div style='font-size:0.65rem;color:#B45309;margin-top:3px;font-style:italic;'>{alerta_res}</div>"
-                f"</div>",
-                unsafe_allow_html=True
+            html_semaforo = (
+                "<div style='margin-top:0.3rem;'>"
+                "<div style='font-size:0.72rem;font-weight:700;color:#92400E;margin-bottom:3px;'>"
+                "🟡 Reservas: " + str(cab_reservas) + " (" + str(pct_res) + "%)</div>"
+                "<div style='background:#E5E7EB;border-radius:4px;height:8px;width:100%;margin-bottom:4px;'>"
+                "<div style='background:#EF4444;width:" + str(barra_sold) + "%;height:8px;border-radius:4px;'></div>"
+                "</div>"
+                "<div style='background:#E5E7EB;border-radius:4px;height:8px;width:100%;'>"
+                "<div style='background:#F59E0B;width:" + str(barra_res) + "%;height:8px;border-radius:4px;'></div>"
+                "</div>"
+                "<div style='font-size:0.65rem;color:#B45309;margin-top:3px;font-style:italic;'>" + alerta_res + "</div>"
+                "</div>"
             )
+            c1.markdown(html_semaforo, unsafe_allow_html=True)
 La barra naranja oscura es vendidas, la amarilla clara es reservas. Cuando reservas supera el 100% la barra se queda al tope visual pero aparece el aviso ⚠️ Reservas >100% en texto debajo.
             c2.metric("🟡 Reservas / On Hold", f"{cab_reservas}", f"{pct_res}% del total / of total")
             c3.metric("⬜ Libres / Free",      f"{cab_libres}")
