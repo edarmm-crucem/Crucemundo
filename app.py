@@ -1645,12 +1645,28 @@ st.markdown(
     ''',
     unsafe_allow_html=True,
 )
-crm_col1, crm_col2 = st.columns([1, 1], gap="small")
+chip, crm_col1, crm_col2 = st.columns([0.25, 1, 1], gap="small")
+
+with chip:
+    st.markdown("""
+    <div style="
+    background:#1976D2;
+    color:white;
+    text-align:center;
+    border-radius:20px;
+    padding:6px 0;
+    font-weight:bold;
+    ">
+    CRM
+    </div>
+    """, unsafe_allow_html=True)
+
 with crm_col1:
-    if st.button("MS Vista Rio 2026 CRM", key="crm_nav"):
+    if st.button("MS Vista Rio 2026 CRM", key="crm_nav", use_container_width=True):
         st.switch_page("pages/MS_VISTA_RIO_2026_CRM.py")
+
 with crm_col2:
-    if st.button("PROBA", key="proba_nav"):
+    if st.button("PROBA", key="proba_nav", use_container_width=True):
         st.switch_page("pages/NEW_CONFIG.py")
 
 # ============================================================
