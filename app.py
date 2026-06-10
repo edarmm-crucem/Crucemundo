@@ -1645,7 +1645,7 @@ st.markdown(
     ''',
     unsafe_allow_html=True,
 )
-chip_col, crm_col1, crm_col2 = st.columns([0.2, 1, 1], gap="none")
+chip_col, crm_col1, crm_col2 = st.columns([0.2, 1, 1], gap="small")
 
 with chip_col:
     st.markdown("""
