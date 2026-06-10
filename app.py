@@ -1649,7 +1649,7 @@ chip_col, crm_col1, crm_col2 = st.columns([0.25, 1, 1], gap="small")
 
 with chip_col:
     st.markdown("""
-    <div style="margin-top:-2px;">
+    <div style="margin-top:-6px;">
         <span class="web-chip-blue">CRM</span>
     </div>
     """, unsafe_allow_html=True)
