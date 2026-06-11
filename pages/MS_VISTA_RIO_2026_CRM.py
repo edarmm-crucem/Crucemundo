@@ -1000,8 +1000,9 @@ else:
                 cab_libres_cat = [
                     d for d in datos
                     if next((c[3] for c in cabinas if c[1] == d.get("cabina", "")), "") == categoria_cupo
-                    and d.get("estado", "LIBRE") == "LIBRE"
-                    and not d.get("agencia", "").strip()
+                    and d.get("estado", "LIBRE") in ("LIBRE", "RESERVA", "VENDIDA")
+                    and len([a for a in split_pipe(d.get("agencia", "")) if a]) < 4
+                    and agencia_cupo not in split_pipe(d.get("agencia", ""))
                 ]
 
                 st.markdown("---")
