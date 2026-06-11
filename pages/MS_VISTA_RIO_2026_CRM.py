@@ -1995,7 +1995,7 @@ else:
                             svc_sheets.spreadsheets().values().update(
                                 spreadsheetId=archivo_conf_id,
                                 range=f"'{fv['hoja']}'!G56",
-                                valueInputOption="RAW",
+                                valueInputOption="USER_ENTERED",
                                 body={"values": [[cabinas_str]]}
                             ).execute()
                         except Exception as e_write:
