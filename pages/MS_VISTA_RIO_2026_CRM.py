@@ -973,7 +973,7 @@ else:
                 t += '</tbody></table>'
                 st.markdown(t, unsafe_allow_html=True)
 
-        #### BLOQUE 20: MODO CONFIGURAR CUPOS
+#### BLOQUE 20: MODO CONFIGURAR CUPOS (con auto-reserva)
         elif modo == "⚙️ Configurar Cupos / Configure Quotas":
             st.markdown(
                 f"### ⚙️ Definir Límites por Categoría — Salida {ddmm_sel} "
@@ -986,7 +986,18 @@ else:
             with col_b:
                 categoria_cupo = st.selectbox("2. Selecciona la Categoría / *Select Category*", todas_categorias)
             valores_actuales = cupos_config.get((agencia_cupo, categoria_cupo), {"cabinas": 0, "pax": 0})
+
+            # Calcular cabinas ya asignadas a esta agencia+categoría
+            cab_ya_asignadas = cabinas_por_ag_cat.get((agencia_cupo, categoria_cupo), 0)
+            cab_libres_cat = [
+                d for d in datos
+                if next((c[3] for c in cabinas if c[1] == d.get("cabina", "")), "") == categoria_cupo
+                and d.get("estado", "LIBRE") == "LIBRE"
+                and not d.get("agencia", "").strip()
+            ]
+
             st.markdown("---")
+
             c_l1, c_l2 = st.columns(2)
             with c_l1:
                 limite_cabinas = st.number_input(
@@ -998,14 +1009,103 @@ else:
                     "Nº MÁXIMO de Personas (Pax) / *Max authorised Passengers*",
                     min_value=0, max_value=150, value=valores_actuales["pax"]
                 )
+
+            # Calcular cuántas cabinas se bloquearán automáticamente
+            a_bloquear = max(0, limite_cabinas - cab_ya_asignadas)
+            disponibles_para_bloqueo = len(cab_libres_cat)
+            reales_a_bloquear = min(a_bloquear, disponibles_para_bloqueo)
+
+            # Info visual previa al guardado
+            if limite_cabinas > 0:
+                col_inf1, col_inf2, col_inf3 = st.columns(3)
+                col_inf1.metric(
+                    "Ya asignadas / Assigned",
+                    cab_ya_asignadas,
+                    help="Cabinas de esta agencia+categoría ya en CRM"
+                )
+                col_inf2.metric(
+                    "A bloquear / To reserve",
+                    reales_a_bloquear,
+                    help="Cabinas libres que se pondrán en RESERVA automáticamente"
+                )
+                col_inf3.metric(
+                    "Libres disponibles / Free available",
+                    disponibles_para_bloqueo,
+                    help="Cabinas totalmente libres en esta categoría"
+                )
+
+                if a_bloquear > disponibles_para_bloqueo:
+                    st.warning(
+                        f"⚠️ Se solicitan **{limite_cabinas}** cabinas pero solo hay "
+                        f"**{disponibles_para_bloqueo + cab_ya_asignadas}** disponibles "
+                        f"({cab_ya_asignadas} ya asignadas + {disponibles_para_bloqueo} libres). "
+                        f"Se bloquearán **{reales_a_bloquear}** cabinas libres. "
+                        f"/ *Quota exceeds available stock — {reales_a_bloquear} free cabins will be reserved.*"
+                    )
+                elif reales_a_bloquear > 0:
+                    st.info(
+                        f"ℹ️ Al guardar se pondrán **{reales_a_bloquear}** cabina(s) libres en estado **RESERVA** "
+                        f"para **{agencia_cupo}** / **{categoria_cupo}**. "
+                        f"/ *{reales_a_bloquear} free cabin(s) will be set to RESERVA on save.*"
+                    )
+                else:
+                    st.success(
+                        f"✅ El cupo ya está cubierto con las {cab_ya_asignadas} cabinas existentes. "
+                        f"No se bloqueará ninguna adicional. "
+                        f"/ *Quota already met — no additional cabins will be reserved.*"
+                    )
+
             if st.button("💾 Guardar Límites / *Save Limits*"):
                 with st.spinner("Sincronizando… / *Syncing…*"):
-                    guardar_cupo_sheets(ddmm_sel, datos, f"{agencia_cupo}|{categoria_cupo}", f"{limite_cabinas},{limite_pax}")
-                    st.cache_data.clear()
-                    st.success(
-                        f"Límites guardados: **{agencia_cupo}** / **{categoria_cupo}** — "
-                        f"{limite_cabinas} Cab · {limite_pax} Pax. / *Limits saved.*"
+                    # 1. Guardar el cupo en Sheets (igual que antes)
+                    guardar_cupo_sheets(
+                        ddmm_sel, datos,
+                        f"{agencia_cupo}|{categoria_cupo}",
+                        f"{limite_cabinas},{limite_pax}"
                     )
+
+                    # 2. Auto-reservar cabinas libres hasta cubrir el cupo
+                    cabinas_bloqueadas = []
+                    if reales_a_bloquear > 0:
+                        datos_frescos = getdatossalida.__wrapped__(ddmm_sel)  # bypass cache
+                        cabinas_libres_ord = sorted(
+                            cab_libres_cat,
+                            key=lambda d: int(''.join(filter(str.isdigit, d.get("cabina", "0"))) or 0)
+                        )
+                        for d in cabinas_libres_ord[:reales_a_bloquear]:
+                            cab_num  = d.get("cabina", "")
+                            rowindex = next(
+                                (i for i, x in enumerate(datos) if x.get("cabina") == cab_num),
+                                None
+                            )
+                            if rowindex is None:
+                                continue
+                            estado_f, ag_f, pax_f, loc_f, nt_f = agregar_agencia_a_cabina(
+                                d,
+                                agencia_cupo,
+                                "",                          # pax vacío, se rellena luego
+                                f"CUPO:{agencia_cupo}",      # localizador identificativo
+                                "Auto-reserva por cupo",
+                                "RESERVA"
+                            )
+                            guardarcabina(ddmm_sel, rowindex, ag_f, pax_f, loc_f, nt_f, estado_f)
+                            cabinas_bloqueadas.append(cab_num)
+
+                    st.cache_data.clear()
+
+                    if cabinas_bloqueadas:
+                        st.success(
+                            f"✅ Límites guardados y **{len(cabinas_bloqueadas)}** cabina(s) bloqueadas en RESERVA: "
+                            f"{', '.join(cabinas_bloqueadas)}. "
+                            f"/ *Limits saved and {len(cabinas_bloqueadas)} cabin(s) reserved: "
+                            f"{', '.join(cabinas_bloqueadas)}.*"
+                        )
+                    else:
+                        st.success(
+                            f"✅ Límites guardados: **{agencia_cupo}** / **{categoria_cupo}** — "
+                            f"{limite_cabinas} Cab · {limite_pax} Pax. Sin nuevas auto-reservas. "
+                            f"/ *Limits saved. No new auto-reservations.*"
+                        )
                     st.rerun()
 
 #### BLOQUE 21: MODO MAPA DE CABINAS
