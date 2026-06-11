@@ -761,7 +761,10 @@ else:
             )
             total_cabinas = len(datos)
             cab_vendidas  = sum(1 for d in datos if d.get("estado") == "VENDIDA")
-            cab_reservas  = sum(1 for d in datos if d.get("estado") == "RESERVA")
+            cab_reservas = sum(
+                len([a for a in split_pipe(d.get("agencia", "")) if a])
+                for d in datos if d.get("estado") == "RESERVA"
+            )
             cab_libres    = sum(1 for d in datos if d.get("estado") == "LIBRE")
             total_pax = sum(int(d.get("pax", 0) or 0) for d in datos if d.get("estado") == "VENDIDA")
             try:
@@ -817,7 +820,10 @@ else:
                 cabinas_cat = [c[1] for c in cabinas if c[3] == cat]
                 n_total    = len(cabinas_cat)
                 n_vendidas = sum(1 for d in datos if d.get("cabina") in cabinas_cat and d.get("estado") == "VENDIDA")
-                n_reservas = sum(1 for d in datos if d.get("cabina") in cabinas_cat and d.get("estado") == "RESERVA")
+                n_reservas = sum(
+                    len([a for a in split_pipe(d.get("agencia", "")) if a])
+                    for d in datos if d.get("cabina") in cabinas_cat and d.get("estado") == "RESERVA"
+                )
                 n_libres   = sum(1 for d in datos if d.get("cabina") in cabinas_cat and d.get("estado") == "LIBRE")
                 pax_cat    = sum(int(d.get("pax", 0) or 0) for d in datos if d.get("cabina") in cabinas_cat and d.get("estado") == "VENDIDA")
                 pct        = round(n_vendidas / n_total * 100, 1) if n_total else 0
