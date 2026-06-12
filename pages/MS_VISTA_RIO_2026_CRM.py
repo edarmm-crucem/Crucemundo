@@ -1034,6 +1034,7 @@ else:
                     if next((c[3] for c in cabinas if c[1] == d.get("cabina", "")), "") == categoria_cupo
                     and d.get("estado", "LIBRE") == "LIBRE"
                     and not d.get("agencia", "").strip()
+                    and d.get("estado", "LIBRE") != "VENDIDA"  # redundante pero por si acaso
                 ]
 
                 st.markdown("---")
