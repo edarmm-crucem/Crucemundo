@@ -1060,13 +1060,18 @@ else:
                     col_inf1.metric("Ya asignadas / Assigned", cab_ya_asignadas)
                     col_inf2.metric("A bloquear / To reserve", reales_a_bloquear)
                     col_inf3.metric("Libres disponibles / Free available", disponibles_para_bloqueo)
-
+                
                     if a_bloquear > disponibles_para_bloqueo:
                         st.warning(
-                            f"⚠️ Se solicitan **{limite_cabinas}** cabinas pero solo hay "
-                            f"**{disponibles_para_bloqueo + cab_ya_asignadas}** disponibles. "
-                            f"Se bloquearán **{reales_a_bloquear}** cabinas libres. "
-                            f"/ *Quota exceeds available stock — {reales_a_bloquear} free cabins will be reserved.*"
+                            f"⚠️ Para cubrir el cupo de **{limite_cabinas}** cabinas faltarían "
+                            f"**{a_bloquear}**, pero solo hay **{disponibles_para_bloqueo}** "
+                            f"cabina(s) libres en esta categoría. "
+                            f"Se bloquearán **{reales_a_bloquear}** y el cupo quedará incompleto "
+                            f"({cab_ya_asignadas + reales_a_bloquear} de {limite_cabinas}). "
+                            f"/ *Not enough free cabins to fully cover this quota — "
+                            f"only {disponibles_para_bloqueo} available, "
+                            f"{reales_a_bloquear} will be reserved "
+                            f"({cab_ya_asignadas + reales_a_bloquear} of {limite_cabinas} covered).*"
                         )
                     elif reales_a_bloquear > 0:
                         st.info(
