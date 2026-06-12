@@ -982,7 +982,7 @@ else:
                 t = '<table class="cupos-tabla"><thead><tr>'
                 t += th("Agencia", "Agency") + th("Categoría", "Category")
                 t += '<th class="th-cupo-cab"><div class="th-bilingual"><span class="th-es">Cupo Cabinas</span><span class="th-en">Cabin Quota</span></div></th>'
-                t += th("Cab. Usadas", "Used") + th("Cab. Disp. (cupo)", "Avail. (quota)")
+                t += th("Cab. Usadas", "Used") + th("Cab. Fuera Cupo", "Cabins Outside Quota")
                 t += th("Cabinas Categoría", "Category Cabins")
                 t += '<th class="th-cupo-pax"><div class="th-bilingual"><span class="th-es">Cupo Pax</span><span class="th-en">Pax Quota</span></div></th>'
                 t += th("Pax Registrados", "Registered") + th("Pax Disp.", "Avail.")
