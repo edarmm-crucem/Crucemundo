@@ -978,27 +978,43 @@ else:
 
                 def th(es, en):
                     return f'<th><div class="th-bilingual"><span class="th-es">{es}</span><span class="th-en">{en}</span></div></th>'
-
+                
                 t = '<table class="cupos-tabla"><thead><tr>'
                 t += th("Agencia", "Agency") + th("Categoría", "Category")
                 t += '<th class="th-cupo-cab"><div class="th-bilingual"><span class="th-es">Cupo Cabinas</span><span class="th-en">Cabin Quota</span></div></th>'
-                t += th("Cab. Usadas", "Used") + th("Cab. Disp.", "Avail.")
+                t += th("Cab. Usadas", "Used") + th("Cab. Disp. (cupo)", "Avail. (quota)")
+                t += th("Cabinas Categoría", "Category Cabins")
                 t += '<th class="th-cupo-pax"><div class="th-bilingual"><span class="th-es">Cupo Pax</span><span class="th-en">Pax Quota</span></div></th>'
                 t += th("Pax Registrados", "Registered") + th("Pax Disp.", "Avail.")
                 t += th("Estado", "Status") + '</tr></thead><tbody>'
-
+                
                 for (ag, cat), lims in cupos_config.items():
                     cab_lim = lims["cabinas"]; pax_lim = lims["pax"]
                     cab_usadas = cabinas_por_ag_cat[(ag, cat)]; pax_usados = pax_por_ag_cat[(ag, cat)]
                     cab_disp = cab_lim - cab_usadas; pax_disp = pax_lim - pax_usados
-                    excedido = cab_disp < 0 or pax_disp < 0
-                    status_html = (
-                        '<span class="td-exc">🚨 Excedido <span style="font-size:0.8em;font-style:italic;">/ Exceeded</span></span>'
-                        if excedido else '<span class="td-ok">✅ OK</span>'
-                    )
+                
+                    total_cabinas_cat = len([c for c in cabinas if c[3] == cat])
+                    cupo_supera_capacidad = cab_lim > total_cabinas_cat
+                
+                    excedido = cab_disp < 0 or pax_disp < 0 or cupo_supera_capacidad
+                    if cupo_supera_capacidad:
+                        status_html = (
+                            f'<span class="td-exc">⚠️ Cupo &gt; capacidad '
+                            f'<span style="font-size:0.8em;font-style:italic;">/ Quota &gt; capacity</span></span>'
+                        )
+                    elif excedido:
+                        status_html = (
+                            '<span class="td-exc">🚨 Excedido <span style="font-size:0.8em;font-style:italic;">/ Exceeded</span></span>'
+                        )
+                    else:
+                        status_html = '<span class="td-ok">✅ OK</span>'
+                
+                    cat_cell_style = ' style="color:#991B1B;font-weight:700;"' if cupo_supera_capacidad else ''
+                
                     t += (f'<tr><td style="font-weight:700;text-align:left;">{ag}</td><td>{cat}</td>'
                           f'<td class="td-cupo-cab">{cab_lim}</td><td>{cab_usadas}</td>'
                           f'<td>{"🔴 " if cab_disp < 0 else ""}{cab_disp}</td>'
+                          f'<td{cat_cell_style}>{total_cabinas_cat}</td>'
                           f'<td class="td-cupo-pax">{pax_lim}</td><td>{pax_usados}</td>'
                           f'<td>{"🔴 " if pax_disp < 0 else ""}{pax_disp}</td>'
                           f'<td>{status_html}</td></tr>')
