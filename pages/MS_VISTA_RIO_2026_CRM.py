@@ -301,13 +301,32 @@ def getsalidas():
     service = getsheetsservice()
     spreadsheet = service.spreadsheets().get(spreadsheetId=CRMBARCO).execute()
     return [s["properties"]["title"] for s in spreadsheet.get("sheets", [])]
-
-def crearsalida(ddmm, cabinas):
+@st.cache_data(ttl=30)
+def getdescripcionessalidas():
+    service = getsheetsservice()
+    spreadsheet = service.spreadsheets().get(spreadsheetId=CRMBARCO).execute()
+    titulos = [s["properties"]["title"] for s in spreadsheet.get("sheets", [])]
+    descripciones = {}
+    if not titulos:
+        return descripciones
+    ranges = [f"'{t}'!K1" for t in titulos]
+    result = service.spreadsheets().values().batchGet(spreadsheetId=CRMBARCO, ranges=ranges).execute()
+    for t, vr in zip(titulos, result.get("valueRanges", [])):
+        vals = vr.get("values", [])
+        descripciones[t] = vals[0][0].strip() if vals and vals[0] else ""
+    return descripciones
+def crearsalida(ddmm, cabinas, descripcion=""):
     service = getsheetsservice()
     service.spreadsheets().batchUpdate(spreadsheetId=CRMBARCO, body={"requests": [{"addSheet": {"properties": {"title": ddmm}}}]}).execute()
     header = [["cabina", "categoria", "estado", "agencia", "pax", "localizador", "notes", "cupo_agencia", "cupo_maximo"]]
     rows = [[c[1], c[3], "LIBRE", "", "", "", "", "", ""] for c in cabinas]
     service.spreadsheets().values().update(spreadsheetId=CRMBARCO, range=f"{ddmm}!A1", valueInputOption="RAW", body={"values": header + rows}).execute()
+    # Guardar descripción en K1
+    if descripcion.strip():
+        service.spreadsheets().values().update(
+            spreadsheetId=CRMBARCO, range=f"{ddmm}!K1",
+            valueInputOption="RAW", body={"values": [[descripcion.strip()]]}
+        ).execute()
 
 @st.cache_data(ttl=5)
 def getdatossalida(ddmm):
@@ -400,6 +419,7 @@ st.markdown('''
 cabinas = getcabinas()
 agencias = getagencias()
 salidas = getsalidas()
+descripciones_salidas = getdescripcionessalidas()
 
 if not cabinas:
     st.error(f"No se encontraron cabinas para {BARCO}. / *No cabins found for {BARCO}.*")
@@ -507,17 +527,25 @@ elif _modo("Nueva salida"):
         "<span class='section-en'>Create a new departure</span>",
         unsafe_allow_html=True
     )
-    ddmm = st.text_input(
-        "Fecha de salida (DDMM) / *Departure date (DDMM)*",
-        max_chars=4, placeholder="2705"
-    )
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        ddmm = st.text_input(
+            "Fecha de salida (DDMM) / *Departure date (DDMM)*",
+            max_chars=4, placeholder="2705"
+        )
+    with col2:
+        descripcion = st.text_input(
+            "Descripción / *Description*",
+            placeholder="Ej: Crucero Especial Semana Santa"
+        )
+
     if ddmm and len(ddmm) == 4:
         if ddmm in salidas:
             st.warning(f"La salida **{ddmm}** ya existe. / *Departure {ddmm} already exists.*")
         else:
             if st.button("✅ Crear salida / *Create departure*"):
                 with st.spinner("Creando salida… / *Creating departure…*"):
-                    crearsalida(ddmm, cabinas)
+                    crearsalida(ddmm, cabinas, descripcion)
                     st.cache_data.clear()
                     st.success(f"Salida **{ddmm}** creada en {ANIO}. / *Departure {ddmm} created for {ANIO}.*")
                     st.rerun()
@@ -528,7 +556,11 @@ else:
         st.info("No hay salidas creadas todavía. / *No departures have been created yet.*")
         st.stop()
 
-    ddmm_sel = st.selectbox("Selecciona salida / *Select departure*", salidas)
+    ddmm_sel = st.selectbox(
+        "Selecciona salida / *Select departure*",
+        salidas,
+        format_func=lambda x: f"{x} — {descripciones_salidas.get(x, '')}" if descripciones_salidas.get(x) else x
+    )
 
     if ddmm_sel:
         datos = getdatossalida(ddmm_sel)
