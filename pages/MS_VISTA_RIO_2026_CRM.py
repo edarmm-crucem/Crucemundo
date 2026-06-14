@@ -1239,7 +1239,7 @@ else:
                                 d for d in datos
                                 if _cabina_disponible_para_cupo(d, cat_sel, ag_sel)
                             ]
-                            extra_a_bloquear = min(diff, len(cab_libres_mod))
+                       
                             extra_a_bloquear = min(diff, len(cab_libres_mod))
                             if extra_a_bloquear > 0:
                                 st.info(
