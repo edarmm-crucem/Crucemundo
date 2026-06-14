@@ -1022,6 +1022,27 @@ else:
                 st.markdown(t, unsafe_allow_html=True)
 
 #### BLOQUE 20: MODO CONFIGURAR CUPOS (con auto-reserva + gestión)
+
+        def _cabina_disponible_para_cupo(d: dict, cat: str, agencia_cupo: str) -> bool:
+    """
+    Una cabina es candidata a auto-reserva de un cupo si:
+    - es de la categoría correcta, y
+    - está LIBRE (sin agencias), o
+    - está en RESERVA con < 4 agencias y la agencia del cupo
+      todavía no está asignada a esa cabina.
+    Las VENDIDAS nunca son candidatas.
+    """
+    if next((c[3] for c in cabinas if c[1] == d.get("cabina", "")), "") != cat:
+        return False
+    estado = d.get("estado", "LIBRE")
+    if estado == "VENDIDA":
+        return False
+    ags_act = [a for a in split_pipe(d.get("agencia", "")) if a]
+    if estado == "LIBRE" and not ags_act:
+        return True
+    if estado == "RESERVA" and agencia_cupo not in ags_act and len(ags_act) < 4:
+        return True
+    return False
         elif modo == "⚙️ Configurar Cupos / Configure Quotas":
             st.markdown(
                 f"### ⚙️ Gestión de Cupos — Salida {ddmm_sel} "
@@ -1047,10 +1068,7 @@ else:
                 cab_ya_asignadas = cabinas_por_ag_cat.get((agencia_cupo, categoria_cupo), 0)
                 cab_libres_cat = [
                     d for d in datos
-                    if next((c[3] for c in cabinas if c[1] == d.get("cabina", "")), "") == categoria_cupo
-                    and d.get("estado", "LIBRE") == "LIBRE"
-                    and not d.get("agencia", "").strip()
-                    and d.get("estado", "LIBRE") != "VENDIDA"  # redundante pero por si acaso
+                    if _cabina_disponible_para_cupo(d, categoria_cupo, agencia_cupo)
                 ]
 
                 st.markdown("---")
@@ -1217,10 +1235,9 @@ else:
 
                         if diff > 0:
                             cab_libres_mod = [
+                            cab_libres_mod = [
                                 d for d in datos
-                                if next((c[3] for c in cabinas if c[1] == d.get("cabina", "")), "") == cat_sel
-                                and d.get("estado", "LIBRE") == "LIBRE"
-                                and not d.get("agencia", "").strip()
+                                if _cabina_disponible_para_cupo(d, cat_sel, ag_sel)
                             ]
                             extra_a_bloquear = min(diff, len(cab_libres_mod))
                             if extra_a_bloquear > 0:
@@ -1249,9 +1266,7 @@ else:
                                     # Bloquear más cabinas
                                     cab_libres_mod = sorted([
                                         d for d in datos
-                                        if next((c[3] for c in cabinas if c[1] == d.get("cabina", "")), "") == cat_sel
-                                        and d.get("estado", "LIBRE") == "LIBRE"
-                                        and not d.get("agencia", "").strip()
+                                        if _cabina_disponible_para_cupo(d, cat_sel, ag_sel)
                                     ], key=lambda d: int(''.join(filter(str.isdigit, d.get("cabina", "0"))) or 0))
                                     for d in cab_libres_mod[:diff]:
                                         rowindex = next((i for i, x in enumerate(datos) if x.get("cabina") == d.get("cabina")), None)
