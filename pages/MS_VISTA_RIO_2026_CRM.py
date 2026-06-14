@@ -951,7 +951,7 @@ else:
             st.markdown(t, unsafe_allow_html=True)
 
         
-        #### BLOQUE 19: MODO VER CUPOS
+#### BLOQUE 19: MODO VER CUPOS
         elif modo == "📊 Ver Cupos / View Quotas":
             st.markdown(
                 f"### 📊 Cuadro de Mandos de Cupos — Salida {ddmm_sel} "
@@ -1021,41 +1021,19 @@ else:
                 t += '</tbody></table>'
                 st.markdown(t, unsafe_allow_html=True)
 
-#### BLOQUE 20: MODO CONFIGURAR CUPOS (con auto-reserva + gestión)
-
-        def _cabina_disponible_para_cupo(d: dict, cat: str, agencia_cupo: str) -> bool:
-            """
-            Una cabina es candidata a auto-reserva de un cupo si:
-            - es de la categoría correcta, y
-            - está LIBRE (sin agencias), o
-            - está en RESERVA con < 4 agencias y la agencia del cupo
-              todavía no está asignada a esa cabina.
-            Las VENDIDAS nunca son candidatas.
-            """
-            if next((c[3] for c in cabinas if c[1] == d.get("cabina", "")), "") != cat:
-                return False
-            estado = d.get("estado", "LIBRE")
-            if estado == "VENDIDA":
-                return False
-            ags_act = [a for a in split_pipe(d.get("agencia", "")) if a]
-            if estado == "LIBRE" and not ags_act:
-                return True
-            if estado == "RESERVA" and agencia_cupo not in ags_act and len(ags_act) < 4:
-                return True
-            return False
-
         elif modo == "⚙️ Configurar Cupos / Configure Quotas":
-            st.markdown(
-                f"### ⚙️ Gestión de Cupos — Salida {ddmm_sel} "
-                f"<span class='section-en'>Quota Management — Departure {ddmm_sel}</span>",
-                unsafe_allow_html=True
-            )
-
-            subtab = st.radio(
-                "Acción / *Action*",
-                ["➕ Configurar / New or Edit", "✏️ Modificar o Borrar / Modify or Delete"],
-                horizontal=True
-            )
+            def _cabina_disponible_para_cupo(d: dict, cat: str, agencia_cupo: str) -> bool:
+                if next((c[3] for c in cabinas if c[1] == d.get("cabina", "")), "") != cat:
+                    return False
+                estado = d.get("estado", "LIBRE")
+                if estado == "VENDIDA":
+                    return False
+                ags_act = [a for a in split_pipe(d.get("agencia", "")) if a]
+                if estado == "LIBRE" and not ags_act:
+                    return True
+                if estado == "RESERVA" and agencia_cupo not in ags_act and len(ags_act) < 4:
+                    return True
+                return False
 
             # ── SUBTAB 1: CONFIGURAR (igual que antes + auto-reserva) ─────────
             if "Configurar" in subtab:
