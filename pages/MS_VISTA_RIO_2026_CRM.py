@@ -1023,6 +1023,8 @@ else:
 
 #### BLOQUE 20: MODO CONFIGURAR CUPOS (con auto-reserva + gestión)
 
+#### BLOQUE 20: MODO CONFIGURAR CUPOS (con auto-reserva + gestión)
+
         def _cabina_disponible_para_cupo(d: dict, cat: str, agencia_cupo: str) -> bool:
             """
             ...
@@ -1050,7 +1052,6 @@ else:
                     ["➕ Configurar / New or Edit", "✏️ Modificar o Borrar / Modify or Delete"],
                     horizontal=True
                 )
-
             # ── SUBTAB 1: CONFIGURAR (igual que antes + auto-reserva) ─────────
             if "Configurar" in subtab:
                 col_a, col_b = st.columns(2)
