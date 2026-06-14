@@ -1574,15 +1574,94 @@ else:
                 """El localizador termina en GROUP → estado RESERVA."""
                 return localizador.upper().endswith("GROUP")
 
-            def _cabinas_libres_de_categoria(cat: str, datos_crm: list) -> list:
-                """Devuelve lista de IDs de cabinas libres de una categoría."""
-                cabinas_cat = {c[1] for c in cabinas if c[3] == cat}
-                return [
-                    d["cabina"] for d in datos_crm
-                    if d.get("cabina") in cabinas_cat
-                    and d.get("estado", "LIBRE") == "LIBRE"
-                    and not d.get("agencia", "").strip()
-                ]
+def _cabinas_libres_de_categoria(cat: str, datos_crm: list) -> list:
+    """Cabinas LIBRES de una categoría (sin agencia asignada)."""
+    cabinas_cat = {c[1] for c in cabinas if c[3] == cat}
+    return [
+        d["cabina"] for d in datos_crm
+        if d.get("cabina") in cabinas_cat
+        and d.get("estado", "LIBRE") == "LIBRE"
+        and not d.get("agencia", "").strip()
+    ]
+
+def _cabinas_reserva_desplazables_de_categoria(cat: str, datos_crm: list) -> list:
+    """
+    Cabinas en RESERVA de una categoría que pueden cederse a una VENDIDA.
+    Prioriza las auto-reservadas por cupo (localizador CUPO:agencia),
+    porque son bloqueos "blandos" sin pax real.
+    Devuelve lista de cabinas ordenada: primero auto-reserva por cupo,
+    luego otras reservas.
+    """
+    cabinas_cat = {c[1] for c in cabinas if c[3] == cat}
+    candidatas_cupo = []
+    candidatas_otras = []
+    for d in datos_crm:
+        if d.get("cabina") not in cabinas_cat:
+            continue
+        if d.get("estado") != "RESERVA":
+            continue
+        locs = split_pipe(d.get("localizador", ""))
+        if any(l.startswith("CUPO:") for l in locs):
+            candidatas_cupo.append(d["cabina"])
+        else:
+            candidatas_otras.append(d["cabina"])
+    return candidatas_cupo + candidatas_otras
+
+            def _liberar_reserva_para_venta(cab_num: str, datos_crm: list, ddmm_sel: str) -> bool:
+                """
+                Libera una cabina en RESERVA (quita todas sus agencias) para dejarla
+                disponible y poder asignarla como VENDIDA. Devuelve True si se liberó.
+                """
+                rowindex = next((i for i, d in enumerate(datos_crm) if d.get("cabina") == cab_num), None)
+                if rowindex is None:
+                    return False
+                d_crm = datos_crm[rowindex]
+                ags = [a for a in split_pipe(d_crm.get("agencia", "")) if a]
+                estado_f, ag_f, pax_f, loc_f, nt_f = "LIBRE", "", "", "", ""
+                for ag in ags:
+                    estado_f, ag_f, pax_f, loc_f, nt_f = quitar_agencia_de_cabina(d_crm, ag)
+                    d_crm.update({"agencia": ag_f, "estado": estado_f, "pax": pax_f,
+                                   "localizador": loc_f, "notes": nt_f})
+                guardarcabina(ddmm_sel, rowindex, ag_f, pax_f, loc_f, nt_f, estado_f)
+                datos_crm[rowindex].update({"agencia": "", "pax": "", "localizador": "",
+                                             "notes": "", "estado": "LIBRE"})
+                return True
+            
+            def _obtener_cabinas_disponibles_con_prioridad(cat: str, n_necesarias: int,
+                                                            datos_crm: list, estado_dst: str,
+                                                            excluidas: list, warnings: list) -> list:
+                """
+                Devuelve hasta n_necesarias cabinas disponibles de la categoría 'cat'.
+                1) Usa primero las LIBRES.
+                2) Si faltan y estado_dst es VENDIDA, libera RESERVAS (con prioridad
+                   para las auto-reservadas por cupo) y avisa al usuario.
+                """
+                libres = [c for c in _cabinas_libres_de_categoria(cat, datos_crm) if c not in excluidas]
+                if len(libres) >= n_necesarias or estado_dst != "VENDIDA":
+                    return libres[:n_necesarias]
+            
+                faltan = n_necesarias - len(libres)
+                desplazables = [c for c in _cabinas_reserva_desplazables_de_categoria(cat, datos_crm)
+                                 if c not in excluidas and c not in libres]
+            
+                liberadas = []
+                for cab in desplazables:
+                    if faltan <= 0:
+                        break
+                    if _liberar_reserva_para_venta(cab, datos_crm, ddmm_sel):
+                        liberadas.append(cab)
+                        faltan -= 1
+            
+                if liberadas:
+                    warnings.append(
+                        f"🔄 Categoría {cat}: no había suficientes cabinas LIBRES para la VENTA. "
+                        f"Se liberaron {len(liberadas)} cabina(s) en RESERVA "
+                        f"({', '.join(liberadas)}) para dar prioridad a la venta confirmada. "
+                        f"/ Not enough FREE cabins for the SALE — released {len(liberadas)} "
+                        f"cabin(s) previously on HOLD: {', '.join(liberadas)} (sold has priority)."
+                    )
+            
+                return (libres + liberadas)[:n_necesarias]
 
             def _extraer_pax_q24(raw_q24: str) -> list:
                 """
@@ -1947,7 +2026,9 @@ else:
                         cat        = item["cat"]
                         n_cab      = item["n_cab"]
                         n_pax_item = item["n_pax"]
-                        libres     = _cabinas_libres_de_categoria(cat, datos_crm)
+                        libres = _obtener_cabinas_disponibles_con_prioridad(
+                        cat, n_cab, datos_crm, estado_dst, todas_asignadas_en_vuelta, warnings
+                    )
                         libres     = [c for c in libres if c not in todas_asignadas_en_vuelta]
                         if len(libres) < n_cab:
                             errores.append(
@@ -2019,7 +2100,9 @@ else:
                         cat        = item["cat"]
                         n_cab      = item["n_cab"]
                         n_pax_item = item["n_pax"]
-                        libres     = _cabinas_libres_de_categoria(cat, datos_crm)
+                        libres = _obtener_cabinas_disponibles_con_prioridad(
+                            cat, n_cab, datos_crm, estado_dst, todas_asignadas_en_vuelta, warnings
+                        )
                         libres     = [c for c in libres if c not in todas_asignadas_en_vuelta]
                         if len(libres) < n_cab:
                             errores.append(
