@@ -2028,7 +2028,7 @@ def _cabinas_reserva_desplazables_de_categoria(cat: str, datos_crm: list) -> lis
                         n_pax_item = item["n_pax"]
                         libres = _obtener_cabinas_disponibles_con_prioridad(
                         cat, n_cab, datos_crm, estado_dst, todas_asignadas_en_vuelta, warnings
-                        )
+                            )
                         libres     = [c for c in libres if c not in todas_asignadas_en_vuelta]
                         if len(libres) < n_cab:
                             errores.append(
@@ -2102,7 +2102,7 @@ def _cabinas_reserva_desplazables_de_categoria(cat: str, datos_crm: list) -> lis
                         n_pax_item = item["n_pax"]
                         libres = _obtener_cabinas_disponibles_con_prioridad(
                             cat, n_cab, datos_crm, estado_dst, todas_asignadas_en_vuelta, warnings
-                        )
+                            )
                         libres     = [c for c in libres if c not in todas_asignadas_en_vuelta]
                         if len(libres) < n_cab:
                             errores.append(
