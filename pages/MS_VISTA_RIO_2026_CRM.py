@@ -1574,38 +1574,38 @@ else:
                 """El localizador termina en GROUP → estado RESERVA."""
                 return localizador.upper().endswith("GROUP")
 
-def _cabinas_libres_de_categoria(cat: str, datos_crm: list) -> list:
-    """Cabinas LIBRES de una categoría (sin agencia asignada)."""
-    cabinas_cat = {c[1] for c in cabinas if c[3] == cat}
-    return [
-        d["cabina"] for d in datos_crm
-        if d.get("cabina") in cabinas_cat
-        and d.get("estado", "LIBRE") == "LIBRE"
-        and not d.get("agencia", "").strip()
-    ]
-
-def _cabinas_reserva_desplazables_de_categoria(cat: str, datos_crm: list) -> list:
-    """
-    Cabinas en RESERVA de una categoría que pueden cederse a una VENDIDA.
-    Prioriza las auto-reservadas por cupo (localizador CUPO:agencia),
-    porque son bloqueos "blandos" sin pax real.
-    Devuelve lista de cabinas ordenada: primero auto-reserva por cupo,
-    luego otras reservas.
-    """
-    cabinas_cat = {c[1] for c in cabinas if c[3] == cat}
-    candidatas_cupo = []
-    candidatas_otras = []
-    for d in datos_crm:
-        if d.get("cabina") not in cabinas_cat:
-            continue
-        if d.get("estado") != "RESERVA":
-            continue
-        locs = split_pipe(d.get("localizador", ""))
-        if any(l.startswith("CUPO:") for l in locs):
-            candidatas_cupo.append(d["cabina"])
-        else:
-            candidatas_otras.append(d["cabina"])
-    return candidatas_cupo + candidatas_otras
+            def _cabinas_libres_de_categoria(cat: str, datos_crm: list) -> list:
+                """Cabinas LIBRES de una categoría (sin agencia asignada)."""
+                cabinas_cat = {c[1] for c in cabinas if c[3] == cat}
+                return [
+                    d["cabina"] for d in datos_crm
+                    if d.get("cabina") in cabinas_cat
+                    and d.get("estado", "LIBRE") == "LIBRE"
+                    and not d.get("agencia", "").strip()
+                ]
+            
+            def _cabinas_reserva_desplazables_de_categoria(cat: str, datos_crm: list) -> list:
+                """
+                Cabinas en RESERVA de una categoría que pueden cederse a una VENDIDA.
+                Prioriza las auto-reservadas por cupo (localizador CUPO:agencia),
+                porque son bloqueos "blandos" sin pax real.
+                Devuelve lista de cabinas ordenada: primero auto-reserva por cupo,
+                luego otras reservas.
+                """
+                cabinas_cat = {c[1] for c in cabinas if c[3] == cat}
+                candidatas_cupo = []
+                candidatas_otras = []
+                for d in datos_crm:
+                    if d.get("cabina") not in cabinas_cat:
+                        continue
+                    if d.get("estado") != "RESERVA":
+                        continue
+                    locs = split_pipe(d.get("localizador", ""))
+                    if any(l.startswith("CUPO:") for l in locs):
+                        candidatas_cupo.append(d["cabina"])
+                    else:
+                        candidatas_otras.append(d["cabina"])
+                return candidatas_cupo + candidatas_otras
 
             def _liberar_reserva_para_venta(cab_num: str, datos_crm: list, ddmm_sel: str) -> bool:
                 """
