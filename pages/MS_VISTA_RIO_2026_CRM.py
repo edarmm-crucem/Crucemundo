@@ -784,7 +784,7 @@ else:
                 t += '</tr>'
             t += '</tbody></table>'
             st.markdown(t, unsafe_allow_html=True)
-        #### BLOQUE 18: MODO OCUPACIÓN
+#### BLOQUE 18: MODO OCUPACIÓN
         elif modo == "🛳️ Ocupación / Occupancy":
             st.markdown(
                 f"### 🛳️ Ocupación del Buque — Salida {ddmm_sel} "
@@ -793,6 +793,7 @@ else:
             )
             total_cabinas = len(datos)
             cab_vendidas  = sum(1 for d in datos if d.get("estado") == "VENDIDA")
+            cab_fisicas_reserva = sum(1 for d in datos if d.get("estado") == "RESERVA")
             cab_reservas = sum(
                 len([a for a in split_pipe(d.get("agencia", "")) if a])
                 for d in datos if d.get("estado") == "RESERVA"
@@ -805,8 +806,8 @@ else:
                 cap_max = 0
             pct_cab = round(cab_vendidas / total_cabinas * 100, 1) if total_cabinas else 0
             pct_pax = round(total_pax / cap_max * 100, 1) if cap_max else 0
-            pct_res = round(cab_reservas / total_cabinas * 100, 1) if total_cabinas else 0
-            alerta_res = "⚠️ >100%" if pct_res > 100 else ""
+            pct_res = round(cab_reservas / cab_fisicas_reserva * 100, 1) if cab_fisicas_reserva else 0
+            alerta_res = "⚠️ Overbooking" if pct_res > 100 else ""
             barra_sold = min(pct_cab, 100)
             barra_res  = min(pct_res, 100)
 
@@ -831,12 +832,12 @@ else:
             partes_sold.append("</div>")
             c1.markdown("".join(partes_sold), unsafe_allow_html=True)
 
-            c2.metric("🟡 Reservas / On Hold", f"{cab_reservas}", f"{pct_res}% del total / of total")
+            c2.metric("🟡 Reservas / On Hold", f"{cab_reservas}", f"{pct_res}% ratio reserva / booking ratio")
             partes_res = []
             partes_res.append("<div style=\"margin-top:0.3rem;\">")
             partes_res.append("<div style=\"background:#E5E7EB;border-radius:4px;height:8px;width:100%;margin-bottom:3px;\">")
             partes_res.append("<div style=\"background:" + color_res + ";width:" + str(barra_res) + "%;height:8px;border-radius:4px;\"></div></div>")
-            partes_res.append("<div style=\"font-size:0.72rem;font-weight:700;color:" + color_res + ";\">" + str(pct_res) + "% reservado" + (" — " + alerta_res if alerta_res else "") + "</div>")
+            partes_res.append("<div style=\"font-size:0.72rem;font-weight:700;color:" + color_res + ";\">" + str(pct_res) + "% ratio" + (" — " + alerta_res if alerta_res else "") + "</div>")
             partes_res.append("</div>")
             c2.markdown("".join(partes_res), unsafe_allow_html=True)
 
@@ -852,6 +853,7 @@ else:
                 cabinas_cat = [c[1] for c in cabinas if c[3] == cat]
                 n_total    = len(cabinas_cat)
                 n_vendidas = sum(1 for d in datos if d.get("cabina") in cabinas_cat and d.get("estado") == "VENDIDA")
+                n_fisicas_reserva = sum(1 for d in datos if d.get("cabina") in cabinas_cat and d.get("estado") == "RESERVA")
                 n_reservas = sum(
                     len([a for a in split_pipe(d.get("agencia", "")) if a])
                     for d in datos if d.get("cabina") in cabinas_cat and d.get("estado") == "RESERVA"
@@ -859,13 +861,13 @@ else:
                 n_libres   = sum(1 for d in datos if d.get("cabina") in cabinas_cat and d.get("estado") == "LIBRE")
                 pax_cat    = sum(int(d.get("pax", 0) or 0) for d in datos if d.get("cabina") in cabinas_cat and d.get("estado") == "VENDIDA")
                 pct        = round(n_vendidas / n_total * 100, 1) if n_total else 0
-                pct_r      = round(n_reservas / n_total * 100, 1) if n_total else 0
-                stats_cat[cat] = {"total": n_total, "vendidas": n_vendidas, "reservas": n_reservas, "libres": n_libres, "pax": pax_cat, "pct": pct, "pct_r": pct_r}
+                pct_r      = round(n_reservas / n_fisicas_reserva * 100, 1) if n_fisicas_reserva else 0
+                stats_cat[cat] = {"total": n_total, "vendidas": n_vendidas, "reservas": n_reservas, "fisicas_reserva": n_fisicas_reserva, "libres": n_libres, "pax": pax_cat, "pct": pct, "pct_r": pct_r}
 
             t = '<table class="informe-tabla"><thead><tr>'
             t += th("Categoría", "Category")
             t += '<th class="th-total-cab"><div class="th-bilingual"><span class="th-es">Total Cabinas</span><span class="th-en">Total Cabins</span></div></th>'
-            t += th("Vendidas", "Sold") + th("% Ocup.", "% Occup.") + th("Reservas", "On Hold") + th("% Reserva", "% On Hold") + th("Libres", "Free") + th("Pax SOLD", "Pax Sold")
+            t += th("Vendidas", "Sold") + th("% Ocup.", "% Occup.") + th("Reservas", "On Hold") + th("% Ratio Reserva", "% Booking Ratio") + th("Libres", "Free") + th("Pax SOLD", "Pax Sold")
             t += '</tr></thead><tbody>'
 
             for cat, s in stats_cat.items():
@@ -877,10 +879,9 @@ else:
                 elif pct < 90: grad = "linear-gradient(90deg, #EAB308, #F97316)"
                 else:          grad = "linear-gradient(90deg, #F97316, #EF4444)"
 
-                if pct_r < 40:   grad_r = "linear-gradient(90deg, #22C55E, #86EFAC)"
-                elif pct_r < 70: grad_r = "linear-gradient(90deg, #22C55E, #EAB308)"
-                elif pct_r < 90: grad_r = "linear-gradient(90deg, #EAB308, #F97316)"
-                else:            grad_r = "linear-gradient(90deg, #F97316, #EF4444)"
+                if pct_r < 100:  grad_r = "linear-gradient(90deg, #22C55E, #86EFAC)"
+                elif pct_r < 150: grad_r = "linear-gradient(90deg, #EAB308, #F97316)"
+                else:             grad_r = "linear-gradient(90deg, #F97316, #EF4444)"
 
                 barra_v = (
                     "<div style=\"background:#E5E7EB;border-radius:4px;height:10px;width:100%;margin-bottom:4px;\">"
@@ -908,21 +909,21 @@ else:
 
             tot_v   = sum(s["vendidas"] for s in stats_cat.values())
             tot_r   = sum(s["reservas"] for s in stats_cat.values())
+            tot_fr  = sum(s["fisicas_reserva"] for s in stats_cat.values())
             tot_l   = sum(s["libres"]   for s in stats_cat.values())
             tot_t   = sum(s["total"]    for s in stats_cat.values())
             tot_p   = sum(s["pax"]      for s in stats_cat.values())
             tot_pct = round(tot_v / tot_t * 100, 1) if tot_t else 0
-            tot_pct_r = round(tot_r / tot_t * 100, 1) if tot_t else 0
+            tot_pct_r = round(tot_r / tot_fr * 100, 1) if tot_fr else 0
 
             if tot_pct < 40:   grad_tot = "linear-gradient(90deg, #22C55E, #86EFAC)"
             elif tot_pct < 70: grad_tot = "linear-gradient(90deg, #22C55E, #EAB308)"
             elif tot_pct < 90: grad_tot = "linear-gradient(90deg, #EAB308, #F97316)"
             else:              grad_tot = "linear-gradient(90deg, #F97316, #EF4444)"
 
-            if tot_pct_r < 40:   grad_tot_r = "linear-gradient(90deg, #22C55E, #86EFAC)"
-            elif tot_pct_r < 70: grad_tot_r = "linear-gradient(90deg, #22C55E, #EAB308)"
-            elif tot_pct_r < 90: grad_tot_r = "linear-gradient(90deg, #EAB308, #F97316)"
-            else:                grad_tot_r = "linear-gradient(90deg, #F97316, #EF4444)"
+            if tot_pct_r < 100:  grad_tot_r = "linear-gradient(90deg, #22C55E, #86EFAC)"
+            elif tot_pct_r < 150: grad_tot_r = "linear-gradient(90deg, #EAB308, #F97316)"
+            else:                 grad_tot_r = "linear-gradient(90deg, #F97316, #EF4444)"
 
             barra_tot = (
                 "<div style=\"background:#E5E7EB;border-radius:4px;height:10px;width:100%;margin-bottom:4px;\">"
@@ -949,7 +950,6 @@ else:
             )
             t += '</tbody></table>'
             st.markdown(t, unsafe_allow_html=True)
-
         
 #### BLOQUE 19: MODO VER CUPOS
         elif modo == "📊 Ver Cupos / View Quotas":
