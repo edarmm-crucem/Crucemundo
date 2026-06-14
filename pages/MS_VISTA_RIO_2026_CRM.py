@@ -1021,7 +1021,8 @@ else:
                 t += '</tbody></table>'
                 st.markdown(t, unsafe_allow_html=True)
 
-        elif modo == "⚙️ Configurar Cupos / Configure Quotas":
+            elif modo == "⚙️ Configurar Cupos / Configure Quotas":
+
             def _cabina_disponible_para_cupo(d: dict, cat: str, agencia_cupo: str) -> bool:
                 if next((c[3] for c in cabinas if c[1] == d.get("cabina", "")), "") != cat:
                     return False
@@ -1035,7 +1036,18 @@ else:
                     return True
                 return False
 
-            # ── SUBTAB 1: CONFIGURAR (igual que antes + auto-reserva) ─────────
+            st.markdown(
+                f"### ⚙️ Gestión de Cupos — Salida {ddmm_sel} "
+                f"<span class='section-en'>Quota Management — Departure {ddmm_sel}</span>",
+                unsafe_allow_html=True
+            )
+
+            subtab = st.radio(
+                "Acción / *Action*",
+                ["➕ Configurar / New or Edit", "✏️ Modificar o Borrar / Modify or Delete"],
+                horizontal=True
+            )
+
             if "Configurar" in subtab:
                 col_a, col_b = st.columns(2)
                 with col_a:
