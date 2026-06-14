@@ -1021,7 +1021,7 @@ else:
                 t += '</tbody></table>'
                 st.markdown(t, unsafe_allow_html=True)
 
-            elif modo == "⚙️ Configurar Cupos / Configure Quotas":
+        elif modo == "⚙️ Configurar Cupos / Configure Quotas":
 
             def _cabina_disponible_para_cupo(d: dict, cat: str, agencia_cupo: str) -> bool:
                 if next((c[3] for c in cabinas if c[1] == d.get("cabina", "")), "") != cat:
