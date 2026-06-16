@@ -398,7 +398,7 @@ def main():
 
         # Cargar credenciales desde st.secrets (configuradas en Streamlit Cloud)
         try:
-            creds_dict = dict(st.secrets["serviceaccount"])
+            creds_dict = dict(st.secrets["gcpserviceaccount"])
         except KeyError:
             st.error("⚠️  No se encontraron credenciales en Secrets. Ve a **Manage app → Secrets** y añade la sección `[gcpserviceaccount]`.")
             return
