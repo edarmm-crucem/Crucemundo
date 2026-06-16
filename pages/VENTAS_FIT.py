@@ -42,15 +42,31 @@ def crear_servicios(creds_json: dict):
 
 
 # ── Exploración de Drive ─────────────────────────────────────────────────────
-def listar_carpetas(drive, parent_id: str) -> list[dict]:
+def listar_carpetas(drive, parent_id):
     q = f"'{parent_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
-    res = drive.files().list(q=q, fields="files(id,name)", orderBy="name").execute()
+
+    res = drive.files().list(
+        q=q,
+        fields="files(id,name)",
+        supportsAllDrives=True,
+        includeItemsFromAllDrives=True,
+        corpora="allDrives"
+    ).execute()
+
     return res.get("files", [])
 
 
-def listar_hojas(drive, parent_id: str) -> list[dict]:
+def listar_hojas(drive, parent_id):
     q = f"'{parent_id}' in parents and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false"
-    res = drive.files().list(q=q, fields="files(id,name)", orderBy="name").execute()
+
+    res = drive.files().list(
+        q=q,
+        fields="files(id,name)",
+        supportsAllDrives=True,
+        includeItemsFromAllDrives=True,
+        corpora="allDrives"
+    ).execute()
+
     return res.get("files", [])
 
 
