@@ -428,18 +428,18 @@ def main():
         
         # ===================== DEBUG ======================
         
-                try:
-                    info = drive.files().get(
-                        fileId=id_raiz,
-                        fields="id,name,mimeType",
-                        supportsAllDrives=True
-                    ).execute()
-                
-                    st.success("Carpeta encontrada")
-                    st.write(info)
-                
-                except Exception as e:
-                    st.error(e)
+        try:
+            info = drive.files().get(
+                fileId=id_raiz,
+                fields="id,name,mimeType",
+                supportsAllDrives=True
+            ).execute()
+        
+            st.success("Carpeta encontrada")
+            st.write(info)
+        
+        except Exception as e:
+            st.error(e)
 
 # ==================================================
 
