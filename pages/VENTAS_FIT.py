@@ -422,9 +422,9 @@ def main():
         with st.spinner("Conectando con Google Drive…"):
             try:
                 drive, gc = crear_servicios(creds_dict)
-except Exception as e:
-    st.error(f"Error de autenticación: {e}")
-    return
+            except Exception as e:
+                st.error(f"Error de autenticación: {e}")
+                return
         
             # ===================== DEBUG ======================
             try:
@@ -436,13 +436,11 @@ except Exception as e:
             
                 st.success("Carpeta encontrada")
                 st.write(info)
-except Exception as e:
-    st.error(e)
+            except Exception as e:
+                st.error(e)
 
 # ==================================================
 
-except Exception as e:
-    st.error(e)
         # Buscar carpeta del año
         with st.spinner(f"Buscando carpeta del año {año_sel}…"):
             # Listar TODO lo que hay en la raíz para debug
