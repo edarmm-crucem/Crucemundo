@@ -412,6 +412,11 @@ def main():
 
         # Buscar carpeta del año
         with st.spinner(f"Buscando carpeta del año {año_sel}…"):
+            # Listar TODO lo que hay en la raíz para debug
+            q_debug = f"'{id_raiz}' in parents and trashed=false"
+            res_debug = drive.files().list(q=q_debug, fields="files(id,name,mimeType)").execute()
+            st.write("📂 Contenido de la carpeta raíz:", res_debug.get("files", []))
+            
             q = f"'{id_raiz}' in parents and name='{año_sel}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
             res = drive.files().list(q=q, fields="files(id,name)").execute()
             carpetas_año = res.get("files", [])
