@@ -444,13 +444,19 @@ def main():
         # Buscar carpeta del año
         with st.spinner(f"Buscando carpeta del año {año_sel}…"):
             # Listar TODO lo que hay en la raíz para debug
+            # Modifica tu bloque DEBUG para ver qué nombres hay realmente:
             q_debug = f"'{id_raiz}' in parents and trashed=false"
-            res_debug = drive.files().list(q=q_debug, fields="files(id,name,mimeType)").execute()
-            st.write("📂 Contenido de la carpeta raíz:", res_debug.get("files", []))
+            res_debug = drive.files().list(
+                q=q_debug, 
+                fields="files(id,name,mimeType)",
+                supportsAllDrives=True,
+                includeItemsFromAllDrives=True
+            ).execute()
             
-            q = f"'{id_raiz}' in parents and name='{año_sel}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
-            res = drive.files().list(q=q, fields="files(id,name)").execute()
-            carpetas_año = res.get("files", [])
+            carpetas = res_debug.get("files", [])
+            st.write("📂 Contenido real de la carpeta raíz (CRUCEM):")
+            for f in carpetas:
+                st.write(f"- {f['name']} (ID: {f['id']})")
 
         if not carpetas_año:
             st.error(f"No se encontró la carpeta del año **{año_sel}** en la raíz indicada.")
