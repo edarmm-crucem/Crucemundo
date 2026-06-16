@@ -1,708 +1,672 @@
+"""
+MacroFIT - Extractor de Informes FIT
+Streamlit app que replica la lógica del Google Apps Script original
+con doble pasada de verificación, filtros y exportación Excel.
+"""
 
-# ============================================================
-# NEW_CONFIG.py — Formulario inteligente de confirmación
-# ============================================================
-
-import re
 import streamlit as st
-from google.oauth2 import service_account
+import pandas as pd
+import json
+import re
+import io
+import time
+from datetime import datetime
+from pathlib import Path
+
+# ── Google API ──────────────────────────────────────────────────────────────
+from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
+import gspread
 
-st.set_page_config(
-    page_title="Nueva Confirmación",
-    page_icon="favicon1.png",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
-
-# ============================================================
-# AUTH CHECK
-# ============================================================
-if not st.session_state.get("authenticated"):
-    st.markdown("""
-        <style>
-        [data-testid="stSidebarNav"] { display: none !important; }
-        header[data-testid="stHeader"] { display: none !important; }
-        .auth-warn { background: #FEF3C7; border: 1.5px solid #FCD34D; border-radius: 12px;
-            padding: 1rem 1.2rem; margin: 2rem auto; max-width: 480px; font-family: sans-serif; }
-        .auth-warn-title { font-size: 1rem; font-weight: 800; color: #92400E; margin-bottom: 0.3rem; }
-        .auth-warn-sub { font-size: 0.82rem; color: #78350F; }
-        </style>
-        <div class="auth-warn">
-            <div class="auth-warn-title">⚠️ Acceso restringido / Restricted access</div>
-            <div class="auth-warn-sub">No tienes acceso. Inicia sesión desde el menú principal.<br>
-            <em>You don't have access. Please log in from the main menu.</em></div>
-        </div>""", unsafe_allow_html=True)
-    st.stop()
-
-# ============================================================
-# CONSTANTES
-# ============================================================
-LOGOID        = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
-LOGOURL       = f"https://lh3.googleusercontent.com/d/{LOGOID}"
-AGENCYSHEETID = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
-AGENCYSHEET   = "Datos"
-
-AGENCYFIELDS  = [
-    "Nombre", "CODIGO", "Grupo Gest", "Telefono", "Email", "Direccion",
-    "COMISION AGENCIA", "COMISION AGENCIA CON OFERTA ", "COMISION AGENCIA OFERTA 2X1 ",
-    "IVA", "IVA SERVICIO OPCIONAL",
+# ── Constantes ──────────────────────────────────────────────────────────────
+SCOPES = [
+    "https://www.googleapis.com/auth/drive.readonly",
+    "https://www.googleapis.com/auth/spreadsheets.readonly",
 ]
 
-DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Usuario"
+HEADERS = [
+    "Barco", "Agencia", "Cod", "Grupo", "Confirmación",
+    "Booking", "Itinerario", "Salida", "Regreso",
+    "Neto", "Bruto", "Estado Reserva", "Pago", "Comercial", "Personas", "Idioma"
+]
 
-# ============================================================
-# GOOGLE SERVICES
-# ============================================================
-@st.cache_resource
-def getgooglecreds():
-    return service_account.Credentials.from_service_account_info(
-        st.secrets["gcpserviceaccount"],
-        scopes=["https://www.googleapis.com/auth/spreadsheets",
-                "https://www.googleapis.com/auth/drive"],
+PATRON_ARCHIVO = re.compile(r"^[A-Z0-9_]+-\d{6}$", re.IGNORECASE)
+
+# ── Utilidades de autenticación ──────────────────────────────────────────────
+@st.cache_resource(show_spinner=False)
+def crear_servicios(creds_json: dict):
+    creds = Credentials.from_service_account_info(creds_json, scopes=SCOPES)
+    drive = build("drive", "v3", credentials=creds)
+    gc    = gspread.authorize(creds)
+    return drive, gc
+
+
+# ── Exploración de Drive ─────────────────────────────────────────────────────
+def listar_carpetas(drive, parent_id: str) -> list[dict]:
+    q = f"'{parent_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
+    res = drive.files().list(q=q, fields="files(id,name)", orderBy="name").execute()
+    return res.get("files", [])
+
+
+def listar_hojas(drive, parent_id: str) -> list[dict]:
+    q = f"'{parent_id}' in parents and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false"
+    res = drive.files().list(q=q, fields="files(id,name)", orderBy="name").execute()
+    return res.get("files", [])
+
+
+def descubrir_archivos(drive, carpeta_año_id: str) -> tuple[list[dict], list[str], list[str]]:
+    """
+    Navega: Año → Barcos → Salidas → Archivos (BARCO-AAMMDD).
+    Devuelve (archivos, barcos_encontrados, salidas_encontradas).
+    """
+    archivos = []
+    barcos_nombres = []
+    salidas_nombres = []
+
+    carpetas_barco = listar_carpetas(drive, carpeta_año_id)
+
+    for barco in carpetas_barco:
+        barcos_nombres.append(barco["name"])
+        carpetas_salida = listar_carpetas(drive, barco["id"])
+
+        for salida in carpetas_salida:
+            salidas_nombres.append(f"{barco['name']} / {salida['name']}")
+            hojas = listar_hojas(drive, salida["id"])
+
+            for hoja in hojas:
+                nombre = hoja["name"]
+                archivos.append({
+                    "id": hoja["id"],
+                    "nombre": nombre,
+                    "barco": barco["name"],
+                    "salida": salida["name"],
+                })
+
+    return archivos, barcos_nombres, salidas_nombres
+
+
+# ── Procesado de una hoja ────────────────────────────────────────────────────
+def limpiar_numero(val) -> float:
+    if not val:
+        return 0.0
+    s = str(val).strip()
+    # Eliminar símbolos de moneda, espacios y caracteres no numéricos salvo , . -
+    s = re.sub(r"[^\d,.\-]", "", s)
+    if not s:
+        return 0.0
+    # Formato 1.234,56 → 1234.56
+    if "," in s and "." in s:
+        s = s.replace(".", "").replace(",", ".")
+    else:
+        s = s.replace(",", ".")
+    try:
+        return float(s)
+    except ValueError:
+        return 0.0
+
+
+def procesar_hoja(valores: list[list], nombre_archivo: str) -> dict | None:
+    """
+    Recibe los display values (A1:Z60) de una hoja y extrae una fila de datos.
+    Devuelve None si la hoja no es BOOKING/PROFORMA o es _GROUP.
+    """
+    v = valores
+
+    def cel(fila, col, default="-"):
+        try:
+            val = v[fila][col]
+            return val if val not in ("", None) else default
+        except IndexError:
+            return default
+
+    # B2 debe contener BOOKING o PROFORMA
+    b2 = str(cel(1, 1, "")).upper()
+    if "BOOKING" not in b2 and "PROFORMA" not in b2:
+        return None
+
+    # Ignorar confirmaciones _GROUP
+    confirmacion = str(cel(10, 6, "")).upper().strip()
+    if confirmacion.endswith("_GROUP"):
+        return None
+
+    # Neto: suma de columnas Q y R en filas 33-40 (índices 32-39, cols 16-17)
+    neto = 0.0
+    for r in range(32, 40):
+        neto += limpiar_numero(cel(r, 16, 0)) + limpiar_numero(cel(r, 17, 0))
+
+    # Bruto: celda Y55 (índice fila 54, col 24... original col 16 = Q)
+    bruto = limpiar_numero(cel(54, 16, 0))
+
+    # Personas: V22 + Z22 + ... (fila 21, cols 6,10,13,15)
+    personas = (
+        limpiar_numero(cel(21, 6, 0)) +
+        limpiar_numero(cel(21, 10, 0)) +
+        limpiar_numero(cel(21, 13, 0)) +
+        limpiar_numero(cel(21, 15, 0))
     )
 
-@st.cache_resource
-def getsheetsservice():
-    return build("sheets", "v4", credentials=getgooglecreds())
-
-@st.cache_data(ttl=300)
-def getagencias():
-    service = getsheetsservice()
-    response = service.spreadsheets().values().get(
-        spreadsheetId=AGENCYSHEETID,
-        range=f"{AGENCYSHEET}!A:K",
-    ).execute()
-    rows = response.get("values", [])
-    agencies = []
-    for idx, row in enumerate(rows, start=1):
-        row = row + [""] * (11 - len(row))
-        data = {"rownumber": idx}
-        for i, field in enumerate(AGENCYFIELDS):
-            data[field] = row[i]
-        data["searchblob"] = " ".join(
-            str(data.get(f, "") or "").strip().lower()
-            for f in ["Nombre", "CODIGO", "Grupo Gest", "Telefono", "Email"]
-        )
-        agencies.append(data)
-    return agencies
-
-def searchagencias(query):
-    q = str(query or "").strip().lower()
-    if len(q) < 2:
-        return []
-    return [a for a in getagencias() if q in a["searchblob"]]
-
-# ============================================================
-# CSS
-# ============================================================
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
-
-* { box-sizing: border-box; }
-html, body, [class*="css"] {
-    font-family: "DM Sans", sans-serif !important;
-    background: #FFFFFF !important;
-}
-[data-testid="stAppViewContainer"] { background: #FFFFFF !important; }
-[data-testid="stHeader"] { background: transparent !important; }
-section[data-testid="stSidebar"] { display: none !important; }
-.block-container, [data-testid="stMainBlockContainer"] {
-    padding-top: 0 !important; padding-bottom: 1rem !important;
-    padding-left: 1rem !important; padding-right: 1rem !important;
-    max-width: 1400px !important; margin: 0 auto !important;
-}
-
-/* ── Cabecera documento ── */
-.doc-header {
-    display: flex; align-items: flex-start; justify-content: space-between;
-    padding: 0.9rem 0 0.7rem 0; border-bottom: 3px solid #1E3A8A; margin-bottom: 1rem;
-}
-.doc-header-left { display: flex; flex-direction: column; gap: 0.1rem; }
-.doc-title {
-    font-size: 1.55rem; font-weight: 900; color: #1E3A8A;
-    letter-spacing: 0.04em; text-transform: uppercase; line-height: 1;
-}
-.doc-subtitle { font-size: 0.72rem; font-weight: 600; color: #6B7280; letter-spacing: 0.08em; text-transform: uppercase; }
-.doc-header-center { text-align: center; font-size: 0.68rem; color: #6B7280; line-height: 1.6; }
-.doc-header-right { display: flex; align-items: center; }
-.doc-logo { height: 46px; width: auto; }
-
-/* ── Selector de tipo ── */
-.tipo-btn {
-    width: 100%; padding: 0.85rem 1rem; border-radius: 12px;
-    border: 2px solid #E5E7EB; background: #F9FAFB;
-    text-align: center; margin-bottom: 0.4rem;
-}
-.tipo-btn-icon { font-size: 1.4rem; margin-bottom: 0.2rem; }
-.tipo-btn-label { font-size: 0.80rem; font-weight: 800; color: #1F2937; }
-.tipo-btn-sub   { font-size: 0.65rem; color: #6B7280; margin-top: 0.1rem; }
-
-/* ── Panel formulario ── */
-.form-panel {
-    background: #FAFBFF; border: 1.5px solid #E0E7EF; border-radius: 14px;
-    padding: 1.1rem 1.2rem 1.3rem 1.2rem; margin-bottom: 1rem;
-}
-.form-section-title {
-    font-size: 0.70rem; font-weight: 800; color: #6B7280;
-    text-transform: uppercase; letter-spacing: 0.10em;
-    border-bottom: 1px solid #E5E7EB; padding-bottom: 0.3rem;
-    margin-bottom: 0.8rem; margin-top: 0.2rem;
-}
-
-/* ── Tabla estilo hoja ── */
-.agency-table {
-    width: 100%; border-collapse: collapse; font-size: 0.82rem;
-    border: 1.5px solid #374151;
-}
-.agency-table td, .agency-table th {
-    border: 1px solid #9CA3AF; padding: 5px 8px;
-    vertical-align: middle;
-}
-.agency-table th {
-    background: #F3F4F6; font-weight: 800; font-size: 0.72rem;
-    color: #374151; text-transform: uppercase; letter-spacing: 0.05em;
-    white-space: nowrap;
-}
-.agency-table td.label-cell {
-    background: #F9FAFB; font-weight: 700; color: #374151;
-    font-size: 0.75rem; white-space: nowrap; width: 100px;
-    text-align: right; padding-right: 10px;
-}
-.agency-table td.value-cell {
-    font-weight: 600; color: #111827; background: #FFFFFF;
-}
-.agency-table td.code-cell {
-    background: #EFF6FF; font-weight: 800; color: #1E40AF;
-    text-align: center; white-space: nowrap;
-}
-.agency-table td.empty-cell {
-    background: #F9FAFB; color: #9CA3AF; font-style: italic;
-    font-size: 0.72rem;
-}
-
-/* ── Badge tipo activo ── */
-.badge-tipo {
-    display: inline-flex; align-items: center; gap: 0.4rem;
-    padding: 0.3rem 0.8rem; border-radius: 999px;
-    font-size: 0.72rem; font-weight: 800; margin-bottom: 0.9rem;
-}
-.badge-fit-es  { background: #DBEAFE; color: #1D4ED8; border: 1px solid #93C5FD; }
-.badge-fit-en  { background: #D1FAE5; color: #065F46; border: 1px solid #6EE7B7; }
-.badge-groups  { background: #EDE9FE; color: #5B21B6; border: 1px solid #C4B5FD; }
-
-/* ── Inputs ── */
-div[data-testid="stTextInput"] label {
-    color: #374151 !important; font-size: 0.76rem !important; font-weight: 700 !important;
-}
-div[data-testid="stTextInput"] input {
-    background: #FFFFFF !important; border: 1.5px solid #CBD5E1 !important;
-    border-radius: 10px !important; color: #1F2937 !important;
-    min-height: 40px !important; font-family: "DM Sans", sans-serif !important;
-    font-size: 0.88rem !important; font-weight: 600 !important;
-}
-div[data-testid="stTextInput"] input:focus {
-    border-color: #2563EB !important;
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.12) !important;
-}
-div.stButton button {
-    border-radius: 999px !important; font-size: 0.75rem !important;
-    font-weight: 800 !important; font-family: "DM Sans", sans-serif !important;
-    padding: 0 1rem !important; min-height: 34px !important;
-    box-shadow: 0 2px 6px rgba(15,23,42,0.10) !important;
-    border: 2px solid transparent !important;
-    transition: transform 0.15s ease, box-shadow 0.15s ease !important;
-}
-div.stButton button:hover {
-    transform: translateY(-1px) !important;
-    box-shadow: 0 6px 14px rgba(15,23,42,0.13) !important;
-}
-
-/* ── Pill usuario ── */
-.user-pill {
-    display: inline-flex; align-items: center; gap: 0.4rem;
-    padding: 0.3rem 0.7rem; border-radius: 999px;
-    background: #F3F4F6; border: 1px solid #E5E7EB;
-    font-size: 0.70rem; font-weight: 700; color: #4B5565;
-}
-
-/* ── Resultado búsqueda ── */
-.search-result-card {
-    background: #F0FDF4; border: 1.5px solid #86EFAC;
-    border-radius: 10px; padding: 0.6rem 0.9rem;
-    font-size: 0.78rem; color: #166534; font-weight: 700;
-    margin-top: 0.6rem;
-}
-.search-none-card {
-    background: #FEF9C3; border: 1.5px solid #FCD34D;
-    border-radius: 10px; padding: 0.6rem 0.9rem;
-    font-size: 0.78rem; color: #92400E; font-weight: 700;
-    margin-bottom: 0.6rem;
-}
-
-/* ── Campos fijos (lectura) vs libres (editable) ── */
-div[data-testid="stTextInput"] input[disabled],
-div[data-testid="stTextInput"] input:read-only {
-    background: #F0F4FF !important;
-    border-color: #BFDBFE !important;
-    color: #1E40AF !important;
-    cursor: default !important;
-}
-
-div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-    background: #FFFFFF !important; border: 1.5px solid #CBD5E1 !important;
-    border-radius: 10px !important; color: #1F2937 !important;
-    min-height: 40px !important; font-family: "DM Sans", sans-serif !important;
-    font-size: 0.88rem !important; font-weight: 600 !important;
-}
-div[data-testid="stSelectbox"] label {
-    color: #374151 !important; font-size: 0.76rem !important; font-weight: 700 !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ============================================================
-# CABECERA — estilo documento
-# ============================================================
-from datetime import date
-today_str = date.today().strftime("%-d/%-m/%Y")
-
-st.markdown(f"""
-<div class="doc-header">
-    <div class="doc-header-left">
-        <div class="doc-title">PROFORMA - CONFIRMACIÓN</div>
-        <div class="doc-subtitle">Nueva Confirmación / New Confirmation</div>
-        <div style="margin-top:0.5rem;font-size:0.82rem;font-weight:700;color:#374151;">
-            FECHA: &nbsp;<span style="color:#1E3A8A;">{today_str}</span>
-        </div>
-    </div>
-    <div class="doc-header-center">
-        CRUCEMUNDO SL · CRUCEROS FLUVIALES · WWW.CRUCEMUNDO.ES<br>
-        Av. Europa, 86, building 2A, suite 25 cp.08850 Gavà, Spain<br>
-        EMAIL: info@crucemundo.com
-    </div>
-    <div class="doc-header-right">
-        <img class="doc-logo" src="{LOGOURL}" alt="Logo">
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-# Pill usuario + back
-nav_col1, nav_col2 = st.columns([6, 1])
-with nav_col1:
-    st.markdown(f'<span class="user-pill">👤 {DISPLAYUSER}</span>', unsafe_allow_html=True)
-with nav_col2:
-    if st.button("← Volver / Back", key="btn_back_main"):
-        st.switch_page("app.py")
-
-st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-
-# ============================================================
-# PASO 1 — SELECTOR DE TIPO
-# ============================================================
-if "nc_tipo" not in st.session_state:
-    st.session_state.nc_tipo = None
-
-st.markdown('<div class="form-section-title">Paso 1 — Selecciona el tipo de confirmación / Select confirmation type</div>', unsafe_allow_html=True)
-
-col_t1, col_t2, col_t3 = st.columns(3, gap="medium")
-
-with col_t1:
-    active1 = st.session_state.nc_tipo == "FIT_ES"
-    border1 = "#2563EB" if active1 else "#E5E7EB"
-    bg1     = "#EFF6FF" if active1 else "#F9FAFB"
-    st.markdown(f"""
-    <div class="tipo-btn" style="border-color:{border1};background:{bg1};">
-        <div class="tipo-btn-icon">📘</div>
-        <div class="tipo-btn-label">FIT Español</div>
-        <div class="tipo-btn-sub">Confirmación individual ES</div>
-    </div>""", unsafe_allow_html=True)
-    if st.button("Seleccionar FIT ES", key="btn_tipo_fit_es"):
-        st.session_state.nc_tipo           = "FIT_ES"
-        st.session_state.nc_agency_query   = ""
-        st.session_state.nc_agency_sel     = None
-        st.session_state.nc_agency_matches = []
-        st.rerun()
-
-with col_t2:
-    active2 = st.session_state.nc_tipo == "FIT_EN"
-    border2 = "#059669" if active2 else "#E5E7EB"
-    bg2     = "#ECFDF5" if active2 else "#F9FAFB"
-    st.markdown(f"""
-    <div class="tipo-btn" style="border-color:{border2};background:{bg2};">
-        <div class="tipo-btn-icon">📗</div>
-        <div class="tipo-btn-label">FIT English</div>
-        <div class="tipo-btn-sub">Individual confirmation EN</div>
-    </div>""", unsafe_allow_html=True)
-    if st.button("Select FIT EN", key="btn_tipo_fit_en"):
-        st.session_state.nc_tipo           = "FIT_EN"
-        st.session_state.nc_agency_query   = ""
-        st.session_state.nc_agency_sel     = None
-        st.session_state.nc_agency_matches = []
-        st.rerun()
-
-with col_t3:
-    active3 = st.session_state.nc_tipo == "GROUPS"
-    border3 = "#7C3AED" if active3 else "#E5E7EB"
-    bg3     = "#F5F3FF" if active3 else "#F9FAFB"
-    st.markdown(f"""
-    <div class="tipo-btn" style="border-color:{border3};background:{bg3};">
-        <div class="tipo-btn-icon">👥</div>
-        <div class="tipo-btn-label">GRUPOS / Groups</div>
-        <div class="tipo-btn-sub">Confirmación grupal</div>
-    </div>""", unsafe_allow_html=True)
-    if st.button("Seleccionar GRUPOS", key="btn_tipo_groups"):
-        st.session_state.nc_tipo           = "GROUPS"
-        st.session_state.nc_agency_query   = ""
-        st.session_state.nc_agency_sel     = None
-        st.session_state.nc_agency_matches = []
-        st.rerun()
-
-# ============================================================
-# PASO 2 — FORMULARIO (solo si hay tipo seleccionado)
-# ============================================================
-if st.session_state.nc_tipo:
-
-    tipo        = st.session_state.nc_tipo
-    badge_class = {"FIT_ES": "badge-fit-es", "FIT_EN": "badge-fit-en", "GROUPS": "badge-groups"}[tipo]
-    badge_label = {"FIT_ES": "📘 FIT Español",  "FIT_EN": "📗 FIT English", "GROUPS": "👥 Grupos"}[tipo]
-
-    st.markdown(f'<div class="badge-tipo {badge_class}">{badge_label}</div>', unsafe_allow_html=True)
-    st.markdown('<div class="form-panel">', unsafe_allow_html=True)
-    st.markdown('<div class="form-section-title">Agencia / Agency</div>', unsafe_allow_html=True)
-
-    # ── Buscador ────────────────────────────────────────────
-    search_col, btn_col = st.columns([4, 1], gap="small")
-    with search_col:
-        query = st.text_input(
-            "Buscar agencia (nombre, código, teléfono, email...)",
-            value=st.session_state.get("nc_agency_query", ""),
-            key="nc_agency_query_widget",
-            placeholder="Ej: A Babor, ABB, 912952092...",
-        )
-    with btn_col:
-        st.markdown("<div style='height:1.82rem'></div>", unsafe_allow_html=True)
-        if st.button("🔎 Buscar", key="btn_buscar_agencia"):
-            matches = searchagencias(query)
-            st.session_state.nc_agency_query   = query
-            st.session_state.nc_agency_matches = matches
-            st.session_state.nc_agency_sel     = matches[0] if len(matches) == 1 else None
-            st.rerun()
-
-    matches = st.session_state.get("nc_agency_matches", [])
-    sel     = st.session_state.get("nc_agency_sel")
-
-    if len(matches) > 1 and not sel:
-        st.markdown(f'<div class="search-none-card">⚠️ {len(matches)} coincidencias — selecciona la correcta:</div>', unsafe_allow_html=True)
-        options = [f"{a['Nombre']}  ·  {a['CODIGO']}  ·  {a['Telefono']}" for a in matches]
-        chosen  = st.selectbox("Selecciona agencia", options, index=None,
-                               placeholder="Elige una...", key="nc_agency_select")
-        if chosen:
-            st.session_state.nc_agency_sel = matches[options.index(chosen)]
-            st.rerun()
-
-    elif len(matches) == 0 and st.session_state.get("nc_agency_query"):
-        st.markdown('<div class="search-none-card">🔎 No se encontraron coincidencias. Escribe otro término.</div>', unsafe_allow_html=True)
-
-    # ── Tabla estilo documento ───────────────────────────────
-    ag        = sel or {}
-    nombre    = ag.get("Nombre",    "")
-    codigo    = ag.get("CODIGO",    "")
-    grupo     = ag.get("Grupo Gest","")
-    telefono  = ag.get("Telefono",  "")
-    email     = ag.get("Email",     "")
-    direccion = ag.get("Direccion", "")
-
-    def cell(v, css="value-cell"):
-        return f'<td class="{css}">{v}</td>' if v else '<td class="empty-cell">—</td>'
-
-    st.markdown(f"""
-    <table class="agency-table">
-        <tr>
-            <th colspan="2" style="text-align:left;">AGENCIA</th>
-            <td class="value-cell" style="font-weight:800;font-size:0.88rem;" colspan="2">
-                {nombre or '<span style="color:#9CA3AF;font-style:italic;">sin seleccionar</span>'}
-            </td>
-            <th>COD</th>
-            {cell(codigo, "code-cell")}
-            <th>GRUPO</th>
-            {cell(grupo)}
-        </tr>
-        <tr>
-            <td class="label-cell" colspan="2">Dirección</td>
-            <td class="value-cell" colspan="5">
-                {direccion or '<span style="color:#9CA3AF;font-style:italic;">—</span>'}
-            </td>
-        </tr>
-        <tr>
-            <td class="label-cell" colspan="2">Teléfono</td>
-            {cell(telefono)}
-            <td class="label-cell">Email</td>
-            <td class="value-cell" colspan="4">
-                {email or '<span style="color:#9CA3AF;font-style:italic;">—</span>'}
-            </td>
-        </tr>
-    </table>
-    """, unsafe_allow_html=True)
-
-    if sel:
-        st.markdown('<div class="search-result-card">✅ Agencia cargada correctamente desde la base de datos.</div>', unsafe_allow_html=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # ============================================================
-    # AGENTE / CLIENTE
-    # ============================================================
-    st.markdown("<div style='height:0.7rem'></div>", unsafe_allow_html=True)
-    st.markdown('<div class="form-panel">', unsafe_allow_html=True)
-    st.markdown('<div class="form-section-title">Agente / Cliente</div>', unsafe_allow_html=True)
-
-    agente_cliente = st.text_input(
-        "Nombre del agente o cliente / Agent or client name",
-        value=st.session_state.get("nc_agente_cliente", ""),
-        key="nc_agente_cliente_widget",
-        placeholder="Ej: María García",
-    )
-    if agente_cliente != st.session_state.get("nc_agente_cliente", ""):
-        st.session_state.nc_agente_cliente = agente_cliente
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # ============================================================
-    # ESTADO RESERVA
-    # ============================================================
-    st.markdown('<div class="form-panel">', unsafe_allow_html=True)
-    st.markdown('<div class="form-section-title">Estado de la Reserva / Booking Status</div>', unsafe_allow_html=True)
-
-    ESTADOS = ["", "CONFIRMADO", "NO CONFIRMADO", "CANCELADO"]
-    estado_actual = st.session_state.get("nc_estado_reserva", "")
-
-    estado_sel = st.selectbox(
-        "Estado / Status",
-        options=ESTADOS,
-        index=ESTADOS.index(estado_actual) if estado_actual in ESTADOS else 0,
-        key="nc_estado_reserva_widget",
-        format_func=lambda x: {
-            "":              "— Selecciona un estado —",
-            "CONFIRMADO":    "✅  CONFIRMADO",
-            "NO CONFIRMADO": "⚠️  NO CONFIRMADO",
-            "CANCELADO":     "❌  CANCELADO",
-        }.get(x, x),
-    )
-    if estado_sel != st.session_state.get("nc_estado_reserva", ""):
-        st.session_state.nc_estado_reserva = estado_sel
-
-    # Badge visual del estado seleccionado
-    if estado_sel == "CONFIRMADO":
-        st.markdown("""
-        <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
-             padding:0.4rem 1rem;border-radius:999px;background:#DCFCE7;
-             border:1.5px solid #86EFAC;color:#166534;font-weight:800;font-size:0.80rem;">
-            ✅ CONFIRMADO
-        </div>""", unsafe_allow_html=True)
-    elif estado_sel == "NO CONFIRMADO":
-        st.markdown("""
-        <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
-             padding:0.4rem 1rem;border-radius:999px;background:#FEF3C7;
-             border:1.5px solid #FCD34D;color:#92400E;font-weight:800;font-size:0.80rem;">
-            ⚠️ NO CONFIRMADO
-        </div>""", unsafe_allow_html=True)
-    elif estado_sel == "CANCELADO":
-        st.markdown("""
-        <div style="display:inline-flex;align-items:center;gap:0.5rem;margin-top:0.5rem;
-             padding:0.4rem 1rem;border-radius:999px;background:#FEE2E2;
-             border:1.5px solid #FCA5A5;color:#991B1B;font-weight:800;font-size:0.80rem;">
-            ❌ CANCELADO
-        </div>""", unsafe_allow_html=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# ============================================================
-    # LOCALIZADOR CRUCEMUNDO
-    # ============================================================
-    LOCALIZADOR_REMOTE_ID = "1c1oiBTLDRtDAAKQp8hE7uA1FfStp4DJAYhwa7F_yCNQ"
-
-    SHIPCODEMAP = {
-        "MS_ALBERTINA":     "ALB",
-        "MS_ARENA":         "ARN",
-        "MS_CRUCEVITA":     "CV",
-        "MS_DOURO_CRUISER": "DC",
-        "MS_FIDELIO":       "FID",
-        "MS_LEONORA":       "LEO",
-        "MS_RIVER_DIAMOND": "RDA",
-        "MS_RIVER_SAPPHIRE":"RSA",
-        "MS_SWISS_SPLENDOR":"SPL",
-        "MS_VISTA_GRACIA":  "VGR",
-        "MS_VISTAMILLA":    "VMI",
-        "MS_VISTA_RIO":     "VRI",
-        "MS_CRUCE_RIO":     "CRI",
+    return {
+        "Barco":         cel(12, 6),
+        "Agencia":       cel(4, 6),
+        "Cod":           cel(4, 15),
+        "Grupo":         cel(4, 17),
+        "Confirmación":  cel(10, 6),
+        "Booking":       cel(2, 2),
+        "Itinerario":    cel(18, 6),
+        "Salida":        cel(16, 6),
+        "Regreso":       cel(16, 10),
+        "Neto":          round(neto, 2),
+        "Bruto":         round(bruto, 2),
+        "Estado Reserva":cel(9, 6),
+        "Pago":          cel(56, 6),
+        "Comercial":     cel(9, 16),
+        "Personas":      int(personas),
+        "Idioma":        cel(22, 6),
+        "_archivo":      nombre_archivo,   # interno para verificación
     }
 
-    def generar_localizador(barco, fecha_salida):
-        """
-        Replica MASTER_CONFIRMATION_GeneraLOCALIZADOR en Python.
-        - Hoja índice 0 del remoto: contadores  (col A = clave, col B = valor)
-        - Hoja índice 1 del remoto: registro    (timestamp, codigo, barco, fecha)
-        Devuelve el código generado o lanza Exception.
-        """
-        prefijo = SHIPCODEMAP.get(barco)
-        if not prefijo:
-            raise Exception(f"Barco no configurado: {barco}")
 
-        anio2      = fecha_salida.strftime("%y")
-        mes        = fecha_salida.strftime("%m")
-        dia        = fecha_salida.strftime("%d")
-        clave      = prefijo + anio2          # ej: VRI26
-        parte_fecha = anio2 + mes + dia       # ej: 260522
+# ── Procesado principal con doble pasada ──────────────────────────────────────
+def ejecutar_extraccion(drive, gc, archivos: list[dict], placeholder_progress, placeholder_estado):
+    """
+    Primera pasada: procesa todos los archivos.
+    Segunda pasada: re-verifica los que dieron 0 registros o error.
+    """
+    resultados = []
+    errores = []
+    archivos_vacios = []
 
-        service = getsheetsservice()
+    total = len(archivos)
 
-        # ── Leer hoja contadores (índice 0) ──────────────────
-        spreadsheet  = service.spreadsheets().get(
-            spreadsheetId=LOCALIZADOR_REMOTE_ID
-        ).execute()
-        sheets       = spreadsheet.get("sheets", [])
-        if len(sheets) < 2:
-            raise Exception("El archivo remoto necesita al menos 2 hojas.")
+    # ── PASADA 1 ────────────────────────────────────────────────────────────
+    placeholder_estado.markdown("### 🔄 Pasada 1 — Extracción inicial")
+    pb1 = placeholder_progress.progress(0, text="Iniciando pasada 1…")
 
-        title_cont = sheets[0]["properties"]["title"]
-        title_reg  = sheets[1]["properties"]["title"]
+    for i, arch in enumerate(archivos):
+        pct = int((i + 1) / total * 100)
+        pb1.progress(pct, text=f"[{i+1}/{total}] {arch['barco']} · {arch['salida']} · {arch['nombre']}")
 
-        resp = service.spreadsheets().values().get(
-            spreadsheetId=LOCALIZADOR_REMOTE_ID,
-            range=f"{title_cont}!A:B",
-        ).execute()
-        rows = resp.get("values", [])
+        filas_este = []
+        try:
+            sh = gc.open_by_key(arch["id"])
+            for ws in sh.worksheets():
+                vals = ws.get_all_values()
+                # Extender a 60 filas × 26 cols para evitar IndexError
+                padded = [row + [""] * (26 - len(row)) for row in vals]
+                while len(padded) < 60:
+                    padded.append([""] * 26)
 
-        contador    = 1
-        fila_update = None
+                fila = procesar_hoja(padded, arch["nombre"])
+                if fila:
+                    fila["_barco_carpeta"]  = arch["barco"]
+                    fila["_salida_carpeta"] = arch["salida"]
+                    filas_este.append(fila)
 
-        for i, row in enumerate(rows):
-            if row and str(row[0]).strip() == clave:
-                contador    = int(row[1]) + 1 if len(row) > 1 and str(row[1]).isdigit() else 1
-                fila_update = i + 1   # 1-based
-                break
+        except Exception as e:
+            errores.append({"archivo": arch["nombre"], "id": arch["id"], "error": str(e), "pasada": 1})
 
-        # ── Actualizar o crear contador ───────────────────────
-        if fila_update:
-            service.spreadsheets().values().update(
-                spreadsheetId=LOCALIZADOR_REMOTE_ID,
-                range=f"{title_cont}!B{fila_update}",
-                valueInputOption="RAW",
-                body={"values": [[contador]]},
-            ).execute()
+        if filas_este:
+            resultados.extend(filas_este)
         else:
-            service.spreadsheets().values().append(
-                spreadsheetId=LOCALIZADOR_REMOTE_ID,
-                range=f"{title_cont}!A:B",
-                valueInputOption="RAW",
-                insertDataOption="INSERT_ROWS",
-                body={"values": [[clave, contador]]},
-            ).execute()
+            archivos_vacios.append(arch)
 
-        # ── Generar código ────────────────────────────────────
-        codigo = f"{prefijo}{parte_fecha}-{str(contador).zfill(3)}"
+    # ── PASADA 2 (re-verificación) ──────────────────────────────────────────
+    reintento_ids = {a["id"] for a in archivos_vacios}
+    reintento_ids |= {e["id"] for e in errores}
 
-        # ── Registrar en hoja índice 1 ────────────────────────
-        from datetime import datetime as dt
-        ahora    = dt.now().strftime("%d/%m/%Y %H:%M")
-        fecha_str = fecha_salida.strftime("%d/%m/%Y")
+    reintento_lista = [a for a in archivos if a["id"] in reintento_ids]
 
-        service.spreadsheets().values().append(
-            spreadsheetId=LOCALIZADOR_REMOTE_ID,
-            range=f"{title_reg}!A:D",
-            valueInputOption="RAW",
-            insertDataOption="INSERT_ROWS",
-            body={"values": [[ahora, codigo, barco, fecha_str]]},
-        ).execute()
-
-        return codigo
-
-    # ── UI del bloque localizador ─────────────────────────────
-    st.markdown('<div class="form-panel">', unsafe_allow_html=True)
-    st.markdown('<div class="form-section-title">Localizador Crucemundo</div>', unsafe_allow_html=True)
-
-    loc_col1, loc_col2, loc_col3 = st.columns([2, 2, 1], gap="medium")
-
-    with loc_col1:
-        barco_options = [""] + list(SHIPCODEMAP.keys())
-        barco_sel = st.selectbox(
-            "Barco / Ship",
-            options=barco_options,
-            index=barco_options.index(st.session_state.get("nc_barco", ""))
-                  if st.session_state.get("nc_barco", "") in barco_options else 0,
-            key="nc_barco_widget",
-            format_func=lambda x: x.replace("_", " ") if x else "— Selecciona barco —",
+    if reintento_lista:
+        placeholder_estado.markdown(
+            f"### 🔍 Pasada 2 — Re-verificando {len(reintento_lista)} archivos sin datos / con error"
         )
-        if barco_sel != st.session_state.get("nc_barco", ""):
-            st.session_state.nc_barco       = barco_sel
-            st.session_state.nc_localizador = ""
-            st.rerun()
+        pb2 = placeholder_progress.progress(0, text="Iniciando pasada 2…")
+        errores_p1_ids = {e["id"] for e in errores}
+        errores_p2 = []
 
-    with loc_col2:
-        fecha_salida_loc = st.date_input(
-            "Fecha de salida / Departure date",
-            value=st.session_state.get("nc_fecha_salida_loc", date.today()),
-            format="DD/MM/YYYY",
-            key="nc_fecha_salida_loc_widget",
-        )
-        st.session_state.nc_fecha_salida_loc = fecha_salida_loc
+        for j, arch in enumerate(reintento_lista):
+            pct = int((j + 1) / len(reintento_lista) * 100)
+            pb2.progress(pct, text=f"[{j+1}/{len(reintento_lista)}] Reintentando: {arch['nombre']}")
+            time.sleep(0.3)  # pequeño throttle para evitar rate-limit
 
-    with loc_col3:
-        st.markdown("<div style='height:1.82rem'></div>", unsafe_allow_html=True)
-        generar_disabled = not (
-            st.session_state.get("nc_barco") and
-            st.session_state.get("nc_fecha_salida_loc")
-        )
-        if st.button("⚡ Generar", key="btn_generar_localizador", disabled=generar_disabled):
-            if st.session_state.get("nc_localizador"):
-                st.warning("Ya existe un localizador generado para esta confirmación. Reinicia si quieres uno nuevo.")
+            filas_este = []
+            try:
+                sh = gc.open_by_key(arch["id"])
+                for ws in sh.worksheets():
+                    vals = ws.get_all_values()
+                    padded = [row + [""] * (26 - len(row)) for row in vals]
+                    while len(padded) < 60:
+                        padded.append([""] * 26)
+
+                    fila = procesar_hoja(padded, arch["nombre"])
+                    if fila:
+                        fila["_barco_carpeta"]  = arch["barco"]
+                        fila["_salida_carpeta"] = arch["salida"]
+                        filas_este.append(fila)
+
+            except Exception as e:
+                errores_p2.append({"archivo": arch["nombre"], "id": arch["id"], "error": str(e), "pasada": 2})
+
+            if filas_este:
+                # Solo añadir si no estaba ya en resultados
+                conf_existentes = {r["Confirmación"] for r in resultados}
+                nuevos = [f for f in filas_este if f["Confirmación"] not in conf_existentes]
+                resultados.extend(nuevos)
+
+                # Limpiar de errores si ahora funcionó
+                errores = [e for e in errores if e["id"] != arch["id"]]
+
+        errores.extend(errores_p2)
+
+    placeholder_progress.empty()
+    placeholder_estado.empty()
+    return resultados, errores
+
+
+# ── Exportar a Excel ─────────────────────────────────────────────────────────
+def exportar_excel(df: pd.DataFrame) -> bytes:
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        df_export = df.drop(columns=[c for c in df.columns if c.startswith("_")], errors="ignore")
+        df_export.to_excel(writer, index=False, sheet_name="VentasFIT")
+
+        wb  = writer.book
+        ws  = writer.sheets["VentasFIT"]
+
+        # Formatos
+        fmt_header = wb.add_format({
+            "bold": True, "bg_color": "#d9e1f2", "border": 1,
+            "align": "center", "valign": "vcenter", "font_name": "Calibri"
+        })
+        fmt_euro = wb.add_format({
+            "num_format": '#,##0.00 €', "bg_color": "#fff2cc",
+            "font_name": "Calibri"
+        })
+        fmt_normal = wb.add_format({"font_name": "Calibri"})
+
+        for col_num, col_name in enumerate(df_export.columns):
+            ws.write(0, col_num, col_name, fmt_header)
+            if col_name in ("Neto", "Bruto"):
+                ws.set_column(col_num, col_num, 14, fmt_euro)
             else:
-                try:
-                    with st.spinner("Generando localizador..."):
-                        codigo = generar_localizador(
-                            st.session_state.nc_barco,
-                            st.session_state.nc_fecha_salida_loc,
-                        )
-                    st.session_state.nc_localizador = codigo
-                    st.rerun()
-                except Exception as exc:
-                    st.error(f"Error generando localizador: {exc}")
+                ws.set_column(col_num, col_num, 16, fmt_normal)
 
-    # ── Mostrar resultado ─────────────────────────────────────
-    loc_generado = st.session_state.get("nc_localizador", "")
-    if loc_generado:
-        st.markdown(f"""
-        <div style="margin-top:0.7rem;display:flex;align-items:center;gap:1rem;
-             background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:10px;
-             padding:0.7rem 1rem;">
-            <div style="font-size:0.72rem;font-weight:700;color:#166534;
-                 text-transform:uppercase;letter-spacing:0.08em;">
-                Localizador asignado
-            </div>
-            <div style="font-size:1.15rem;font-weight:900;color:#1E3A8A;
-                 letter-spacing:0.08em;font-family:monospace;">
-                {loc_generado}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
+        # Autofilter
+        ws.autofilter(0, 0, len(df_export), len(df_export.columns) - 1)
+
+    return output.getvalue()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ── APP PRINCIPAL ──────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+def main():
+    st.set_page_config(
+        page_title="MacroFIT Extractor",
+        page_icon="🚢",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+
+    # ── CSS personalizado ──────────────────────────────────────────────────
+    st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+
+    .main-header {
+        background: linear-gradient(135deg, #1a3a5c 0%, #2563ab 100%);
+        padding: 2rem 2.5rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        color: white;
+    }
+    .main-header h1 { margin: 0; font-size: 2rem; font-weight: 700; letter-spacing: -0.5px; }
+    .main-header p  { margin: 0.4rem 0 0; opacity: 0.8; font-size: 0.95rem; }
+
+    .metric-card {
+        background: #f8faff;
+        border: 1px solid #dce6f7;
+        border-radius: 10px;
+        padding: 1.2rem 1.5rem;
+        text-align: center;
+    }
+    .metric-card .val { font-size: 2rem; font-weight: 700; color: #1a3a5c; }
+    .metric-card .lbl { font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .stDataFrame { border: 1px solid #dce6f7; border-radius: 8px; }
+
+    .badge-ok  { background:#d1fae5; color:#065f46; padding:2px 8px; border-radius:99px; font-size:0.8rem; }
+    .badge-err { background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:99px; font-size:0.8rem; }
+
+    div[data-testid="stSidebar"] { background: #f1f5fb; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # ── Header ──────────────────────────────────────────────────────────────
+    st.markdown("""
+    <div class="main-header">
+        <h1>🚢 MacroFIT Extractor</h1>
+        <p>Extracción automática de informes FIT · Doble pasada de verificación</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ════════════════════════════════════════════════════════════════════════
+    # ── SIDEBAR — Configuración ────────────────────────────────────────────
+    # ════════════════════════════════════════════════════════════════════════
+    with st.sidebar:
+        st.markdown("## ⚙️ Configuración")
+
+        st.markdown("### 🔑 Credenciales Google")
+        creds_file = st.file_uploader(
+            "Sube el JSON de la Service Account",
+            type=["json"],
+            help="Descarga desde Google Cloud Console → IAM → Cuentas de Servicio"
+        )
+
+        st.divider()
+        st.markdown("### 📁 Carpeta raíz de Drive")
+        id_raiz = st.text_input(
+            "ID de la carpeta raíz FIT",
+            value="11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm",
+            help="ID que aparece en la URL de Drive"
+        )
+
+        st.divider()
+        st.markdown("### 📅 Año a procesar")
+        año_sel = st.text_input("Año", value=str(datetime.now().year))
+
+        st.divider()
+        iniciar = st.button("▶️ Iniciar Extracción", use_container_width=True, type="primary")
+
+        st.markdown("---")
+        st.caption("MacroFIT v2.0 · Doble pasada · Exportación Excel")
+
+    # ════════════════════════════════════════════════════════════════════════
+    # ── ESTADO DE SESIÓN ───────────────────────────────────────────────────
+    # ════════════════════════════════════════════════════════════════════════
+    if "df_resultados" not in st.session_state:
+        st.session_state.df_resultados = None
+    if "errores"       not in st.session_state:
+        st.session_state.errores = []
+    if "meta"          not in st.session_state:
+        st.session_state.meta = {}
+
+    # ════════════════════════════════════════════════════════════════════════
+    # ── INICIO DE EXTRACCIÓN ───────────────────────────────────────────────
+    # ════════════════════════════════════════════════════════════════════════
+    if iniciar:
+        if not creds_file:
+            st.error("⚠️  Sube primero el fichero JSON de credenciales.")
+            return
+        if not id_raiz.strip():
+            st.error("⚠️  Introduce el ID de la carpeta raíz.")
+            return
+        if not año_sel.strip().isdigit():
+            st.error("⚠️  El año debe ser numérico.")
+            return
+
+        creds_dict = json.load(creds_file)
+
+        with st.spinner("Conectando con Google Drive…"):
+            try:
+                drive, gc = crear_servicios(creds_dict)
+            except Exception as e:
+                st.error(f"Error de autenticación: {e}")
+                return
+
+        # Buscar carpeta del año
+        with st.spinner(f"Buscando carpeta del año {año_sel}…"):
+            q = f"'{id_raiz}' in parents and name='{año_sel}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+            res = drive.files().list(q=q, fields="files(id,name)").execute()
+            carpetas_año = res.get("files", [])
+
+        if not carpetas_año:
+            st.error(f"No se encontró la carpeta del año **{año_sel}** en la raíz indicada.")
+            return
+
+        carpeta_año_id = carpetas_año[0]["id"]
+
+        # Descubrir estructura
+        with st.spinner("Explorando estructura de carpetas…"):
+            archivos, barcos, salidas = descubrir_archivos(drive, carpeta_año_id)
+
+        if not archivos:
+            st.warning("No se encontraron archivos Sheets en la estructura de carpetas.")
+            return
+
+        st.info(
+            f"📂 **{len(barcos)} barcos** · **{len(salidas)} salidas** · "
+            f"**{len(archivos)} archivos** encontrados. Iniciando extracción…"
+        )
+
+        # Contenedores para progreso en tiempo real
+        placeholder_prog   = st.empty()
+        placeholder_estado = st.empty()
+
+        t_inicio = time.time()
+        resultados, errores = ejecutar_extraccion(
+            drive, gc, archivos, placeholder_prog, placeholder_estado
+        )
+        t_fin = time.time()
+
+        # Guardar en sesión
+        if resultados:
+            df = pd.DataFrame(resultados)
+            # Marcar duplicados por Confirmación
+            df["_duplicado"] = df["Confirmación"].duplicated(keep=False)
+            st.session_state.df_resultados = df
+        else:
+            st.session_state.df_resultados = pd.DataFrame()
+
+        st.session_state.errores = errores
+        st.session_state.meta = {
+            "año": año_sel,
+            "archivos_total": len(archivos),
+            "tiempo": round(t_fin - t_inicio, 1),
+            "ts": datetime.now().strftime("%d/%m/%Y %H:%M"),
+        }
+        st.rerun()
+
+    # ════════════════════════════════════════════════════════════════════════
+    # ── MOSTRAR RESULTADOS ─────────────────────────────────────────────────
+    # ════════════════════════════════════════════════════════════════════════
+    df_all = st.session_state.df_resultados
+
+    if df_all is None:
         st.markdown("""
-        <div style="margin-top:0.6rem;background:#F8FAFC;border:1.5px dashed #CBD5E1;
-             border-radius:10px;padding:0.65rem 1rem;font-size:0.78rem;
-             color:#94A3B8;font-weight:600;">
-            Selecciona barco y fecha, luego pulsa ⚡ Generar
+        <div style="text-align:center;padding:4rem 0;color:#94a3b8;">
+            <div style="font-size:4rem">🚢</div>
+            <div style="font-size:1.2rem;font-weight:600;margin-top:1rem;">Listo para procesar</div>
+            <div style="margin-top:0.5rem;font-size:0.9rem;">
+                Configura las credenciales y el año en el panel lateral, luego pulsa Iniciar.
+            </div>
         </div>
         """, unsafe_allow_html=True)
+        return
 
-    st.markdown("</div>", unsafe_allow_html=True)
-    st.markdown('<div class="form-panel" style="border-color:#FCD34D;background:#FFFBEB;">', unsafe_allow_html=True)
-    st.markdown('<div class="form-section-title" style="color:#92400E;">Localizador Crucemundo</div>', unsafe_allow_html=True)
-    st.warning("⏳ Pendiente de integrar el script de asignación automática de localizador. Pega el script y lo conectamos.")
-    st.markdown("</div>", unsafe_allow_html=True)
+    meta = st.session_state.meta
+    errores = st.session_state.errores
+
+    # ── Métricas resumen ───────────────────────────────────────────────────
+    n_filas = len(df_all)
+    n_dup   = int(df_all["_duplicado"].sum()) if "_duplicado" in df_all.columns else 0
+    neto_t  = df_all["Neto"].sum()  if "Neto"  in df_all.columns else 0
+    bruto_t = df_all["Bruto"].sum() if "Bruto" in df_all.columns else 0
+
+    c1, c2, c3, c4, c5 = st.columns(5)
+    with c1:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="val">{n_filas}</div>
+            <div class="lbl">Localizadores</div>
+        </div>""", unsafe_allow_html=True)
+    with c2:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="val">{meta.get('archivos_total','–')}</div>
+            <div class="lbl">Archivos procesados</div>
+        </div>""", unsafe_allow_html=True)
+    with c3:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="val" style="color:#b45309">{n_dup}</div>
+            <div class="lbl">Confirmaciones duplicadas</div>
+        </div>""", unsafe_allow_html=True)
+    with c4:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="val" style="color:#15803d">{neto_t:,.0f} €</div>
+            <div class="lbl">Neto total</div>
+        </div>""", unsafe_allow_html=True)
+    with c5:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="val" style="color:#1d4ed8">{bruto_t:,.0f} €</div>
+            <div class="lbl">Bruto total</div>
+        </div>""", unsafe_allow_html=True)
+
+    st.markdown(f"<div style='margin:.5rem 0;font-size:.8rem;color:#94a3b8;'>Generado: {meta.get('ts','–')} · {meta.get('tiempo','–')}s · Año {meta.get('año','–')}</div>", unsafe_allow_html=True)
+
+    # ── Alertas duplicados / errores ──────────────────────────────────────
+    if n_dup > 0:
+        st.warning(f"⚠️  Se detectaron **{n_dup} filas** con Confirmación duplicada (marcadas en la tabla).")
+    if errores:
+        with st.expander(f"❌ {len(errores)} error(es) durante el proceso", expanded=False):
+            df_err = pd.DataFrame(errores)
+            st.dataframe(df_err, use_container_width=True, height=200)
+
+    # ── FILTROS ───────────────────────────────────────────────────────────
+    st.markdown("### 🔍 Filtros")
+    col_f1, col_f2, col_f3, col_f4 = st.columns(4)
+
+    df_vis = df_all.copy()
+
+    with col_f1:
+        barcos_u = sorted(df_vis["Barco"].dropna().unique().tolist())
+        sel_barco = st.multiselect("Barco", barcos_u, key="f_barco")
+
+    with col_f2:
+        agencias_u = sorted(df_vis["Agencia"].dropna().unique().tolist())
+        sel_agencia = st.multiselect("Agencia", agencias_u, key="f_agencia")
+
+    with col_f3:
+        estados_u = sorted(df_vis["Estado Reserva"].dropna().unique().tolist())
+        sel_estado = st.multiselect("Estado Reserva", estados_u, key="f_estado")
+
+    with col_f4:
+        solo_dup = st.checkbox("Solo duplicados", key="f_dup")
+        solo_err_neto = st.checkbox("Neto = 0", key="f_neto0")
+
+    # Filtro texto libre
+    texto_libre = st.text_input("🔎 Buscar en toda la tabla (Confirmación, Agencia, Comercial…)", key="f_txt")
+
+    # Aplicar filtros
+    if sel_barco:
+        df_vis = df_vis[df_vis["Barco"].isin(sel_barco)]
+    if sel_agencia:
+        df_vis = df_vis[df_vis["Agencia"].isin(sel_agencia)]
+    if sel_estado:
+        df_vis = df_vis[df_vis["Estado Reserva"].isin(sel_estado)]
+    if solo_dup and "_duplicado" in df_vis.columns:
+        df_vis = df_vis[df_vis["_duplicado"] == True]
+    if solo_err_neto:
+        df_vis = df_vis[df_vis["Neto"] == 0]
+    if texto_libre:
+        mask = df_vis.apply(
+            lambda row: row.astype(str).str.contains(texto_libre, case=False, na=False).any(),
+            axis=1
+        )
+        df_vis = df_vis[mask]
+
+    # ── Tabla principal ───────────────────────────────────────────────────
+    st.markdown(f"### 📋 Resultados ({len(df_vis)} filas)")
+
+    cols_mostrar = [c for c in HEADERS if c in df_vis.columns]
+    if "_duplicado" in df_vis.columns:
+        cols_mostrar_ext = cols_mostrar + ["_duplicado"]
+    else:
+        cols_mostrar_ext = cols_mostrar
+
+    df_display = df_vis[cols_mostrar_ext].copy()
+
+    # Resaltar duplicados
+    def highlight_dup(row):
+        if row.get("_duplicado", False):
+            return ["background-color: #fee2e2; color: #991b1b"] * len(row)
+        return [""] * len(row)
+
+    # Formateo de columnas numéricas
+    fmt = {
+        "Neto":  "{:,.2f} €",
+        "Bruto": "{:,.2f} €",
+    }
+    if "Personas" in df_display.columns:
+        fmt["Personas"] = "{:,.0f}"
+
+    styled = df_display.style.apply(highlight_dup, axis=1).format(fmt, na_rep="-")
+
+    st.dataframe(
+        styled,
+        use_container_width=True,
+        height=520,
+        column_config={
+            "_duplicado": st.column_config.CheckboxColumn("Dup.", width="small"),
+            "Neto":       st.column_config.NumberColumn("Neto", format="%.2f €"),
+            "Bruto":      st.column_config.NumberColumn("Bruto", format="%.2f €"),
+        }
+    )
+
+    # ── Exportación ───────────────────────────────────────────────────────
+    st.markdown("### 💾 Exportar")
+    c_ex1, c_ex2 = st.columns(2)
+
+    with c_ex1:
+        xlsx_bytes = exportar_excel(df_vis)
+        ts_str = datetime.now().strftime("%Y%m%d_%H%M")
+        st.download_button(
+            label="⬇️  Descargar Excel (filtrado)",
+            data=xlsx_bytes,
+            file_name=f"VentasFIT_{meta.get('año','X')}_{ts_str}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+        )
+
+    with c_ex2:
+        xlsx_all = exportar_excel(df_all)
+        st.download_button(
+            label="⬇️  Descargar Excel (todo)",
+            data=xlsx_all,
+            file_name=f"VentasFIT_{meta.get('año','X')}_COMPLETO_{ts_str}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+        )
+
+    # ── Pestaña de detalle por barco ──────────────────────────────────────
+    if "Barco" in df_vis.columns and len(df_vis) > 0:
+        with st.expander("📊 Resumen por Barco", expanded=False):
+            resumen = df_vis.groupby("Barco").agg(
+                Localizadores=("Confirmación", "count"),
+                Neto_Total=("Neto", "sum"),
+                Bruto_Total=("Bruto", "sum"),
+                Personas_Total=("Personas", "sum"),
+            ).sort_values("Neto_Total", ascending=False)
+
+            resumen["Neto_Total"]  = resumen["Neto_Total"].map("{:,.2f} €".format)
+            resumen["Bruto_Total"] = resumen["Bruto_Total"].map("{:,.2f} €".format)
+            st.dataframe(resumen, use_container_width=True)
+
+    if "Agencia" in df_vis.columns and len(df_vis) > 0:
+        with st.expander("📊 Resumen por Agencia (Top 20)", expanded=False):
+            resumen_ag = df_vis.groupby("Agencia").agg(
+                Localizadores=("Confirmación", "count"),
+                Neto_Total=("Neto", "sum"),
+            ).sort_values("Neto_Total", ascending=False).head(20)
+
+            resumen_ag["Neto_Total"] = resumen_ag["Neto_Total"].map("{:,.2f} €".format)
+            st.dataframe(resumen_ag, use_container_width=True)
 
 
-    
-
-    st.info("🚧 Próximos campos: Agente/Cliente, Estado Reserva, Localizador, Barco, Fechas, Cabinas, Pax...")
+if __name__ == "__main__":
+    main()
