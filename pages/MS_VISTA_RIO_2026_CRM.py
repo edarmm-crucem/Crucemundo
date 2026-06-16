@@ -27,11 +27,11 @@ if not st.session_state.get("authenticated"):
     st.stop()
 
 #### BLOQUE 3: CONSTANTES
-BARCO = "MS_VISTA_RIO"
-ANIO = "2026"
+BARCO = "MS_VISTA_RIO"                                                    # ← CAMBIAR POR BARCO
+ANIO = "2026"                                                             # ← CAMBIAR AÑO
 CRMBARCO_NAME = f"{BARCO}_{ANIO}_CRM"
 MASTERCABINASID = "1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI"
-CRMBARCO = "1ApNv3qK-_2ANOVwSZoOchAdwWaeQg0Evz-n54s6T2cE"
+CRMBARCO = "1ApNv3qK-_2ANOVwSZoOchAdwWaeQg0Evz-n54s6T2cE"                   # ← CAMBIAR ID CRM
 LOGOID = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
 LOGOURL = f"https://lh3.googleusercontent.com/d/{LOGOID}"
 ROOT_GROUPS = "1MMNH3y1E3jJIp6uUnxbwV0toAtdr2F2M"
