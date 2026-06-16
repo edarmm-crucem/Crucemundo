@@ -635,7 +635,7 @@ def appendagencyrow(agencydata):
     sheetsservice = getsheetsservice()
     values = [[agencydata.get(field, "") for field in AGENCYFIELDS]]
     sheetsservice.spreadsheets().values().append(
-        spreadsheetId=AGENCYSHEETID, range=f"{AGENCYSHEETNAME}!A:K",
+        spreadsheetId=AGENCYSHEETID, range=f"{AGENCYSHEETNAME}!A:L",
         valueInputOption="USER_ENTERED", insertDataOption="INSERT_ROWS",
         body={"values": values},
     ).execute()
@@ -644,12 +644,12 @@ def appendagencyrow(agencydata):
 def getagencies():
     sheetsservice = getsheetsservice()
     response = sheetsservice.spreadsheets().values().get(
-        spreadsheetId=AGENCYSHEETID, range=f"{AGENCYSHEETNAME}!A:K",
+        spreadsheetId=AGENCYSHEETID, range=f"{AGENCYSHEETNAME}!A:L",
     ).execute()
     rows = response.get("values", [])
     agencies = []
     for idx, row in enumerate(rows, start=1):
-        row = row + [""] * (11 - len(row))
+        row = row + [""] * (len(AGENCYFIELDS) - len(row))
         data = {"rownumber": idx}
         for i, field in enumerate(AGENCYFIELDS):
             data[field] = row[i]
@@ -913,7 +913,7 @@ def save_new_boat_registry(barconombre, localizador, cabin_pairs):
     if not values:
         raise Exception("Debes informar al menos una cabina y/o una categoría.")
     sheetsservice.spreadsheets().values().append(
-        spreadsheetId=BOATREGISTRYSHEETID, range=f"{ticket_title}!A:K",
+        spreadsheetId=BOATREGISTRYSHEETID, range=f"{ticket_title}!A:L",
         valueInputOption="USER_ENTERED", insertDataOption="INSERT_ROWS",
         body={"values": values},
     ).execute()
