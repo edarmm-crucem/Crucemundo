@@ -358,14 +358,6 @@ def main():
     with st.sidebar:
         st.markdown("## ⚙️ Configuración")
 
-        st.markdown("### 🔑 Credenciales Google")
-        creds_file = st.file_uploader(
-            "Sube el JSON de la Service Account",
-            type=["json"],
-            help="Descarga desde Google Cloud Console → IAM → Cuentas de Servicio"
-        )
-
-        st.divider()
         st.markdown("### 📁 Carpeta raíz de Drive")
         id_raiz = st.text_input(
             "ID de la carpeta raíz FIT",
@@ -397,9 +389,6 @@ def main():
     # ── INICIO DE EXTRACCIÓN ───────────────────────────────────────────────
     # ════════════════════════════════════════════════════════════════════════
     if iniciar:
-        if not creds_file:
-            st.error("⚠️  Sube primero el fichero JSON de credenciales.")
-            return
         if not id_raiz.strip():
             st.error("⚠️  Introduce el ID de la carpeta raíz.")
             return
@@ -407,7 +396,12 @@ def main():
             st.error("⚠️  El año debe ser numérico.")
             return
 
-        creds_dict = json.load(creds_file)
+        # Cargar credenciales desde st.secrets (configuradas en Streamlit Cloud)
+        try:
+            creds_dict = dict(st.secrets["gcp_service_account"])
+        except KeyError:
+            st.error("⚠️  No se encontraron credenciales en Secrets. Ve a **Manage app → Secrets** y añade la sección `[gcp_service_account]`.")
+            return
 
         with st.spinner("Conectando con Google Drive…"):
             try:
