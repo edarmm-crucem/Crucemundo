@@ -1660,7 +1660,7 @@ with crm_col1:
 
 with crm_col2:
     if st.button("PROBA", key="proba_nav", use_container_width=True):
-        st.switch_page("pages/NEW_CONFIG.py")
+        st.switch_page("pages/VENTAS_FIT.py")
         
 # ============================================================
 # BLOQUE 19: TARJETAS DE ACCIÓN — DEFINICIÓN Y RENDER
