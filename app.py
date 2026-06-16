@@ -1613,7 +1613,7 @@ st.markdown(
         <span class="web-chip-blue">ENLACES INTERNOS</span>
         <a class="web-chip-green" href="{driverooturl}" target="_blank" rel="noopener noreferrer">📁 Drive Root</a>        
         <a class="web-chip-green" href="{cvcfitfolderurl}" target="_blank" rel="noopener noreferrer">📁 Folder Sesiones</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-TnE3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊MASTER Cabinas</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit" target="_blank" rel="noopener noreferrer">📊MASTER Cabinas</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊Excursiones</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊MASTER Clientes</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCR_HJr9TCD7VWrGI6nDhMtwi27cMJL_1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊Ventas FIT</a>
