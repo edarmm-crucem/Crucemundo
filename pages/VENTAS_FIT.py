@@ -422,9 +422,9 @@ def main():
         with st.spinner("Conectando con Google Drive…"):
             try:
                 drive, gc = crear_servicios(creds_dict)
-            except Exception as e:
-                st.error(f"Error de autenticación: {e}")
-                return
+except Exception as e:
+    st.error(f"Error de autenticación: {e}")
+    return
         
             # ===================== DEBUG ======================
             try:
@@ -436,8 +436,8 @@ def main():
             
                 st.success("Carpeta encontrada")
                 st.write(info)
-            except Exception as e:
-                st.error(e)
+except Exception as e:
+    st.error(e)
 
 # ==================================================
 
