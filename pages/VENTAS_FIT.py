@@ -103,7 +103,10 @@ def get_year_folder_id(year):
 
 # ── Sheets helpers ───────────────────────────────────────────
 def get_sheet_titles_ids(ssid):
-    ss = sheets_svc().spreadsheets().get(spreadsheetId=ssid).execute()
+    ss = sheets_svc().spreadsheets().get(
+        spreadsheetId=ssid,
+        fields="sheets.properties"
+    ).execute()
     return [
         {"title": s["properties"]["title"], "sheetId": s["properties"]["sheetId"]}
         for s in ss.get("sheets", [])
@@ -112,14 +115,17 @@ def get_sheet_titles_ids(ssid):
 def batch_get(ssid, sheet_title, a1_list):
     ranges = [f"'{sheet_title}'!{a1}" for a1 in a1_list]
     resp = sheets_svc().spreadsheets().values().batchGet(
-        spreadsheetId=ssid, ranges=ranges, majorDimension="ROWS",
+        spreadsheetId=ssid,
+        ranges=ranges,
+        majorDimension="ROWS",
+        valueRenderOption="UNFORMATTED_VALUE",   # ← añade esto
     ).execute()
     out = {}
     for a1, vr in zip(a1_list, resp.get("valueRanges", [])):
         vals = vr.get("values", [])
         out[a1] = vals[0][0] if vals and vals[0] else ""
     return out
-
+    
 def get_column_values(ssid, sheet_title, col_a1):
     resp = sheets_svc().spreadsheets().values().get(
         spreadsheetId=ssid,
@@ -130,10 +136,32 @@ def get_column_values(ssid, sheet_title, col_a1):
     return [v for v in (vals[0] if vals else []) if str(v).strip()]
 
 def parse_numeric(val):
-    text = re.sub(r"[€$£\s]", "", str(val or "")).replace(".", "").replace(",", ".")
+    if val is None or val == "":
+        return 0.0
+    # si ya es número (la API a veces devuelve floats)
+    if isinstance(val, (int, float)):
+        return float(val)
+    text = str(val).strip()
+    # quita símbolos de moneda y espacios
+    text = re.sub(r"[€$£\s%]", "", text)
+    if not text:
+        return 0.0
+    # detecta formato europeo: punto como separador de miles, coma como decimal
+    # ej: "1.234,56" → "1234.56"
+    if re.search(r"\d\.\d{3},", text) or (text.count(",") == 1 and text.count(".") >= 1 and text.rfind(",") > text.rfind(".")):
+        text = text.replace(".", "").replace(",", ".")
+    # detecta formato con solo coma decimal: "1234,56"
+    elif text.count(",") == 1 and "." not in text:
+        text = text.replace(",", ".")
+    # si solo tiene puntos como separador de miles sin coma: "1.234" → "1234"
+    elif text.count(".") >= 1 and "," not in text:
+        # distingue "1.234" (miles) de "1.23" (decimal)
+        parts = text.split(".")
+        if len(parts[-1]) == 3:
+            text = text.replace(".", "")
+        # si no, lo deja como está (punto decimal normal)
     m = re.search(r"-?\d+(?:\.\d+)?", text)
     return float(m.group()) if m else 0.0
-
 def fmt_date(val):
     return str(val).strip() if val else ""
 
@@ -156,21 +184,48 @@ def read_sheet_data(ssid, sheet_title):
     if not localizador or localizador.upper().endswith("_GROUP"):
         return None
 
-    neto_vals = []
-    for col in ["Q", "R"]:
-        resp = sheets_svc().spreadsheets().values().get(
+# NETO = suma Q33:R39
+    try:
+        resp_neto = sheets_svc().spreadsheets().values().get(
             spreadsheetId=ssid,
-            range=f"'{sheet_title}'!{col}33:{col}39",
-            majorDimension="COLUMNS",
+            range=f"'{sheet_title}'!Q33:R39",
+            majorDimension="ROWS",
+            valueRenderOption="UNFORMATTED_VALUE",
         ).execute()
-        raw = resp.get("values", [[]])
-        neto_vals += [parse_numeric(v) for v in (raw[0] if raw else []) if str(v).strip()]
-    neto = sum(neto_vals)
+        neto = sum(
+            parse_numeric(cell)
+            for row in resp_neto.get("values", [])
+            for cell in row
+            if cell not in (None, "")
+        )
+    except Exception:
+        neto = 0.0
 
-    personas_col = get_column_values(ssid, sheet_title, "G24:G60")
-    personas = len(personas_col)
-    bruto = parse_numeric(cells.get("Q55", ""))
+    # PERSONAS = contar filas no vacías en G24:G60
+    try:
+        resp_pers = sheets_svc().spreadsheets().values().get(
+            spreadsheetId=ssid,
+            range=f"'{sheet_title}'!G24:G60",
+            majorDimension="COLUMNS",
+            valueRenderOption="UNFORMATTED_VALUE",
+        ).execute()
+        vals_pers = resp_pers.get("values", [[]])
+        personas = sum(1 for v in (vals_pers[0] if vals_pers else []) if str(v).strip())
+    except Exception:
+        personas = 0
 
+    # BRUTO = Q55
+    try:
+        resp_bruto = sheets_svc().spreadsheets().values().get(
+            spreadsheetId=ssid,
+            range=f"'{sheet_title}'!Q55",
+            majorDimension="ROWS",
+            valueRenderOption="UNFORMATTED_VALUE",
+        ).execute()
+        vals_bruto = resp_bruto.get("values", [])
+        bruto = parse_numeric(vals_bruto[0][0]) if vals_bruto and vals_bruto[0] else 0.0
+    except Exception:
+        bruto = 0.0
     return {
         "BARCO":          str(cells.get("G13", "")).strip(),
         "AGENCIA":        str(cells.get("G5",  "")).strip(),
