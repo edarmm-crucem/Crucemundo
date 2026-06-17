@@ -577,6 +577,20 @@ if run_scan and selected_year:
         status_ph.caption(label)
 
     def pintar_tabla(rows):
+        def _estado(v):
+            u = str(v).strip().upper()
+            if "CONFIRM" in u: return f'<span class="pill pill-conf">{v}</span>'
+            if "CANCEL"  in u: return f'<span class="pill pill-canc">{v}</span>'
+            if "NO CONF" in u: return f'<span class="pill pill-noconf">{v}</span>'
+            return f'<span class="pill pill-neutral">{v}</span>'
+
+        def _pago(v):
+            u = str(v).strip().upper()
+            if "PAGADO" in u: return f'<span class="pill pill-conf">{v}</span>'
+            if "PTE"    in u: return f'<span class="pill pill-pte">{v}</span>'
+            if "DEPOSI" in u: return f'<span class="pill pill-pago">{v}</span>'
+            return f'<span class="pill pill-neutral">{v}</span>'
+
         df_live = pd.DataFrame(rows, columns=COLUMNS_ORDER)
         summary_ph.markdown(f"""
         <div class="summary-row">
@@ -595,7 +609,7 @@ if run_scan and selected_year:
               <td><b>{r['CONFIRMACION']}</b></td><td>{r['FECHA BOOKING']}</td><td>{r['ITINERARIO']}</td>
               <td>{r['FECHA SALIDA']}</td><td>{r['FECHA LLEGADA']}</td>
               <td class="num">{r['NETO']:,.2f} €</td><td class="num">{r['BRUTO']:,.2f} €</td>
-              <td>{estado_pill(r['ESTADO RESERVA'])}</td><td>{pago_pill(r['PAGO'])}</td>
+              <td>{_estado(r['ESTADO RESERVA'])}</td><td>{_pago(r['PAGO'])}</td>
               <td>{r['COMERCIAL']}</td><td class="num">{int(r['PERSONAS'])}</td><td>{r['IDIOMA']}</td>
             </tr>"""
         table_ph.html(f'<div class="vf-table-wrap"><table class="vf-table"><thead><tr>{header_cells}</tr></thead><tbody>{rows_html}</tbody></table></div>')
