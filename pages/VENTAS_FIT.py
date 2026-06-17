@@ -1,705 +1,510 @@
-"""
-MacroFIT - Extractor de Informes FIT
-Streamlit app que replica la lógica del Google Apps Script original
-con doble pasada de verificación, filtros y exportación Excel.
-"""
+# ============================================================
+# PÁGINA: VENTAS_FIT
+# ============================================================
 
-import streamlit as st
-import pandas as pd
-import json
 import re
 import io
-import time
 from datetime import datetime
-from pathlib import Path
-
-# ── Google API ──────────────────────────────────────────────────────────────
-from google.oauth2.service_account import Credentials
+import pytz
+import streamlit as st
+from google.auth.transport.requests import Request
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
-import gspread
+import pandas as pd
 
-# ── Constantes ──────────────────────────────────────────────────────────────
-SCOPES = [
-    "https://www.googleapis.com/auth/drive.readonly",
-    "https://www.googleapis.com/auth/spreadsheets.readonly",
+# ── constantes ──────────────────────────────────────────────
+DRIVEROOTID   = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
+LOGOID        = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
+LOGOURL       = f"https://lh3.googleusercontent.com/d/{LOGOID}"
+TIMEZONE      = pytz.timezone("Europe/Madrid")
+
+COLUMNS_ORDER = [
+    "BARCO", "AGENCIA", "CODIGO", "GRUPO",
+    "CONFIRMACION", "FECHA BOOKING", "ITINERARIO",
+    "FECHA SALIDA", "FECHA LLEGADA",
+    "NETO", "BRUTO",
+    "ESTADO RESERVA", "PAGO", "COMERCIAL",
+    "PERSONAS", "IDIOMA",
 ]
 
-HEADERS = [
-    "Barco", "Agencia", "Cod", "Grupo", "Confirmación",
-    "Booking", "Itinerario", "Salida", "Regreso",
-    "Neto", "Bruto", "Estado Reserva", "Pago", "Comercial", "Personas", "Idioma"
-]
+# ── helpers tiempo ───────────────────────────────────────────
+def now():
+    return datetime.now(pytz.utc).astimezone(TIMEZONE).replace(tzinfo=None)
 
-PATRON_ARCHIVO = re.compile(r"^[A-Z0-9_]+-\d{6}$", re.IGNORECASE)
+def getsaludo(lang="es"):
+    h = now().hour
+    if lang == "en":
+        if 6 <= h < 14: return "Good morning"
+        if 14 <= h < 21: return "Good afternoon"
+        return "Good evening"
+    if 6 <= h < 14: return "Buenos días"
+    if 14 <= h < 21: return "Buenas tardes"
+    return "Buenas noches"
 
-# ── Utilidades de autenticación ──────────────────────────────────────────────
-@st.cache_resource(show_spinner=False)
-def crear_servicios(creds_json: dict):
-    creds = Credentials.from_service_account_info(creds_json, scopes=SCOPES)
-    drive = build("drive", "v3", credentials=creds)
-    gc    = gspread.authorize(creds)
-    return drive, gc
-
-
-# ── Exploración de Drive ─────────────────────────────────────────────────────
-def listar_carpetas(drive, parent_id):
-    q = f"'{parent_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
-
-    res = drive.files().list(
-        q=q,
-        fields="files(id,name)",
-        supportsAllDrives=True,
-        includeItemsFromAllDrives=True,
-        corpora="allDrives"
-    ).execute()
-
-    return res.get("files", [])
-
-
-def listar_hojas(drive, parent_id):
-    q = f"'{parent_id}' in parents and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false"
-
-    res = drive.files().list(
-        q=q,
-        fields="files(id,name)",
-        supportsAllDrives=True,
-        includeItemsFromAllDrives=True,
-        corpora="allDrives"
-    ).execute()
-
-    return res.get("files", [])
-
-
-def descubrir_archivos(drive, carpeta_año_id: str) -> tuple[list[dict], list[str], list[str]]:
-    """
-    Navega: Año → Barcos → Salidas → Archivos (BARCO-AAMMDD).
-    Devuelve (archivos, barcos_encontrados, salidas_encontradas).
-    """
-    archivos = []
-    barcos_nombres = []
-    salidas_nombres = []
-
-    carpetas_barco = listar_carpetas(drive, carpeta_año_id)
-
-    for barco in carpetas_barco:
-        barcos_nombres.append(barco["name"])
-        carpetas_salida = listar_carpetas(drive, barco["id"])
-
-        for salida in carpetas_salida:
-            salidas_nombres.append(f"{barco['name']} / {salida['name']}")
-            hojas = listar_hojas(drive, salida["id"])
-
-            for hoja in hojas:
-                nombre = hoja["name"]
-                archivos.append({
-                    "id": hoja["id"],
-                    "nombre": nombre,
-                    "barco": barco["name"],
-                    "salida": salida["name"],
-                })
-
-    return archivos, barcos_nombres, salidas_nombres
-
-
-# ── Procesado de una hoja ────────────────────────────────────────────────────
-def limpiar_numero(val) -> float:
-    if not val:
-        return 0.0
-    s = str(val).strip()
-    # Eliminar símbolos de moneda, espacios y caracteres no numéricos salvo , . -
-    s = re.sub(r"[^\d,.\-]", "", s)
-    if not s:
-        return 0.0
-    # Formato 1.234,56 → 1234.56
-    if "," in s and "." in s:
-        s = s.replace(".", "").replace(",", ".")
-    else:
-        s = s.replace(",", ".")
-    try:
-        return float(s)
-    except ValueError:
-        return 0.0
-
-
-def procesar_hoja(valores: list[list], nombre_archivo: str) -> dict | None:
-    """
-    Recibe los display values (A1:Z60) de una hoja y extrae una fila de datos.
-    Devuelve None si la hoja no es BOOKING/PROFORMA o es _GROUP.
-    """
-    v = valores
-
-    def cel(fila, col, default="-"):
-        try:
-            val = v[fila][col]
-            return val if val not in ("", None) else default
-        except IndexError:
-            return default
-
-    # B2 debe contener BOOKING o PROFORMA
-    b2 = str(cel(1, 1, "")).upper()
-    if "BOOKING" not in b2 and "PROFORMA" not in b2:
-        return None
-
-    # Ignorar confirmaciones _GROUP
-    confirmacion = str(cel(10, 6, "")).upper().strip()
-    if confirmacion.endswith("_GROUP"):
-        return None
-
-    # Neto: suma de columnas Q y R en filas 33-40 (índices 32-39, cols 16-17)
-    neto = 0.0
-    for r in range(32, 40):
-        neto += limpiar_numero(cel(r, 16, 0)) + limpiar_numero(cel(r, 17, 0))
-
-    # Bruto: celda Y55 (índice fila 54, col 24... original col 16 = Q)
-    bruto = limpiar_numero(cel(54, 16, 0))
-
-    # Personas: V22 + Z22 + ... (fila 21, cols 6,10,13,15)
-    personas = (
-        limpiar_numero(cel(21, 6, 0)) +
-        limpiar_numero(cel(21, 10, 0)) +
-        limpiar_numero(cel(21, 13, 0)) +
-        limpiar_numero(cel(21, 15, 0))
+# ── Google services ──────────────────────────────────────────
+@st.cache_resource
+def _creds():
+    if "gcpserviceaccount" not in st.secrets:
+        raise Exception("Falta gcpserviceaccount en secrets.")
+    return service_account.Credentials.from_service_account_info(
+        st.secrets["gcpserviceaccount"],
+        scopes=[
+            "https://www.googleapis.com/auth/drive",
+            "https://www.googleapis.com/auth/spreadsheets",
+        ],
     )
+
+@st.cache_resource
+def drive_svc():
+    return build("drive", "v3", credentials=_creds())
+
+@st.cache_resource
+def sheets_svc():
+    return build("sheets", "v4", credentials=_creds())
+
+# ── Drive helpers ────────────────────────────────────────────
+def list_children(parent_id, folders_only=False):
+    svc = drive_svc()
+    q = f"'{parent_id}' in parents and trashed=false"
+    if folders_only:
+        q += " and mimeType='application/vnd.google-apps.folder'"
+    items, token = [], None
+    while True:
+        r = svc.files().list(
+            q=q,
+            fields="nextPageToken, files(id,name,mimeType,webViewLink)",
+            supportsAllDrives=True, includeItemsFromAllDrives=True,
+            corpora="allDrives", pageToken=token, pageSize=1000,
+        ).execute()
+        items.extend(r.get("files", []))
+        token = r.get("nextPageToken")
+        if not token:
+            break
+    return items
+
+def find_child_folder(parent_id, name):
+    for f in list_children(parent_id, folders_only=True):
+        if f["name"].strip() == name.strip():
+            return f
+    return None
+
+@st.cache_data(ttl=300)
+def get_years():
+    folders = list_children(DRIVEROOTID, folders_only=True)
+    return sorted(
+        [f["name"].strip() for f in folders if re.fullmatch(r"\d{4}", f["name"].strip())],
+        reverse=True,
+    )
+
+@st.cache_data(ttl=300)
+def get_year_folder_id(year):
+    f = find_child_folder(DRIVEROOTID, year)
+    return f["id"] if f else None
+
+# ── Sheets helpers ───────────────────────────────────────────
+def get_sheet_titles_ids(ssid):
+    ss = sheets_svc().spreadsheets().get(spreadsheetId=ssid).execute()
+    return [
+        {"title": s["properties"]["title"], "sheetId": s["properties"]["sheetId"]}
+        for s in ss.get("sheets", [])
+    ]
+
+def batch_get(ssid, sheet_title, a1_list):
+    ranges = [f"'{sheet_title}'!{a1}" for a1 in a1_list]
+    resp = sheets_svc().spreadsheets().values().batchGet(
+        spreadsheetId=ssid, ranges=ranges, majorDimension="ROWS",
+    ).execute()
+    out = {}
+    for a1, vr in zip(a1_list, resp.get("valueRanges", [])):
+        vals = vr.get("values", [])
+        out[a1] = vals[0][0] if vals and vals[0] else ""
+    return out
+
+def get_column_values(ssid, sheet_title, col_a1):
+    resp = sheets_svc().spreadsheets().values().get(
+        spreadsheetId=ssid,
+        range=f"'{sheet_title}'!{col_a1}",
+        majorDimension="COLUMNS",
+    ).execute()
+    vals = resp.get("values", [[]])
+    return [v for v in (vals[0] if vals else []) if str(v).strip()]
+
+def parse_numeric(val):
+    text = re.sub(r"[€$£\s]", "", str(val or "")).replace(".", "").replace(",", ".")
+    m = re.search(r"-?\d+(?:\.\d+)?", text)
+    return float(m.group()) if m else 0.0
+
+def fmt_date(val):
+    return str(val).strip() if val else ""
+
+# ── Lectura de una hoja ──────────────────────────────────────
+CELLS_NEEDED = [
+    "B2", "G11", "G13",
+    "G5", "P5", "R5",
+    "C3", "G19", "G17", "K17",
+    "G10", "G57", "Q10", "G23", "Q55",
+]
+
+def read_sheet_data(ssid, sheet_title):
+    cells = batch_get(ssid, sheet_title, CELLS_NEEDED)
+
+    b2 = str(cells.get("B2", "")).strip().upper()
+    if "PROFORMA" not in b2 and "BOOKING" not in b2 and "CONFIR" not in b2:
+        return None
+
+    localizador = str(cells.get("G11", "")).strip()
+    if not localizador or localizador.upper().endswith("_GROUP"):
+        return None
+
+    neto_vals = []
+    for col in ["Q", "R"]:
+        resp = sheets_svc().spreadsheets().values().get(
+            spreadsheetId=ssid,
+            range=f"'{sheet_title}'!{col}33:{col}39",
+            majorDimension="COLUMNS",
+        ).execute()
+        raw = resp.get("values", [[]])
+        neto_vals += [parse_numeric(v) for v in (raw[0] if raw else []) if str(v).strip()]
+    neto = sum(neto_vals)
+
+    personas_col = get_column_values(ssid, sheet_title, "G24:G60")
+    personas = len(personas_col)
+    bruto = parse_numeric(cells.get("Q55", ""))
 
     return {
-        "Barco":         cel(12, 6),
-        "Agencia":       cel(4, 6),
-        "Cod":           cel(4, 15),
-        "Grupo":         cel(4, 17),
-        "Confirmación":  cel(10, 6),
-        "Booking":       cel(2, 2),
-        "Itinerario":    cel(18, 6),
-        "Salida":        cel(16, 6),
-        "Regreso":       cel(16, 10),
-        "Neto":          round(neto, 2),
-        "Bruto":         round(bruto, 2),
-        "Estado Reserva":cel(9, 6),
-        "Pago":          cel(56, 6),
-        "Comercial":     cel(9, 16),
-        "Personas":      int(personas),
-        "Idioma":        cel(22, 6),
-        "_archivo":      nombre_archivo,   # interno para verificación
+        "BARCO":          str(cells.get("G13", "")).strip(),
+        "AGENCIA":        str(cells.get("G5",  "")).strip(),
+        "CODIGO":         str(cells.get("P5",  "")).strip(),
+        "GRUPO":          str(cells.get("R5",  "")).strip(),
+        "CONFIRMACION":   localizador,
+        "FECHA BOOKING":  fmt_date(cells.get("C3",  "")),
+        "ITINERARIO":     str(cells.get("G19", "")).strip(),
+        "FECHA SALIDA":   fmt_date(cells.get("G17", "")),
+        "FECHA LLEGADA":  fmt_date(cells.get("K17", "")),
+        "NETO":           round(neto,  2),
+        "BRUTO":          round(bruto, 2),
+        "ESTADO RESERVA": str(cells.get("G10", "")).strip(),
+        "PAGO":           str(cells.get("G57", "")).strip(),
+        "COMERCIAL":      str(cells.get("Q10", "")).strip(),
+        "PERSONAS":       personas,
+        "IDIOMA":         str(cells.get("G23", "")).strip(),
     }
 
+def read_sheet_double_pass(ssid, sheet_title):
+    r1 = read_sheet_data(ssid, sheet_title)
+    if r1 is None:
+        return None
+    r2 = read_sheet_data(ssid, sheet_title)
+    if r1 == r2:
+        return r1
+    r3 = read_sheet_data(ssid, sheet_title)
+    if r2 == r3:
+        return r2
+    if r1 == r3:
+        return r1
+    return r3
 
-# ── Procesado principal con doble pasada ──────────────────────────────────────
-def ejecutar_extraccion(drive, gc, archivos: list[dict], placeholder_progress, placeholder_estado):
-    """
-    Primera pasada: procesa todos los archivos.
-    Segunda pasada: re-verifica los que dieron 0 registros o error.
-    """
-    resultados = []
-    errores = []
-    archivos_vacios = []
+# ── Escaneo completo ─────────────────────────────────────────
+SALIDA_PATTERN = re.compile(r"^[A-Z_]+_\d{6}$")
 
-    total = len(archivos)
+def scan_year(year, progress_cb=None):
+    year_id = get_year_folder_id(year)
+    if not year_id:
+        return []
 
-    # ── PASADA 1 ────────────────────────────────────────────────────────────
-    placeholder_estado.markdown("### 🔄 Pasada 1 — Extracción inicial")
-    pb1 = placeholder_progress.progress(0, text="Iniciando pasada 1…")
+    boat_folders = list_children(year_id, folders_only=True)
+    file_map = {}
+    total_files = 0
+    for bf in boat_folders:
+        files = list_children(bf["id"], folders_only=False)
+        salidas = [f for f in files if SALIDA_PATTERN.match(f["name"].strip())]
+        file_map[bf["name"]] = salidas
+        total_files += len(salidas)
 
-    for i, arch in enumerate(archivos):
-        pct = int((i + 1) / total * 100)
-        pb1.progress(pct, text=f"[{i+1}/{total}] {arch['barco']} · {arch['salida']} · {arch['nombre']}")
-
-        filas_este = []
-        try:
-            sh = gc.open_by_key(arch["id"])
-            for ws in sh.worksheets():
-                vals = ws.get_all_values()
-                # Extender a 60 filas × 26 cols para evitar IndexError
-                padded = [row + [""] * (26 - len(row)) for row in vals]
-                while len(padded) < 60:
-                    padded.append([""] * 26)
-
-                fila = procesar_hoja(padded, arch["nombre"])
-                if fila:
-                    fila["_barco_carpeta"]  = arch["barco"]
-                    fila["_salida_carpeta"] = arch["salida"]
-                    filas_este.append(fila)
-
-        except Exception as e:
-            errores.append({"archivo": arch["nombre"], "id": arch["id"], "error": str(e), "pasada": 1})
-
-        if filas_este:
-            resultados.extend(filas_este)
-        else:
-            archivos_vacios.append(arch)
-
-    # ── PASADA 2 (re-verificación) ──────────────────────────────────────────
-    reintento_ids = {a["id"] for a in archivos_vacios}
-    reintento_ids |= {e["id"] for e in errores}
-
-    reintento_lista = [a for a in archivos if a["id"] in reintento_ids]
-
-    if reintento_lista:
-        placeholder_estado.markdown(
-            f"### 🔍 Pasada 2 — Re-verificando {len(reintento_lista)} archivos sin datos / con error"
-        )
-        pb2 = placeholder_progress.progress(0, text="Iniciando pasada 2…")
-        errores_p1_ids = {e["id"] for e in errores}
-        errores_p2 = []
-
-        for j, arch in enumerate(reintento_lista):
-            pct = int((j + 1) / len(reintento_lista) * 100)
-            pb2.progress(pct, text=f"[{j+1}/{len(reintento_lista)}] Reintentando: {arch['nombre']}")
-            time.sleep(0.3)  # pequeño throttle para evitar rate-limit
-
-            filas_este = []
+    results = []
+    processed = 0
+    for boat_name, salidas in file_map.items():
+        for fobj in salidas:
+            fname = fobj["name"].strip()
+            ssid  = fobj["id"]
+            if progress_cb:
+                progress_cb(processed, total_files, f"{boat_name} / {fname}")
             try:
-                sh = gc.open_by_key(arch["id"])
-                for ws in sh.worksheets():
-                    vals = ws.get_all_values()
-                    padded = [row + [""] * (26 - len(row)) for row in vals]
-                    while len(padded) < 60:
-                        padded.append([""] * 26)
+                sheets = get_sheet_titles_ids(ssid)
+                for sh in sheets:
+                    try:
+                        row = read_sheet_double_pass(ssid, sh["title"])
+                        if row:
+                            results.append(row)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            processed += 1
 
-                    fila = procesar_hoja(padded, arch["nombre"])
-                    if fila:
-                        fila["_barco_carpeta"]  = arch["barco"]
-                        fila["_salida_carpeta"] = arch["salida"]
-                        filas_este.append(fila)
+    if progress_cb:
+        progress_cb(total_files, total_files, "Completado")
+    return results
 
-            except Exception as e:
-                errores_p2.append({"archivo": arch["nombre"], "id": arch["id"], "error": str(e), "pasada": 2})
+# ── Export Excel ─────────────────────────────────────────────
+def to_excel_bytes(df: pd.DataFrame) -> bytes:
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="VENTAS FIT")
+        ws = writer.sheets["VENTAS FIT"]
+        for col in ws.columns:
+            max_len = max((len(str(cell.value or "")) for cell in col), default=10)
+            ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 50)
+    buf.seek(0)
+    return buf.read()
 
-            if filas_este:
-                # Solo añadir si no estaba ya en resultados
-                conf_existentes = {r["Confirmación"] for r in resultados}
-                nuevos = [f for f in filas_este if f["Confirmación"] not in conf_existentes]
-                resultados.extend(nuevos)
+# ============================================================
+# PÁGINA
+# ============================================================
+st.set_page_config(
+    page_title="Ventas FIT – Crucemundo Hub",
+    page_icon="favicon1.png",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
 
-                # Limpiar de errores si ahora funcionó
-                errores = [e for e in errores if e["id"] != arch["id"]]
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+*{box-sizing:border-box;}
+html,body,[class*="css"]{font-family:"DM Sans",sans-serif;background:#FFFFFF!important;}
+[data-testid="stAppViewContainer"]{background:#FFFFFF!important;}
+[data-testid="stHeader"]{background:transparent!important;}
+section[data-testid="stSidebar"]{display:none!important;}
+.block-container,.stMainBlockContainer,[data-testid="stMainBlockContainer"]{
+    padding-top:0!important;padding-bottom:1rem!important;
+    padding-left:1rem!important;padding-right:1rem!important;
+    max-width:1900px!important;margin:0 auto!important;
+}
+.portal-header{padding:0.1rem 0 0.55rem 0;display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:0.55rem;}
+.portal-header-left{display:flex;align-items:center;gap:0.9rem;}
+.portal-logo{height:42px;width:auto;object-fit:contain;display:block;}
+.portal-title{font-size:0.96rem;font-weight:800;color:#1F2937;line-height:1.15;}
+.portal-subtitle{font-size:0.72rem;color:#667085;line-height:1.2;margin-top:0.12rem;}
+.user-top{font-size:0.72rem;color:#566079;white-space:nowrap;}
+.web-chip-blue{display:inline-flex;align-items:center;justify-content:center;
+    padding:0.38rem 0.82rem;border-radius:999px;font-size:0.71rem;font-weight:800;
+    background:#E0ECFF;border:1px solid #BFD4FF;color:#1E4FBF!important;cursor:default;}
+div.stButton>button{
+    border-radius:999px!important;padding:0 1rem!important;
+    font-size:0.78rem!important;font-weight:800!important;
+    font-family:"DM Sans",sans-serif!important;
+    border:2px solid transparent!important;
+    background:linear-gradient(180deg,#2F6DF6 0%,#245FE0 100%)!important;
+    color:#fff!important;
+    box-shadow:0 4px 14px rgba(37,99,235,0.22)!important;
+    transition:transform .15s,box-shadow .15s!important;
+}
+div.stButton>button:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(37,99,235,0.28)!important;}
+div.stButton>button:disabled{background:#CBD5E1!important;box-shadow:none!important;}
+div[data-testid="stSelectbox"] label,
+div[data-testid="stTextInput"] label,
+div[data-testid="stMultiSelect"] label{
+    color:#334155!important;font-size:0.80rem!important;font-weight:700!important;
+}
+div[data-testid="stSelectbox"] div[data-baseweb="select"]>div,
+div[data-testid="stTextInput"] input,
+div[data-testid="stMultiSelect"] div[data-baseweb="select"]>div{
+    background:#fff!important;border:1.6px solid #CBD5E1!important;
+    border-radius:14px!important;color:#1F2937!important;
+    min-height:44px!important;font-family:"DM Sans",sans-serif!important;
+    font-size:0.88rem!important;font-weight:600!important;
+    box-shadow:0 2px 8px rgba(15,23,42,0.05)!important;
+}
+.vf-table-wrap{overflow-x:auto;margin-top:1rem;}
+.vf-table{width:100%;border-collapse:collapse;font-family:"DM Sans",sans-serif;}
+.vf-table th{
+    background:#F0F4FA;color:#334155;font-size:0.72rem;font-weight:800;
+    padding:0.55rem 0.65rem;border-bottom:2px solid #DCE5F0;
+    white-space:nowrap;text-align:left;position:sticky;top:0;z-index:1;
+}
+.vf-table td{
+    font-size:0.75rem;color:#1F2937;padding:0.48rem 0.65rem;
+    border-bottom:1px solid #EEF2F7;vertical-align:top;font-weight:500;
+}
+.vf-table tr:hover td{background:#F8FAFF;}
+.vf-table td.num{text-align:right;font-variant-numeric:tabular-nums;}
+.pill{display:inline-flex;align-items:center;padding:0.22rem 0.5rem;
+      border-radius:999px;font-size:0.68rem;font-weight:800;white-space:nowrap;}
+.pill-conf{background:#DCFCE7;color:#166534;border:1px solid #86EFAC;}
+.pill-noconf{background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;}
+.pill-canc{background:#FEE2E2;color:#991B1B;border:1px solid #FCA5A5;}
+.pill-pago{background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;}
+.pill-pte{background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;}
+.pill-neutral{background:#F1F5F9;color:#475569;border:1px solid #CBD5E1;}
+.summary-row{display:flex;gap:1rem;flex-wrap:wrap;margin:0.75rem 0 1rem;}
+.sum-card{flex:1;min-width:120px;background:#F8FAFF;border:1px solid #DCE5F0;
+          border-radius:16px;padding:0.65rem 0.9rem;}
+.sum-label{font-size:0.68rem;color:#64748B;font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+.sum-value{font-size:1.22rem;font-weight:800;color:#1F2937;margin-top:0.18rem;}
+.portal-footer{margin-top:1rem;padding:.5rem 0 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
+.footer-text{font-size:.71rem;color:#A2ABBD;}
+</style>
+""", unsafe_allow_html=True)
 
-        errores.extend(errores_p2)
+if not st.session_state.get("authenticated"):
+    st.warning("Debes iniciar sesión primero. Vuelve a la página principal.")
+    if st.button("← Volver al Hub"):
+        st.switch_page("app.py")
+    st.stop()
 
-    placeholder_progress.empty()
-    placeholder_estado.empty()
-    return resultados, errores
+DISPLAYUSER = st.session_state.get("displayname", "").strip() or "Sin usuario"
+SALUDO    = getsaludo("es")
+SALUDOEN  = getsaludo("en")
 
+st.markdown(f"""
+<div class="portal-header">
+  <div class="portal-header-left">
+    <img class="portal-logo" src="{LOGOURL}" alt="Logo">
+    <div>
+      <div class="portal-title">{SALUDO}, {DISPLAYUSER}. Ventas FIT</div>
+      <div class="portal-subtitle">Resumen de reservas FIT por año · Google Drive backend</div>
+    </div>
+  </div>
+  <div class="user-top">{DISPLAYUSER}</div>
+</div>
+""", unsafe_allow_html=True)
 
-# ── Exportar a Excel ─────────────────────────────────────────────────────────
-def exportar_excel(df: pd.DataFrame) -> bytes:
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-        df_export = df.drop(columns=[c for c in df.columns if c.startswith("_")], errors="ignore")
-        df_export.to_excel(writer, index=False, sheet_name="VentasFIT")
+back_col, _ = st.columns([1, 9])
+with back_col:
+    if st.button("← Hub", key="back_to_hub"):
+        st.switch_page("app.py")
 
-        wb  = writer.book
-        ws  = writer.sheets["VentasFIT"]
+st.markdown('<hr style="border:none;border-top:2px solid #E2E8F0;margin:.4rem 0 1rem;">', unsafe_allow_html=True)
 
-        # Formatos
-        fmt_header = wb.add_format({
-            "bold": True, "bg_color": "#d9e1f2", "border": 1,
-            "align": "center", "valign": "vcenter", "font_name": "Calibri"
-        })
-        fmt_euro = wb.add_format({
-            "num_format": '#,##0.00 €', "bg_color": "#fff2cc",
-            "font_name": "Calibri"
-        })
-        fmt_normal = wb.add_format({"font_name": "Calibri"})
-
-        for col_num, col_name in enumerate(df_export.columns):
-            ws.write(0, col_num, col_name, fmt_header)
-            if col_name in ("Neto", "Bruto"):
-                ws.set_column(col_num, col_num, 14, fmt_euro)
-            else:
-                ws.set_column(col_num, col_num, 16, fmt_normal)
-
-        # Autofilter
-        ws.autofilter(0, 0, len(df_export), len(df_export.columns) - 1)
-
-    return output.getvalue()
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# ── APP PRINCIPAL ──────────────────────────────────────────────────────────────
-# ═══════════════════════════════════════════════════════════════════════════════
-def main():
-    st.set_page_config(
-        page_title="MacroFIT Extractor",
-        page_icon="🚢",
-        layout="wide",
-        initial_sidebar_state="expanded",
+col_year, col_btn, col_spacer = st.columns([2, 1.2, 6], gap="medium")
+with col_year:
+    try:
+        years = get_years()
+    except Exception as e:
+        st.error(f"Error al obtener años: {e}")
+        st.stop()
+    selected_year = st.selectbox(
+        "AÑO / YEAR", options=years, index=None,
+        placeholder="Selecciona un año…", key="vf_year",
     )
 
-    # ── CSS personalizado ──────────────────────────────────────────────────
-    st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+with col_btn:
+    st.markdown("<div style='margin-top:1.6rem;'>", unsafe_allow_html=True)
+    run_scan = st.button("Generar informe", key="vf_run", disabled=not selected_year)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+if "vf_results" not in st.session_state:
+    st.session_state.vf_results = None
+if "vf_year_loaded" not in st.session_state:
+    st.session_state.vf_year_loaded = None
 
-    .main-header {
-        background: linear-gradient(135deg, #1a3a5c 0%, #2563ab 100%);
-        padding: 2rem 2.5rem;
-        border-radius: 12px;
-        margin-bottom: 1.5rem;
-        color: white;
-    }
-    .main-header h1 { margin: 0; font-size: 2rem; font-weight: 700; letter-spacing: -0.5px; }
-    .main-header p  { margin: 0.4rem 0 0; opacity: 0.8; font-size: 0.95rem; }
+if run_scan and selected_year:
+    st.session_state.vf_results = None
+    st.session_state.vf_year_loaded = None
+    prog_bar  = st.progress(0.0, text="Iniciando escaneo…")
+    status_ph = st.empty()
 
-    .metric-card {
-        background: #f8faff;
-        border: 1px solid #dce6f7;
-        border-radius: 10px;
-        padding: 1.2rem 1.5rem;
-        text-align: center;
-    }
-    .metric-card .val { font-size: 2rem; font-weight: 700; color: #1a3a5c; }
-    .metric-card .lbl { font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+    def update_progress(done, total, label):
+        pct = done / total if total else 0
+        prog_bar.progress(min(pct, 1.0), text=f"Procesando {done}/{total}: {label}")
+        status_ph.caption(label)
 
-    .stDataFrame { border: 1px solid #dce6f7; border-radius: 8px; }
+    try:
+        rows = scan_year(selected_year, progress_cb=update_progress)
+        prog_bar.empty()
+        status_ph.empty()
+        st.session_state.vf_results     = rows
+        st.session_state.vf_year_loaded = selected_year
+        if not rows:
+            st.info("No se han encontrado reservas para el año seleccionado.")
+    except Exception as e:
+        prog_bar.empty()
+        status_ph.empty()
+        st.exception(e)
 
-    .badge-ok  { background:#d1fae5; color:#065f46; padding:2px 8px; border-radius:99px; font-size:0.8rem; }
-    .badge-err { background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:99px; font-size:0.8rem; }
+rows = st.session_state.get("vf_results")
+year_loaded = st.session_state.get("vf_year_loaded")
 
-    div[data-testid="stSidebar"] { background: #f1f5fb; }
-    </style>
-    """, unsafe_allow_html=True)
+if rows:
+    df_all = pd.DataFrame(rows, columns=COLUMNS_ORDER)
 
-    # ── Header ──────────────────────────────────────────────────────────────
-    st.markdown("""
-    <div class="main-header">
-        <h1>🚢 MacroFIT Extractor</h1>
-        <p>Extracción automática de informes FIT · Doble pasada de verificación</p>
+    st.markdown(f'<span class="web-chip-blue">FILTROS · AÑO {year_loaded} · {len(df_all)} registros</span>', unsafe_allow_html=True)
+
+    fc1, fc2, fc3, fc4, fc5, fc6 = st.columns([2, 2, 2, 2, 2, 2], gap="medium")
+    with fc1:
+        sel_barco = st.multiselect("BARCO", options=sorted(df_all["BARCO"].dropna().unique()), default=[], key="f_barco")
+    with fc2:
+        sel_agencia = st.multiselect("AGENCIA", options=sorted(df_all["AGENCIA"].dropna().unique()), default=[], key="f_agencia")
+    with fc3:
+        sel_estado = st.multiselect("ESTADO RESERVA", options=sorted(df_all["ESTADO RESERVA"].dropna().unique()), default=[], key="f_estado")
+    with fc4:
+        sel_comercial = st.multiselect("COMERCIAL", options=sorted(df_all["COMERCIAL"].dropna().unique()), default=[], key="f_comercial")
+    with fc5:
+        sel_pago = st.multiselect("PAGO", options=sorted(df_all["PAGO"].dropna().unique()), default=[], key="f_pago")
+    with fc6:
+        sel_idioma = st.multiselect("IDIOMA", options=sorted(df_all["IDIOMA"].dropna().unique()), default=[], key="f_idioma")
+
+    search_col, _ = st.columns([3, 7])
+    with search_col:
+        txt_search = st.text_input("🔍 Buscar en tabla", key="f_txt", placeholder="Localizador, agencia, itinerario…")
+
+    df = df_all.copy()
+    if sel_barco:     df = df[df["BARCO"].isin(sel_barco)]
+    if sel_agencia:   df = df[df["AGENCIA"].isin(sel_agencia)]
+    if sel_estado:    df = df[df["ESTADO RESERVA"].isin(sel_estado)]
+    if sel_comercial: df = df[df["COMERCIAL"].isin(sel_comercial)]
+    if sel_pago:      df = df[df["PAGO"].isin(sel_pago)]
+    if sel_idioma:    df = df[df["IDIOMA"].isin(sel_idioma)]
+    if txt_search.strip():
+        mask = df.apply(lambda r: txt_search.strip().lower() in " ".join(str(v) for v in r.values).lower(), axis=1)
+        df = df[mask]
+
+    st.markdown(f"""
+    <div class="summary-row">
+      <div class="sum-card"><div class="sum-label">Reservas</div><div class="sum-value">{len(df):,}</div></div>
+      <div class="sum-card"><div class="sum-label">Personas</div><div class="sum-value">{int(df['PERSONAS'].sum()):,}</div></div>
+      <div class="sum-card"><div class="sum-label">Neto Total</div><div class="sum-value">{df['NETO'].sum():,.2f} €</div></div>
+      <div class="sum-card"><div class="sum-label">Bruto Total</div><div class="sum-value">{df['BRUTO'].sum():,.2f} €</div></div>
     </div>
     """, unsafe_allow_html=True)
 
-    # ════════════════════════════════════════════════════════════════════════
-    # ── SIDEBAR — Configuración ────────────────────────────────────────────
-    # ════════════════════════════════════════════════════════════════════════
-    with st.sidebar:
-        st.markdown("## ⚙️ Configuración")
-
-        st.markdown("### 📁 Carpeta raíz de Drive")
-        id_raiz = st.text_input(
-            "ID de la carpeta raíz FIT",
-            value="11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm",
-            help="ID que aparece en la URL de Drive"
-        )
-
-        st.divider()
-        st.markdown("### 📅 Año a procesar")
-        año_sel = st.text_input("Año", value=str(datetime.now().year))
-
-        st.divider()
-        iniciar = st.button("▶️ Iniciar Extracción", use_container_width=True, type="primary")
-
-        st.markdown("---")
-        st.caption("MacroFIT v2.0 · Doble pasada · Exportación Excel")
-
-    # ════════════════════════════════════════════════════════════════════════
-    # ── ESTADO DE SESIÓN ───────────────────────────────────────────────────
-    # ════════════════════════════════════════════════════════════════════════
-    if "df_resultados" not in st.session_state:
-        st.session_state.df_resultados = None
-    if "errores"       not in st.session_state:
-        st.session_state.errores = []
-    if "meta"          not in st.session_state:
-        st.session_state.meta = {}
-
-    # ════════════════════════════════════════════════════════════════════════
-    # ── INICIO DE EXTRACCIÓN ───────────────────────────────────────────────
-    # ════════════════════════════════════════════════════════════════════════
-    if iniciar:
-        if not id_raiz.strip():
-            st.error("⚠️  Introduce el ID de la carpeta raíz.")
-            return
-        if not año_sel.strip().isdigit():
-            st.error("⚠️  El año debe ser numérico.")
-            return
-
-        # Cargar credenciales desde st.secrets
-        try:
-            creds_dict = dict(st.secrets["gcpserviceaccount"])
-        except KeyError:
-            st.error("⚠️  No se encontraron credenciales en Secrets.")
-            return
-
-        with st.spinner("Conectando con Google Drive…"):
-            try:
-                drive, gc = crear_servicios(creds_dict)
-            except Exception as e:
-                st.error(f"Error de autenticación: {e}")
-                return
-        
-            # ===================== DEBUG ======================
-            try:
-                info = drive.files().get(
-                    fileId=id_raiz,
-                    fields="id,name,mimeType",
-                    supportsAllDrives=True
-                ).execute()
-            
-                st.success("Carpeta encontrada")
-                st.write(info)
-            except Exception as e:
-                st.error(e)
-
-# ==================================================
-
-        # Buscar carpeta del año
-        with st.spinner(f"Buscando carpeta del año {año_sel}…"):
-            # Buscamos la carpeta por nombre
-            q = f"'{id_raiz}' in parents and name='{año_sel}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
-            res = drive.files().list(
-                q=q, 
-                fields="files(id,name)",
-                supportsAllDrives=True,
-                includeItemsFromAllDrives=True
-            ).execute()
-            
-            carpetas_año = res.get("files", [])
-        
-            if not carpetas_año:
-                st.error(f"No se encontró ninguna carpeta con el nombre '{año_sel}' dentro de CRUCEM.")
-                return # Salimos limpiamente sin generar errores de variable
-        
-            carpeta_año_id = carpetas_año[0]["id"]
-            st.success(f"Carpeta del año {año_sel} encontrada con ID: {carpeta_año_id}")
-
-        # Descubrir estructura
-        with st.spinner("Explorando estructura de carpetas…"):
-            archivos, barcos, salidas = descubrir_archivos(drive, carpeta_año_id)
-
-        if not archivos:
-            st.warning("No se encontraron archivos Sheets en la estructura de carpetas.")
-            return
-
-        st.info(
-            f"📂 **{len(barcos)} barcos** · **{len(salidas)} salidas** · "
-            f"**{len(archivos)} archivos** encontrados. Iniciando extracción…"
-        )
-
-        # Contenedores para progreso en tiempo real
-        placeholder_prog   = st.empty()
-        placeholder_estado = st.empty()
-
-        t_inicio = time.time()
-        resultados, errores = ejecutar_extraccion(
-            drive, gc, archivos, placeholder_prog, placeholder_estado
-        )
-        t_fin = time.time()
-
-        # Guardar en sesión
-        if resultados:
-            df = pd.DataFrame(resultados)
-            # Marcar duplicados por Confirmación
-            df["_duplicado"] = df["Confirmación"].duplicated(keep=False)
-            st.session_state.df_resultados = df
-        else:
-            st.session_state.df_resultados = pd.DataFrame()
-
-        st.session_state.errores = errores
-        st.session_state.meta = {
-            "año": año_sel,
-            "archivos_total": len(archivos),
-            "tiempo": round(t_fin - t_inicio, 1),
-            "ts": datetime.now().strftime("%d/%m/%Y %H:%M"),
-        }
-        st.rerun()
-
-    # ════════════════════════════════════════════════════════════════════════
-    # ── MOSTRAR RESULTADOS ─────────────────────────────────────────────────
-    # ════════════════════════════════════════════════════════════════════════
-    df_all = st.session_state.df_resultados
-
-    if df_all is None:
-        st.markdown("""
-        <div style="text-align:center;padding:4rem 0;color:#94a3b8;">
-            <div style="font-size:4rem">🚢</div>
-            <div style="font-size:1.2rem;font-weight:600;margin-top:1rem;">Listo para procesar</div>
-            <div style="margin-top:0.5rem;font-size:0.9rem;">
-                Configura las credenciales y el año en el panel lateral, luego pulsa Iniciar.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        return
-
-    meta = st.session_state.meta
-    errores = st.session_state.errores
-
-    # ── Métricas resumen ───────────────────────────────────────────────────
-    n_filas = len(df_all)
-    n_dup   = int(df_all["_duplicado"].sum()) if "_duplicado" in df_all.columns else 0
-    neto_t  = df_all["Neto"].sum()  if "Neto"  in df_all.columns else 0
-    bruto_t = df_all["Bruto"].sum() if "Bruto" in df_all.columns else 0
-
-    c1, c2, c3, c4, c5 = st.columns(5)
-    with c1:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="val">{n_filas}</div>
-            <div class="lbl">Localizadores</div>
-        </div>""", unsafe_allow_html=True)
-    with c2:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="val">{meta.get('archivos_total','–')}</div>
-            <div class="lbl">Archivos procesados</div>
-        </div>""", unsafe_allow_html=True)
-    with c3:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="val" style="color:#b45309">{n_dup}</div>
-            <div class="lbl">Confirmaciones duplicadas</div>
-        </div>""", unsafe_allow_html=True)
-    with c4:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="val" style="color:#15803d">{neto_t:,.0f} €</div>
-            <div class="lbl">Neto total</div>
-        </div>""", unsafe_allow_html=True)
-    with c5:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="val" style="color:#1d4ed8">{bruto_t:,.0f} €</div>
-            <div class="lbl">Bruto total</div>
-        </div>""", unsafe_allow_html=True)
-
-    st.markdown(f"<div style='margin:.5rem 0;font-size:.8rem;color:#94a3b8;'>Generado: {meta.get('ts','–')} · {meta.get('tiempo','–')}s · Año {meta.get('año','–')}</div>", unsafe_allow_html=True)
-
-    # ── Alertas duplicados / errores ──────────────────────────────────────
-    if n_dup > 0:
-        st.warning(f"⚠️  Se detectaron **{n_dup} filas** con Confirmación duplicada (marcadas en la tabla).")
-    if errores:
-        with st.expander(f"❌ {len(errores)} error(es) durante el proceso", expanded=False):
-            df_err = pd.DataFrame(errores)
-            st.dataframe(df_err, use_container_width=True, height=200)
-
-    # ── FILTROS ───────────────────────────────────────────────────────────
-    st.markdown("### 🔍 Filtros")
-    col_f1, col_f2, col_f3, col_f4 = st.columns(4)
-
-    df_vis = df_all.copy()
-
-    with col_f1:
-        barcos_u = sorted(df_vis["Barco"].dropna().unique().tolist())
-        sel_barco = st.multiselect("Barco", barcos_u, key="f_barco")
-
-    with col_f2:
-        agencias_u = sorted(df_vis["Agencia"].dropna().unique().tolist())
-        sel_agencia = st.multiselect("Agencia", agencias_u, key="f_agencia")
-
-    with col_f3:
-        estados_u = sorted(df_vis["Estado Reserva"].dropna().unique().tolist())
-        sel_estado = st.multiselect("Estado Reserva", estados_u, key="f_estado")
-
-    with col_f4:
-        solo_dup = st.checkbox("Solo duplicados", key="f_dup")
-        solo_err_neto = st.checkbox("Neto = 0", key="f_neto0")
-
-    # Filtro texto libre
-    texto_libre = st.text_input("🔎 Buscar en toda la tabla (Confirmación, Agencia, Comercial…)", key="f_txt")
-
-    # Aplicar filtros
-    if sel_barco:
-        df_vis = df_vis[df_vis["Barco"].isin(sel_barco)]
-    if sel_agencia:
-        df_vis = df_vis[df_vis["Agencia"].isin(sel_agencia)]
-    if sel_estado:
-        df_vis = df_vis[df_vis["Estado Reserva"].isin(sel_estado)]
-    if solo_dup and "_duplicado" in df_vis.columns:
-        df_vis = df_vis[df_vis["_duplicado"] == True]
-    if solo_err_neto:
-        df_vis = df_vis[df_vis["Neto"] == 0]
-    if texto_libre:
-        mask = df_vis.apply(
-            lambda row: row.astype(str).str.contains(texto_libre, case=False, na=False).any(),
-            axis=1
-        )
-        df_vis = df_vis[mask]
-
-    # ── Tabla principal ───────────────────────────────────────────────────
-    st.markdown(f"### 📋 Resultados ({len(df_vis)} filas)")
-
-    cols_mostrar = [c for c in HEADERS if c in df_vis.columns]
-    if "_duplicado" in df_vis.columns:
-        cols_mostrar_ext = cols_mostrar + ["_duplicado"]
-    else:
-        cols_mostrar_ext = cols_mostrar
-
-    df_display = df_vis[cols_mostrar_ext].copy()
-
-    # Resaltar duplicados
-    def highlight_dup(row):
-        if row.get("_duplicado", False):
-            return ["background-color: #fee2e2; color: #991b1b"] * len(row)
-        return [""] * len(row)
-
-    # Formateo de columnas numéricas
-    fmt = {
-        "Neto":  "{:,.2f} €",
-        "Bruto": "{:,.2f} €",
-    }
-    if "Personas" in df_display.columns:
-        fmt["Personas"] = "{:,.0f}"
-
-    styled = df_display.style.apply(highlight_dup, axis=1).format(fmt, na_rep="-")
-
-    st.dataframe(
-        styled,
-        use_container_width=True,
-        height=520,
-        column_config={
-            "_duplicado": st.column_config.CheckboxColumn("Dup.", width="small"),
-            "Neto":       st.column_config.NumberColumn("Neto", format="%.2f €"),
-            "Bruto":      st.column_config.NumberColumn("Bruto", format="%.2f €"),
-        }
+    st.download_button(
+        label="⬇ Exportar a Excel",
+        data=to_excel_bytes(df),
+        file_name=f"VENTAS_FIT_{year_loaded}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        key="vf_export",
     )
 
-    # ── Exportación ───────────────────────────────────────────────────────
-    st.markdown("### 💾 Exportar")
-    c_ex1, c_ex2 = st.columns(2)
+    def estado_pill(v):
+        u = str(v).strip().upper()
+        if "CONFIRM" in u: return f'<span class="pill pill-conf">{v}</span>'
+        if "CANCEL"  in u: return f'<span class="pill pill-canc">{v}</span>'
+        if "NO CONF" in u: return f'<span class="pill pill-noconf">{v}</span>'
+        return f'<span class="pill pill-neutral">{v}</span>'
 
-    with c_ex1:
-        xlsx_bytes = exportar_excel(df_vis)
-        ts_str = datetime.now().strftime("%Y%m%d_%H%M")
-        st.download_button(
-            label="⬇️  Descargar Excel (filtrado)",
-            data=xlsx_bytes,
-            file_name=f"VentasFIT_{meta.get('año','X')}_{ts_str}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-        )
+    def pago_pill(v):
+        u = str(v).strip().upper()
+        if "PAGADO" in u:  return f'<span class="pill pill-conf">{v}</span>'
+        if "PTE"    in u:  return f'<span class="pill pill-pte">{v}</span>'
+        if "DEPOSI" in u:  return f'<span class="pill pill-pago">{v}</span>'
+        return f'<span class="pill pill-neutral">{v}</span>'
 
-    with c_ex2:
-        xlsx_all = exportar_excel(df_all)
-        st.download_button(
-            label="⬇️  Descargar Excel (todo)",
-            data=xlsx_all,
-            file_name=f"VentasFIT_{meta.get('año','X')}_COMPLETO_{ts_str}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-        )
+    if df.empty:
+        st.info("Sin resultados para los filtros aplicados.")
+    else:
+        header_cells = "".join(f"<th>{c}</th>" for c in COLUMNS_ORDER)
+        rows_html = ""
+        for _, r in df.iterrows():
+            rows_html += f"""<tr>
+              <td>{r['BARCO']}</td><td>{r['AGENCIA']}</td><td>{r['CODIGO']}</td><td>{r['GRUPO']}</td>
+              <td><b>{r['CONFIRMACION']}</b></td><td>{r['FECHA BOOKING']}</td><td>{r['ITINERARIO']}</td>
+              <td>{r['FECHA SALIDA']}</td><td>{r['FECHA LLEGADA']}</td>
+              <td class="num">{r['NETO']:,.2f} €</td><td class="num">{r['BRUTO']:,.2f} €</td>
+              <td>{estado_pill(r['ESTADO RESERVA'])}</td><td>{pago_pill(r['PAGO'])}</td>
+              <td>{r['COMERCIAL']}</td><td class="num">{int(r['PERSONAS'])}</td><td>{r['IDIOMA']}</td>
+            </tr>"""
+        st.html(f'<div class="vf-table-wrap"><table class="vf-table"><thead><tr>{header_cells}</tr></thead><tbody>{rows_html}</tbody></table></div>')
 
-    # ── Pestaña de detalle por barco ──────────────────────────────────────
-    if "Barco" in df_vis.columns and len(df_vis) > 0:
-        with st.expander("📊 Resumen por Barco", expanded=False):
-            resumen = df_vis.groupby("Barco").agg(
-                Localizadores=("Confirmación", "count"),
-                Neto_Total=("Neto", "sum"),
-                Bruto_Total=("Bruto", "sum"),
-                Personas_Total=("Personas", "sum"),
-            ).sort_values("Neto_Total", ascending=False)
-
-            resumen["Neto_Total"]  = resumen["Neto_Total"].map("{:,.2f} €".format)
-            resumen["Bruto_Total"] = resumen["Bruto_Total"].map("{:,.2f} €".format)
-            st.dataframe(resumen, use_container_width=True)
-
-    if "Agencia" in df_vis.columns and len(df_vis) > 0:
-        with st.expander("📊 Resumen por Agencia (Top 20)", expanded=False):
-            resumen_ag = df_vis.groupby("Agencia").agg(
-                Localizadores=("Confirmación", "count"),
-                Neto_Total=("Neto", "sum"),
-            ).sort_values("Neto_Total", ascending=False).head(20)
-
-            resumen_ag["Neto_Total"] = resumen_ag["Neto_Total"].map("{:,.2f} €".format)
-            st.dataframe(resumen_ag, use_container_width=True)
-
-
-if __name__ == "__main__":
-    main()
+st.markdown('<div class="portal-footer"><div class="footer-text">Crucemundo Hub · Ventas FIT</div></div>', unsafe_allow_html=True)
