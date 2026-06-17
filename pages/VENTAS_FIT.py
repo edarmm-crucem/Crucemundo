@@ -605,21 +605,21 @@ if run_scan and selected_year:
         if len(rows_acumuladas) % 3 == 0:
             pintar_tabla(rows_acumuladas)
     
-        try:
-            rows = scan_year(selected_year, progress_cb=update_progress, on_row_verified=on_row_verified)
-            prog_bar.empty()
-            status_ph.empty()
-            st.session_state.vf_results     = rows
-            st.session_state.vf_year_loaded = selected_year
-            if not rows:
-                st.info("No se han encontrado reservas para el año seleccionado.")
-        except Exception as e:
-            prog_bar.empty()
-            status_ph.empty()
-            st.session_state.vf_results = rows_acumuladas  # ← conserva lo ya pintado aunque falle
-            st.session_state.vf_year_loaded = selected_year
-            st.exception(e)
-            st.warning(f"Escaneo interrumpido. Se han procesado {len(rows_acumuladas)} reservas antes del error.")
+    try:
+        rows = scan_year(selected_year, progress_cb=update_progress, on_row_verified=on_row_verified)
+        prog_bar.empty()
+        status_ph.empty()
+        st.session_state.vf_results     = rows
+        st.session_state.vf_year_loaded = selected_year
+        if not rows:
+            st.info("No se han encontrado reservas para el año seleccionado.")
+    except Exception as e:
+        prog_bar.empty()
+        status_ph.empty()
+        st.session_state.vf_results = rows_acumuladas  # ← conserva lo ya pintado aunque falle
+        st.session_state.vf_year_loaded = selected_year
+        st.exception(e)
+        st.warning(f"Escaneo interrumpido. Se han procesado {len(rows_acumuladas)} reservas antes del error.")
     
     rows = st.session_state.get("vf_results")
     year_loaded = st.session_state.get("vf_year_loaded")
