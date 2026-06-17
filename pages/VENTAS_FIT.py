@@ -62,6 +62,25 @@ def drive_svc():
 def sheets_svc():
     return build("sheets", "v4", credentials=_creds())
 
+
+if st.button("🔍 Debug un libro", key="debug_libro", disabled=not selected_year):
+    year_id = get_year_folder_id(selected_year)
+    boat_folders = list_children(year_id, folders_only=True)
+    # coge el primer barco y el primer archivo
+    for bf in boat_folders:
+        files = list_children(bf["id"], folders_only=False)
+        salidas = [f for f in files if re.match(r"^[A-Z_]+_\d{6}$", f["name"].strip())]
+        if salidas:
+            fobj = salidas[0]
+            st.write(f"**Libro:** {fobj['name']}")
+            sheets = get_sheet_titles_ids(fobj["id"])
+            st.write(f"**Total hojas:** {len(sheets)}")
+            for sh in sheets:
+                g11 = batch_get(fobj["id"], sh["title"], ["G11"]).get("G11", "")
+                st.write(f"Hoja: `{sh['title']}` → G11: `{repr(g11)}`")
+            break
+        break
+        
 # ── Drive helpers ────────────────────────────────────────────
 def list_children(parent_id, folders_only=False):
     svc = drive_svc()
