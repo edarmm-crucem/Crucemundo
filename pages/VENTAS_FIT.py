@@ -1,5 +1,3 @@
-# ARCHIVO REVISADO
-# NOTA: Se han corregido parcialmente problemas de indentación identificados.
 # ============================================================
 # PÁGINA: VENTAS_FIT
 # ============================================================
@@ -126,7 +124,6 @@ def sheets_svc():
 
         
 # ── Drive helpers ────────────────────────────────────────────
-
 def list_children(parent_id, folders_only=False):
     svc = drive_svc()
     q = f"'{parent_id}' in parents and trashed=false"
