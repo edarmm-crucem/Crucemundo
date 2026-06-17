@@ -190,84 +190,34 @@ def parse_numeric(val):
 
     text = re.sub(r"[€$\s]", "", str(val))
     text = text.replace(".", "").replace(",", ".")
-
     m = re.search(r"-?\d+(?:\.\d+)?", text)
-    return float(m.group()) if m else 0.0
 
+    return float(m.group()) if m else 0.0
 
 def count_personas(rango):
     if not rango:
         return 0
-
     return sum(1 for fila in rango if fila and str(fila[0]).strip())
 
 # ============================================================
-# PROCESO LIBRO
+# CORE
 # ============================================================
 
-def process_book(book_id, boat_name, book_name):
-
-    rows_book = []
-
-    try:
-        sheets_list = get_sheet_titles(book_id)
-
-        for sh in sheets_list:
-
-            d1 = batch_get(book_id, sh)
-            d2 = batch_get(book_id, sh)
-
-            if d1 != d2:
-                st.warning(f"Inconsistencia en {book_name} / {sh}")
-
-            data = d2
-
-            if not data.get("G11"):
-                continue
-
-            row = {
-                "BARCO": boat_name,
-                "AGENCIA": data.get("B2", ""),
-                "CODIGO": data.get("G11", ""),
-                "GRUPO": data.get("G13", ""),
-                "CONFIRMACION": data.get("G5", ""),
-                "FECHA BOOKING": data.get("P5", ""),
-                "ITINERARIO": data.get("R5", ""),
-                "FECHA SALIDA": data.get("C3", ""),
-                "FECHA LLEGADA": data.get("G19", ""),
-                "NETO": parse_numeric(data.get("G17")),
-                "BRUTO": parse_numeric(data.get("Q55")),
-                "ESTADO RESERVA": data.get("G10", ""),
-                "PAGO": data.get("Q10", ""),
-                "COMERCIAL": data.get("G23", ""),
-                "PERSONAS": count_personas(data.get("G24:G60")),
-                "IDIOMA": data.get("G57", ""),
-            }
-
-            rows_book.append(row)
-
-    except Exception as e:
-        st.warning(f"Error libro {book_name}: {e}")
-
-    return rows_book
-
-# ============================================================
-# SCAN
-# ============================================================
-
-def scan_year(year, progress_bar, table_placeholder):
+def scan_year(year, progress_bar):
 
     year_id = get_year_id(year)
     if not year_id:
-        return pd.DataFrame(columns=COLUMNS_ORDER)
+        return []
 
     rows_total = []
+    inconsistencias = 0
 
     boats = list_children(year_id, True)
     total = sum(len(list_children(b["id"], False)) for b in boats)
     processed = 0
 
     for boat in boats:
+
         files = list_children(boat["id"], False)
 
         for f in files:
@@ -278,34 +228,47 @@ def scan_year(year, progress_bar, table_placeholder):
             if not re.match(r"^[A-Z_]+_\d{6}$", f["name"].strip()):
                 continue
 
-            rows_book = process_book(f["id"], boat["name"], f["name"])
+            try:
+                sheets_list = get_sheet_titles(f["id"])
 
-            if rows_book:
-                rows_total.extend(rows_book)
+                for sh in sheets_list:
 
-                df_temp = pd.DataFrame(rows_total)
+                    d1 = batch_get(f["id"], sh)
+                    d2 = batch_get(f["id"], sh)
 
-                # ✅ numeración segura (NO index)
-                df_temp.insert(0, "Nº", range(1, len(df_temp) + 1))
+                    if d1 != d2:
+                        inconsistencias += 1
 
-                table_placeholder.dataframe(df_temp)
+                    data = d2
 
-    df_final = pd.DataFrame(rows_total)
+                    if not data.get("G11"):
+                        continue
 
-    if not df_final.empty:
-        df_final.insert(0, "Nº", range(1, len(df_final) + 1))
+                    row = {
+                        "BARCO": boat["name"],
+                        "AGENCIA": data.get("B2", ""),
+                        "CODIGO": data.get("G11", ""),
+                        "GRUPO": data.get("G13", ""),
+                        "CONFIRMACION": data.get("G5", ""),
+                        "FECHA BOOKING": data.get("P5", ""),
+                        "ITINERARIO": data.get("R5", ""),
+                        "FECHA SALIDA": data.get("C3", ""),
+                        "FECHA LLEGADA": data.get("G19", ""),
+                        "NETO": parse_numeric(data.get("G17")),
+                        "BRUTO": parse_numeric(data.get("Q55")),
+                        "ESTADO RESERVA": data.get("G10", ""),
+                        "PAGO": data.get("Q10", ""),
+                        "COMERCIAL": data.get("G23", ""),
+                        "PERSONAS": count_personas(data.get("G24:G60")),
+                        "IDIOMA": data.get("G57", ""),
+                    }
 
-    return df_final
+                    rows_total.append(row)
 
-# ============================================================
-# EXCEL
-# ============================================================
+            except Exception:
+                continue
 
-def to_excel(df):
-    buf = io.BytesIO()
-    df.to_excel(buf, index=False)
-    buf.seek(0)
-    return buf
+    return rows_total, inconsistencias
 
 # ============================================================
 # UI
@@ -313,7 +276,7 @@ def to_excel(df):
 
 st.set_page_config(page_title="Ventas FIT", layout="wide")
 
-st.title("Ventas FIT")
+st.title("Ventas FIT (Modo Blindado)")
 
 years = get_years()
 year = st.selectbox("Año", years)
@@ -321,16 +284,22 @@ year = st.selectbox("Año", years)
 if st.button("Generar informe"):
 
     progress = st.progress(0)
-    table_placeholder = st.empty()
 
-    with st.spinner("Procesando..."):
-        df = scan_year(year, progress, table_placeholder)
+    with st.spinner("Procesando... (modo seguro)"):
+        rows, inconsistencias = scan_year(year, progress)
 
-    if df.empty:
+    if not rows:
         st.warning("No hay datos")
     else:
+        df = pd.DataFrame(rows)
+        df.insert(0, "Nº", range(1, len(df) + 1))
+
+        st.success(f"Proceso completado ✅ | Inconsistencias detectadas: {inconsistencias}")
+
+        st.dataframe(df)
+
         st.download_button(
             "Descargar Excel",
-            to_excel(df),
+            df.to_excel(index=False, engine="openpyxl"),
             file_name=f"ventas_{year}.xlsx"
         )
