@@ -1,7 +1,3 @@
-# ============================================================
-# IMPORTS
-# ============================================================
-
 import re
 import io
 import time
@@ -25,17 +21,7 @@ socket.setdefaulttimeout(60)
 
 DRIVEROOTID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
 
-COLUMNS_ORDER = [
-    "Nº",
-    "BARCO", "AGENCIA", "CODIGO", "GRUPO",
-    "CONFIRMACION", "FECHA BOOKING", "ITINERARIO",
-    "FECHA SALIDA", "FECHA LLEGADA",
-    "NETO", "BRUTO",
-    "ESTADO RESERVA", "PAGO", "COMERCIAL",
-    "PERSONAS", "IDIOMA",
-]
-
-CELLS_NEEDED = [
+CELLS = [
     "B2","G11","G13","G5","P5","R5",
     "C3","G19","G17","G10",
     "G57","Q10","G23","Q55",
@@ -43,31 +29,26 @@ CELLS_NEEDED = [
 ]
 
 # ============================================================
-# RATE LIMITER
+# RATE LIMIT
 # ============================================================
 
 class RateLimiter:
-    def __init__(self, max_calls=50, per_seconds=60):
+    def __init__(self):
         self.calls = deque()
-        self.max_calls = max_calls
-        self.per_seconds = per_seconds
         self.lock = threading.Lock()
 
     def wait(self):
         with self.lock:
             now = time.time()
-
-            while self.calls and now - self.calls[0] > self.per_seconds:
+            while self.calls and now - self.calls[0] > 60:
                 self.calls.popleft()
 
-            if len(self.calls) >= self.max_calls:
-                sleep_time = self.per_seconds - (now - self.calls[0])
-                if sleep_time > 0:
-                    time.sleep(sleep_time)
+            if len(self.calls) >= 50:
+                time.sleep(1)
 
             self.calls.append(time.time())
 
-rate_limiter = RateLimiter()
+limiter = RateLimiter()
 
 # ============================================================
 # GOOGLE
@@ -95,71 +76,60 @@ def sheets():
 # EXECUTE
 # ============================================================
 
-def execute(req, retries=5):
-    for i in range(retries):
+def execute(req):
+    for i in range(5):
         try:
-            rate_limiter.wait()
+            limiter.wait()
             return req.execute()
-        except (HttpError, OSError, ConnectionResetError, BrokenPipeError):
-            time.sleep((2 ** i) + random.uniform(0, 1))
+        except:
+            time.sleep(2**i)
 
-    raise Exception("Error API persistente")
+    raise Exception("Error API")
 
 # ============================================================
 # DRIVE
 # ============================================================
 
-def list_children(parent_id, folders_only=False):
+def list_children(parent, folders=False):
 
-    q = f"'{parent_id}' in parents and trashed=false"
-
-    if folders_only:
+    q = f"'{parent}' in parents and trashed=false"
+    if folders:
         q += " and mimeType='application/vnd.google-apps.folder'"
 
     res = execute(
         drive().files().list(
             q=q,
-            fields="files(id,name,mimeType)",
-            pageSize=1000,
-            supportsAllDrives=True,
-            includeItemsFromAllDrives=True,
+            fields="files(id,name,mimeType)"
         )
     )
 
     return res.get("files", [])
 
 def get_years():
-    return sorted(
-        [f["name"] for f in list_children(DRIVEROOTID, True)
-         if re.fullmatch(r"\d{4}", f["name"])],
-        reverse=True,
-    )
-
-def get_year_id(year):
-    for f in list_children(DRIVEROOTID, True):
-        if f["name"] == year:
-            return f["id"]
-    return None
+    return sorted([
+        f["name"] for f in list_children(DRIVEROOTID, True)
+        if re.fullmatch(r"\d{4}", f["name"])
+    ], reverse=True)
 
 # ============================================================
 # SHEETS
 # ============================================================
 
-def batch_get(ssid, sheet_title):
+def batch_get(ssid, sheet):
 
-    ranges = [f"'{sheet_title}'!{c}" for c in CELLS_NEEDED]
+    ranges = [f"'{sheet}'!{c}" for c in CELLS]
 
-    resp = execute(
+    res = execute(
         sheets().spreadsheets().values().batchGet(
             spreadsheetId=ssid,
             ranges=ranges,
-            valueRenderOption="UNFORMATTED_VALUE",
+            valueRenderOption="UNFORMATTED_VALUE"
         )
     )
 
     data = {}
 
-    for c, vr in zip(CELLS_NEEDED, resp.get("valueRanges", [])):
+    for c, vr in zip(CELLS, res.get("valueRanges", [])):
         vals = vr.get("values", [])
 
         if len(vals) > 1:
@@ -169,137 +139,154 @@ def batch_get(ssid, sheet_title):
 
     return data
 
-def get_sheet_titles(ssid):
+def get_sheets(ssid):
     meta = execute(
-        sheets().spreadsheets().get(
-            spreadsheetId=ssid,
-            includeGridData=False,
-        )
+        sheets().spreadsheets().get(spreadsheetId=ssid)
     )
-    return [s["properties"]["title"] for s in meta.get("sheets", [])]
+    return [s["properties"]["title"] for s in meta["sheets"]]
 
 # ============================================================
-# HELPERS
+# LOGICA FIABLE
 # ============================================================
 
-def parse_numeric(val):
-    if not val:
-        return 0.0
-    if isinstance(val, (int, float)):
-        return float(val)
+def read_verified(ssid, sheet):
 
-    text = re.sub(r"[€$\s]", "", str(val))
-    text = text.replace(".", "").replace(",", ".")
-    m = re.search(r"-?\d+(?:\.\d+)?", text)
+    # intento 1
+    d1 = batch_get(ssid, sheet)
+    d2 = batch_get(ssid, sheet)
 
-    return float(m.group()) if m else 0.0
+    if d1 == d2:
+        return d1, True
 
-def count_personas(rango):
-    if not rango:
+    # intento 2
+    d3 = batch_get(ssid, sheet)
+    d4 = batch_get(ssid, sheet)
+
+    if d3 == d4:
+        return d3, True
+
+    return d4, False
+
+def parse_num(v):
+    if not v:
         return 0
-    return sum(1 for fila in rango if fila and str(fila[0]).strip())
+    if isinstance(v,(int,float)):
+        return float(v)
+
+    t = re.sub(r"[^\d,.-]", "", str(v))
+    t = t.replace(".", "").replace(",", ".")
+
+    try:
+        return float(t)
+    except:
+        return 0
+
+def count_personas(r):
+    if not r:
+        return 0
+    return sum(1 for x in r if x and str(x[0]).strip())
 
 # ============================================================
 # CORE
 # ============================================================
 
-def scan_year(year, progress_bar):
+def scan(year, progress):
 
-    year_id = get_year_id(year)
+    # localizar año
+    year_id = None
+    for f in list_children(DRIVEROOTID, True):
+        if f["name"] == year:
+            year_id = f["id"]
+
     if not year_id:
-        return []
+        return [], []
 
-    rows_total = []
-    inconsistencias = 0
+    rows = []
+    fallos = []
 
     boats = list_children(year_id, True)
-    total = sum(len(list_children(b["id"], False)) for b in boats)
-    processed = 0
+    total = sum(len(list_children(b["id"])) for b in boats)
 
-    for boat in boats:
+    count = 0
 
-        files = list_children(boat["id"], False)
+    for b in boats:
+        for f in list_children(b["id"]):
 
-        for f in files:
+            count += 1
+            progress.progress(count / max(total, 1))
 
-            processed += 1
-            progress_bar.progress(processed / max(total, 1))
-
-            if not re.match(r"^[A-Z_]+_\d{6}$", f["name"].strip()):
+            if not re.match(r"^[A-Z_]+_\d{6}$", f["name"]):
                 continue
 
             try:
-                sheets_list = get_sheet_titles(f["id"])
+                for sh in get_sheets(f["id"]):
 
-                for sh in sheets_list:
+                    data, ok = read_verified(f["id"], sh)
 
-                    d1 = batch_get(f["id"], sh)
-                    d2 = batch_get(f["id"], sh)
-
-                    if d1 != d2:
-                        inconsistencias += 1
-
-                    data = d2
+                    if not ok:
+                        fallos.append({"LIBRO": f["name"], "HOJA": sh})
+                        continue
 
                     if not data.get("G11"):
                         continue
 
-                    row = {
-                        "BARCO": boat["name"],
-                        "AGENCIA": data.get("B2", ""),
-                        "CODIGO": data.get("G11", ""),
-                        "GRUPO": data.get("G13", ""),
-                        "CONFIRMACION": data.get("G5", ""),
-                        "FECHA BOOKING": data.get("P5", ""),
-                        "ITINERARIO": data.get("R5", ""),
-                        "FECHA SALIDA": data.get("C3", ""),
-                        "FECHA LLEGADA": data.get("G19", ""),
-                        "NETO": parse_numeric(data.get("G17")),
-                        "BRUTO": parse_numeric(data.get("Q55")),
-                        "ESTADO RESERVA": data.get("G10", ""),
-                        "PAGO": data.get("Q10", ""),
-                        "COMERCIAL": data.get("G23", ""),
+                    rows.append({
+                        "BARCO": b["name"],
+                        "AGENCIA": data.get("B2"),
+                        "CODIGO": data.get("G11"),
+                        "GRUPO": data.get("G13"),
+                        "CONFIRMACION": data.get("G5"),
+                        "FECHA BOOKING": data.get("P5"),
+                        "ITINERARIO": data.get("R5"),
+                        "FECHA SALIDA": data.get("C3"),
+                        "FECHA LLEGADA": data.get("G19"),
+                        "NETO": parse_num(data.get("G17")),
+                        "BRUTO": parse_num(data.get("Q55")),
+                        "ESTADO RESERVA": data.get("G10"),
+                        "PAGO": data.get("Q10"),
+                        "COMERCIAL": data.get("G23"),
                         "PERSONAS": count_personas(data.get("G24:G60")),
-                        "IDIOMA": data.get("G57", ""),
-                    }
+                        "IDIOMA": data.get("G57"),
+                    })
 
-                    rows_total.append(row)
+            except:
+                fallos.append({"LIBRO": f["name"], "HOJA": "ERROR"})
 
-            except Exception:
-                continue
-
-    return rows_total, inconsistencias
+    return rows, fallos
 
 # ============================================================
 # UI
 # ============================================================
 
-st.set_page_config(page_title="Ventas FIT", layout="wide")
+st.title("Ventas FIT – modo fiable")
 
-st.title("Ventas FIT (Modo Blindado)")
+year = st.selectbox("Año", get_years())
 
-years = get_years()
-year = st.selectbox("Año", years)
-
-if st.button("Generar informe"):
+if st.button("Generar"):
 
     progress = st.progress(0)
 
-    with st.spinner("Procesando... (modo seguro)"):
-        rows, inconsistencias = scan_year(year, progress)
+    with st.spinner("Procesando..."):
+        rows, fallos = scan(year, progress)
 
     if not rows:
-        st.warning("No hay datos")
+        st.warning("Sin datos")
     else:
         df = pd.DataFrame(rows)
-        df.insert(0, "Nº", range(1, len(df) + 1))
+        df.insert(0, "Nº", range(1, len(df)+1))
 
-        st.success(f"Proceso completado ✅ | Inconsistencias detectadas: {inconsistencias}")
-
+        st.success("Datos generados ✅")
         st.dataframe(df)
 
-        st.download_button(
-            "Descargar Excel",
-            df.to_excel(index=False, engine="openpyxl"),
-            file_name=f"ventas_{year}.xlsx"
-        )
+        # ✅ EXCEL BIEN HECHO
+        output = io.BytesIO()
+        df.to_excel(output, index=False)
+        output.seek(0)
+
+        st.download_button("Descargar Excel", output, "ventas.xlsx")
+
+    # ✅ REPORTE FALLOS
+    if fallos:
+        st.warning(f"Fallos detectados: {len(fallos)}")
+        st.dataframe(pd.DataFrame(fallos))
+``
