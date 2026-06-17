@@ -8,8 +8,6 @@ import time
 import random
 import threading
 from collections import deque
-from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pytz
 import streamlit as st
@@ -27,9 +25,6 @@ socket.setdefaulttimeout(60)
 # ============================================================
 
 DRIVEROOTID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
-TIMEZONE = pytz.timezone("Europe/Madrid")
-
-MAX_WORKERS = 2   # 🔥 ajustable (5 = seguro, 8 = más rápido pero más riesgo 429)
 
 COLUMNS_ORDER = [
     "BARCO", "AGENCIA", "CODIGO", "GRUPO",
@@ -38,6 +33,12 @@ COLUMNS_ORDER = [
     "NETO", "BRUTO",
     "ESTADO RESERVA", "PAGO", "COMERCIAL",
     "PERSONAS", "IDIOMA",
+]
+
+CELLS_NEEDED = [
+    "B2", "G11", "G13", "G5", "P5", "R5",
+    "C3", "G19", "G17", "K17", "G10",
+    "G57", "Q10", "G23", "Q55",
 ]
 
 # ============================================================
@@ -65,11 +66,10 @@ class RateLimiter:
 
             self.calls.append(time.time())
 
-
 rate_limiter = RateLimiter()
 
 # ============================================================
-# GOOGLE CLIENTS
+# GOOGLE
 # ============================================================
 
 @st.cache_resource
@@ -91,17 +91,20 @@ def sheets():
     return build("sheets", "v4", credentials=creds())
 
 # ============================================================
-# RETRY
+# EXECUTE (ANTI SSL)
 # ============================================================
 
 def execute(req, retries=5):
+
     for i in range(retries):
         try:
             rate_limiter.wait()
             return req.execute()
+
         except (HttpError, OSError, ConnectionResetError, BrokenPipeError):
             time.sleep((2 ** i) + random.uniform(0, 1))
-    raise Exception("Error API persistente")
+
+    raise Exception("Error persistente API")
 
 # ============================================================
 # DRIVE
@@ -127,8 +130,9 @@ def list_children(parent_id, folders_only=False):
     return res.get("files", [])
 
 def get_years():
+    folders = list_children(DRIVEROOTID, True)
     return sorted(
-        [f["name"] for f in list_children(DRIVEROOTID, True) if re.fullmatch(r"\d{4}", f["name"])],
+        [f["name"] for f in folders if re.fullmatch(r"\d{4}", f["name"])],
         reverse=True,
     )
 
@@ -142,14 +146,9 @@ def get_year_id(year):
 # SHEETS
 # ============================================================
 
-CELLS = [
-    "B2","G11","G13","G5","P5","R5",
-    "C3","G19","G17","K17","G10",
-    "G57","Q10","G23","Q55"
-]
+def batch_get(ssid, sheet_title):
 
-def batch_get(ssid, sheet):
-    ranges = [f"'{sheet}'!{c}" for c in CELLS]
+    ranges = [f"'{sheet_title}'!{a1}" for a1 in CELLS_NEEDED]
 
     resp = execute(
         sheets().spreadsheets().values().batchGet(
@@ -159,15 +158,15 @@ def batch_get(ssid, sheet):
         )
     )
 
-    data = {}
-    for c, vr in zip(CELLS, resp.get("valueRanges", [])):
+    out = {}
+
+    for a1, vr in zip(CELLS_NEEDED, resp.get("valueRanges", [])):
         vals = vr.get("values", [])
-        data[c] = vals[0][0] if vals and vals[0] else ""
+        out[a1] = vals[0][0] if vals and vals[0] else ""
 
-    return data
+    return out
 
-@st.cache_data(ttl=600)
-def get_sheets(ssid):
+def get_sheet_titles(ssid):
     meta = execute(
         sheets().spreadsheets().get(
             spreadsheetId=ssid,
@@ -177,66 +176,50 @@ def get_sheets(ssid):
     return [s["properties"]["title"] for s in meta.get("sheets", [])]
 
 # ============================================================
+# CONSISTENCIA (TU IDEA)
+# ============================================================
+
+def read_sheet_verified(ssid, sheet_title, max_intentos=4):
+
+    intento = 0
+    ultima = None
+
+    while intento < max_intentos:
+
+        data1 = batch_get(ssid, sheet_title)
+        data2 = batch_get(ssid, sheet_title)
+
+        if data1 == data2:
+            return data1
+
+        intento += 1
+        ultima = data2
+
+    return ultima
+
+# ============================================================
 # PARSE
 # ============================================================
 
-def parse_numeric(v):
-    if not v:
-        return 0.0
-    if isinstance(v,(int,float)):
-        return float(v)
+def parse_numeric(val):
 
-    t = re.sub(r"[€$\s]", "", str(v))
-    t = t.replace(".", "").replace(",", ".")
-    m = re.search(r"-?\d+(?:\.\d+)?", t)
+    if val is None or val == "":
+        return 0.0
+
+    if isinstance(val, (int, float)):
+        return float(val)
+
+    text = str(val)
+    text = re.sub(r"[€$£\s]", "", text)
+    text = text.replace(".", "").replace(",", ".")
+
+    m = re.search(r"-?\d+(?:\.\d+)?", text)
+
     return float(m.group()) if m else 0.0
 
 # ============================================================
-# CORE PARALLEL
+# CORE
 # ============================================================
-
-def process_file(boat_name, file_obj):
-    rows = []
-
-    if not re.match(r"^[A-Z_]+_\d{6}$", file_obj["name"].strip()):
-        return rows
-
-    try:
-        sheets_list = get_sheets(file_obj["id"])
-
-        for sh in sheets_list:
-            data = batch_get(file_obj["id"], sh)
-
-            if not data.get("G11"):
-                continue
-
-            row = {col: "" for col in COLUMNS_ORDER}
-
-            row.update({
-                "BARCO": boat_name,
-                "AGENCIA": data.get("B2",""),
-                "CODIGO": data.get("G11",""),
-                "GRUPO": data.get("G13",""),
-                "CONFIRMACION": data.get("G5",""),
-                "FECHA BOOKING": data.get("P5",""),
-                "ITINERARIO": data.get("R5",""),
-                "FECHA SALIDA": data.get("C3",""),
-                "FECHA LLEGADA": data.get("G19",""),
-                "NETO": parse_numeric(data.get("G17")),
-                "BRUTO": parse_numeric(data.get("K17")),
-                "ESTADO RESERVA": data.get("G10",""),
-                "PAGO": data.get("Q10",""),
-                "COMERCIAL": data.get("G23",""),
-                "PERSONAS": data.get("Q55",""),
-                "IDIOMA": data.get("G57",""),
-            })
-
-            rows.append(row)
-
-    except Exception as e:
-        return [{"ERROR": f"{file_obj['name']} -> {e}"}]
-
-    return rows
 
 def scan_year(year, progress_bar=None):
 
@@ -244,31 +227,62 @@ def scan_year(year, progress_bar=None):
     if not year_id:
         return []
 
+    rows = []
+
     boats = list_children(year_id, True)
+    total_files = sum(len(list_children(b["id"], False)) for b in boats)
+    processed = 0
 
-    files_total = []
-    for b in boats:
-        for f in list_children(b["id"], False):
-            files_total.append((b["name"], f))
+    for boat in boats:
+        files = list_children(boat["id"], False)
 
-    results = []
-    total = len(files_total)
+        for f in files:
 
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-
-        futures = [
-            executor.submit(process_file, boat, f)
-            for boat, f in files_total
-        ]
-
-        for i, future in enumerate(as_completed(futures)):
-            results.extend(future.result())
+            processed += 1
 
             if progress_bar:
-                progress_bar.progress((i + 1) / total)
+                progress_bar.progress(processed / max(total_files, 1))
 
-    return results
+            if not re.match(r"^[A-Z_]+_\d{6}$", f["name"].strip()):
+                continue
 
+            try:
+                sheets_list = get_sheet_titles(f["id"])
+
+                for sh in sheets_list:
+
+                    data = read_sheet_verified(f["id"], sh)
+
+                    if not data.get("G11"):
+                        continue
+
+                    row = {col: "" for col in COLUMNS_ORDER}
+
+                    row.update({
+                        "BARCO": boat["name"],
+                        "AGENCIA": data.get("B2", ""),
+                        "CODIGO": data.get("G11", ""),
+                        "GRUPO": data.get("G13", ""),
+                        "CONFIRMACION": data.get("G5", ""),
+                        "FECHA BOOKING": data.get("P5", ""),
+                        "ITINERARIO": data.get("R5", ""),
+                        "FECHA SALIDA": data.get("C3", ""),
+                        "FECHA LLEGADA": data.get("G19", ""),
+                        "NETO": parse_numeric(data.get("G17")),
+                        "BRUTO": parse_numeric(data.get("K17")),
+                        "ESTADO RESERVA": data.get("G10", ""),
+                        "PAGO": data.get("Q10", ""),
+                        "COMERCIAL": data.get("G23", ""),
+                        "PERSONAS": data.get("Q55", ""),
+                        "IDIOMA": data.get("G57", ""),
+                    })
+
+                    rows.append(row)
+
+            except Exception as e:
+                st.warning(f"Error en {f['name']}: {e}")
+
+    return rows
 
 # ============================================================
 # EXCEL
@@ -281,7 +295,7 @@ def to_excel(df):
     return buf
 
 # ============================================================
-# UI (NO TOCADA)
+# UI (RESPETADA)
 # ============================================================
 
 st.set_page_config(page_title="Ventas FIT", layout="wide")
@@ -305,7 +319,7 @@ if st.button("Generar informe"):
         rows = scan_year(year, progress)
 
     if not rows:
-        st.warning("Sin datos")
+        st.warning("No hay datos")
     else:
         df = pd.DataFrame(rows)
 
