@@ -455,22 +455,25 @@ with col_btn:
     run_scan = st.button("Generar informe", key="vf_run", disabled=not selected_year)
     st.markdown("</div>", unsafe_allow_html=True)
 
-if st.button("🔍 Debug un libro", key="debug_libro", disabled=not selected_year):
-    year_id = get_year_folder_id(selected_year)
-    boat_folders = list_children(year_id, folders_only=True)
-    for bf in boat_folders:
-        files = list_children(bf["id"], folders_only=False)
-        salidas = [f for f in files if re.match(r"^[A-Z_]+_\d{6}$", f["name"].strip())]
-        if salidas:
-            fobj = salidas[0]
-            st.write(f"**Libro:** {fobj['name']}")
-            sheets = get_sheet_titles_ids(fobj["id"])
-            st.write(f"**Total hojas:** {len(sheets)}")
-            for sh in sheets:
-                g11 = batch_get(fobj["id"], sh["title"], ["G11"]).get("G11", "")
-                st.write(f"Hoja: `{sh['title']}` → G11: `{repr(g11)}`")
+if st.button("🔍 Debug un libro", key="debug_libro"):
+    try:
+        year_id = get_year_folder_id("2026")  # pon el año fijo que estés probando
+        boat_folders = list_children(year_id, folders_only=True)
+        for bf in boat_folders:
+            files = list_children(bf["id"], folders_only=False)
+            salidas = [f for f in files if re.match(r"^[A-Z_]+_\d{6}$", f["name"].strip())]
+            if salidas:
+                fobj = salidas[0]
+                st.write(f"**Libro:** {fobj['name']}")
+                sheets = get_sheet_titles_ids(fobj["id"])
+                st.write(f"**Total hojas:** {len(sheets)}")
+                for sh in sheets:
+                    g11 = batch_get(fobj["id"], sh["title"], ["G11"]).get("G11", "")
+                    st.write(f"Hoja: `{sh['title']}` → G11: `{repr(g11)}`")
+                break
             break
-        break
+    except Exception as e:
+        st.exception(e)
 
 if "vf_results" not in st.session_state:
     st.session_state.vf_results = None
