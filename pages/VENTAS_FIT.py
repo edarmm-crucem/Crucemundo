@@ -111,7 +111,7 @@ def get_year_folder_id(year):
 def get_sheet_titles_ids(ssid):
     ss = sheets_svc().spreadsheets().get(
         spreadsheetId=ssid,
-        fields="sheets.properties"
+        includeGridData=False,
     ).execute()
     return [
         {"title": s["properties"]["title"], "sheetId": s["properties"]["sheetId"]}
