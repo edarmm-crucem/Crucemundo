@@ -29,7 +29,7 @@ socket.setdefaulttimeout(60)
 DRIVEROOTID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
 TIMEZONE = pytz.timezone("Europe/Madrid")
 
-MAX_WORKERS = 5   # 🔥 ajustable (5 = seguro, 8 = más rápido pero más riesgo 429)
+MAX_WORKERS = 2   # 🔥 ajustable (5 = seguro, 8 = más rápido pero más riesgo 429)
 
 COLUMNS_ORDER = [
     "BARCO", "AGENCIA", "CODIGO", "GRUPO",
