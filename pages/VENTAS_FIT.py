@@ -271,7 +271,7 @@ def read_book_verified(ssid, year):
         pasada2 = read_book(ssid, year)
         if pasada1 == pasada2:
             return pasada1
-
+SALIDA_PATTERN = re.compile(r"^[A-Z_]+_\d{6}$")
 def scan_year(year, progress_cb=None):
     year_id = get_year_folder_id(year)
     if not year_id:
