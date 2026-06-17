@@ -612,13 +612,35 @@ if run_scan and selected_year:
             </tr>"""
         table_ph.html(f'<div class="vf-table-wrap"><table class="vf-table"><thead><tr>{header_cells}</tr></thead><tbody>{rows_html}</tbody></table></div>')
 
+    rows_acumuladas = []
+    audit_ph = st.empty()  # ← añade este placeholder junto a los otros
+    
     def on_row_verified(row):
         rows_acumuladas.append(row)
+        # Auditoría: muestra cuántas filas hay y cuál es la última
+        audit_ph.caption(
+            f"✅ Filas acumuladas: {len(rows_acumuladas)} · "
+            f"Última: {row['CONFIRMACION']} ({row['BARCO']})"
+        )
         if len(rows_acumuladas) % 3 == 0:
             pintar_tabla(rows_acumuladas)
     
     try:
         rows = scan_year(selected_year, progress_cb=update_progress, on_row_verified=on_row_verified)
+        if len(rows) != len(rows_acumuladas):
+            st.error(
+                f"⚠️ DISCREPANCIA: scan_year devolvió {len(rows)} filas "
+                f"pero on_row_verified acumuló {len(rows_acumuladas)}. "
+                f"Se usa el resultado de scan_year."
+            )
+        else:
+            st.success(f"✅ Verificado: {len(rows)} filas coinciden en ambos conteos.")
+
+prog_bar.empty()
+status_ph.empty()
+audit_ph.empty()  # limpia el contador al terminar
+st.session_state.vf_results = rows
+st.session_state.vf_year_loaded = selected_year
         prog_bar.empty()
         status_ph.empty()
         st.session_state.vf_results     = rows
