@@ -4,20 +4,49 @@
 
 import re
 import io
+import time
+import random
+import threading
+from collections import deque
 from datetime import datetime
 import pytz
 import streamlit as st
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 import pandas as pd
+
+# ── rate limiter para Sheets API (60 lecturas/min/usuario) ───
+class RateLimiter:
+    """Garantiza no superar max_calls llamadas por cada periodo de 'per_seconds' segundos."""
+    def __init__(self, max_calls=50, per_seconds=60):
+        self.max_calls = max_calls
+        self.per_seconds = per_seconds
+        self.calls = deque()
+        self.lock = threading.Lock()
+
+    def wait(self):
+        with self.lock:
+            now = time.monotonic()
+            while self.calls and now - self.calls[0] > self.per_seconds:
+                self.calls.popleft()
+            if len(self.calls) >= self.max_calls:
+                sleep_time = self.per_seconds - (now - self.calls[0]) + 0.05
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
+                now = time.monotonic()
+                while self.calls and now - self.calls[0] > self.per_seconds:
+                    self.calls.popleft()
+            self.calls.append(time.monotonic())
+
+sheets_rate_limiter = RateLimiter(max_calls=50, per_seconds=60)
 
 # ── constantes ──────────────────────────────────────────────
 DRIVEROOTID   = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
 LOGOID        = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
 LOGOURL       = f"https://lh3.googleusercontent.com/d/{LOGOID}"
 TIMEZONE      = pytz.timezone("Europe/Madrid")
-
 COLUMNS_ORDER = [
     "BARCO", "AGENCIA", "CODIGO", "GRUPO",
     "CONFIRMACION", "FECHA BOOKING", "ITINERARIO",
@@ -27,6 +56,7 @@ COLUMNS_ORDER = [
     "PERSONAS", "IDIOMA",
 ]
 
+# ── helpers tiempo ───────────────────────────────────────────
 # ── helpers tiempo ───────────────────────────────────────────
 def now():
     return datetime.now(pytz.utc).astimezone(TIMEZONE).replace(tzinfo=None)
@@ -40,6 +70,35 @@ def getsaludo(lang="es"):
     if 6 <= h < 14: return "Buenos días"
     if 14 <= h < 21: return "Buenas tardes"
     return "Buenas noches"
+
+# ── helpers retry / rate limit ──────────────────────────────
+def execute_with_retry(request, max_intentos=6, base_delay=2.0, rate_limiter=None):
+    intentos = 0
+    while True:
+        if rate_limiter:
+            rate_limiter.wait()
+        try:
+            return request.execute()
+        except (BrokenPipeError, ConnectionResetError, OSError) as e:
+            intentos += 1
+            if intentos >= max_intentos:
+                raise Exception(f"Fallo de conexión tras {max_intentos} intentos: {e}")
+            time.sleep(base_delay * (2 ** (intentos - 1)) + random.uniform(0, 0.5))
+        except HttpError as e:
+            status = e.resp.status
+            if status == 429:
+                intentos += 1
+                if intentos >= max_intentos:
+                    raise Exception(f"Cuota excedida tras {max_intentos} intentos: {e}")
+                wait_time = min(base_delay * (2 ** intentos), 65) + random.uniform(0, 1)
+                time.sleep(wait_time)
+            elif status in (500, 502, 503, 504):
+                intentos += 1
+                if intentos >= max_intentos:
+                    raise
+                time.sleep(base_delay * (2 ** (intentos - 1)) + random.uniform(0, 0.5))
+            else:
+                raise
 
 # ── Google services ──────────────────────────────────────────
 @st.cache_resource
@@ -61,7 +120,6 @@ def drive_svc():
 @st.cache_resource
 def sheets_svc():
     return build("sheets", "v4", credentials=_creds())
-
 
 
         
@@ -109,10 +167,11 @@ def get_year_folder_id(year):
 
 # ── Sheets helpers ───────────────────────────────────────────
 def get_sheet_titles_ids(ssid):
-    ss = sheets_svc().spreadsheets().get(
+    request = sheets_svc().spreadsheets().get(
         spreadsheetId=ssid,
         includeGridData=False,
-    ).execute()
+    )
+    ss = execute_with_retry(request, rate_limiter=sheets_rate_limiter)
     return [
         {"title": s["properties"]["title"], "sheetId": s["properties"]["sheetId"]}
         for s in ss.get("sheets", [])
@@ -180,17 +239,17 @@ CELLS_NEEDED = [
 ]
 
 def read_sheet_data(ssid, sheet_title, year):
-    # rangos individuales (celdas sueltas) + rangos en bloque, todo en UNA llamada
     a1_list = CELLS_NEEDED + ["Q33:R39", "G24:G60", "Q55"]
     ranges = [f"'{sheet_title}'!{a1}" for a1 in a1_list]
 
+    request = sheets_svc().spreadsheets().values().batchGet(
+        spreadsheetId=ssid,
+        ranges=ranges,
+        majorDimension="ROWS",
+        valueRenderOption="UNFORMATTED_VALUE",
+    )
     try:
-        resp = sheets_svc().spreadsheets().values().batchGet(
-            spreadsheetId=ssid,
-            ranges=ranges,
-            majorDimension="ROWS",
-            valueRenderOption="UNFORMATTED_VALUE",
-        ).execute()
+        resp = execute_with_retry(request, rate_limiter=sheets_rate_limiter)
     except Exception as e:
         raise Exception(f"Error en batchGet de '{sheet_title}': {e}")
 
