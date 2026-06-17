@@ -190,19 +190,36 @@ def read_sheet_data(ssid, sheet_title):
         "IDIOMA":         str(cells.get("G23", "")).strip(),
     }
 
-def read_sheet_double_pass(ssid, sheet_title):
-    r1 = read_sheet_data(ssid, sheet_title)
-    if r1 is None:
-        return None
-    r2 = read_sheet_data(ssid, sheet_title)
-    if r1 == r2:
-        return r1
-    r3 = read_sheet_data(ssid, sheet_title)
-    if r2 == r3:
-        return r2
-    if r1 == r3:
-        return r1
-    return r3
+
+# ── Lectura de un libro completo ─────────────────────────────
+def read_book(ssid):
+    """Lee todas las hojas válidas de un libro. Devuelve lista de dicts."""
+    results = []
+    try:
+        sheets = get_sheet_titles_ids(ssid)
+    except Exception:
+        return []
+    for sh in sheets:
+        try:
+            row = read_sheet_data(ssid, sh["title"])
+            if row:
+                results.append(row)
+        except Exception:
+            pass
+    return results
+
+def read_book_verified(ssid, max_attempts=4):
+    """
+    Lee el libro completo en pasadas hasta que dos consecutivas coincidan.
+    Máximo max_attempts pasadas para evitar bucles infinitos.
+    """
+    prev = read_book(ssid)
+    for _ in range(max_attempts - 1):
+        curr = read_book(ssid)
+        if curr == prev:
+            return curr          # dos pasadas consecutivas idénticas → OK
+        prev = curr
+    return prev                  # devuelve la última si nunca coincidieron
 
 # ── Escaneo completo ─────────────────────────────────────────
 SALIDA_PATTERN = re.compile(r"^[A-Z_]+_\d{6}$")
@@ -229,23 +246,13 @@ def scan_year(year, progress_cb=None):
             ssid  = fobj["id"]
             if progress_cb:
                 progress_cb(processed, total_files, f"{boat_name} / {fname}")
-            try:
-                sheets = get_sheet_titles_ids(ssid)
-                for sh in sheets:
-                    try:
-                        row = read_sheet_double_pass(ssid, sh["title"])
-                        if row:
-                            results.append(row)
-                    except Exception:
-                        pass
-            except Exception:
-                pass
+            rows = read_book_verified(ssid)
+            results.extend(rows)
             processed += 1
 
     if progress_cb:
         progress_cb(total_files, total_files, "Completado")
     return results
-
 # ── Export Excel ─────────────────────────────────────────────
 def to_excel_bytes(df: pd.DataFrame) -> bytes:
     buf = io.BytesIO()
