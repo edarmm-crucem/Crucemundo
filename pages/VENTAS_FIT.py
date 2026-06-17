@@ -26,6 +26,7 @@ socket.setdefaulttimeout(60)
 DRIVEROOTID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
 
 COLUMNS_ORDER = [
+    "Nº",
     "BARCO", "AGENCIA", "CODIGO", "GRUPO",
     "CONFIRMACION", "FECHA BOOKING", "ITINERARIO",
     "FECHA SALIDA", "FECHA LLEGADA",
@@ -34,12 +35,11 @@ COLUMNS_ORDER = [
     "PERSONAS", "IDIOMA",
 ]
 
-# ✅ IMPORTANTE: INCLUYE EL RANGO
 CELLS_NEEDED = [
     "B2","G11","G13","G5","P5","R5",
     "C3","G19","G17","G10",
     "G57","Q10","G23","Q55",
-    "G24:G60"   # 👈 PERSONAS
+    "G24:G60"
 ]
 
 # ============================================================
@@ -96,7 +96,6 @@ def sheets():
 # ============================================================
 
 def execute(req, retries=5):
-
     for i in range(retries):
         try:
             rate_limiter.wait()
@@ -163,14 +162,12 @@ def batch_get(ssid, sheet_title):
     for c, vr in zip(CELLS_NEEDED, resp.get("valueRanges", [])):
         vals = vr.get("values", [])
 
-        # ✅ diferencia celda vs rango
         if len(vals) > 1:
             data[c] = vals
         else:
             data[c] = vals[0][0] if vals and vals[0] else ""
 
     return data
-
 
 def get_sheet_titles(ssid):
     meta = execute(
@@ -186,18 +183,15 @@ def get_sheet_titles(ssid):
 # ============================================================
 
 def parse_numeric(val):
-    if val is None or val == "":
+    if not val:
         return 0.0
-
     if isinstance(val, (int, float)):
         return float(val)
 
-    text = str(val)
-    text = re.sub(r"[€$£\s]", "", text)
+    text = re.sub(r"[€$\s]", "", str(val))
     text = text.replace(".", "").replace(",", ".")
 
     m = re.search(r"-?\d+(?:\.\d+)?", text)
-
     return float(m.group()) if m else 0.0
 
 
@@ -205,15 +199,10 @@ def count_personas(rango):
     if not rango:
         return 0
 
-    count = 0
-    for fila in rango:
-        if fila and str(fila[0]).strip():
-            count += 1
-
-    return count
+    return sum(1 for fila in rango if fila and str(fila[0]).strip())
 
 # ============================================================
-# PROCESO LIBRO (DOBLE PASADA)
+# PROCESO LIBRO
 # ============================================================
 
 def process_book(book_id, boat_name, book_name):
@@ -231,14 +220,12 @@ def process_book(book_id, boat_name, book_name):
             if d1 != d2:
                 st.warning(f"Inconsistencia en {book_name} / {sh}")
 
-            data = d2  # ✅ usamos segunda pasada
+            data = d2
 
             if not data.get("G11"):
                 continue
 
-            row = {col: "" for col in COLUMNS_ORDER}
-
-            row.update({
+            row = {
                 "BARCO": boat_name,
                 "AGENCIA": data.get("B2", ""),
                 "CODIGO": data.get("G11", ""),
@@ -248,20 +235,14 @@ def process_book(book_id, boat_name, book_name):
                 "ITINERARIO": data.get("R5", ""),
                 "FECHA SALIDA": data.get("C3", ""),
                 "FECHA LLEGADA": data.get("G19", ""),
-
-                # ✅ CORRECTOS SEGÚN TU MODELO
                 "NETO": parse_numeric(data.get("G17")),
                 "BRUTO": parse_numeric(data.get("Q55")),
-
                 "ESTADO RESERVA": data.get("G10", ""),
                 "PAGO": data.get("Q10", ""),
                 "COMERCIAL": data.get("G23", ""),
-
-                # ✅ PERSONAS REAL
                 "PERSONAS": count_personas(data.get("G24:G60")),
-
                 "IDIOMA": data.get("G57", ""),
-            })
+            }
 
             rows_book.append(row)
 
@@ -301,9 +282,20 @@ def scan_year(year, progress_bar, table_placeholder):
 
             if rows_book:
                 rows_total.extend(rows_book)
-                table_placeholder.dataframe(pd.DataFrame(rows_total))
 
-    return pd.DataFrame(rows_total)
+                df_temp = pd.DataFrame(rows_total)
+
+                # ✅ numeración segura (NO index)
+                df_temp.insert(0, "Nº", range(1, len(df_temp) + 1))
+
+                table_placeholder.dataframe(df_temp)
+
+    df_final = pd.DataFrame(rows_total)
+
+    if not df_final.empty:
+        df_final.insert(0, "Nº", range(1, len(df_final) + 1))
+
+    return df_final
 
 # ============================================================
 # EXCEL
@@ -311,7 +303,7 @@ def scan_year(year, progress_bar, table_placeholder):
 
 def to_excel(df):
     buf = io.BytesIO()
-    df[COLUMNS_ORDER].to_excel(buf, index=False)
+    df.to_excel(buf, index=False)
     buf.seek(0)
     return buf
 
@@ -329,7 +321,7 @@ year = st.selectbox("Año", years)
 if st.button("Generar informe"):
 
     progress = st.progress(0)
-    table_placeholder.dataframe(pd.DataFrame(rows_total))
+    table_placeholder = st.empty()
 
     with st.spinner("Procesando..."):
         df = scan_year(year, progress, table_placeholder)
