@@ -9,7 +9,6 @@ import random
 import threading
 from collections import deque
 
-import pytz
 import streamlit as st
 import pandas as pd
 
@@ -106,6 +105,7 @@ def execute(req, retries=5):
 
     raise Exception("Error persistente API")
 
+
 # ============================================================
 # DRIVE
 # ============================================================
@@ -142,13 +142,14 @@ def get_year_id(year):
             return f["id"]
     return None
 
+
 # ============================================================
 # SHEETS
 # ============================================================
 
 def batch_get(ssid, sheet_title):
 
-    ranges = [f"'{sheet_title}'!{a1}" for a1 in CELLS_NEEDED]
+    ranges = [f"'{sheet_title}'!{c}" for c in CELLS_NEEDED]
 
     resp = execute(
         sheets().spreadsheets().values().batchGet(
@@ -158,13 +159,13 @@ def batch_get(ssid, sheet_title):
         )
     )
 
-    out = {}
-
-    for a1, vr in zip(CELLS_NEEDED, resp.get("valueRanges", [])):
+    data = {}
+    for c, vr in zip(CELLS_NEEDED, resp.get("valueRanges", [])):
         vals = vr.get("values", [])
-        out[a1] = vals[0][0] if vals and vals[0] else ""
+        data[c] = vals[0][0] if vals and vals[0] else ""
 
-    return out
+    return data
+
 
 def get_sheet_titles(ssid):
     meta = execute(
@@ -175,27 +176,21 @@ def get_sheet_titles(ssid):
     )
     return [s["properties"]["title"] for s in meta.get("sheets", [])]
 
+
 # ============================================================
-# CONSISTENCIA (TU IDEA)
+# LECTURA DOBLE (TU IDEA)
 # ============================================================
 
-def read_sheet_verified(ssid, sheet_title, max_intentos=4):
+def read_sheet_double(ssid, sheet_title):
 
-    intento = 0
-    ultima = None
+    data1 = batch_get(ssid, sheet_title)
+    data2 = batch_get(ssid, sheet_title)
 
-    while intento < max_intentos:
+    if data1 != data2:
+        st.warning(f"Inconsistencia en {sheet_title}")
 
-        data1 = batch_get(ssid, sheet_title)
-        data2 = batch_get(ssid, sheet_title)
+    return data2   # usamos segunda siempre
 
-        if data1 == data2:
-            return data1
-
-        intento += 1
-        ultima = data2
-
-    return ultima
 
 # ============================================================
 # PARSE
@@ -217,31 +212,32 @@ def parse_numeric(val):
 
     return float(m.group()) if m else 0.0
 
+
 # ============================================================
 # CORE
 # ============================================================
 
-def scan_year(year, progress_bar=None):
+def scan_year(year, progress_bar, table_placeholder):
 
     year_id = get_year_id(year)
     if not year_id:
-        return []
+        return pd.DataFrame(columns=COLUMNS_ORDER)
 
-    rows = []
+    df_acumulado = pd.DataFrame(columns=COLUMNS_ORDER)
 
     boats = list_children(year_id, True)
     total_files = sum(len(list_children(b["id"], False)) for b in boats)
     processed = 0
 
     for boat in boats:
+
         files = list_children(boat["id"], False)
 
         for f in files:
 
             processed += 1
 
-            if progress_bar:
-                progress_bar.progress(processed / max(total_files, 1))
+            progress_bar.progress(processed / max(total_files, 1))
 
             if not re.match(r"^[A-Z_]+_\d{6}$", f["name"].strip()):
                 continue
@@ -251,7 +247,7 @@ def scan_year(year, progress_bar=None):
 
                 for sh in sheets_list:
 
-                    data = read_sheet_verified(f["id"], sh)
+                    data = read_sheet_double(f["id"], sh)
 
                     if not data.get("G11"):
                         continue
@@ -277,12 +273,19 @@ def scan_year(year, progress_bar=None):
                         "IDIOMA": data.get("G57", ""),
                     })
 
-                    rows.append(row)
+                    # ✅ AÑADIR Y PINTAR EN DIRECTO
+                    df_acumulado = pd.concat(
+                        [df_acumulado, pd.DataFrame([row])],
+                        ignore_index=True
+                    )
+
+                    table_placeholder.dataframe(df_acumulado)
 
             except Exception as e:
                 st.warning(f"Error en {f['name']}: {e}")
 
-    return rows
+    return df_acumulado
+
 
 # ============================================================
 # EXCEL
@@ -294,8 +297,9 @@ def to_excel(df):
     buf.seek(0)
     return buf
 
+
 # ============================================================
-# UI (RESPETADA)
+# UI
 # ============================================================
 
 st.set_page_config(page_title="Ventas FIT", layout="wide")
@@ -313,18 +317,15 @@ year = st.selectbox("Año", years)
 if st.button("Generar informe"):
 
     progress = st.progress(0)
+    table_placeholder = st.empty()
 
     with st.spinner("Procesando..."):
 
-        rows = scan_year(year, progress)
+        df = scan_year(year, progress, table_placeholder)
 
-    if not rows:
+    if df.empty:
         st.warning("No hay datos")
     else:
-        df = pd.DataFrame(rows)
-
-        st.dataframe(df)
-
         st.download_button(
             "Descargar Excel",
             to_excel(df),
