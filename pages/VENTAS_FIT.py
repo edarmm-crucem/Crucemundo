@@ -600,72 +600,72 @@ if run_scan and selected_year:
             </tr>"""
         table_ph.html(f'<div class="vf-table-wrap"><table class="vf-table"><thead><tr>{header_cells}</tr></thead><tbody>{rows_html}</tbody></table></div>')
 
-def on_row_verified(row):
-    rows_acumuladas.append(row)
-    if len(rows_acumuladas) % 3 == 0:
-        pintar_tabla(rows_acumuladas)
-
-    try:
-        rows = scan_year(selected_year, progress_cb=update_progress, on_row_verified=on_row_verified)
-        prog_bar.empty()
-        status_ph.empty()
-        st.session_state.vf_results     = rows
-        st.session_state.vf_year_loaded = selected_year
-        if not rows:
-            st.info("No se han encontrado reservas para el año seleccionado.")
-    except Exception as e:
-        prog_bar.empty()
-        status_ph.empty()
-        st.session_state.vf_results = rows_acumuladas  # ← conserva lo ya pintado aunque falle
-        st.session_state.vf_year_loaded = selected_year
-        st.exception(e)
-        st.warning(f"Escaneo interrumpido. Se han procesado {len(rows_acumuladas)} reservas antes del error.")
-
-rows = st.session_state.get("vf_results")
-year_loaded = st.session_state.get("vf_year_loaded")
-
-if rows:
-    df_all = pd.DataFrame(rows, columns=COLUMNS_ORDER)
-
-    st.markdown(f'<span class="web-chip-blue">FILTROS · AÑO {year_loaded} · {len(df_all)} registros</span>', unsafe_allow_html=True)
-
-    fc1, fc2, fc3, fc4, fc5, fc6 = st.columns([2, 2, 2, 2, 2, 2], gap="medium")
-    with fc1:
-        sel_barco = st.multiselect("BARCO", options=sorted(df_all["BARCO"].dropna().unique()), default=[], key="f_barco")
-    with fc2:
-        sel_agencia = st.multiselect("AGENCIA", options=sorted(df_all["AGENCIA"].dropna().unique()), default=[], key="f_agencia")
-    with fc3:
-        sel_estado = st.multiselect("ESTADO RESERVA", options=sorted(df_all["ESTADO RESERVA"].dropna().unique()), default=[], key="f_estado")
-    with fc4:
-        sel_comercial = st.multiselect("COMERCIAL", options=sorted(df_all["COMERCIAL"].dropna().unique()), default=[], key="f_comercial")
-    with fc5:
-        sel_pago = st.multiselect("PAGO", options=sorted(df_all["PAGO"].dropna().unique()), default=[], key="f_pago")
-    with fc6:
-        sel_idioma = st.multiselect("IDIOMA", options=sorted(df_all["IDIOMA"].dropna().unique()), default=[], key="f_idioma")
-
-    search_col, _ = st.columns([3, 7])
-    with search_col:
-        txt_search = st.text_input("🔍 Buscar en tabla", key="f_txt", placeholder="Localizador, agencia, itinerario…")
-
-    df = df_all.copy()
-    if sel_barco:     df = df[df["BARCO"].isin(sel_barco)]
-    if sel_agencia:   df = df[df["AGENCIA"].isin(sel_agencia)]
-    if sel_estado:    df = df[df["ESTADO RESERVA"].isin(sel_estado)]
-    if sel_comercial: df = df[df["COMERCIAL"].isin(sel_comercial)]
-    if sel_pago:      df = df[df["PAGO"].isin(sel_pago)]
-    if sel_idioma:    df = df[df["IDIOMA"].isin(sel_idioma)]
-    if txt_search.strip():
-        mask = df.apply(lambda r: txt_search.strip().lower() in " ".join(str(v) for v in r.values).lower(), axis=1)
-        df = df[mask]
-
-    st.markdown(f"""
-    <div class="summary-row">
-      <div class="sum-card"><div class="sum-label">Reservas</div><div class="sum-value">{len(df):,}</div></div>
-      <div class="sum-card"><div class="sum-label">Personas</div><div class="sum-value">{int(df['PERSONAS'].sum()):,}</div></div>
-      <div class="sum-card"><div class="sum-label">Neto Total</div><div class="sum-value">{df['NETO'].sum():,.2f} €</div></div>
-      <div class="sum-card"><div class="sum-label">Bruto Total</div><div class="sum-value">{df['BRUTO'].sum():,.2f} €</div></div>
-    </div>
-    """, unsafe_allow_html=True)
+    def on_row_verified(row):
+        rows_acumuladas.append(row)
+        if len(rows_acumuladas) % 3 == 0:
+            pintar_tabla(rows_acumuladas)
+    
+        try:
+            rows = scan_year(selected_year, progress_cb=update_progress, on_row_verified=on_row_verified)
+            prog_bar.empty()
+            status_ph.empty()
+            st.session_state.vf_results     = rows
+            st.session_state.vf_year_loaded = selected_year
+            if not rows:
+                st.info("No se han encontrado reservas para el año seleccionado.")
+        except Exception as e:
+            prog_bar.empty()
+            status_ph.empty()
+            st.session_state.vf_results = rows_acumuladas  # ← conserva lo ya pintado aunque falle
+            st.session_state.vf_year_loaded = selected_year
+            st.exception(e)
+            st.warning(f"Escaneo interrumpido. Se han procesado {len(rows_acumuladas)} reservas antes del error.")
+    
+    rows = st.session_state.get("vf_results")
+    year_loaded = st.session_state.get("vf_year_loaded")
+    
+    if rows:
+        df_all = pd.DataFrame(rows, columns=COLUMNS_ORDER)
+    
+        st.markdown(f'<span class="web-chip-blue">FILTROS · AÑO {year_loaded} · {len(df_all)} registros</span>', unsafe_allow_html=True)
+    
+        fc1, fc2, fc3, fc4, fc5, fc6 = st.columns([2, 2, 2, 2, 2, 2], gap="medium")
+        with fc1:
+            sel_barco = st.multiselect("BARCO", options=sorted(df_all["BARCO"].dropna().unique()), default=[], key="f_barco")
+        with fc2:
+            sel_agencia = st.multiselect("AGENCIA", options=sorted(df_all["AGENCIA"].dropna().unique()), default=[], key="f_agencia")
+        with fc3:
+            sel_estado = st.multiselect("ESTADO RESERVA", options=sorted(df_all["ESTADO RESERVA"].dropna().unique()), default=[], key="f_estado")
+        with fc4:
+            sel_comercial = st.multiselect("COMERCIAL", options=sorted(df_all["COMERCIAL"].dropna().unique()), default=[], key="f_comercial")
+        with fc5:
+            sel_pago = st.multiselect("PAGO", options=sorted(df_all["PAGO"].dropna().unique()), default=[], key="f_pago")
+        with fc6:
+            sel_idioma = st.multiselect("IDIOMA", options=sorted(df_all["IDIOMA"].dropna().unique()), default=[], key="f_idioma")
+    
+        search_col, _ = st.columns([3, 7])
+        with search_col:
+            txt_search = st.text_input("🔍 Buscar en tabla", key="f_txt", placeholder="Localizador, agencia, itinerario…")
+    
+        df = df_all.copy()
+        if sel_barco:     df = df[df["BARCO"].isin(sel_barco)]
+        if sel_agencia:   df = df[df["AGENCIA"].isin(sel_agencia)]
+        if sel_estado:    df = df[df["ESTADO RESERVA"].isin(sel_estado)]
+        if sel_comercial: df = df[df["COMERCIAL"].isin(sel_comercial)]
+        if sel_pago:      df = df[df["PAGO"].isin(sel_pago)]
+        if sel_idioma:    df = df[df["IDIOMA"].isin(sel_idioma)]
+        if txt_search.strip():
+            mask = df.apply(lambda r: txt_search.strip().lower() in " ".join(str(v) for v in r.values).lower(), axis=1)
+            df = df[mask]
+    
+        st.markdown(f"""
+        <div class="summary-row">
+          <div class="sum-card"><div class="sum-label">Reservas</div><div class="sum-value">{len(df):,}</div></div>
+          <div class="sum-card"><div class="sum-label">Personas</div><div class="sum-value">{int(df['PERSONAS'].sum()):,}</div></div>
+          <div class="sum-card"><div class="sum-label">Neto Total</div><div class="sum-value">{df['NETO'].sum():,.2f} €</div></div>
+          <div class="sum-card"><div class="sum-label">Bruto Total</div><div class="sum-value">{df['BRUTO'].sum():,.2f} €</div></div>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.download_button(
         label="⬇ Exportar a Excel",
