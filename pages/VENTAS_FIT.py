@@ -675,19 +675,19 @@ if run_scan and selected_year:
         key="vf_export",
     )
 
-    def estado_pill(v):
-        u = str(v).strip().upper()
-        if "CONFIRM" in u: return f'<span class="pill pill-conf">{v}</span>'
-        if "CANCEL"  in u: return f'<span class="pill pill-canc">{v}</span>'
-        if "NO CONF" in u: return f'<span class="pill pill-noconf">{v}</span>'
-        return f'<span class="pill pill-neutral">{v}</span>'
+def estado_pill(v):
+    u = str(v).strip().upper()
+    if "CONFIRM" in u: return f'<span class="pill pill-conf">{v}</span>'
+    if "CANCEL"  in u: return f'<span class="pill pill-canc">{v}</span>'
+    if "NO CONF" in u: return f'<span class="pill pill-noconf">{v}</span>'
+    return f'<span class="pill pill-neutral">{v}</span>'
 
-    def pago_pill(v):
-        u = str(v).strip().upper()
-        if "PAGADO" in u:  return f'<span class="pill pill-conf">{v}</span>'
-        if "PTE"    in u:  return f'<span class="pill pill-pte">{v}</span>'
-        if "DEPOSI" in u:  return f'<span class="pill pill-pago">{v}</span>'
-        return f'<span class="pill pill-neutral">{v}</span>'
+def pago_pill(v):
+    u = str(v).strip().upper()
+    if "PAGADO" in u:  return f'<span class="pill pill-conf">{v}</span>'
+    if "PTE"    in u:  return f'<span class="pill pill-pte">{v}</span>'
+    if "DEPOSI" in u:  return f'<span class="pill pill-pago">{v}</span>'
+    return f'<span class="pill pill-neutral">{v}</span>'
 
     if df.empty:
         st.info("Sin resultados para los filtros aplicados.")
