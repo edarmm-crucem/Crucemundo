@@ -347,20 +347,37 @@ def read_book_verified(ssid, year, max_intentos=5):
     
 SALIDA_PATTERN = re.compile(r"^[A-Z_]+_\d{6}$")
 def scan_year(year, progress_cb=None, on_row_verified=None):
-    ...
+    year_id = get_year_folder_id(year)
+    if not year_id:
+        return []
+
+    boat_folders = list_children(year_id, folders_only=True)
+    file_map = {}
+    total_files = 0
+    for bf in boat_folders:
+        files = list_children(bf["id"], folders_only=False)
+        salidas = [f for f in files if SALIDA_PATTERN.match(f["name"].strip())]
+        file_map[bf["name"]] = salidas
+        total_files += len(salidas)
+
+    results = []
+    processed = 0
     for boat_name, salidas in file_map.items():
         for fobj in salidas:
             fname = fobj["name"].strip()
             ssid  = fobj["id"]
             if progress_cb:
                 progress_cb(processed, total_files, f"{boat_name} / {fname}")
-            rows = read_book_verified(ssid, year)   # ← ya no pasa callback
+            rows = read_book_verified(ssid, year)
             for row in rows:
                 results.append(row)
                 if on_row_verified:
-                    on_row_verified(row)   # ← solo aquí, una vez verificado
+                    on_row_verified(row)
             processed += 1
-    ...
+
+    if progress_cb:
+        progress_cb(total_files, total_files, "Completado")
+    return results
 
 # ── Export Excel ─────────────────────────────────────────────
 def to_excel_bytes(df: pd.DataFrame) -> bytes:
