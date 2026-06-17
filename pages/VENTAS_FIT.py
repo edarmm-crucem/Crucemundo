@@ -180,13 +180,36 @@ CELLS_NEEDED = [
 ]
 
 def read_sheet_data(ssid, sheet_title, year):
-    localizador = str(batch_get(ssid, sheet_title, ["G11"]).get("G11", "")).strip()
+    # rangos individuales (celdas sueltas) + rangos en bloque, todo en UNA llamada
+    a1_list = CELLS_NEEDED + ["Q33:R39", "G24:G60", "Q55"]
+    ranges = [f"'{sheet_title}'!{a1}" for a1 in a1_list]
+
+    try:
+        resp = sheets_svc().spreadsheets().values().batchGet(
+            spreadsheetId=ssid,
+            ranges=ranges,
+            majorDimension="ROWS",
+            valueRenderOption="UNFORMATTED_VALUE",
+        ).execute()
+    except Exception as e:
+        raise Exception(f"Error en batchGet de '{sheet_title}': {e}")
+
+    value_ranges = resp.get("valueRanges", [])
+    data_by_range = dict(zip(a1_list, value_ranges))
+
+    # ── celdas sueltas ──
+    cells = {}
+    for a1 in CELLS_NEEDED:
+        vals = data_by_range.get(a1, {}).get("values", [])
+        cells[a1] = vals[0][0] if vals and vals[0] else ""
+
+    # comprobación de localizador ANTES de seguir procesando
+    localizador = str(cells.get("G11", "")).strip()
     if not localizador:
         return None
     if localizador.upper().endswith("_GROUP"):
         return None
-    
-    # valida formato: CODIGO AAMMDD-YYY donde AA coincide con el año
+
     year_short = str(year)[2:]  # "2026" → "26"
     m = re.search(r"(\d{6})-\d{3}$", localizador)
     if not m:
@@ -194,47 +217,23 @@ def read_sheet_data(ssid, sheet_title, year):
     if not m.group(1).startswith(year_short):
         return None
 
-    cells = batch_get(ssid, sheet_title, CELLS_NEEDED)
+    # ── NETO: suma de Q33:R39 ──
+    neto_rows = data_by_range.get("Q33:R39", {}).get("values", [])
+    neto = sum(
+        parse_numeric(cell)
+        for row in neto_rows
+        for cell in row
+        if cell not in (None, "")
+    )
 
-    try:
-        resp_neto = sheets_svc().spreadsheets().values().get(
-            spreadsheetId=ssid,
-            range=f"'{sheet_title}'!Q33:R39",
-            majorDimension="ROWS",
-            valueRenderOption="UNFORMATTED_VALUE",
-        ).execute()
-        neto = sum(
-            parse_numeric(cell)
-            for row in resp_neto.get("values", [])
-            for cell in row
-            if cell not in (None, "")
-        )
-    except Exception:
-        neto = 0.0
+    # ── PERSONAS: cuenta de no vacíos en G24:G60 ──
+    # majorDimension="ROWS" => cada fila es una lista de 1 elemento (columna G)
+    personas_rows = data_by_range.get("G24:G60", {}).get("values", [])
+    personas = sum(1 for row in personas_rows if row and str(row[0]).strip())
 
-    try:
-        resp_pers = sheets_svc().spreadsheets().values().get(
-            spreadsheetId=ssid,
-            range=f"'{sheet_title}'!G24:G60",
-            majorDimension="COLUMNS",
-            valueRenderOption="UNFORMATTED_VALUE",
-        ).execute()
-        vals_pers = resp_pers.get("values", [[]])
-        personas = sum(1 for v in (vals_pers[0] if vals_pers else []) if str(v).strip())
-    except Exception:
-        personas = 0
-
-    try:
-        resp_bruto = sheets_svc().spreadsheets().values().get(
-            spreadsheetId=ssid,
-            range=f"'{sheet_title}'!Q55",
-            majorDimension="ROWS",
-            valueRenderOption="UNFORMATTED_VALUE",
-        ).execute()
-        vals_bruto = resp_bruto.get("values", [])
-        bruto = parse_numeric(vals_bruto[0][0]) if vals_bruto and vals_bruto[0] else 0.0
-    except Exception:
-        bruto = 0.0
+    # ── BRUTO: Q55 ──
+    bruto_vals = data_by_range.get("Q55", {}).get("values", [])
+    bruto = parse_numeric(bruto_vals[0][0]) if bruto_vals and bruto_vals[0] else 0.0
 
     return {
         "BARCO":          str(cells.get("G13", "")).strip(),
@@ -254,29 +253,40 @@ def read_sheet_data(ssid, sheet_title, year):
         "PERSONAS":       personas,
         "IDIOMA":         str(cells.get("G23", "")).strip(),
     }
-
 # ── Lectura de un libro completo ─────────────────────────────
 def read_book(ssid, year):
     results = []
     try:
         sheets = get_sheet_titles_ids(ssid)
-    except Exception:
+    except Exception as e:
+        st.warning(f"No se pudo leer la lista de hojas del libro `{ssid}`: {e}")
         return []
     for sh in sheets:
         try:
             row = read_sheet_data(ssid, sh["title"], year)
             if row:
                 results.append(row)
-        except Exception:
-            pass
+        except Exception as e:
+            st.warning(f"Error leyendo hoja '{sh['title']}' del libro `{ssid}`: {e}")
     return results
 
-def read_book_verified(ssid, year):
-    while True:
+def read_book_verified(ssid, year, max_intentos=5):
+    intentos = 0
+    ultima_pasada = None
+    while intentos < max_intentos:
         pasada1 = read_book(ssid, year)
         pasada2 = read_book(ssid, year)
         if pasada1 == pasada2:
             return pasada1
+        intentos += 1
+        ultima_pasada = pasada2
+
+    st.warning(
+        f"⚠️ El libro `{ssid}` no dio resultados consistentes tras {max_intentos} intentos. "
+        f"Se usará la última lectura obtenida, revísala si algo no encaja."
+    )
+    return ultima_pasada
+    
 SALIDA_PATTERN = re.compile(r"^[A-Z_]+_\d{6}$")
 def scan_year(year, progress_cb=None):
     year_id = get_year_folder_id(year)
@@ -457,21 +467,27 @@ with col_btn:
 
 if st.button("🔍 Debug un libro", key="debug_libro"):
     try:
-        year_id = get_year_folder_id("2026")  # pon el año fijo que estés probando
-        boat_folders = list_children(year_id, folders_only=True)
-        for bf in boat_folders:
-            files = list_children(bf["id"], folders_only=False)
-            salidas = [f for f in files if re.match(r"^[A-Z_]+_\d{6}$", f["name"].strip())]
-            if salidas:
-                fobj = salidas[0]
-                st.write(f"**Libro:** {fobj['name']}")
-                sheets = get_sheet_titles_ids(fobj["id"])
-                st.write(f"**Total hojas:** {len(sheets)}")
-                for sh in sheets:
-                    g11 = batch_get(fobj["id"], sh["title"], ["G11"]).get("G11", "")
-                    st.write(f"Hoja: `{sh['title']}` → G11: `{repr(g11)}`")
-                break
-            break
+        year_id = get_year_folder_id("2026")
+        if not year_id:
+            st.warning("No se encontró la carpeta del año 2026")
+        else:
+            boat_folders = list_children(year_id, folders_only=True)
+            encontrado = False
+            for bf in boat_folders:
+                files = list_children(bf["id"], folders_only=False)
+                salidas = [f for f in files if re.match(r"^[A-Z_]+_\d{6}$", f["name"].strip())]
+                if salidas:
+                    fobj = salidas[0]
+                    st.write(f"**Barco:** {bf['name']} · **Libro:** {fobj['name']}")
+                    sheets = get_sheet_titles_ids(fobj["id"])
+                    st.write(f"**Total hojas:** {len(sheets)}")
+                    for sh in sheets:
+                        g11 = batch_get(fobj["id"], sh["title"], ["G11"]).get("G11", "")
+                        st.write(f"Hoja: `{sh['title']}` → G11: `{repr(g11)}`")
+                    encontrado = True
+                    break
+            if not encontrado:
+                st.warning("Ninguna carpeta de barco tiene archivos que coincidan con el patrón de nombre esperado.")
     except Exception as e:
         st.exception(e)
 
