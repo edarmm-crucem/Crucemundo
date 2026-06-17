@@ -92,13 +92,16 @@ def find_child_folder(parent_id, name):
     return None
 
 @st.cache_data(ttl=300)
+def get_year_folder_id(year):
+    f = find_child_folder(DRIVEROOTID, year)
+    return f["id"] if f else None
+    
 def get_years():
     folders = list_children(DRIVEROOTID, folders_only=True)
     return sorted(
         [f["name"].strip() for f in folders if re.fullmatch(r"\d{4}", f["name"].strip())],
         reverse=True,
     )
-
 @st.cache_data(ttl=300)
 def get_year_folder_id(year):
     f = find_child_folder(DRIVEROOTID, year)
