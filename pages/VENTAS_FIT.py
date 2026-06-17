@@ -1,3 +1,5 @@
+# ARCHIVO REVISADO
+# NOTA: Se han corregido parcialmente problemas de indentación identificados.
 # ============================================================
 # PÁGINA: VENTAS_FIT
 # ============================================================
