@@ -94,17 +94,14 @@ def sheets():
 # ============================================================
 
 def execute(req, retries=5):
-
     for i in range(retries):
         try:
             rate_limiter.wait()
             return req.execute()
-
         except (HttpError, OSError, ConnectionResetError, BrokenPipeError):
             time.sleep((2 ** i) + random.uniform(0, 1))
 
     raise Exception("Error persistente API")
-
 
 # ============================================================
 # DRIVE
@@ -142,7 +139,6 @@ def get_year_id(year):
             return f["id"]
     return None
 
-
 # ============================================================
 # SHEETS
 # ============================================================
@@ -176,22 +172,6 @@ def get_sheet_titles(ssid):
     )
     return [s["properties"]["title"] for s in meta.get("sheets", [])]
 
-
-# ============================================================
-# LECTURA DOBLE (TU IDEA)
-# ============================================================
-
-def read_sheet_double(ssid, sheet_title):
-
-    data1 = batch_get(ssid, sheet_title)
-    data2 = batch_get(ssid, sheet_title)
-
-    if data1 != data2:
-        st.warning(f"Inconsistencia en {sheet_title}")
-
-    return data2   # usamos segunda siempre
-
-
 # ============================================================
 # PARSE
 # ============================================================
@@ -212,6 +192,57 @@ def parse_numeric(val):
 
     return float(m.group()) if m else 0.0
 
+# ============================================================
+# PROCESAR LIBRO COMPLETO (DOBLE PASADA)
+# ============================================================
+
+def process_book(book_id, boat_name, book_name):
+
+    rows_book = []
+
+    try:
+        sheets_list = get_sheet_titles(book_id)
+
+        for sh in sheets_list:
+
+            data1 = batch_get(book_id, sh)
+            data2 = batch_get(book_id, sh)
+
+            if data1 != data2:
+                st.warning(f"Inconsistencia en {book_name} / hoja {sh}")
+
+            data = data2
+
+            if not data.get("G11"):
+                continue
+
+            row = {col: "" for col in COLUMNS_ORDER}
+
+            row.update({
+                "BARCO": boat_name,
+                "AGENCIA": data.get("B2", ""),
+                "CODIGO": data.get("G11", ""),
+                "GRUPO": data.get("G13", ""),
+                "CONFIRMACION": data.get("G5", ""),
+                "FECHA BOOKING": data.get("P5", ""),
+                "ITINERARIO": data.get("R5", ""),
+                "FECHA SALIDA": data.get("C3", ""),
+                "FECHA LLEGADA": data.get("G19", ""),
+                "NETO": parse_numeric(data.get("G17")),
+                "BRUTO": parse_numeric(data.get("K17")),
+                "ESTADO RESERVA": data.get("G10", ""),
+                "PAGO": data.get("Q10", ""),
+                "COMERCIAL": data.get("G23", ""),
+                "PERSONAS": data.get("Q55", ""),
+                "IDIOMA": data.get("G57", ""),
+            })
+
+            rows_book.append(row)
+
+    except Exception as e:
+        st.warning(f"Error en libro {book_name}: {e}")
+
+    return rows_book
 
 # ============================================================
 # CORE
@@ -223,7 +254,7 @@ def scan_year(year, progress_bar, table_placeholder):
     if not year_id:
         return pd.DataFrame(columns=COLUMNS_ORDER)
 
-    df_acumulado = pd.DataFrame(columns=COLUMNS_ORDER)
+    rows_total = []
 
     boats = list_children(year_id, True)
     total_files = sum(len(list_children(b["id"], False)) for b in boats)
@@ -236,56 +267,21 @@ def scan_year(year, progress_bar, table_placeholder):
         for f in files:
 
             processed += 1
-
             progress_bar.progress(processed / max(total_files, 1))
 
             if not re.match(r"^[A-Z_]+_\d{6}$", f["name"].strip()):
                 continue
 
-            try:
-                sheets_list = get_sheet_titles(f["id"])
+            # ✅ PROCESAR LIBRO COMPLETO
+            rows_book = process_book(f["id"], boat["name"], f["name"])
 
-                for sh in sheets_list:
+            if rows_book:
+                rows_total.extend(rows_book)
 
-                    data = read_sheet_double(f["id"], sh)
+                # ✅ PINTA SOLO AL TERMINAR LIBRO
+                table_placeholder.dataframe(pd.DataFrame(rows_total))
 
-                    if not data.get("G11"):
-                        continue
-
-                    row = {col: "" for col in COLUMNS_ORDER}
-
-                    row.update({
-                        "BARCO": boat["name"],
-                        "AGENCIA": data.get("B2", ""),
-                        "CODIGO": data.get("G11", ""),
-                        "GRUPO": data.get("G13", ""),
-                        "CONFIRMACION": data.get("G5", ""),
-                        "FECHA BOOKING": data.get("P5", ""),
-                        "ITINERARIO": data.get("R5", ""),
-                        "FECHA SALIDA": data.get("C3", ""),
-                        "FECHA LLEGADA": data.get("G19", ""),
-                        "NETO": parse_numeric(data.get("G17")),
-                        "BRUTO": parse_numeric(data.get("K17")),
-                        "ESTADO RESERVA": data.get("G10", ""),
-                        "PAGO": data.get("Q10", ""),
-                        "COMERCIAL": data.get("G23", ""),
-                        "PERSONAS": data.get("Q55", ""),
-                        "IDIOMA": data.get("G57", ""),
-                    })
-
-                    # ✅ AÑADIR Y PINTAR EN DIRECTO
-                    df_acumulado = pd.concat(
-                        [df_acumulado, pd.DataFrame([row])],
-                        ignore_index=True
-                    )
-
-                    table_placeholder.dataframe(df_acumulado)
-
-            except Exception as e:
-                st.warning(f"Error en {f['name']}: {e}")
-
-    return df_acumulado
-
+    return pd.DataFrame(rows_total)
 
 # ============================================================
 # EXCEL
@@ -296,7 +292,6 @@ def to_excel(df):
     df[COLUMNS_ORDER].to_excel(buf, index=False)
     buf.seek(0)
     return buf
-
 
 # ============================================================
 # UI
