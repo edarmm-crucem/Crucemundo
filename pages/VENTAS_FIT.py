@@ -173,9 +173,19 @@ CELLS_NEEDED = [
     "G10", "G57", "Q10", "G23", "Q55",
 ]
 
-def read_sheet_data(ssid, sheet_title):
+def read_sheet_data(ssid, sheet_title, year):
     localizador = str(batch_get(ssid, sheet_title, ["G11"]).get("G11", "")).strip()
-    if not localizador or localizador.upper().endswith("_GROUP"):
+    if not localizador:
+        return None
+    if localizador.upper().endswith("_GROUP"):
+        return None
+    
+    # valida formato: CODIGO AAMMDD-YYY donde AA coincide con el año
+    year_short = str(year)[2:]  # "2026" → "26"
+    m = re.search(r"(\d{6})-\d{3}$", localizador)
+    if not m:
+        return None
+    if not m.group(1).startswith(year_short):
         return None
 
     cells = batch_get(ssid, sheet_title, CELLS_NEEDED)
@@ -240,8 +250,7 @@ def read_sheet_data(ssid, sheet_title):
     }
 
 # ── Lectura de un libro completo ─────────────────────────────
-def read_book(ssid):
-    """Lee todas las hojas válidas de un libro. Devuelve lista de dicts."""
+def read_book(ssid, year):
     results = []
     try:
         sheets = get_sheet_titles_ids(ssid)
@@ -249,28 +258,19 @@ def read_book(ssid):
         return []
     for sh in sheets:
         try:
-            row = read_sheet_data(ssid, sh["title"])
+            row = read_sheet_data(ssid, sh["title"], year)
             if row:
                 results.append(row)
         except Exception:
             pass
     return results
 
-def read_book_verified(ssid, max_attempts=4):
-    """
-    Lee el libro completo en pasadas hasta que dos consecutivas coincidan.
-    Máximo max_attempts pasadas para evitar bucles infinitos.
-    """
-    prev = read_book(ssid)
-    for _ in range(max_attempts - 1):
-        curr = read_book(ssid)
-        if curr == prev:
-            return curr          # dos pasadas consecutivas idénticas → OK
-        prev = curr
-    return prev                  # devuelve la última si nunca coincidieron
-
-# ── Escaneo completo ─────────────────────────────────────────
-SALIDA_PATTERN = re.compile(r"^[A-Z_]+_\d{6}$")
+def read_book_verified(ssid, year):
+    while True:
+        pasada1 = read_book(ssid, year)
+        pasada2 = read_book(ssid, year)
+        if pasada1 == pasada2:
+            return pasada1
 
 def scan_year(year, progress_cb=None):
     year_id = get_year_folder_id(year)
@@ -294,7 +294,7 @@ def scan_year(year, progress_cb=None):
             ssid  = fobj["id"]
             if progress_cb:
                 progress_cb(processed, total_files, f"{boat_name} / {fname}")
-            rows = read_book_verified(ssid)
+            rows = read_book_verified(ssid, year)
             results.extend(rows)
             processed += 1
 
