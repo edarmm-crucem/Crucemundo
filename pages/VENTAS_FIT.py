@@ -174,17 +174,12 @@ CELLS_NEEDED = [
 ]
 
 def read_sheet_data(ssid, sheet_title):
-    cells = batch_get(ssid, sheet_title, CELLS_NEEDED)
-
-    b2 = str(cells.get("B2", "")).strip().upper()
-    if "PROFORMA" not in b2 and "BOOKING" not in b2 and "CONFIR" not in b2:
-        return None
-
-    localizador = str(cells.get("G11", "")).strip()
+    localizador = str(batch_get(ssid, sheet_title, ["G11"]).get("G11", "")).strip()
     if not localizador or localizador.upper().endswith("_GROUP"):
         return None
 
-# NETO = suma Q33:R39
+    cells = batch_get(ssid, sheet_title, CELLS_NEEDED)
+
     try:
         resp_neto = sheets_svc().spreadsheets().values().get(
             spreadsheetId=ssid,
@@ -201,7 +196,6 @@ def read_sheet_data(ssid, sheet_title):
     except Exception:
         neto = 0.0
 
-    # PERSONAS = contar filas no vacías en G24:G60
     try:
         resp_pers = sheets_svc().spreadsheets().values().get(
             spreadsheetId=ssid,
@@ -214,7 +208,6 @@ def read_sheet_data(ssid, sheet_title):
     except Exception:
         personas = 0
 
-    # BRUTO = Q55
     try:
         resp_bruto = sheets_svc().spreadsheets().values().get(
             spreadsheetId=ssid,
@@ -226,6 +219,7 @@ def read_sheet_data(ssid, sheet_title):
         bruto = parse_numeric(vals_bruto[0][0]) if vals_bruto and vals_bruto[0] else 0.0
     except Exception:
         bruto = 0.0
+
     return {
         "BARCO":          str(cells.get("G13", "")).strip(),
         "AGENCIA":        str(cells.get("G5",  "")).strip(),
@@ -244,7 +238,6 @@ def read_sheet_data(ssid, sheet_title):
         "PERSONAS":       personas,
         "IDIOMA":         str(cells.get("G23", "")).strip(),
     }
-
 
 # ── Lectura de un libro completo ─────────────────────────────
 def read_book(ssid):
