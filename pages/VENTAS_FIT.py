@@ -34,10 +34,12 @@ COLUMNS_ORDER = [
     "PERSONAS", "IDIOMA",
 ]
 
+# ✅ IMPORTANTE: INCLUYE EL RANGO
 CELLS_NEEDED = [
-    "B2", "G11", "G13", "G5", "P5", "R5",
-    "C3", "G19", "G17", "K17", "G10",
-    "G57", "Q10", "G23", "Q55",
+    "B2","G11","G13","G5","P5","R5",
+    "C3","G19","G17","G10",
+    "G57","Q10","G23","Q55",
+    "G24:G60"   # 👈 PERSONAS
 ]
 
 # ============================================================
@@ -46,9 +48,9 @@ CELLS_NEEDED = [
 
 class RateLimiter:
     def __init__(self, max_calls=50, per_seconds=60):
+        self.calls = deque()
         self.max_calls = max_calls
         self.per_seconds = per_seconds
-        self.calls = deque()
         self.lock = threading.Lock()
 
     def wait(self):
@@ -90,10 +92,11 @@ def sheets():
     return build("sheets", "v4", credentials=creds())
 
 # ============================================================
-# EXECUTE (ANTI SSL)
+# EXECUTE
 # ============================================================
 
 def execute(req, retries=5):
+
     for i in range(retries):
         try:
             rate_limiter.wait()
@@ -101,7 +104,7 @@ def execute(req, retries=5):
         except (HttpError, OSError, ConnectionResetError, BrokenPipeError):
             time.sleep((2 ** i) + random.uniform(0, 1))
 
-    raise Exception("Error persistente API")
+    raise Exception("Error API persistente")
 
 # ============================================================
 # DRIVE
@@ -127,9 +130,9 @@ def list_children(parent_id, folders_only=False):
     return res.get("files", [])
 
 def get_years():
-    folders = list_children(DRIVEROOTID, True)
     return sorted(
-        [f["name"] for f in folders if re.fullmatch(r"\d{4}", f["name"])],
+        [f["name"] for f in list_children(DRIVEROOTID, True)
+         if re.fullmatch(r"\d{4}", f["name"])],
         reverse=True,
     )
 
@@ -156,9 +159,15 @@ def batch_get(ssid, sheet_title):
     )
 
     data = {}
+
     for c, vr in zip(CELLS_NEEDED, resp.get("valueRanges", [])):
         vals = vr.get("values", [])
-        data[c] = vals[0][0] if vals and vals[0] else ""
+
+        # ✅ diferencia celda vs rango
+        if len(vals) > 1:
+            data[c] = vals
+        else:
+            data[c] = vals[0][0] if vals and vals[0] else ""
 
     return data
 
@@ -173,11 +182,10 @@ def get_sheet_titles(ssid):
     return [s["properties"]["title"] for s in meta.get("sheets", [])]
 
 # ============================================================
-# PARSE
+# HELPERS
 # ============================================================
 
 def parse_numeric(val):
-
     if val is None or val == "":
         return 0.0
 
@@ -192,8 +200,20 @@ def parse_numeric(val):
 
     return float(m.group()) if m else 0.0
 
+
+def count_personas(rango):
+    if not rango:
+        return 0
+
+    count = 0
+    for fila in rango:
+        if fila and str(fila[0]).strip():
+            count += 1
+
+    return count
+
 # ============================================================
-# PROCESAR LIBRO COMPLETO (DOBLE PASADA)
+# PROCESO LIBRO (DOBLE PASADA)
 # ============================================================
 
 def process_book(book_id, boat_name, book_name):
@@ -205,13 +225,13 @@ def process_book(book_id, boat_name, book_name):
 
         for sh in sheets_list:
 
-            data1 = batch_get(book_id, sh)
-            data2 = batch_get(book_id, sh)
+            d1 = batch_get(book_id, sh)
+            d2 = batch_get(book_id, sh)
 
-            if data1 != data2:
-                st.warning(f"Inconsistencia en {book_name} / hoja {sh}")
+            if d1 != d2:
+                st.warning(f"Inconsistencia en {book_name} / {sh}")
 
-            data = data2
+            data = d2  # ✅ usamos segunda pasada
 
             if not data.get("G11"):
                 continue
@@ -228,24 +248,30 @@ def process_book(book_id, boat_name, book_name):
                 "ITINERARIO": data.get("R5", ""),
                 "FECHA SALIDA": data.get("C3", ""),
                 "FECHA LLEGADA": data.get("G19", ""),
+
+                # ✅ CORRECTOS SEGÚN TU MODELO
                 "NETO": parse_numeric(data.get("G17")),
-                "BRUTO": parse_numeric(data.get("K17")),
+                "BRUTO": parse_numeric(data.get("Q55")),
+
                 "ESTADO RESERVA": data.get("G10", ""),
                 "PAGO": data.get("Q10", ""),
                 "COMERCIAL": data.get("G23", ""),
-                "PERSONAS": data.get("Q55", ""),
+
+                # ✅ PERSONAS REAL
+                "PERSONAS": count_personas(data.get("G24:G60")),
+
                 "IDIOMA": data.get("G57", ""),
             })
 
             rows_book.append(row)
 
     except Exception as e:
-        st.warning(f"Error en libro {book_name}: {e}")
+        st.warning(f"Error libro {book_name}: {e}")
 
     return rows_book
 
 # ============================================================
-# CORE
+# SCAN
 # ============================================================
 
 def scan_year(year, progress_bar, table_placeholder):
@@ -257,28 +283,24 @@ def scan_year(year, progress_bar, table_placeholder):
     rows_total = []
 
     boats = list_children(year_id, True)
-    total_files = sum(len(list_children(b["id"], False)) for b in boats)
+    total = sum(len(list_children(b["id"], False)) for b in boats)
     processed = 0
 
     for boat in boats:
-
         files = list_children(boat["id"], False)
 
         for f in files:
 
             processed += 1
-            progress_bar.progress(processed / max(total_files, 1))
+            progress_bar.progress(processed / max(total, 1))
 
             if not re.match(r"^[A-Z_]+_\d{6}$", f["name"].strip()):
                 continue
 
-            # ✅ PROCESAR LIBRO COMPLETO
             rows_book = process_book(f["id"], boat["name"], f["name"])
 
             if rows_book:
                 rows_total.extend(rows_book)
-
-                # ✅ PINTA SOLO AL TERMINAR LIBRO
                 table_placeholder.dataframe(pd.DataFrame(rows_total))
 
     return pd.DataFrame(rows_total)
@@ -301,21 +323,15 @@ st.set_page_config(page_title="Ventas FIT", layout="wide")
 
 st.title("Ventas FIT")
 
-try:
-    years = get_years()
-except Exception as e:
-    st.error(f"Error Drive: {e}")
-    st.stop()
-
+years = get_years()
 year = st.selectbox("Año", years)
 
 if st.button("Generar informe"):
 
     progress = st.progress(0)
-    table_placeholder = st.empty()
+    table_placeholder.dataframe(pd.DataFrame(rows_total))
 
     with st.spinner("Procesando..."):
-
         df = scan_year(year, progress, table_placeholder)
 
     if df.empty:
