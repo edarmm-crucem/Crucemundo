@@ -303,8 +303,6 @@ def read_sheet_data(ssid, sheet_title, year):
     }
 
 # ── Lectura de un libro completo ─────────────────────────────
-# Lee todas las hojas de un spreadsheet y llama a on_row_cb
-# por cada fila válida encontrada, para pintado progresivo.
 def read_book(ssid, year, on_row_cb=None):
     results = []
     try:
@@ -394,7 +392,7 @@ def build_table_html(rows):
           <td>{r['BARCO']}</td><td>{r['AGENCIA']}</td><td>{r['CODIGO']}</td><td>{r['GRUPO']}</td>
           <td><b>{r['CONFIRMACION']}</b></td><td>{r['FECHA BOOKING']}</td><td>{r['ITINERARIO']}</td>
           <td>{r['FECHA SALIDA']}</td><td>{r['FECHA LLEGADA']}</td>
-          <td class="num">{r['NETO']:,.2f} €</td><td class="num">{r['BRUTO']:,.2f} €</td>
+          <td class="num nowrap">{r['NETO']:,.2f}&nbsp;€</td><td class="num nowrap">{r['BRUTO']:,.2f}&nbsp;€</td>
           <td>{estado_pill(r['ESTADO RESERVA'])}</td><td>{pago_pill(r['PAGO'])}</td>
           <td>{r['COMERCIAL']}</td><td class="num">{int(r['PERSONAS'])}</td><td>{r['IDIOMA']}</td>
         </tr>"""
@@ -415,6 +413,11 @@ def build_summary_html(rows):
       <div class="sum-card"><div class="sum-label">Neto Total</div><div class="sum-value">{df_live['NETO'].sum():,.2f} €</div></div>
       <div class="sum-card"><div class="sum-label">Bruto Total</div><div class="sum-value">{df_live['BRUTO'].sum():,.2f} €</div></div>
     </div>"""
+
+# ── Helper: extrae la parte antes del guion de CONFIRMACION ──
+def confirmacion_prefix(val):
+    """DC260714-015  →  DC260714"""
+    return str(val).split("-")[0].strip()
 
 # ============================================================
 # PÁGINA
@@ -487,6 +490,7 @@ div[data-testid="stMultiSelect"] div[data-baseweb="select"]>div{
 }
 .vf-table tr:hover td{background:#F8FAFF;}
 .vf-table td.num{text-align:right;font-variant-numeric:tabular-nums;}
+.vf-table td.nowrap{white-space:nowrap;}
 .pill{display:inline-flex;align-items:center;padding:0.22rem 0.5rem;
       border-radius:999px;font-size:0.68rem;font-weight:800;white-space:nowrap;}
 .pill-conf{background:#DCFCE7;color:#166534;border:1px solid #86EFAC;}
@@ -558,11 +562,15 @@ if "vf_results" not in st.session_state:
     st.session_state.vf_results     = None
 if "vf_year_loaded" not in st.session_state:
     st.session_state.vf_year_loaded = None
+# ── NUEVO: guardar fecha/hora de extracción ──────────────────
+if "vf_extracted_at" not in st.session_state:
+    st.session_state.vf_extracted_at = None
 
 # ── Escaneo ──────────────────────────────────────────────────
 if run_scan and selected_year:
-    st.session_state.vf_results     = None
-    st.session_state.vf_year_loaded = None
+    st.session_state.vf_results      = None
+    st.session_state.vf_year_loaded  = None
+    st.session_state.vf_extracted_at = None
 
     prog_bar   = st.progress(0.0, text="Iniciando escaneo…")
     status_ph  = st.empty()
@@ -583,24 +591,24 @@ if run_scan and selected_year:
             f"✅ Filas acumuladas: {len(rows_acumuladas)} · "
             f"Última: {row['CONFIRMACION']} ({row['BARCO']})"
         )
-        # Repintamos la tabla tras cada nueva fila; Streamlit actualiza el placeholder
         summary_ph.markdown(build_summary_html(rows_acumuladas), unsafe_allow_html=True)
         table_ph.html(build_table_html(rows_acumuladas))
 
     try:
         rows = scan_year(selected_year, progress_cb=update_progress, on_row_verified=on_row_verified)
-        # Pintado final completo (por si la última tanda no pintó)
         if rows:
             summary_ph.markdown(build_summary_html(rows), unsafe_allow_html=True)
             table_ph.html(build_table_html(rows))
-        st.session_state.vf_results     = rows
-        st.session_state.vf_year_loaded = selected_year
+        st.session_state.vf_results      = rows
+        st.session_state.vf_year_loaded  = selected_year
+        # ── Guardar timestamp de extracción ──────────────────
+        st.session_state.vf_extracted_at = now().strftime("%d/%m/%Y %H:%M")
         if not rows:
             st.info("No se han encontrado reservas para el año seleccionado.")
     except Exception as e:
-        # Conservamos lo que ya se acumuló antes del error
-        st.session_state.vf_results     = rows_acumuladas
-        st.session_state.vf_year_loaded = selected_year
+        st.session_state.vf_results      = rows_acumuladas
+        st.session_state.vf_year_loaded  = selected_year
+        st.session_state.vf_extracted_at = now().strftime("%d/%m/%Y %H:%M")
         st.exception(e)
         st.warning(f"Escaneo interrumpido. Se han procesado {len(rows_acumuladas)} reservas antes del error.")
     finally:
@@ -611,30 +619,41 @@ if run_scan and selected_year:
         table_ph.empty()
 
 # ── Resultado + filtros ──────────────────────────────────────
-rows        = st.session_state.get("vf_results")
-year_loaded = st.session_state.get("vf_year_loaded")
+rows         = st.session_state.get("vf_results")
+year_loaded  = st.session_state.get("vf_year_loaded")
+extracted_at = st.session_state.get("vf_extracted_at")
 
 if rows:
     df_all = pd.DataFrame(rows, columns=DATA_COLUMNS)
 
+    # ── Columna auxiliar: prefijo de confirmación (antes del guion) ──
+    df_all["_CONF_PREFIX"] = df_all["CONFIRMACION"].apply(confirmacion_prefix)
+
+    # ── Chip azul con fecha de extracción ────────────────────
+    fecha_txt = f" · Extraído el {extracted_at}" if extracted_at else ""
     st.markdown(
-        f'<span class="web-chip-blue">FILTROS · AÑO {year_loaded} · {len(df_all)} registros</span>',
+        f'<span class="web-chip-blue">FILTROS · AÑO {year_loaded} · {len(df_all)} registros{fecha_txt}</span>',
         unsafe_allow_html=True,
     )
 
-    fc1, fc2, fc3, fc4, fc5, fc6 = st.columns([2, 2, 2, 2, 2, 2], gap="medium")
+    # ── Filtros: ahora 7 columnas (añadimos CONFIRMACION) ────
+    fc1, fc2, fc3, fc4, fc5, fc6, fc7 = st.columns([2, 2, 2, 2, 2, 2, 2], gap="medium")
     with fc1:
-        sel_barco     = st.multiselect("BARCO",         options=sorted(df_all["BARCO"].dropna().unique()),          default=[], key="f_barco")
+        sel_barco     = st.multiselect("BARCO",         options=sorted(df_all["BARCO"].dropna().unique()),             default=[], key="f_barco")
     with fc2:
-        sel_agencia   = st.multiselect("AGENCIA",       options=sorted(df_all["AGENCIA"].dropna().unique()),        default=[], key="f_agencia")
+        sel_agencia   = st.multiselect("AGENCIA",       options=sorted(df_all["AGENCIA"].dropna().unique()),           default=[], key="f_agencia")
     with fc3:
-        sel_estado    = st.multiselect("ESTADO RESERVA",options=sorted(df_all["ESTADO RESERVA"].dropna().unique()), default=[], key="f_estado")
+        # Opciones: valores únicos del prefijo (DC260714, DC260715, …)
+        conf_options  = sorted(df_all["_CONF_PREFIX"].dropna().unique())
+        sel_conf      = st.multiselect("CONFIRMACION",  options=conf_options,                                          default=[], key="f_conf")
     with fc4:
-        sel_comercial = st.multiselect("COMERCIAL",     options=sorted(df_all["COMERCIAL"].dropna().unique()),      default=[], key="f_comercial")
+        sel_estado    = st.multiselect("ESTADO RESERVA",options=sorted(df_all["ESTADO RESERVA"].dropna().unique()),    default=[], key="f_estado")
     with fc5:
-        sel_pago      = st.multiselect("PAGO",          options=sorted(df_all["PAGO"].dropna().unique()),           default=[], key="f_pago")
+        sel_comercial = st.multiselect("COMERCIAL",     options=sorted(df_all["COMERCIAL"].dropna().unique()),         default=[], key="f_comercial")
     with fc6:
-        sel_idioma    = st.multiselect("IDIOMA",        options=sorted(df_all["IDIOMA"].dropna().unique()),         default=[], key="f_idioma")
+        sel_pago      = st.multiselect("PAGO",          options=sorted(df_all["PAGO"].dropna().unique()),              default=[], key="f_pago")
+    with fc7:
+        sel_idioma    = st.multiselect("IDIOMA",        options=sorted(df_all["IDIOMA"].dropna().unique()),            default=[], key="f_idioma")
 
     search_col, _ = st.columns([3, 7])
     with search_col:
@@ -643,6 +662,7 @@ if rows:
     df = df_all.copy()
     if sel_barco:      df = df[df["BARCO"].isin(sel_barco)]
     if sel_agencia:    df = df[df["AGENCIA"].isin(sel_agencia)]
+    if sel_conf:       df = df[df["_CONF_PREFIX"].isin(sel_conf)]
     if sel_estado:     df = df[df["ESTADO RESERVA"].isin(sel_estado)]
     if sel_comercial:  df = df[df["COMERCIAL"].isin(sel_comercial)]
     if sel_pago:       df = df[df["PAGO"].isin(sel_pago)]
@@ -657,12 +677,13 @@ if rows:
     # ── Resumen filtrado ──────────────────────────────────────
     st.markdown(build_summary_html(df.to_dict("records")), unsafe_allow_html=True)
 
-    # ── Exportar ──────────────────────────────────────────────
+    # ── Exportar (sin la columna auxiliar) ───────────────────
     export_col, _ = st.columns([2, 8])
     with export_col:
+        export_df = df[DATA_COLUMNS]  # excluye _CONF_PREFIX
         st.download_button(
             label="⬇ Exportar a Excel",
-            data=to_excel_bytes(df),
+            data=to_excel_bytes(export_df),
             file_name=f"VENTAS_FIT_{year_loaded}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             key="vf_export",
