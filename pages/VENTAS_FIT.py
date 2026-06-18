@@ -587,21 +587,19 @@ if run_scan and selected_year:
 
     def on_row_verified(row):
         rows_acumuladas.append(row)
+        # Solo mostramos contador + resumen numérico durante el escaneo.
+        # NO pintamos la tabla HTML completa aquí: Streamlit la descarta
+        # silenciosamente cuando el HTML supera ~1-2 MB (≈ 80-100 filas).
         audit_ph.caption(
-            f"✅ Filas acumuladas: {len(rows_acumuladas)} · "
+            f"✅ {len(rows_acumuladas)} reservas encontradas · "
             f"Última: {row['CONFIRMACION']} ({row['BARCO']})"
         )
         summary_ph.markdown(build_summary_html(rows_acumuladas), unsafe_allow_html=True)
-        table_ph.html(build_table_html(rows_acumuladas))
 
     try:
         rows = scan_year(selected_year, progress_cb=update_progress, on_row_verified=on_row_verified)
-        if rows:
-            summary_ph.markdown(build_summary_html(rows), unsafe_allow_html=True)
-            table_ph.html(build_table_html(rows))
         st.session_state.vf_results      = rows
         st.session_state.vf_year_loaded  = selected_year
-        # ── Guardar timestamp de extracción ──────────────────
         st.session_state.vf_extracted_at = now().strftime("%d/%m/%Y %H:%M")
         if not rows:
             st.info("No se han encontrado reservas para el año seleccionado.")
@@ -689,11 +687,47 @@ if rows:
             key="vf_export",
         )
 
-    # ── Tabla final ───────────────────────────────────────────
+    # ── Tabla final con st.dataframe (sin límite de tamaño) ──
     if df.empty:
         st.info("Sin resultados para los filtros aplicados.")
     else:
-        st.html(build_table_html(df.to_dict("records")))
+        # Preparamos el dataframe de visualización (sin columna auxiliar)
+        df_show = df[DATA_COLUMNS].copy().reset_index(drop=True)
+        df_show.index = df_show.index + 1  # empezar en 1
+
+        # Etiquetas de estado/pago como texto corto (sin HTML)
+        def estado_txt(v):
+            u = str(v).strip().upper()
+            if "CONFIRM" in u: return f"✅ {v}"
+            if "CANCEL"  in u: return f"❌ {v}"
+            if "NO CONF" in u: return f"⚠️ {v}"
+            return v
+
+        def pago_txt(v):
+            u = str(v).strip().upper()
+            if "PAGADO" in u: return f"✅ {v}"
+            if "PTE"    in u: return f"⏳ {v}"
+            if "DEPOSI" in u: return f"💳 {v}"
+            return v
+
+        df_show["ESTADO RESERVA"] = df_show["ESTADO RESERVA"].apply(estado_txt)
+        df_show["PAGO"]           = df_show["PAGO"].apply(pago_txt)
+
+        st.dataframe(
+            df_show,
+            use_container_width=True,
+            height=600,
+            column_config={
+                "NETO":  st.column_config.NumberColumn("NETO",  format="%.2f €"),
+                "BRUTO": st.column_config.NumberColumn("BRUTO", format="%.2f €"),
+                "PERSONAS": st.column_config.NumberColumn("PERSONAS", format="%d"),
+                "CONFIRMACION": st.column_config.TextColumn("CONFIRMACION", width="medium"),
+                "ITINERARIO":   st.column_config.TextColumn("ITINERARIO",   width="large"),
+                "AGENCIA":      st.column_config.TextColumn("AGENCIA",      width="medium"),
+                "ESTADO RESERVA": st.column_config.TextColumn("ESTADO RESERVA", width="medium"),
+                "PAGO":           st.column_config.TextColumn("PAGO",           width="medium"),
+            },
+        )
 
 st.markdown(
     '<div class="portal-footer"><div class="footer-text">Crucemundo Hub · Ventas FIT</div></div>',
