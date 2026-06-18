@@ -202,7 +202,7 @@ def fmt_date(val):
 # ── Patrón localizador: BARCO_AAMMDD  (p.ej. MELODY_260314) ─
 #    Acepta letras, dígitos y guiones en la parte del barco,
 #    seguido de _ y exactamente 6 dígitos.
-LOCALIZADOR_RE = re.compile(r"^[A-Z0-9\-]+_\d{6}$", re.IGNORECASE)
+LOCALIZADOR_RE = re.compile(r"^[A-Z]{2,3}\d{6}-\d+$", re.IGNORECASE)
 
 # ── Celdas que se leen de cada hoja ─────────────────────────
 CELLS_NEEDED = [
@@ -315,7 +315,7 @@ def read_book(ssid, year, on_row_cb=None):
     return results
 
 # ── Escaneo anual ────────────────────────────────────────────
-SALIDA_PATTERN = re.compile(r"^[A-Z_]+_\d{6}$")
+SALIDA_PATTERN = re.compile(r"^[A-Z0-9_]+_\d{6}$", re.IGNORECASE)
 
 def scan_year(year, progress_cb=None, on_row_verified=None):
     year_id = get_year_folder_id(year)
