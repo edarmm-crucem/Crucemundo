@@ -218,7 +218,7 @@ CELLS_NEEDED = [
     "G23",                          # idioma
 ]
 RANGE_NETO    = "Q33:R39"
-RANGE_PERSONA = "G24:G60"
+RANGE_PERSONA = "G24"
 RANGE_BRUTO   = "Q55"
 
 # ── Lectura de una hoja ──────────────────────────────────────
@@ -231,7 +231,7 @@ def read_sheet_data(ssid, sheet_title, year):
         spreadsheetId=ssid,
         ranges=ranges,
         majorDimension="ROWS",
-        valueRenderOption="UNFORMATTED_VALUE",
+        valueRenderOption="FORMATTED_VALUE",
     )
     try:
         resp = execute_with_retry(request, rate_limiter=sheets_rate_limiter)
@@ -267,9 +267,18 @@ def read_sheet_data(ssid, sheet_title, year):
     )
 
     # ── PERSONAS: filas no vacías en G24:G60 ─────────────────
-    personas_rows = data_by_range.get(RANGE_PERSONA, {}).get("values", [])
-    personas = sum(1 for row in personas_rows if row and str(row[0]).strip())
-
+    persona_vals = data_by_range.get(RANGE_PERSONA, {}).get("values", [])
+    
+    if persona_vals and persona_vals[0]:
+        texto = str(persona_vals[0][0]).strip()
+    
+        personas = len([
+            linea
+            for linea in texto.splitlines()
+            if linea.strip()
+        ])
+    else:
+        personas = 0
     # ── BRUTO: Q55 ───────────────────────────────────────────
     bruto_vals = data_by_range.get(RANGE_BRUTO, {}).get("values", [])
     bruto = parse_numeric(bruto_vals[0][0]) if bruto_vals and bruto_vals[0] else 0.0
