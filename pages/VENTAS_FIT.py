@@ -55,7 +55,6 @@ COLUMNS_ORDER = [
     "ESTADO RESERVA", "PAGO", "COMERCIAL",
     "PERSONAS", "IDIOMA",
 ]
-# Columnas de datos reales (sin el contador "#")
 DATA_COLUMNS = COLUMNS_ORDER[1:]
 
 # ── helpers tiempo ───────────────────────────────────────────
@@ -199,23 +198,16 @@ def parse_numeric(val):
 def fmt_date(val):
     return str(val).strip() if val else ""
 
-# ── Patrón localizador: BARCO_AAMMDD  (p.ej. MELODY_260314) ─
-#    Acepta letras, dígitos y guiones en la parte del barco,
-#    seguido de _ y exactamente 6 dígitos.
+# ── Patrón localizador ───────────────────────────────────────
 LOCALIZADOR_RE = re.compile(r"^[A-Z]{2,3}\d{6}-\d+$", re.IGNORECASE)
 
 # ── Celdas que se leen de cada hoja ─────────────────────────
 CELLS_NEEDED = [
-    "G11",                          # localizador
-    "G13",                          # barco
-    "G5",  "P5",  "R5",            # agencia, código, grupo
-    "C3",                           # fecha booking
-    "G19",                          # itinerario
-    "G17", "K17",                   # fecha salida / llegada
-    "G10",                          # estado reserva
-    "G57",                          # pago
-    "Q10",                          # comercial
-    "G23",                          # idioma
+    "G11", "G13",
+    "G5", "P5", "R5",
+    "C3", "G19",
+    "G17", "K17",
+    "G10", "G57", "Q10", "G23",
 ]
 RANGE_NETO    = "Q33:R39"
 RANGE_PERSONA = "G24"
@@ -223,7 +215,6 @@ RANGE_BRUTO   = "Q55"
 
 # ── Lectura de una hoja ──────────────────────────────────────
 def read_sheet_data(ssid, sheet_title, year):
-    # Construimos la lista de rangos sin duplicados
     a1_list = CELLS_NEEDED + [RANGE_NETO, RANGE_PERSONA, RANGE_BRUTO]
     ranges  = [f"'{sheet_title}'!{a1}" for a1 in a1_list]
 
@@ -238,26 +229,21 @@ def read_sheet_data(ssid, sheet_title, year):
     except Exception as e:
         raise Exception(f"Error en batchGet de '{sheet_title}': {e}")
 
-    value_ranges = resp.get("valueRanges", [])
+    value_ranges  = resp.get("valueRanges", [])
     data_by_range = dict(zip(a1_list, value_ranges))
 
-    # ── celdas sueltas ──
     def cell(a1):
         vals = data_by_range.get(a1, {}).get("values", [])
         return vals[0][0] if vals and vals[0] else ""
 
-    # ── Filtro de localizador: solo buscamos en G11 ──────────
     localizador = str(cell("G11")).strip()
     if not localizador:
         return None
-    # Ignorar hojas de grupo
     if localizador.upper().endswith("_GROUP"):
         return None
-    # Debe coincidir con el patrón BARCO_AAMMDD
     if not LOCALIZADOR_RE.match(localizador):
         return None
 
-    # ── NETO: suma de Q33:R39 ────────────────────────────────
     neto_rows = data_by_range.get(RANGE_NETO, {}).get("values", [])
     neto = sum(
         parse_numeric(c)
@@ -266,20 +252,13 @@ def read_sheet_data(ssid, sheet_title, year):
         if c not in (None, "")
     )
 
-    # ── PERSONAS: filas no vacías en G24:G60 ─────────────────
     persona_vals = data_by_range.get(RANGE_PERSONA, {}).get("values", [])
-    
     if persona_vals and persona_vals[0]:
-        texto = str(persona_vals[0][0]).strip()
-    
-        personas = len([
-            linea
-            for linea in texto.splitlines()
-            if linea.strip()
-        ])
+        texto    = str(persona_vals[0][0]).strip()
+        personas = len([l for l in texto.splitlines() if l.strip()])
     else:
         personas = 0
-    # ── BRUTO: Q55 ───────────────────────────────────────────
+
     bruto_vals = data_by_range.get(RANGE_BRUTO, {}).get("values", [])
     bruto = parse_numeric(bruto_vals[0][0]) if bruto_vals and bruto_vals[0] else 0.0
 
@@ -333,12 +312,12 @@ def scan_year(year, progress_cb=None, on_row_verified=None):
     file_map = {}
     total_files = 0
     for bf in boat_folders:
-        files  = list_children(bf["id"], folders_only=False)
+        files   = list_children(bf["id"], folders_only=False)
         salidas = [f for f in files if SALIDA_PATTERN.match(f["name"].strip())]
         file_map[bf["name"]] = salidas
         total_files += len(salidas)
 
-    results  = []
+    results   = []
     processed = 0
     for boat_name, salidas in file_map.items():
         for fobj in salidas:
@@ -366,44 +345,7 @@ def to_excel_bytes(df: pd.DataFrame) -> bytes:
     buf.seek(0)
     return buf.read()
 
-# ── Pills ────────────────────────────────────────────────────
-def estado_pill(v):
-    u = str(v).strip().upper()
-    if "CONFIRM" in u: return f'<span class="pill pill-conf">{v}</span>'
-    if "CANCEL"  in u: return f'<span class="pill pill-canc">{v}</span>'
-    if "NO CONF" in u: return f'<span class="pill pill-noconf">{v}</span>'
-    return f'<span class="pill pill-neutral">{v}</span>'
-
-def pago_pill(v):
-    u = str(v).strip().upper()
-    if "PAGADO" in u:  return f'<span class="pill pill-conf">{v}</span>'
-    if "PTE"    in u:  return f'<span class="pill pill-pte">{v}</span>'
-    if "DEPOSI" in u:  return f'<span class="pill pill-pago">{v}</span>'
-    return f'<span class="pill pill-neutral">{v}</span>'
-
-# ── Render tabla ─────────────────────────────────────────────
-def build_table_html(rows):
-    """Construye el HTML completo de la tabla a partir de una lista de dicts."""
-    header_cells = "".join(f"<th>{c}</th>" for c in COLUMNS_ORDER)
-    rows_html = ""
-    for i, r in enumerate(rows, start=1):
-        rows_html += f"""<tr>
-          <td class="num">{i}</td>
-          <td>{r['BARCO']}</td><td>{r['AGENCIA']}</td><td>{r['CODIGO']}</td><td>{r['GRUPO']}</td>
-          <td><b>{r['CONFIRMACION']}</b></td><td>{r['FECHA BOOKING']}</td><td>{r['ITINERARIO']}</td>
-          <td>{r['FECHA SALIDA']}</td><td>{r['FECHA LLEGADA']}</td>
-          <td class="num nowrap">{r['NETO']:,.2f}&nbsp;€</td><td class="num nowrap">{r['BRUTO']:,.2f}&nbsp;€</td>
-          <td>{estado_pill(r['ESTADO RESERVA'])}</td><td>{pago_pill(r['PAGO'])}</td>
-          <td>{r['COMERCIAL']}</td><td class="num">{int(r['PERSONAS'])}</td><td>{r['IDIOMA']}</td>
-        </tr>"""
-    return (
-        f'<div class="vf-table-wrap">'
-        f'<table class="vf-table">'
-        f'<thead><tr>{header_cells}</tr></thead>'
-        f'<tbody>{rows_html}</tbody>'
-        f'</table></div>'
-    )
-
+# ── Resumen ──────────────────────────────────────────────────
 def build_summary_html(rows):
     df_live = pd.DataFrame(rows, columns=DATA_COLUMNS)
     return f"""
@@ -414,9 +356,8 @@ def build_summary_html(rows):
       <div class="sum-card"><div class="sum-label">Bruto Total</div><div class="sum-value">{df_live['BRUTO'].sum():,.2f} €</div></div>
     </div>"""
 
-# ── Helper: extrae la parte antes del guion de CONFIRMACION ──
+# ── Helper prefijo confirmación ──────────────────────────────
 def confirmacion_prefix(val):
-    """DC260714-015  →  DC260714"""
     return str(val).split("-")[0].strip()
 
 # ============================================================
@@ -477,28 +418,6 @@ div[data-testid="stMultiSelect"] div[data-baseweb="select"]>div{
     font-size:0.88rem!important;font-weight:600!important;
     box-shadow:0 2px 8px rgba(15,23,42,0.05)!important;
 }
-.vf-table-wrap{overflow-x:auto;margin-top:1rem;}
-.vf-table{width:100%;border-collapse:collapse;font-family:"DM Sans",sans-serif;}
-.vf-table th{
-    background:#F0F4FA;color:#334155;font-size:0.72rem;font-weight:800;
-    padding:0.55rem 0.65rem;border-bottom:2px solid #DCE5F0;
-    white-space:nowrap;text-align:left;position:sticky;top:0;z-index:1;
-}
-.vf-table td{
-    font-size:0.75rem;color:#1F2937;padding:0.48rem 0.65rem;
-    border-bottom:1px solid #EEF2F7;vertical-align:top;font-weight:500;
-}
-.vf-table tr:hover td{background:#F8FAFF;}
-.vf-table td.num{text-align:right;font-variant-numeric:tabular-nums;}
-.vf-table td.nowrap{white-space:nowrap;}
-.pill{display:inline-flex;align-items:center;padding:0.22rem 0.5rem;
-      border-radius:999px;font-size:0.68rem;font-weight:800;white-space:nowrap;}
-.pill-conf{background:#DCFCE7;color:#166534;border:1px solid #86EFAC;}
-.pill-noconf{background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;}
-.pill-canc{background:#FEE2E2;color:#991B1B;border:1px solid #FCA5A5;}
-.pill-pago{background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;}
-.pill-pte{background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;}
-.pill-neutral{background:#F1F5F9;color:#475569;border:1px solid #CBD5E1;}
 .summary-row{display:flex;gap:1rem;flex-wrap:wrap;margin:0.75rem 0 1rem;}
 .sum-card{flex:1;min-width:120px;background:#F8FAFF;border:1px solid #DCE5F0;
           border-radius:16px;padding:0.65rem 0.9rem;}
@@ -558,13 +477,9 @@ with col_btn:
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ── Session state ────────────────────────────────────────────
-if "vf_results" not in st.session_state:
-    st.session_state.vf_results     = None
-if "vf_year_loaded" not in st.session_state:
-    st.session_state.vf_year_loaded = None
-# ── NUEVO: guardar fecha/hora de extracción ──────────────────
-if "vf_extracted_at" not in st.session_state:
-    st.session_state.vf_extracted_at = None
+if "vf_results"      not in st.session_state: st.session_state.vf_results      = None
+if "vf_year_loaded"  not in st.session_state: st.session_state.vf_year_loaded  = None
+if "vf_extracted_at" not in st.session_state: st.session_state.vf_extracted_at = None
 
 # ── Escaneo ──────────────────────────────────────────────────
 if run_scan and selected_year:
@@ -572,29 +487,18 @@ if run_scan and selected_year:
     st.session_state.vf_year_loaded  = None
     st.session_state.vf_extracted_at = None
 
-    prog_bar   = st.progress(0.0, text="Iniciando escaneo…")
-    status_ph  = st.empty()
-    summary_ph = st.empty()
-    table_ph   = st.empty()
-    audit_ph   = st.empty()
-
+    prog_bar        = st.progress(0.0, text="Iniciando escaneo…")
     rows_acumuladas = []
 
     def update_progress(done, total, label):
         pct = done / total if total else 0
         prog_bar.progress(min(pct, 1.0), text=f"Procesando {done}/{total}: {label}")
-        status_ph.caption(label)
 
     def on_row_verified(row):
+        # Solo acumulamos en memoria, CERO actualizaciones de UI.
+        # Cualquier st.empty().xxx() dentro del bucle hace que Streamlit
+        # rerenderice la página entera y resetee la vista al inicio.
         rows_acumuladas.append(row)
-        # Solo mostramos contador + resumen numérico durante el escaneo.
-        # NO pintamos la tabla HTML completa aquí: Streamlit la descarta
-        # silenciosamente cuando el HTML supera ~1-2 MB (≈ 80-100 filas).
-        audit_ph.caption(
-            f"✅ {len(rows_acumuladas)} reservas encontradas · "
-            f"Última: {row['CONFIRMACION']} ({row['BARCO']})"
-        )
-        summary_ph.markdown(build_summary_html(rows_acumuladas), unsafe_allow_html=True)
 
     try:
         rows = scan_year(selected_year, progress_cb=update_progress, on_row_verified=on_row_verified)
@@ -611,10 +515,6 @@ if run_scan and selected_year:
         st.warning(f"Escaneo interrumpido. Se han procesado {len(rows_acumuladas)} reservas antes del error.")
     finally:
         prog_bar.empty()
-        status_ph.empty()
-        audit_ph.empty()
-        summary_ph.empty()
-        table_ph.empty()
 
 # ── Resultado + filtros ──────────────────────────────────────
 rows         = st.session_state.get("vf_results")
@@ -623,35 +523,29 @@ extracted_at = st.session_state.get("vf_extracted_at")
 
 if rows:
     df_all = pd.DataFrame(rows, columns=DATA_COLUMNS)
-
-    # ── Columna auxiliar: prefijo de confirmación (antes del guion) ──
     df_all["_CONF_PREFIX"] = df_all["CONFIRMACION"].apply(confirmacion_prefix)
 
-    # ── Chip azul con fecha de extracción ────────────────────
     fecha_txt = f" · Extraído el {extracted_at}" if extracted_at else ""
     st.markdown(
         f'<span class="web-chip-blue">FILTROS · AÑO {year_loaded} · {len(df_all)} registros{fecha_txt}</span>',
         unsafe_allow_html=True,
     )
 
-    # ── Filtros: ahora 7 columnas (añadimos CONFIRMACION) ────
     fc1, fc2, fc3, fc4, fc5, fc6, fc7 = st.columns([2, 2, 2, 2, 2, 2, 2], gap="medium")
     with fc1:
-        sel_barco     = st.multiselect("BARCO",         options=sorted(df_all["BARCO"].dropna().unique()),             default=[], key="f_barco")
+        sel_barco     = st.multiselect("BARCO",          options=sorted(df_all["BARCO"].dropna().unique()),             default=[], key="f_barco")
     with fc2:
-        sel_agencia   = st.multiselect("AGENCIA",       options=sorted(df_all["AGENCIA"].dropna().unique()),           default=[], key="f_agencia")
+        sel_agencia   = st.multiselect("AGENCIA",        options=sorted(df_all["AGENCIA"].dropna().unique()),           default=[], key="f_agencia")
     with fc3:
-        # Opciones: valores únicos del prefijo (DC260714, DC260715, …)
-        conf_options  = sorted(df_all["_CONF_PREFIX"].dropna().unique())
-        sel_conf      = st.multiselect("CONFIRMACION",  options=conf_options,                                          default=[], key="f_conf")
+        sel_conf      = st.multiselect("CONFIRMACION",   options=sorted(df_all["_CONF_PREFIX"].dropna().unique()),      default=[], key="f_conf")
     with fc4:
-        sel_estado    = st.multiselect("ESTADO RESERVA",options=sorted(df_all["ESTADO RESERVA"].dropna().unique()),    default=[], key="f_estado")
+        sel_estado    = st.multiselect("ESTADO RESERVA", options=sorted(df_all["ESTADO RESERVA"].dropna().unique()),    default=[], key="f_estado")
     with fc5:
-        sel_comercial = st.multiselect("COMERCIAL",     options=sorted(df_all["COMERCIAL"].dropna().unique()),         default=[], key="f_comercial")
+        sel_comercial = st.multiselect("COMERCIAL",      options=sorted(df_all["COMERCIAL"].dropna().unique()),         default=[], key="f_comercial")
     with fc6:
-        sel_pago      = st.multiselect("PAGO",          options=sorted(df_all["PAGO"].dropna().unique()),              default=[], key="f_pago")
+        sel_pago      = st.multiselect("PAGO",           options=sorted(df_all["PAGO"].dropna().unique()),              default=[], key="f_pago")
     with fc7:
-        sel_idioma    = st.multiselect("IDIOMA",        options=sorted(df_all["IDIOMA"].dropna().unique()),            default=[], key="f_idioma")
+        sel_idioma    = st.multiselect("IDIOMA",         options=sorted(df_all["IDIOMA"].dropna().unique()),            default=[], key="f_idioma")
 
     search_col, _ = st.columns([3, 7])
     with search_col:
@@ -672,30 +566,24 @@ if rows:
         )
         df = df[mask]
 
-    # ── Resumen filtrado ──────────────────────────────────────
     st.markdown(build_summary_html(df.to_dict("records")), unsafe_allow_html=True)
 
-    # ── Exportar (sin la columna auxiliar) ───────────────────
     export_col, _ = st.columns([2, 8])
     with export_col:
-        export_df = df[DATA_COLUMNS]  # excluye _CONF_PREFIX
         st.download_button(
             label="⬇ Exportar a Excel",
-            data=to_excel_bytes(export_df),
+            data=to_excel_bytes(df[DATA_COLUMNS]),
             file_name=f"VENTAS_FIT_{year_loaded}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             key="vf_export",
         )
 
-    # ── Tabla final con st.dataframe (sin límite de tamaño) ──
     if df.empty:
         st.info("Sin resultados para los filtros aplicados.")
     else:
-        # Preparamos el dataframe de visualización (sin columna auxiliar)
         df_show = df[DATA_COLUMNS].copy().reset_index(drop=True)
-        df_show.index = df_show.index + 1  # empezar en 1
+        df_show.index = df_show.index + 1
 
-        # Etiquetas de estado/pago como texto corto (sin HTML)
         def estado_txt(v):
             u = str(v).strip().upper()
             if "CONFIRM" in u: return f"✅ {v}"
@@ -718,14 +606,14 @@ if rows:
             use_container_width=True,
             height=600,
             column_config={
-                "NETO":  st.column_config.NumberColumn("NETO",  format="%.2f €"),
-                "BRUTO": st.column_config.NumberColumn("BRUTO", format="%.2f €"),
-                "PERSONAS": st.column_config.NumberColumn("PERSONAS", format="%d"),
-                "CONFIRMACION": st.column_config.TextColumn("CONFIRMACION", width="medium"),
-                "ITINERARIO":   st.column_config.TextColumn("ITINERARIO",   width="large"),
-                "AGENCIA":      st.column_config.TextColumn("AGENCIA",      width="medium"),
-                "ESTADO RESERVA": st.column_config.TextColumn("ESTADO RESERVA", width="medium"),
-                "PAGO":           st.column_config.TextColumn("PAGO",           width="medium"),
+                "NETO":           st.column_config.NumberColumn("NETO",           format="%.2f €"),
+                "BRUTO":          st.column_config.NumberColumn("BRUTO",          format="%.2f €"),
+                "PERSONAS":       st.column_config.NumberColumn("PERSONAS",       format="%d"),
+                "CONFIRMACION":   st.column_config.TextColumn("CONFIRMACION",     width="medium"),
+                "ITINERARIO":     st.column_config.TextColumn("ITINERARIO",       width="large"),
+                "AGENCIA":        st.column_config.TextColumn("AGENCIA",          width="medium"),
+                "ESTADO RESERVA": st.column_config.TextColumn("ESTADO RESERVA",   width="medium"),
+                "PAGO":           st.column_config.TextColumn("PAGO",             width="medium"),
             },
         )
 
