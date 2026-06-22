@@ -1661,7 +1661,17 @@ with crm_col1:
 with crm_col2:
     if st.button("Ventas FIT - pyton mode", key="proba_nav", use_container_width=True):
         st.switch_page("pages/VENTAS_FIT.py")
-        
+# ── Botón Ocupación Global ──────────────────────────────────
+chip_col2, ocup_col, _ = st.columns([0.2, 1, 5], gap="small")
+with chip_col2:
+    st.markdown("""
+    <div style="margin-top:-6px;">
+        <span class="web-chip-blue">OCUP</span>
+    </div>
+    """, unsafe_allow_html=True)
+with ocup_col:
+    if st.button("🌍 Ocupación Global / Global Occupancy", key="ocup_nav", use_container_width=True):
+        st.switch_page("pages/OCUP.py")        
 # ============================================================
 # BLOQUE 19: TARJETAS DE ACCIÓN — DEFINICIÓN Y RENDER
 # ============================================================
