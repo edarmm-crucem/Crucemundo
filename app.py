@@ -1659,7 +1659,7 @@ with crm_col1:
         st.switch_page("pages/MS_VISTA_RIO_2026_CRM.py")
 
 with crm_col2:
-    if st.button("Ventas FIT - phyton mode", key="proba_nav", use_container_width=True):
+    if st.button("Ventas FIT - pyton mode", key="proba_nav", use_container_width=True):
         st.switch_page("pages/VENTAS_FIT.py")
         
 # ============================================================
