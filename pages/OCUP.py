@@ -254,7 +254,14 @@ section[data-testid="stSidebar"]   { display: none !important; }
 .cat-table td.sold  { color: #991B1B; }
 .cat-table td.hold  { color: #92400E; }
 .cat-table td.free  { color: #6B7280; }
-.cat-table td .pct  { font-weight: 600; color: #94A3B8; font-size: 0.62rem; }
+.cat-table td .pct  {
+    display: inline-block; font-weight: 800; font-size: 0.6rem;
+    padding: 0.05rem 0.32rem; border-radius: 999px; margin-left: 0.2rem;
+    line-height: 1.4;
+}
+.cat-table td .pct-sold { color: #B91C1C; background: #FEE2E2; }
+.cat-table td .pct-hold { color: #B45309; background: #FEF3C7; }
+.cat-table td .pct-free { color: #475569; background: #E2E8F0; }
 
 /* % global salida */
 .dep-pct {
@@ -352,9 +359,9 @@ def _render_salida(sal: str, por_cat: dict) -> str:
         <tr>
             <td>{cat}</td>
             <td>{t}</td>
-            <td class="sold">{v} <span class="pct">({pct_v_cat}%)</span></td>
-            <td class="hold">{r} <span class="pct">({pct_r_cat}%)</span></td>
-            <td class="free">{l} <span class="pct">({pct_l_cat}%)</span></td>
+            <td class="sold">{v} <span class="pct pct-sold">{pct_v_cat}%</span></td>
+            <td class="hold">{r} <span class="pct pct-hold">{pct_r_cat}%</span></td>
+            <td class="free">{l} <span class="pct pct-free">{pct_l_cat}%</span></td>
         </tr>"""
 
     return f"""
