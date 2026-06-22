@@ -259,9 +259,6 @@ section[data-testid="stSidebar"]   { display: none !important; }
     padding: 0.05rem 0.32rem; border-radius: 999px; margin-left: 0.2rem;
     line-height: 1.4;
 }
-.cat-table td .pct-sold { color: #B91C1C; background: #FEE2E2; }
-.cat-table td .pct-hold { color: #B45309; background: #FEF3C7; }
-.cat-table td .pct-free { color: #475569; background: #E2E8F0; }
 
 /* % global salida */
 .dep-pct {
@@ -328,6 +325,15 @@ def _clase(pct: float) -> str:
     if pct > 0:   return "low"
     return "empty"
 
+def _pct_pill_colors(pct: float) -> tuple:
+    """Devuelve (bg, fg) según el valor del % siguiendo la misma escala de _color()."""
+    pct = max(0, pct)  # por si acaso, nunca negativo; sin tope superior
+    if pct >= 90: return "#FEE2E2", "#B91C1C"   # rojo
+    if pct >= 70: return "#FFEDD5", "#C2410C"   # naranja
+    if pct >= 40: return "#FEF9C3", "#A16207"   # amarillo
+    if pct > 0:   return "#DCFCE7", "#15803D"   # verde
+    return "#F1F5F9", "#64748B"                  # 0% gris neutro
+
 # ── Render tarjeta de salida ──────────────────────────────────────────────────
 def _render_salida(sal: str, por_cat: dict) -> str:
     if not por_cat:
@@ -355,13 +361,16 @@ def _render_salida(sal: str, por_cat: dict) -> str:
         pct_v_cat = round(v / t * 100) if t else 0
         pct_r_cat = round(r / t * 100) if t else 0
         pct_l_cat = round(l / t * 100) if t else 0
+        bg_v, fg_v = _pct_pill_colors(pct_v_cat)
+        bg_r, fg_r = _pct_pill_colors(pct_r_cat)
+        bg_l, fg_l = _pct_pill_colors(pct_l_cat)
         filas += f"""
         <tr>
             <td>{cat}</td>
             <td>{t}</td>
-            <td class="sold">{v} <span class="pct pct-sold">{pct_v_cat}%</span></td>
-            <td class="hold">{r} <span class="pct pct-hold">{pct_r_cat}%</span></td>
-            <td class="free">{l} <span class="pct pct-free">{pct_l_cat}%</span></td>
+            <td class="sold">{v} <span class="pct" style="background:{bg_v};color:{fg_v};">{pct_v_cat}%</span></td>
+            <td class="hold">{r} <span class="pct" style="background:{bg_r};color:{fg_r};">{pct_r_cat}%</span></td>
+            <td class="free">{l} <span class="pct" style="background:{bg_l};color:{fg_l};">{pct_l_cat}%</span></td>
         </tr>"""
 
     return f"""
