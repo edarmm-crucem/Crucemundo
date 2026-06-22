@@ -248,18 +248,13 @@ section[data-testid="stSidebar"]   { display: none !important; }
 .cat-table td {
     padding: 0.22rem 0; border-top: 1px solid #F1F5F9;
     font-weight: 700; text-align: right; color: #1F2937;
+    white-space: nowrap;
 }
 .cat-table td:first-child { text-align: left; color: #374151; font-weight: 800; }
 .cat-table td.sold  { color: #991B1B; }
 .cat-table td.hold  { color: #92400E; }
 .cat-table td.free  { color: #6B7280; }
-
-/* Mini barra de progreso por categoría */
-.mini-bar-wrap {
-    background: #E5E7EB; border-radius: 4px; height: 5px;
-    width: 100%; margin-top: 0.15rem; overflow: hidden;
-}
-.mini-bar-fill { height: 5px; border-radius: 4px; }
+.cat-table td .pct  { font-weight: 600; color: #94A3B8; font-size: 0.62rem; }
 
 /* % global salida */
 .dep-pct {
@@ -350,20 +345,16 @@ def _render_salida(sal: str, por_cat: dict) -> str:
         v   = m["vendidas"]
         r   = m["reservas"]
         l   = m["libres"]
-        pct = round(v / t * 100) if t else 0
-        bar_color = _color(pct)
+        pct_v_cat = round(v / t * 100) if t else 0
+        pct_r_cat = round(r / t * 100) if t else 0
+        pct_l_cat = round(l / t * 100) if t else 0
         filas += f"""
         <tr>
             <td>{cat}</td>
-            <td class="sold">{v}</td>
-            <td class="hold">{r}</td>
-            <td class="free">{l}</td>
-            <td style="min-width:50px;">
-                <div class="mini-bar-wrap">
-                    <div class="mini-bar-fill" style="width:{pct}%;background:{bar_color};"></div>
-                </div>
-                <span style="font-size:0.62rem;color:{bar_color};font-weight:800;">{pct}%</span>
-            </td>
+            <td>{t}</td>
+            <td class="sold">{v} <span class="pct">({pct_v_cat}%)</span></td>
+            <td class="hold">{r} <span class="pct">({pct_r_cat}%)</span></td>
+            <td class="free">{l} <span class="pct">({pct_l_cat}%)</span></td>
         </tr>"""
 
     return f"""
@@ -377,10 +368,10 @@ def _render_salida(sal: str, por_cat: dict) -> str:
         <table class="cat-table">
             <thead><tr>
                 <th>Cat.</th>
-                <th>🔴 Vend.</th>
-                <th>🟡 Res.</th>
-                <th>⬜ Lib.</th>
-                <th>%</th>
+                <th># Cab.</th>
+                <th># Vend.</th>
+                <th># Res.</th>
+                <th># Lib.</th>
             </tr></thead>
             <tbody>{filas}</tbody>
         </table>
