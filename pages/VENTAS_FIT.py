@@ -56,6 +56,17 @@ COLUMNS_ORDER = [
 ]
 DATA_COLUMNS = COLUMNS_ORDER[1:]
 
+import base64
+
+def getlogobase64():
+    try:
+        with open("favicon1.png", "rb") as f:
+            return "data:image/png;base64," + base64.b64encode(f.read()).decode()
+    except Exception:
+        return ""
+
+LOGOURL = getlogobase64()
+
 # ── helpers tiempo ───────────────────────────────────────────
 def now():
     return datetime.now(pytz.utc).astimezone(TIMEZONE).replace(tzinfo=None)
