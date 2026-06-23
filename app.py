@@ -1626,16 +1626,7 @@ st.markdown(
 st.markdown(
     """
     <style>
-    /* Botones de navegación tipo nav-chip */
-    div[data-testid="stButton"]:has(button[data-testid="baseButton-secondary"]) button,
-    button[key="crm_nav"], button[key="proba_nav"], button[key="ocup_nav"] { all: unset; }
-
-    [data-testid="stButton"]:has(+ [data-testid="stButton"]) { display: inline !important; }
-
-    .nav-chip-row { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin: 0.1rem 0 0.65rem 0; }
-
-    /* Target por key — Streamlit expone el key como aria-label o data-testid indirecto */
-    div[data-testid="column"] div.stButton button {
+    #crm_nav button, #proba_nav button, #ocup_nav button {
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -1657,7 +1648,7 @@ st.markdown(
         cursor: pointer !important;
         transition: filter 0.15s ease, transform 0.15s ease !important;
     }
-    div[data-testid="column"] div.stButton button:hover {
+    #crm_nav button:hover, #proba_nav button:hover, #ocup_nav button:hover {
         filter: brightness(0.94) !important;
         transform: translateY(-1px) !important;
     }
