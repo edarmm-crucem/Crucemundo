@@ -1624,63 +1624,70 @@ st.markdown(
        )
 
 st.markdown(
-    '''
+    """
     <style>
-    div[data-testid="stButton"][id="crm_nav"] button {
-        background: #FDE8F0 !important;
-        color: #1F2937 !important;
-        border: 1px solid #E8789A !important;
+    /* Botones de navegación tipo nav-chip */
+    div[data-testid="stButton"]:has(button[data-testid="baseButton-secondary"]) button,
+    button[key="crm_nav"], button[key="proba_nav"], button[key="ocup_nav"] { all: unset; }
+
+    [data-testid="stButton"]:has(+ [data-testid="stButton"]) { display: inline !important; }
+
+    .nav-chip-row { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin: 0.1rem 0 0.65rem 0; }
+
+    /* Target por key — Streamlit expone el key como aria-label o data-testid indirecto */
+    div[data-testid="column"] div.stButton button {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 0.34rem 0.82rem !important;
         border-radius: 999px !important;
+        background: #E0ECFF !important;
+        border: 1px solid #BFD4FF !important;
+        color: #1E4FBF !important;
         font-size: 0.66rem !important;
         font-weight: 800 !important;
-        letter-spacing: 0.06em !important;
+        font-family: "DM Sans", sans-serif !important;
+        letter-spacing: 0.08em !important;
         text-transform: uppercase !important;
-        padding: 0.34rem 0.82rem !important;
-        line-height: 1 !important;
+        white-space: nowrap !important;
         box-shadow: 0 2px 8px rgba(15,23,42,0.06) !important;
+        line-height: 1 !important;
         min-height: 0 !important;
         height: auto !important;
+        cursor: pointer !important;
+        transition: filter 0.15s ease, transform 0.15s ease !important;
+    }
+    div[data-testid="column"] div.stButton button:hover {
+        filter: brightness(0.94) !important;
+        transform: translateY(-1px) !important;
     }
     </style>
-    ''',
+    """,
     unsafe_allow_html=True,
 )
-chip_col1, crm_col1, chip_col2, crm_col2, chip_col3, ocup_col, _ = st.columns(
-    [0.2, 1, 0.2, 1, 0.2, 1, 5], gap="small"
+
+nav_label_crm, nav_btn_crm, nav_label_fit, nav_btn_fit, nav_label_ocup, nav_btn_ocup, _ = st.columns(
+    [0.18, 0.85, 0.18, 0.95, 0.18, 0.85, 5], gap="small"
 )
 
-with chip_col1:
-    st.markdown("""
-    <div style="margin-top:-6px;">
-        <span class="web-chip-blue">CRM</span>
-    </div>
-    """, unsafe_allow_html=True)
-
-with crm_col1:
-    if st.button("MS Vista Rio 2026 CRM", key="crm_nav", use_container_width=True):
+with nav_label_crm:
+    st.markdown('<div style="padding-top:2px"><span class="web-chip-blue">CRM</span></div>', unsafe_allow_html=True)
+with nav_btn_crm:
+    if st.button("MS Vista Rio 2026", key="crm_nav", use_container_width=False):
         st.switch_page("pages/MS_VISTA_RIO_2026_CRM.py")
 
-with chip_col2:
-    st.markdown("""
-    <div style="margin-top:-6px;">
-        <span class="web-chip-blue">Ventas FIT</span>
-    </div>
-    """, unsafe_allow_html=True)
-
-with crm_col2:
-    if st.button("Ventas FIT - pyton mode", key="proba_nav", use_container_width=True):
+with nav_label_fit:
+    st.markdown('<div style="padding-top:2px"><span class="web-chip-blue">FIT</span></div>', unsafe_allow_html=True)
+with nav_btn_fit:
+    if st.button("Ventas FIT", key="proba_nav", use_container_width=False):
         st.switch_page("pages/VENTAS_FIT.py")
 
-with chip_col3:
-    st.markdown("""
-    <div style="margin-top:-6px;">
-        <span class="web-chip-blue">OCUP</span>
-    </div>
-    """, unsafe_allow_html=True)
-
-with ocup_col:
-    if st.button("🌍 Ocupación/Occupancy", key="ocup_nav", use_container_width=True):
-        st.switch_page("pages/OCUP.py")       
+with nav_label_ocup:
+    st.markdown('<div style="padding-top:2px"><span class="web-chip-blue">OCUP</span></div>', unsafe_allow_html=True)
+with nav_btn_ocup:
+    if st.button("Ocupación / Occupancy", key="ocup_nav", use_container_False):
+        st.switch_page("pages/OCUP.py")
+        
 # ============================================================
 # BLOQUE 19: TARJETAS DE ACCIÓN — DEFINICIÓN Y RENDER
 # ============================================================
