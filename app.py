@@ -1486,12 +1486,7 @@ st.markdown(
     @media (max-width: 1300px) {
         .portal-header, .portal-footer { flex-direction: column; align-items: flex-start; }
     }
-    div[data-testid="stButton"] button {
-        padding: 0.15rem 0.6rem !important;
-        font-size: 0.15rem !important;
-        height: auto !important;
-        min-height: 0 !important;
-    }
+
 
         .crm-btn {
         display: inline-flex; align-items: center; gap: 0.4rem;
