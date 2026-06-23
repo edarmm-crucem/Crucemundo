@@ -241,23 +241,25 @@ section[data-testid="stSidebar"]   { display: none !important; }
 .cat-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
 .cat-table th {
     color: #94A3B8; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.06em; padding: 0 0 0.3rem 0; text-align: right;
-    font-size: 0.62rem;
+    letter-spacing: 0.06em; padding: 0 0 0.4rem 0; text-align: center;
+    font-size: 0.6rem;
 }
 .cat-table th:first-child { text-align: left; }
 .cat-table td {
-    padding: 0.22rem 0; border-top: 1px solid #F1F5F9;
-    font-weight: 700; text-align: right; color: #1F2937;
-    white-space: nowrap;
+    padding: 0.4rem 0.15rem; border-top: 1px solid #F1F5F9;
+    text-align: center; color: #1F2937; vertical-align: middle;
 }
-.cat-table td:first-child { text-align: left; color: #374151; font-weight: 800; }
-.cat-table td.sold  { color: #991B1B; }
-.cat-table td.hold  { color: #92400E; }
-.cat-table td.free  { color: #6B7280; }
-.cat-table td .pct  {
-    display: inline-block; font-weight: 800; font-size: 0.6rem;
-    padding: 0.05rem 0.32rem; border-radius: 999px; margin-left: 0.2rem;
-    line-height: 1.4;
+.cat-table td:first-child { text-align: left; color: #374151; font-weight: 800; font-size: 0.78rem; }
+
+/* Bloque número + % dentro de cada celda */
+.cell-stack { display: flex; flex-direction: column; align-items: center; gap: 0.05rem; }
+.cell-pct {
+    font-weight: 900; font-size: 1.05rem; line-height: 1;
+    padding: 0.08rem 0.45rem; border-radius: 8px;
+}
+.cell-n {
+    font-weight: 700; font-size: 0.6rem; color: #94A3B8;
+    line-height: 1;
 }
 
 /* % global salida */
@@ -374,10 +376,19 @@ def _render_salida(sal: str, por_cat: dict) -> str:
         filas += f"""
         <tr>
             <td>{cat}</td>
-            <td>{t}</td>
-            <td class="sold">{v} <span class="pct" style="background:{bg_v};color:{fg_v};">{pct_v_cat}%</span></td>
-            <td class="hold">{r} <span class="pct" style="background:{bg_r};color:{fg_r};">{pct_r_cat}%</span></td>
-            <td class="free">{l} <span class="pct" style="background:{bg_l};color:{fg_l};">{pct_l_cat}%</span></td>
+            <td><div class="cell-stack"><span class="cell-n">{t}</span></div></td>
+            <td><div class="cell-stack">
+                    <span class="cell-pct" style="background:{bg_v};color:{fg_v};">{pct_v_cat}%</span>
+                    <span class="cell-n">{v}</span>
+                </div></td>
+            <td><div class="cell-stack">
+                    <span class="cell-pct" style="background:{bg_r};color:{fg_r};">{pct_r_cat}%</span>
+                    <span class="cell-n">{r}</span>
+                </div></td>
+            <td><div class="cell-stack">
+                    <span class="cell-pct" style="background:{bg_l};color:{fg_l};">{pct_l_cat}%</span>
+                    <span class="cell-n">{l}</span>
+                </div></td>
         </tr>"""
 
     return f"""
