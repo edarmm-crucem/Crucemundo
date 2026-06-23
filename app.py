@@ -1679,7 +1679,7 @@ with chip_col3:
     """, unsafe_allow_html=True)
 
 with ocup_col:
-    if st.button("🌍 Ocupación Global / Global Occupancy", key="ocup_nav", use_container_width=True):
+    if st.button("🌍 Ocupación/Occupancy", key="ocup_nav", use_container_width=True):
         st.switch_page("pages/OCUP.py")       
 # ============================================================
 # BLOQUE 19: TARJETAS DE ACCIÓN — DEFINICIÓN Y RENDER
