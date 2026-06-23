@@ -325,14 +325,21 @@ def _clase(pct: float) -> str:
     if pct > 0:   return "low"
     return "empty"
 
-def _pct_pill_colors(pct: float) -> tuple:
-    """Devuelve (bg, fg) según el valor del % siguiendo la misma escala de _color()."""
-    pct = max(0, pct)  # por si acaso, nunca negativo; sin tope superior
-    if pct >= 90: return "#FEE2E2", "#B91C1C"   # rojo
-    if pct >= 70: return "#FFEDD5", "#C2410C"   # naranja
-    if pct >= 40: return "#FEF9C3", "#A16207"   # amarillo
-    if pct > 0:   return "#DCFCE7", "#15803D"   # verde
-    return "#F1F5F9", "#64748B"                  # 0% gris neutro
+def _pct_pill_colors(pct: float, invertido: bool = False) -> tuple:
+    """
+    Devuelve (bg, fg) según el valor del %.
+    Por defecto (Vendidas/Reservas): alto = malo/atención -> rojo; bajo -> verde.
+    invertido=True (Libres): alto = bueno (disponibilidad) -> verde; bajo -> rojo.
+    """
+    pct = max(0, pct)  # nunca negativo; sin tope superior
+    p = (100 - min(pct, 100)) if invertido else pct
+    if p >= 90: return "#FEE2E2", "#B91C1C"   # rojo
+    if p >= 70: return "#FFEDD5", "#C2410C"   # naranja
+    if p >= 40: return "#FEF9C3", "#A16207"   # amarillo
+    if p > 0:   return "#DCFCE7", "#15803D"   # verde
+    if invertido:
+        return "#DCFCE7", "#15803D"   # 0% restante = 100% libre -> verde (disponibilidad total)
+    return "#F1F5F9", "#64748B"        # 0% vendido/reservado -> gris neutro
 
 # ── Render tarjeta de salida ──────────────────────────────────────────────────
 def _render_salida(sal: str, por_cat: dict) -> str:
@@ -363,7 +370,7 @@ def _render_salida(sal: str, por_cat: dict) -> str:
         pct_l_cat = round(l / t * 100) if t else 0
         bg_v, fg_v = _pct_pill_colors(pct_v_cat)
         bg_r, fg_r = _pct_pill_colors(pct_r_cat)
-        bg_l, fg_l = _pct_pill_colors(pct_l_cat)
+        bg_l, fg_l = _pct_pill_colors(pct_l_cat, invertido=True)
         filas += f"""
         <tr>
             <td>{cat}</td>
