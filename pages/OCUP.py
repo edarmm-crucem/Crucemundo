@@ -30,6 +30,19 @@ LOGOURL = "favicon1.png"
 FOLDER_CRM_ROOT = "1aPckLqAn_sKHaMJPBdA0hnW2jegT1rT-"
 TIMEZONE        = pytz.timezone("Europe/Madrid")
 
+
+import base64
+
+def getlogobase64():
+    try:
+        with open("favicon1.png", "rb") as f:
+            return "data:image/png;base64," + base64.b64encode(f.read()).decode()
+    except Exception:
+        return ""
+
+LOGOURL = getlogobase64()
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def now():
     return datetime.now(pytz.utc).astimezone(TIMEZONE).replace(tzinfo=None)
