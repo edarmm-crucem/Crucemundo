@@ -1645,9 +1645,11 @@ st.markdown(
     ''',
     unsafe_allow_html=True,
 )
-chip_col, crm_col1, crm_col2 = st.columns([0.2, 1, 1], gap="small")
+chip_col1, crm_col1, chip_col2, crm_col2, chip_col3, ocup_col, _ = st.columns(
+    [0.2, 1, 0.2, 1, 0.2, 1, 5], gap="small"
+)
 
-with chip_col:
+with chip_col1:
     st.markdown("""
     <div style="margin-top:-6px;">
         <span class="web-chip-blue">CRM</span>
@@ -1658,20 +1660,27 @@ with crm_col1:
     if st.button("MS Vista Rio 2026 CRM", key="crm_nav", use_container_width=True):
         st.switch_page("pages/MS_VISTA_RIO_2026_CRM.py")
 
+with chip_col2:
+    st.markdown("""
+    <div style="margin-top:-6px;">
+        <span class="web-chip-blue">Ventas FIT</span>
+    </div>
+    """, unsafe_allow_html=True)
+
 with crm_col2:
     if st.button("Ventas FIT - pyton mode", key="proba_nav", use_container_width=True):
         st.switch_page("pages/VENTAS_FIT.py")
-# ── Botón Ocupación Global ──────────────────────────────────
-chip_col2, ocup_col, _ = st.columns([0.2, 1, 5], gap="small")
-with chip_col2:
+
+with chip_col3:
     st.markdown("""
     <div style="margin-top:-6px;">
         <span class="web-chip-blue">OCUP</span>
     </div>
     """, unsafe_allow_html=True)
+
 with ocup_col:
     if st.button("🌍 Ocupación Global / Global Occupancy", key="ocup_nav", use_container_width=True):
-        st.switch_page("pages/OCUP.py")        
+        st.switch_page("pages/OCUP.py")       
 # ============================================================
 # BLOQUE 19: TARJETAS DE ACCIÓN — DEFINICIÓN Y RENDER
 # ============================================================
