@@ -1685,7 +1685,7 @@ with nav_btn_fit:
 with nav_label_ocup:
     st.markdown('<div style="padding-top:2px"><span class="web-chip-blue">OCUP</span></div>', unsafe_allow_html=True)
 with nav_btn_ocup:
-    if st.button("Ocupación / Occupancy", key="ocup_nav", use_container_False):
+    if st.button("Ocupación / Occupancy", key="ocup_nav", use_container_width=False):
         st.switch_page("pages/OCUP.py")
         
 # ============================================================
