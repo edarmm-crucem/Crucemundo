@@ -26,8 +26,7 @@ if not st.session_state.get("authenticated"):
     st.stop()
 
 # ── Constantes ────────────────────────────────────────────────────────────────
-LOGOID          = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
-LOGOURL         = f"https://lh3.googleusercontent.com/d/{LOGOID}"
+LOGOURL = "favicon1.png"
 FOLDER_CRM_ROOT = "1aPckLqAn_sKHaMJPBdA0hnW2jegT1rT-"
 TIMEZONE        = pytz.timezone("Europe/Madrid")
 
