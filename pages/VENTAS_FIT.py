@@ -43,8 +43,7 @@ sheets_rate_limiter = RateLimiter(max_calls=50, per_seconds=60)
 
 # ── constantes ──────────────────────────────────────────────
 DRIVEROOTID   = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
-LOGOID        = "1N7eaCKP1Jeg8KuDXRjJ8t_ZLhnKStMZ8"
-LOGOURL       = f"https://lh3.googleusercontent.com/d/{LOGOID}"
+LOGOURL = "favicon1.png"
 TIMEZONE      = pytz.timezone("Europe/Madrid")
 COLUMNS_ORDER = [
     "#",
