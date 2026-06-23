@@ -90,6 +90,17 @@ SHIPCODEMAP = {
 }
 SHIPCODETONAME = {v: k for k, v in SHIPCODEMAP.items()}
 
+import base64
+
+def getlogobase64():
+    try:
+        with open("favicon1.png", "rb") as f:
+            return "data:image/png;base64," + base64.b64encode(f.read()).decode()
+    except Exception:
+        return ""
+
+LOGOURL = getlogobase64()
+
 
 # ============================================================
 # BLOQUE 3: ESTADO DE SESIÓN — DEFAULTS Y GRUPOS
