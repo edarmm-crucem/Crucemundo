@@ -87,6 +87,7 @@ SHIPCODEMAP = {
     "MS_VISTAMILLA": "VMI",
     "MS_VISTA_RIO": "VRI",
     "MS_CRUCE_RIO": "CRI",
+    "MS_CRUCENOVA": "CNV",
 }
 SHIPCODETONAME = {v: k for k, v in SHIPCODEMAP.items()}
 
