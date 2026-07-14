@@ -292,7 +292,13 @@ def read_sheet_data(ssid, sheet_title, year):
     }
 
 # ── Lectura de un libro completo ─────────────────────────────
-def read_book(ssid, year, on_row_cb=None):
+def read_book(ssid, year, on_row_cb=None, on_sheet_cb=None):
+    """
+    on_row_cb:   se llama con cada fila válida extraída (para acumular / pintar en vivo)
+    on_sheet_cb: se llama tras procesar CADA hoja (haya dado datos o no), solo para
+                 generar actividad hacia el frontend y evitar timeouts de conexión
+                 en libros con muchas hojas.
+    """
     results = []
     try:
         sheets = get_sheet_titles_ids(ssid)
@@ -308,12 +314,15 @@ def read_book(ssid, year, on_row_cb=None):
                     on_row_cb(row)
         except Exception as e:
             st.warning(f"Error leyendo hoja '{sh['title']}' del libro `{ssid}`: {e}")
+        finally:
+            if on_sheet_cb:
+                on_sheet_cb()
     return results
 
 # ── Escaneo anual ────────────────────────────────────────────
 SALIDA_PATTERN = re.compile(r"^[A-Z0-9_]+_\d{6}$", re.IGNORECASE)
 
-def scan_year(year, progress_cb=None, on_row_verified=None):
+def scan_year(year, progress_cb=None, on_row_verified=None, on_sheet_ping=None):
     year_id = get_year_folder_id(year)
     if not year_id:
         return []
@@ -335,7 +344,11 @@ def scan_year(year, progress_cb=None, on_row_verified=None):
             ssid  = fobj["id"]
             if progress_cb:
                 progress_cb(processed, total_files, f"{boat_name} / {fname}")
-            rows = read_book(ssid, year, on_row_cb=on_row_verified)
+            rows = read_book(
+                ssid, year,
+                on_row_cb=on_row_verified,
+                on_sheet_cb=on_sheet_ping,
+            )
             results.extend(rows)
             processed += 1
 
@@ -498,6 +511,7 @@ if run_scan and selected_year:
     st.session_state.vf_extracted_at = None
 
     prog_bar        = st.progress(0.0, text="Iniciando escaneo…")
+    live_table_slot = st.empty()   # ⚠️ se crea UNA sola vez, fuera del bucle
     rows_acumuladas = []
 
     def update_progress(done, total, label):
@@ -505,13 +519,25 @@ if run_scan and selected_year:
         prog_bar.progress(min(pct, 1.0), text=f"Procesando {done}/{total}: {label}")
 
     def on_row_verified(row):
-        # Solo acumulamos en memoria, CERO actualizaciones de UI.
-        # Cualquier st.empty().xxx() dentro del bucle hace que Streamlit
-        # rerenderice la página entera y resetee la vista al inicio.
         rows_acumuladas.append(row)
+        if len(rows_acumuladas) % 20 == 0:
+            df_parcial = pd.DataFrame(rows_acumuladas, columns=DATA_COLUMNS)
+            live_table_slot.dataframe(
+                df_parcial.tail(300),
+                use_container_width=True,
+                height=420,
+            )
+
+    def on_sheet_ping():
+        pass
 
     try:
-        rows = scan_year(selected_year, progress_cb=update_progress, on_row_verified=on_row_verified)
+        rows = scan_year(
+            selected_year,
+            progress_cb=update_progress,
+            on_row_verified=on_row_verified,
+            on_sheet_ping=on_sheet_ping,
+        )
         st.session_state.vf_results      = rows
         st.session_state.vf_year_loaded  = selected_year
         st.session_state.vf_extracted_at = now().strftime("%d/%m/%Y %H:%M")
@@ -525,6 +551,7 @@ if run_scan and selected_year:
         st.warning(f"Escaneo interrumpido. Se han procesado {len(rows_acumuladas)} reservas antes del error.")
     finally:
         prog_bar.empty()
+        live_table_slot.empty()
 
 # ── Resultado + filtros ──────────────────────────────────────
 rows         = st.session_state.get("vf_results")
@@ -591,41 +618,44 @@ if rows:
     if df.empty:
         st.info("Sin resultados para los filtros aplicados.")
     else:
-        df_show = df[DATA_COLUMNS].copy().reset_index(drop=True)
-        df_show.index = df_show.index + 1
+        try:
+            df_show = df[DATA_COLUMNS].copy().reset_index(drop=True)
+            df_show.index = df_show.index + 1
 
-        def estado_txt(v):
-            u = str(v).strip().upper()
-            if "CONFIRM" in u: return f"✅ {v}"
-            if "CANCEL"  in u: return f"❌ {v}"
-            if "NO CONF" in u: return f"⚠️ {v}"
-            return v
+            def estado_txt(v):
+                u = str(v).strip().upper()
+                if "CONFIRM" in u: return f"✅ {v}"
+                if "CANCEL"  in u: return f"❌ {v}"
+                if "NO CONF" in u: return f"⚠️ {v}"
+                return v
 
-        def pago_txt(v):
-            u = str(v).strip().upper()
-            if "PAGADO" in u: return f"✅ {v}"
-            if "PTE"    in u: return f"⏳ {v}"
-            if "DEPOSI" in u: return f"💳 {v}"
-            return v
+            def pago_txt(v):
+                u = str(v).strip().upper()
+                if "PAGADO" in u: return f"✅ {v}"
+                if "PTE"    in u: return f"⏳ {v}"
+                if "DEPOSI" in u: return f"💳 {v}"
+                return v
 
-        df_show["ESTADO RESERVA"] = df_show["ESTADO RESERVA"].apply(estado_txt)
-        df_show["PAGO"]           = df_show["PAGO"].apply(pago_txt)
+            df_show["ESTADO RESERVA"] = df_show["ESTADO RESERVA"].apply(estado_txt)
+            df_show["PAGO"]           = df_show["PAGO"].apply(pago_txt)
 
-        st.dataframe(
-            df_show,
-            use_container_width=True,
-            height=600,
-            column_config={
-                "NETO":           st.column_config.NumberColumn("NETO",           format="%.2f €"),
-                "BRUTO":          st.column_config.NumberColumn("BRUTO",          format="%.2f €"),
-                "PERSONAS":       st.column_config.NumberColumn("PERSONAS",       format="%d"),
-                "CONFIRMACION":   st.column_config.TextColumn("CONFIRMACION",     width="medium"),
-                "ITINERARIO":     st.column_config.TextColumn("ITINERARIO",       width="large"),
-                "AGENCIA":        st.column_config.TextColumn("AGENCIA",          width="medium"),
-                "ESTADO RESERVA": st.column_config.TextColumn("ESTADO RESERVA",   width="medium"),
-                "PAGO":           st.column_config.TextColumn("PAGO",             width="medium"),
-            },
-        )
+            st.dataframe(
+                df_show,
+                use_container_width=True,
+                height=600,
+                column_config={
+                    "NETO":           st.column_config.NumberColumn("NETO",           format="%.2f €"),
+                    "BRUTO":          st.column_config.NumberColumn("BRUTO",          format="%.2f €"),
+                    "PERSONAS":       st.column_config.NumberColumn("PERSONAS",       format="%d"),
+                    "CONFIRMACION":   st.column_config.TextColumn("CONFIRMACION",     width="medium"),
+                    "ITINERARIO":     st.column_config.TextColumn("ITINERARIO",       width="large"),
+                    "AGENCIA":        st.column_config.TextColumn("AGENCIA",          width="medium"),
+                    "ESTADO RESERVA": st.column_config.TextColumn("ESTADO RESERVA",   width="medium"),
+                    "PAGO":           st.column_config.TextColumn("PAGO",             width="medium"),
+                },
+            )
+        except Exception as e:
+            st.exception(e)
 
 st.markdown(
     '<div class="portal-footer"><div class="footer-text">Crucemundo Hub · Ventas FIT</div></div>',
