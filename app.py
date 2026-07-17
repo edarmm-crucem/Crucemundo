@@ -687,14 +687,14 @@ def searchagencies(query):
 
 
 # ============================================================
-# BLOQUE 11: LÓGICA DE NEGOCIO — CLIENTES
+# BLOQUE 11: LÓGICA DE NEGOCIO — 
 # ============================================================
 
-def getmasterclienteslastmodified():
+def getmasterlastmodified():
     try:
         service = getdriveservice()
         file = service.files().get(
-            fileId=MASTERCLIENTESSHEETID,
+            fileId=MASTERSHEETID,
             fields="modifiedTime, name",
             supportsAllDrives=True,
         ).execute()
@@ -707,21 +707,21 @@ def getmasterclienteslastmodified():
         return None
 
 
-def getclientes():
+def get():
     sheetsservice = getsheetsservice()
     spreadsheet = sheetsservice.spreadsheets().get(
-        spreadsheetId=MASTERCLIENTESSHEETID
+        spreadsheetId=MASTERSHEETID
     ).execute()
     sheets = spreadsheet.get("sheets", [])
     if not sheets:
-        raise Exception("El archivo MASTER CLIENTES no tiene hojas.")
+        raise Exception("El archivo MASTER  no tiene hojas.")
     firsttitle = sheets[0]["properties"]["title"]
     response = sheetsservice.spreadsheets().values().get(
-        spreadsheetId=MASTERCLIENTESSHEETID,
+        spreadsheetId=MASTERSHEETID,
         range=f"{firsttitle}!A:E",
     ).execute()
     rows = response.get("values", [])
-    clientes = []
+     = []
     for idx, row in enumerate(rows, start=1):
         if idx == 1:
             continue
@@ -737,16 +737,16 @@ def getclientes():
         data["searchblob"] = " ".join(
             normalizetext(data[field]) for field in CLIENTFIELDS
         )
-        clientes.append(data)
-    return clientes
+        .append(data)
+    return 
 
 
-def searchclientes(query):
-    clientes = getclientes()
+def search(query):
+     = get()
     q = normalizetext(query)
     if not q:
         return []
-    return [c for c in clientes if q in c["searchblob"]]
+    return [c for c in  if q in c["searchblob"]]
 
 
 # ============================================================
@@ -1383,7 +1383,7 @@ st.markdown(
     .card-irconfirmacion { background: #F0F3F8; border-color: #CFD8E6; --card-btn-bg:#E0E7F1; --card-btn-border:#7A90B0; --card-btn-text:#4A5874; --card-btn-shadow:rgba(74,88,116,0.16); }
     .card-informebarco { background: #EAF7FB; border-color: #BFDDE8; --card-btn-bg:#D2EDF6; --card-btn-border:#3A90B0; --card-btn-text:#2B6881; --card-btn-shadow:rgba(43,104,129,0.16); }
     .card-nuevobarco { background: #EEF6FF; border-color: #C7DCF9; --card-btn-bg:#DCEBFF; --card-btn-border:#4A80CC; --card-btn-text:#27518A; --card-btn-shadow:rgba(39,81,138,0.16); }
-    .card-buscarclientes { background: #F3EEFF; border-color: #D8C8F9; --card-btn-bg:#E5D8FF; --card-btn-border:#8A5AE0; --card-btn-text:#5230A0; --card-btn-shadow:rgba(82,48,160,0.16); }
+    .card-buscar { background: #F3EEFF; border-color: #D8C8F9; --card-btn-bg:#E5D8FF; --card-btn-border:#8A5AE0; --card-btn-text:#5230A0; --card-btn-shadow:rgba(82,48,160,0.16); }
 
     .action-top { display: flex; align-items: flex-start; gap: 0.65rem; }
     .action-icon {
@@ -1437,23 +1437,23 @@ st.markdown(
     }
 
     .agency-card, .cvcfit-card, .cvcfit-status-card, .cvcagencias-card, .cvcagencias-status-card,
-    .process-card, .irconfirmacion-card, .informebarco-card, .buscarclientes-card {
+    .process-card, .irconfirmacion-card, .informebarco-card, .buscar-card {
         background: #FBFCFF; border: 1px solid #DCE5F0; border-radius: 18px; padding: 1rem; margin-top: 0.75rem;
         box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
     }
 
     .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid,
-    .irconfirmacion-grid, .informebarco-grid, .buscarclientes-grid {
+    .irconfirmacion-grid, .informebarco-grid, .buscar-grid {
         display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem 1rem;
     }
 
     .agency-item-label, .cvcfit-item-label, .cvcagencias-item-label, .process-item-label,
-    .irconfirmacion-item-label, .informebarco-item-label, .buscarclientes-item-label {
+    .irconfirmacion-item-label, .informebarco-item-label, .buscar-item-label {
         font-size: 0.68rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.16rem; font-weight: 700;
     }
 
     .agency-item-value, .cvcfit-item-value, .cvcagencias-item-value, .process-item-value,
-    .irconfirmacion-item-value, .informebarco-item-value, .buscarclientes-item-value {
+    .irconfirmacion-item-value, .informebarco-item-value, .buscar-item-value {
         font-size: 0.82rem; color: #1F2937; line-height: 1.35; word-break: break-word; font-weight: 600;
     }
 
@@ -1492,7 +1492,7 @@ st.markdown(
 
     @media (max-width: 1600px) {
         .agency-grid, .cvcfit-grid, .cvcagencias-grid, .process-grid,
-        .irconfirmacion-grid, .informebarco-grid, .buscarclientes-grid { grid-template-columns: 1fr; }
+        .irconfirmacion-grid, .informebarco-grid, .buscar-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 1300px) {
         .portal-header, .portal-footer { flex-direction: column; align-items: flex-start; }
@@ -1621,7 +1621,7 @@ st.markdown(
         <a class="web-chip-green" href="{cvcfitfolderurl}" target="_blank" rel="noopener noreferrer">📁 Folder Sesiones</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit" target="_blank" rel="noopener noreferrer">📊MASTER Cabinas</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊Excursiones</a>
-        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊MASTER Clientes</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44_WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊MASTER Clientes</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCR_HJr9TCD7VWrGI6nDhMtwi27cMJL_1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊Ventas FIT</a>
         <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1GYclq4YkcTCe4Fuj_ajRnkeIJjaBFDLzQSMIMKXqdWg/edit" target="_blank" rel="noopener noreferrer">📊 Diccionario</a>
     </div>
