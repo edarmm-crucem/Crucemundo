@@ -817,7 +817,8 @@ else:
                 cap_max = 0
             pct_cab = round(cab_vendidas / total_cabinas * 100, 1) if total_cabinas else 0
             pct_pax = round(total_pax / cap_max * 100, 1) if cap_max else 0
-            pct_res = round(cab_reservas / cab_fisicas_reserva * 100, 1) if cab_fisicas_reserva else 0
+            cab_disponibles_total = total_cabinas - cab_vendidas
+            pct_res = round(cab_reservas / cab_disponibles_total * 100, 1) if cab_disponibles_total else 0
             alerta_res = "⚠️ Overbooking" if pct_res > 100 else ""
             barra_sold = min(pct_cab, 100)
             barra_res  = min(pct_res, 100)
@@ -872,7 +873,8 @@ else:
                 n_libres   = sum(1 for d in datos if d.get("cabina") in cabinas_cat and d.get("estado") == "LIBRE")
                 pax_cat    = sum(int(d.get("pax", 0) or 0) for d in datos if d.get("cabina") in cabinas_cat and d.get("estado") == "VENDIDA")
                 pct        = round(n_vendidas / n_total * 100, 1) if n_total else 0
-                pct_r      = round(n_reservas / n_fisicas_reserva * 100, 1) if n_fisicas_reserva else 0
+                n_disponibles = n_total - n_vendidas
+                pct_r      = round(n_reservas / n_disponibles * 100, 1) if n_disponibles else 0
                 stats_cat[cat] = {"total": n_total, "vendidas": n_vendidas, "reservas": n_reservas, "fisicas_reserva": n_fisicas_reserva, "libres": n_libres, "pax": pax_cat, "pct": pct, "pct_r": pct_r}
 
             t = '<table class="informe-tabla"><thead><tr>'
@@ -925,7 +927,8 @@ else:
             tot_t   = sum(s["total"]    for s in stats_cat.values())
             tot_p   = sum(s["pax"]      for s in stats_cat.values())
             tot_pct = round(tot_v / tot_t * 100, 1) if tot_t else 0
-            tot_pct_r = round(tot_r / tot_fr * 100, 1) if tot_fr else 0
+            tot_disponibles = tot_t - tot_v
+            tot_pct_r = round(tot_r / tot_disponibles * 100, 1) if tot_disponibles else 0
 
             if tot_pct < 40:   grad_tot = "linear-gradient(90deg, #22C55E, #86EFAC)"
             elif tot_pct < 70: grad_tot = "linear-gradient(90deg, #22C55E, #EAB308)"
