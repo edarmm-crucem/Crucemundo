@@ -687,14 +687,15 @@ def searchagencies(query):
 
 
 # ============================================================
-# BLOQUE 11: LÓGICA DE NEGOCIO — 
+# ============================================================
+# BLOQUE 11: LÓGICA DE NEGOCIO — CLIENTES
 # ============================================================
 
-def getmasterlastmodified():
+def getmasterclienteslastmodified():
     try:
         service = getdriveservice()
         file = service.files().get(
-            fileId=MASTERSHEETID,
+            fileId=MASTERCLIENTESSHEETID,
             fields="modifiedTime, name",
             supportsAllDrives=True,
         ).execute()
@@ -707,21 +708,21 @@ def getmasterlastmodified():
         return None
 
 
-def get():
+def getclientes():
     sheetsservice = getsheetsservice()
     spreadsheet = sheetsservice.spreadsheets().get(
-        spreadsheetId=MASTERSHEETID
+        spreadsheetId=MASTERCLIENTESSHEETID
     ).execute()
     sheets = spreadsheet.get("sheets", [])
     if not sheets:
-        raise Exception("El archivo MASTER  no tiene hojas.")
+        raise Exception("El archivo MASTER CLIENTES no tiene hojas.")
     firsttitle = sheets[0]["properties"]["title"]
     response = sheetsservice.spreadsheets().values().get(
-        spreadsheetId=MASTERSHEETID,
+        spreadsheetId=MASTERCLIENTESSHEETID,
         range=f"{firsttitle}!A:E",
     ).execute()
     rows = response.get("values", [])
-     = []
+    clientes = []
     for idx, row in enumerate(rows, start=1):
         if idx == 1:
             continue
@@ -737,17 +738,16 @@ def get():
         data["searchblob"] = " ".join(
             normalizetext(data[field]) for field in CLIENTFIELDS
         )
-        .append(data)
-    return 
+        clientes.append(data)
+    return clientes
 
 
-def search(query):
-     = get()
+def searchclientes(query):
+    clientes = getclientes()
     q = normalizetext(query)
     if not q:
         return []
-    return [c for c in  if q in c["searchblob"]]
-
+    return [c for c in clientes if q in c["searchblob"]]
 
 # ============================================================
 # BLOQUE 12: LÓGICA DE NEGOCIO — DRIVE / SALIDAS / CRUCEROS
