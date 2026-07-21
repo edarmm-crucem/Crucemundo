@@ -12,7 +12,7 @@ import streamlit as st
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-
+st.set_page_config(
     page_title="Crucemundo Hub",
     page_icon="favicon1.png",
     layout="wide",
