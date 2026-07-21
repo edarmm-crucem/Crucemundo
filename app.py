@@ -13,7 +13,6 @@ from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
-st.set_page_config(<a class="web-chip" href="https://whatsapp.com/channel/0029VbCmvLn2phHUZFcWCX2S" target="_blank" rel="noopener noreferrer">📱 Canal WhatsApp</a>
     page_title="Crucemundo Hub",
     page_icon="favicon1.png",
     layout="wide",
