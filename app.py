@@ -13,7 +13,7 @@ from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
-st.set_page_config(
+st.set_page_config(<a class="web-chip" href="https://whatsapp.com/channel/0029VbCmvLn2phHUZFcWCX2S" target="_blank" rel="noopener noreferrer">📱 Canal WhatsApp</a>
     page_title="Crucemundo Hub",
     page_icon="favicon1.png",
     layout="wide",
@@ -1608,6 +1608,7 @@ st.markdown(
         <span class="web-chip-blue">ENLACES EXTERNOS</span>
         <a class="web-chip" href="https://www.crucemundo.es" target="_blank" rel="noopener noreferrer">Crucemundo</a>
         <a class="web-chip" href="https://mail.google.com" target="_blank" rel="noopener noreferrer">Gmail</a>
+        <a class="web-chip" href="https://whatsapp.com/channel/0029VbCmvLn2phHUZFcWCX2S" target="_blank" rel="noopener noreferrer">📱 Canal WhatsApp</a>
     </div>
     ''',
     unsafe_allow_html=True,
