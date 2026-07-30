@@ -1222,20 +1222,30 @@ def deleteallfilesbyname(folderid, filename, maxretries=3):
 
 def uploadpdftofolderconfirmado(folderid, filename, pdfbytes, maxretries=5, maxconfirmretries=5):
     """
-    Borra cualquier archivo existente con ese nombre, sube el PDF nuevo y NO devuelve
-    el control hasta confirmar que aparece en la carpeta.
+    Si el PDF ya existe en la carpeta, actualiza su CONTENIDO en el mismo archivo
+    (files.update) en vez de borrar y crear uno nuevo. Esto evita el problema de permisos
+    de borrado sobre archivos que no son propiedad de la cuenta de servicio.
+    Si no existe, lo crea.
     """
     service = getdriveservice()
     delay = 3
-    subido = None
+    resultado = None
     for attempt in range(1, maxretries + 1):
         try:
-            deleteallfilesbyname(folderid, filename)
+            existing = findfilebyname(folderid, filename)
             media = MediaIoBaseUpload(io.BytesIO(pdfbytes), mimetype="application/pdf", resumable=False)
-            body = {"name": filename, "parents": [folderid]}
-            subido = service.files().create(
-                body=body, media_body=media, fields="id, name, webViewLink", supportsAllDrives=True
-            ).execute()
+            if existing:
+                resultado = service.files().update(
+                    fileId=existing["id"],
+                    media_body=media,
+                    fields="id, name, webViewLink, modifiedTime",
+                    supportsAllDrives=True,
+                ).execute()
+            else:
+                body = {"name": filename, "parents": [folderid]}
+                resultado = service.files().create(
+                    body=body, media_body=media, fields="id, name, webViewLink, modifiedTime", supportsAllDrives=True
+                ).execute()
             break
         except Exception as exc:
             status = getattr(getattr(exc, "resp", None), "status", None)
@@ -1247,15 +1257,16 @@ def uploadpdftofolderconfirmado(folderid, filename, pdfbytes, maxretries=5, maxc
 
     confirmdelay = 2
     for attempt in range(1, maxconfirmretries + 1):
-        confirmado = findfilebyname(folderid, filename)
-        if confirmado:
+        try:
+            confirmado = service.files().get(
+                fileId=resultado["id"], fields="id, name, modifiedTime", supportsAllDrives=True
+            ).execute()
             return confirmado
-        if attempt == maxconfirmretries:
-            raise Exception(f"El PDF '{filename}' se subió pero no se pudo confirmar en la carpeta tras {maxconfirmretries} intentos.")
-        time.sleep(confirmdelay)
-        confirmdelay += 1
-    return subido
-
+        except Exception:
+            if attempt == maxconfirmretries:
+                raise Exception(f"El PDF '{filename}' se subió pero no se pudo confirmar tras {maxconfirmretries} intentos.")
+            time.sleep(confirmdelay)
+            confirmdelay += 1
 
 def getexistingvouchernames(folderid, sheettitles):
     """Devuelve el conjunto de nombres de PDF que ya existen en la carpeta de vouchers."""
