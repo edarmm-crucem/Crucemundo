@@ -1149,6 +1149,32 @@ def formatestadopagobadge(value):
 # BLOQUE 13B: LÓGICA DE NEGOCIO — IMPRIMIR BONOS (VOUCHERS)
 # ============================================================
 
+
+def limpiarduplicadosvouchers(folderid):
+    """
+    Para cada nombre de archivo duplicado en la carpeta, conserva solo el más reciente
+    (por modifiedTime) y borra el resto. Devuelve cuántos se borraron.
+    """
+    service = getdriveservice()
+    items = listfolderitems(folderid, foldersonly=False)
+    porname = {}
+    for item in items:
+        porname.setdefault(item["name"].strip(), []).append(item)
+
+    borrados = 0
+    for name, filelist in porname.items():
+        if len(filelist) <= 1:
+            continue
+        filelist.sort(key=lambda f: f.get("modifiedTime", ""), reverse=True)
+        for sobrante in filelist[1:]:
+            try:
+                service.files().delete(fileId=sobrante["id"], supportsAllDrives=True).execute()
+                borrados += 1
+            except Exception:
+                pass
+    return borrados
+
+
 def deleteallfilesbyname(folderid, filename, maxretries=3):
     """Borra TODOS los archivos con ese nombre exacto en la carpeta (limpia duplicados)."""
     service = getdriveservice()
@@ -2205,9 +2231,7 @@ if st.session_state.get("opensalidaform"):
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ============================================================
-# BLOQUE 21B: PANEL — IMPRIMIR BONOS
-# ============================================================
+
 # ============================================================
 # BLOQUE 21B: PANEL — IMPRIMIR BONOS
 # ============================================================
@@ -2246,6 +2270,18 @@ if st.session_state.get("openimprimirbonosform"):
 
         if selecteddeparture:
             selectedobj = next((d for d in departures if d["nombre"] == selecteddeparture), None)
+
+            if st.button("🧹 Limpiar duplicados en la carpeta de vouchers", key="btnlimpiarduplicados"):
+                try:
+                    parentid = getparentfolderid(selectedobj["id"])
+                    folder = getorcreatefolder(parentid, f"{selectedobj['nombre']}_VOUCHERS")
+                    borrados = limpiarduplicadosvouchers(folder["id"])
+                    if borrados:
+                        st.success(f"Se han eliminado {borrados} archivo(s) duplicado(s), conservando el más reciente de cada uno.")
+                    else:
+                        st.info("No se han encontrado duplicados.")
+                except Exception as exc:
+                    st.error(f"Error limpiando duplicados: {exc}")
 
             st.markdown("#### ¿Qué quieres generar? / What do you want to generate?")
             modocol1, modocol2 = st.columns(2, gap="medium")
@@ -2378,6 +2414,8 @@ if st.session_state.get("openimprimirbonosform"):
     except Exception as exc:
         st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
+
+    
 # ============================================================
 # BLOQUE 22: PANEL — CREAR CRUCERO
 # ============================================================
