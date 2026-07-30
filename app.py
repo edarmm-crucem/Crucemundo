@@ -1145,100 +1145,11 @@ def formatestadopagobadge(value):
     return f'<span class="status-pill">{value or ""}</span>'
 
 
+
 # ============================================================
 # BLOQUE 13B: LÓGICA DE NEGOCIO — IMPRIMIR BONOS (VOUCHERS)
 # ============================================================
 
-
-def filearchivorealmente(fileid):
-    """Comprueba con una consulta directa (no listado) si el archivo realmente existe."""
-    service = getdriveservice()
-    try:
-        service.files().get(fileId=fileid, fields="id, trashed", supportsAllDrives=True).execute()
-        return True
-    except Exception as exc:
-        status = getattr(getattr(exc, "resp", None), "status", None)
-        if status == 404:
-            return False
-        raise
-
-
-def listarchivosporname(folderid, filename):
-    """Devuelve todos los archivos con ese nombre exacto en la carpeta, con su id, fecha y link."""
-    service = getdriveservice()
-    encontrados = []
-    for item in listfolderitems(folderid, foldersonly=False):
-        if item["name"].strip() == filename.strip():
-            encontrados.append({
-                "id": item["id"],
-                "name": item["name"],
-                "modifiedTime": item.get("modifiedTime", ""),
-                "createdTime": item.get("createdTime", ""),
-                "webViewLink": item.get("webViewLink") or f"https://drive.google.com/file/d/{item['id']}/view",
-            })
-    encontrados.sort(key=lambda f: f.get("modifiedTime", ""), reverse=True)
-    return encontrados
-
-def limpiarduplicadosvouchers(folderid):
-    """
-    Para cada nombre de archivo duplicado en la carpeta, conserva solo el más reciente
-    (por modifiedTime) y borra el resto. Un 404 al borrar cuenta como éxito (el archivo
-    ya no existe, que es justamente el objetivo). Devuelve (borrados, errores_reales).
-    """
-    service = getdriveservice()
-    items = listfolderitems(folderid, foldersonly=False)
-    porname = {}
-    for item in items:
-        porname.setdefault(item["name"].strip(), []).append(item)
-
-    borrados = 0
-    errores = []
-    for name, filelist in porname.items():
-        if len(filelist) <= 1:
-            continue
-        filelist.sort(key=lambda f: f.get("modifiedTime", ""), reverse=True)
-        for sobrante in filelist[1:]:
-            try:
-                service.files().delete(fileId=sobrante["id"], supportsAllDrives=True).execute()
-                borrados += 1
-            except Exception as exc:
-                status = getattr(getattr(exc, "resp", None), "status", None)
-                if status == 404:
-                    borrados += 1  # ya no existía: objetivo cumplido
-                    continue
-                errores.append(f"{name} ({sobrante.get('id')}): {str(exc) or repr(exc)}")
-    return borrados, errores
-
-def deleteallfilesbyname(folderid, filename, maxretries=3):
-    """Borra TODOS los archivos con ese nombre exacto en la carpeta (limpia duplicados)."""
-    service = getdriveservice()
-    for item in listfolderitems(folderid, foldersonly=False):
-        if item["name"].strip() == filename.strip():
-            delay = 2
-            for attempt in range(1, maxretries + 1):
-                try:
-                    service.files().delete(fileId=item["id"], supportsAllDrives=True).execute()
-                    break
-                except Exception as delexc:
-                    delstatus = getattr(getattr(delexc, "resp", None), "status", None)
-                    if delstatus == 404:
-                        break  # ya no existe, no pasa nada
-                    if attempt == maxretries:
-                        raise
-                    time.sleep(delay)
-                    delay *= 2
-                    
-def getexistingvouchernames(folderid, sheettitles):
-    """Devuelve el conjunto de nombres de PDF que ya existen en la carpeta de vouchers."""
-    items = listfolderitems(folderid, foldersonly=False)
-    nombresenfolder = {item["name"].strip() for item in items}
-    existentes = set()
-    for title in sheettitles:
-        pdfname = safefilename(title) + ".pdf"
-        if pdfname in nombresenfolder:
-            existentes.add(pdfname)
-    return existentes
-    
 def getparentfolderid(fileid):
     service = getdriveservice()
     file = service.files().get(fileId=fileid, fields="parents", supportsAllDrives=True).execute()
@@ -1289,14 +1200,33 @@ def exportvoucherpdfbytes(spreadsheetid, gid, portrait, maxretries=5):
         return response.content
 
 
+def deleteallfilesbyname(folderid, filename, maxretries=3):
+    """Borra TODOS los archivos con ese nombre exacto en la carpeta (limpia duplicados)."""
+    service = getdriveservice()
+    for item in listfolderitems(folderid, foldersonly=False):
+        if item["name"].strip() == filename.strip():
+            delay = 2
+            for attempt in range(1, maxretries + 1):
+                try:
+                    service.files().delete(fileId=item["id"], supportsAllDrives=True).execute()
+                    break
+                except Exception as delexc:
+                    delstatus = getattr(getattr(delexc, "resp", None), "status", None)
+                    if delstatus == 404:
+                        break  # ya no existe, no pasa nada
+                    if attempt == maxretries:
+                        raise
+                    time.sleep(delay)
+                    delay *= 2
+
+
 def uploadpdftofolderconfirmado(folderid, filename, pdfbytes, maxretries=5, maxconfirmretries=5):
     """
-    Sube el PDF a Drive y NO devuelve el control hasta confirmar que el archivo
-    aparece listado en la carpeta destino (con reintentos de subida y de confirmación).
+    Borra cualquier archivo existente con ese nombre, sube el PDF nuevo y NO devuelve
+    el control hasta confirmar que aparece en la carpeta.
     """
     service = getdriveservice()
     delay = 3
-    # --- Paso 1: borrar cualquier duplicado existente y subir (con reintento si Drive da 429) ---
     subido = None
     for attempt in range(1, maxretries + 1):
         try:
@@ -1314,7 +1244,7 @@ def uploadpdftofolderconfirmado(folderid, filename, pdfbytes, maxretries=5, maxc
                 delay *= 2
                 continue
             raise
-    # --- Paso 2: confirmar que está en la carpeta antes de continuar ---
+
     confirmdelay = 2
     for attempt in range(1, maxconfirmretries + 1):
         confirmado = findfilebyname(folderid, filename)
@@ -1326,10 +1256,24 @@ def uploadpdftofolderconfirmado(folderid, filename, pdfbytes, maxretries=5, maxc
         confirmdelay += 1
     return subido
 
-def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, delayseconds=2.0, overwrite_map=None):
+
+def getexistingvouchernames(folderid, sheettitles):
+    """Devuelve el conjunto de nombres de PDF que ya existen en la carpeta de vouchers."""
+    items = listfolderitems(folderid, foldersonly=False)
+    nombresenfolder = {item["name"].strip() for item in items}
+    existentes = set()
+    for title in sheettitles:
+        pdfname = safefilename(title) + ".pdf"
+        if pdfname in nombresenfolder:
+            existentes.add(pdfname)
+    return existentes
+
+
+def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, delayseconds=2.0):
     """
-    overwrite_map: dict {nombre_pdf: True/False}. Si un archivo está marcado como False,
-    se omite (no se regenera ni se sobrescribe).
+    Genera PDFs para las hojas '_VOUCHER' de una en una, de forma estrictamente secuencial:
+    exporta -> borra el PDF anterior si existe -> sube el nuevo -> confirma en la carpeta ->
+    solo entonces pasa a la siguiente.
     """
     yield {"type": "status", "msg": "Buscando hojas de vouchers..."}
     sheets = getsheettitleswithids(spreadsheetid)
@@ -1350,19 +1294,10 @@ def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, 
 
     total = len(seleccionadas)
     exitos = 0
-    omitidos = 0
     for idx, sheet in enumerate(seleccionadas, start=1):
         pdfname = safefilename(sheet["title"]) + ".pdf"
         yield {"type": "progress", "current": idx, "total": total, "file": sheet["title"],
                "msg": f"Procesando {idx}/{total}: {sheet['title']}"}
-
-        if overwrite_map is not None and overwrite_map.get(pdfname) is False:
-            omitidos += 1
-            yield {"type": "status", "msg": f"⏭ {sheet['title']} omitido (ya existía, no se reemplaza)."}
-            if idx < total:
-                time.sleep(delayseconds)
-            continue
-
         try:
             lastrow = getsheetlastrowapprox(spreadsheetid, sheet["title"])
             portrait = lastrow > 35
@@ -1374,7 +1309,7 @@ def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, 
             uploadpdftofolderconfirmado(folderid, pdfname, pdfbytes)
 
             exitos += 1
-            yield {"type": "status", "msg": f"✔ {sheet['title']} confirmado en carpeta."}
+            yield {"type": "status", "msg": f"✔ {sheet['title']} generado y confirmado en carpeta."}
         except Exception as exc:
             mensaje = str(exc).strip() or repr(exc)
             yield {"type": "error", "msg": f"Error en {sheet['title']}: {mensaje}"}
@@ -1383,10 +1318,12 @@ def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, 
                 time.sleep(delayseconds)
 
     yield {
-        "type": "done", "exitos": exitos, "total": total, "omitidos": omitidos,
+        "type": "done", "exitos": exitos, "total": total,
         "folderid": folderid,
         "folderurl": folder.get("webViewLink") or f"https://drive.google.com/drive/folders/{folderid}",
     }
+
+
     
 # ============================================================
 # BLOQUE 14: CALLBACKS DE WIDGETS (onChange)
@@ -1401,7 +1338,7 @@ def onbonosyearchange():
     st.session_state.pop("bonossalidawidget", None)
     st.session_state.bonosresult = None
     st.session_state.bonos_confirm_pending = None
-    st.session_state.bonos_overwrite_choices = {}
+    st.session_state.bonos_needs_confirm = False
 
 
 def onbonosboatchange():
@@ -1410,7 +1347,7 @@ def onbonosboatchange():
     st.session_state.pop("bonossalidawidget", None)
     st.session_state.bonosresult = None
     st.session_state.bonos_confirm_pending = None
-    st.session_state.bonos_overwrite_choices = {}
+    st.session_state.bonos_needs_confirm = False
 
 
 def onbonossalidachange():
@@ -1418,7 +1355,7 @@ def onbonossalidachange():
     st.session_state.bonosresult = None
     st.session_state.bonoslog = []
     st.session_state.bonos_confirm_pending = None
-    st.session_state.bonos_overwrite_choices = {}
+    st.session_state.bonos_needs_confirm = False
 
 
 def resetsalidadownstream(level):
@@ -2304,52 +2241,6 @@ if st.session_state.get("openimprimirbonosform"):
         if selecteddeparture:
             selectedobj = next((d for d in departures if d["nombre"] == selecteddeparture), None)
 
-            diagcol1, diagcol2 = st.columns(2, gap="medium")
-            with diagcol1:
-                if st.button("🧹 Limpiar duplicados en la carpeta de vouchers", key="btnlimpiarduplicados"):
-                    try:
-                        parentid = getparentfolderid(selectedobj["id"])
-                        folder = getorcreatefolder(parentid, f"{selectedobj['nombre']}_VOUCHERS")
-                        borrados, errores = limpiarduplicadosvouchers(folder["id"])
-                        if borrados:
-                            st.success(f"Se han eliminado {borrados} archivo(s) duplicado(s), conservando el más reciente de cada uno.")
-                        else:
-                            st.info("No se han encontrado duplicados para borrar.")
-                        if errores:
-                            st.error("Hubo errores al borrar algunos duplicados:")
-                            for err in errores:
-                                st.markdown(f'<div class="cvcfit-log-line" style="color:#D97706">{html.escape(err)}</div>', unsafe_allow_html=True)
-                    except Exception as exc:
-                        st.error(f"Error limpiando duplicados: {exc}")
-            with diagcol2:
-                if st.button("🔍 Ver duplicados detallados (diagnóstico)", key="btnverduplicados"):
-                    try:
-                        parentid = getparentfolderid(selectedobj["id"])
-                        folder = getorcreatefolder(parentid, f"{selectedobj['nombre']}_VOUCHERS")
-                        items = listfolderitems(folder["id"], foldersonly=False)
-                        porname = {}
-                        for item in items:
-                            porname.setdefault(item["name"].strip(), []).append(item)
-                        conduplicados = {}
-                        for name, lst in porname.items():
-                            reales = [f for f in lst if filearchivorealmente(f["id"])]
-                            if len(reales) > 1:
-                                conduplicados[name] = reales
-                        if not conduplicados:
-                            st.info("No hay duplicados reales confirmados (los que veías eran entradas fantasma del índice de Drive).")
-                        else:
-                            for name, lst in conduplicados.items():
-                                st.markdown(f"**{name}** — {len(lst)} copias REALES confirmadas:")
-                                for it in sorted(lst, key=lambda f: f.get("modifiedTime", ""), reverse=True):
-                                    link = it.get("webViewLink") or f"https://drive.google.com/file/d/{it['id']}/view"
-                                    st.markdown(
-                                        f'<div class="cvcfit-log-line">ID: {html.escape(it["id"])} · Modificado: {html.escape(it.get("modifiedTime",""))} · '
-                                        f'<a href="{link}" target="_blank" rel="noopener noreferrer">Abrir</a></div>',
-                                        unsafe_allow_html=True,
-                                    )
-                    except Exception as exc:
-                        st.error(f"Error listando duplicados: {exc}")
-
             st.markdown("#### ¿Qué quieres generar? / What do you want to generate?")
             modocol1, modocol2 = st.columns(2, gap="medium")
             with modocol1:
@@ -2366,7 +2257,7 @@ if st.session_state.get("openimprimirbonosform"):
             elif generaruno:
                 modo, locatorval = "UNO", bonoslocator
 
-            # Paso 0: al pulsar generar, comprobar qué PDFs ya existen antes de tocar nada
+            # Paso 0: al pulsar generar, comprobar si ya existen PDFs
             if modo and selectedobj:
                 try:
                     sheets = getsheettitleswithids(selectedobj["id"])
@@ -2379,43 +2270,46 @@ if st.session_state.get("openimprimirbonosform"):
                     existentes = getexistingvouchernames(folder["id"], [s["title"] for s in seleccionadas])
                     st.session_state.bonos_confirm_pending = {
                         "spreadsheetid": selectedobj["id"], "spreadsheetname": selectedobj["nombre"],
-                        "modo": modo, "locatorval": locatorval, "existentes": sorted(existentes),
+                        "modo": modo, "locatorval": locatorval,
+                        "totalhojas": len(seleccionadas), "existentes": sorted(existentes),
                     }
-                    st.session_state.bonos_overwrite_choices = {}
+                    st.session_state.bonos_needs_confirm = bool(existentes)
                 except Exception as exc:
-                    st.error(f"Error comprobando duplicados: {exc}")
+                    st.error(f"Error comprobando la carpeta: {exc}")
                     st.session_state.bonos_confirm_pending = None
+                    st.session_state.bonos_needs_confirm = False
 
             pending = st.session_state.get("bonos_confirm_pending")
+            needsconfirm = st.session_state.get("bonos_needs_confirm")
 
-            # Paso 1: si hay duplicados, pedir decisión antes de generar nada
-            if pending and pending["existentes"]:
-                st.warning(f"{len(pending['existentes'])} PDF(s) ya existen en la carpeta. ¿Qué hacemos con cada uno?")
-                choices = st.session_state.get("bonos_overwrite_choices", {})
-                for nombreexistente in pending["existentes"]:
-                    eleccion = st.radio(
-                        nombreexistente, options=["Reemplazar", "Omitir (mantener el actual)"],
-                        index=0, key=f"bonos_choice_{nombreexistente}", horizontal=True,
-                    )
-                    choices[nombreexistente] = (eleccion == "Reemplazar")
-                st.session_state.bonos_overwrite_choices = choices
+            # Paso 1: si ya existen PDFs, avisar y pedir confirmación (todo o nada)
+            if pending and needsconfirm:
+                nombres = pending["existentes"]
+                st.warning(
+                    f"⚠️ Ya existen {len(nombres)} PDF(s) en la carpeta de vouchers. "
+                    f"Se **borrarán y sustituirán** por los nuevos."
+                )
+                with st.expander(f"Ver los {len(nombres)} archivo(s) que se reemplazarán"):
+                    for n in nombres:
+                        st.markdown(f'<div class="cvcfit-log-line">{html.escape(n)}</div>', unsafe_allow_html=True)
 
                 confcol1, confcol2 = st.columns([1, 3])
                 with confcol1:
-                    confirmar = st.button("✅ Confirmar y generar", key="btnbonosconfirmar")
+                    confirmar = st.button("✅ Confirmar y reemplazar", key="btnbonosconfirmar")
                 with confcol2:
                     cancelar = st.button("✖ Cancelar", key="btnbonoscancelar")
 
                 if cancelar:
                     st.session_state.bonos_confirm_pending = None
-                    st.session_state.bonos_overwrite_choices = {}
+                    st.session_state.bonos_needs_confirm = False
                     st.rerun()
-                if not confirmar:
-                    pending = None  # esperar confirmación
+                if confirmar:
+                    st.session_state.bonos_needs_confirm = False
+                else:
+                    pending = None  # esperar decisión
 
-            # Paso 2: generar (sin duplicados, o tras confirmación)
-            if pending:
-                overwrite_map = st.session_state.get("bonos_overwrite_choices", {}) or {}
+            # Paso 2: generar (sin duplicados previos, o tras confirmar el reemplazo)
+            if pending and not needsconfirm and st.session_state.get("bonos_confirm_pending"):
                 progressbar = st.progress(0.0, text="Iniciando...")
                 statusbox = st.empty()
                 logbox = st.empty()
@@ -2424,7 +2318,7 @@ if st.session_state.get("openimprimirbonosform"):
                     result = None
                     for event in imprimirbonosgenerator(
                         pending["spreadsheetid"], pending["spreadsheetname"],
-                        pending["modo"], pending["locatorval"], overwrite_map=overwrite_map,
+                        pending["modo"], pending["locatorval"],
                     ):
                         etype = event.get("type")
                         if etype == "progress":
@@ -2449,13 +2343,11 @@ if st.session_state.get("openimprimirbonosform"):
                     if result:
                         st.session_state.bonosresult = result
                         st.session_state.bonoslog = loglines
-                        omitidos = result.get("omitidos", 0)
-                        if result["exitos"] + omitidos == result["total"]:
-                            st.success(f"Se han generado {result['exitos']} de {result['total']} PDFs ({omitidos} omitidos).")
+                        if result["exitos"] == result["total"]:
+                            st.success(f"Se han generado {result['exitos']} de {result['total']} PDFs correctamente.")
                         else:
                             st.warning(f"Se han generado {result['exitos']} de {result['total']} PDFs. Revisa los errores abajo.")
                     st.session_state.bonos_confirm_pending = None
-                    st.session_state.bonos_overwrite_choices = {}
                 except Exception as exc:
                     progressbar.empty()
                     statusbox.empty()
@@ -2481,9 +2373,6 @@ if st.session_state.get("openimprimirbonosform"):
     except Exception as exc:
         st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
-
-
-    
     
 # ============================================================
 # BLOQUE 22: PANEL — CREAR CRUCERO
