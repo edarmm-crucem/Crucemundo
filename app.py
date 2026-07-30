@@ -1153,7 +1153,7 @@ def formatestadopagobadge(value):
 def limpiarduplicadosvouchers(folderid):
     """
     Para cada nombre de archivo duplicado en la carpeta, conserva solo el más reciente
-    (por modifiedTime) y borra el resto. Devuelve cuántos se borraron.
+    (por modifiedTime) y borra el resto. Devuelve (borrados, errores).
     """
     service = getdriveservice()
     items = listfolderitems(folderid, foldersonly=False)
@@ -1162,6 +1162,7 @@ def limpiarduplicadosvouchers(folderid):
         porname.setdefault(item["name"].strip(), []).append(item)
 
     borrados = 0
+    errores = []
     for name, filelist in porname.items():
         if len(filelist) <= 1:
             continue
@@ -1170,10 +1171,9 @@ def limpiarduplicadosvouchers(folderid):
             try:
                 service.files().delete(fileId=sobrante["id"], supportsAllDrives=True).execute()
                 borrados += 1
-            except Exception:
-                pass
-    return borrados
-
+            except Exception as exc:
+                errores.append(f"{name} ({sobrante.get('id')}): {str(exc) or repr(exc)}")
+    return borrados, errores
 
 def deleteallfilesbyname(folderid, filename, maxretries=3):
     """Borra TODOS los archivos con ese nombre exacto en la carpeta (limpia duplicados)."""
@@ -2275,11 +2275,15 @@ if st.session_state.get("openimprimirbonosform"):
                 try:
                     parentid = getparentfolderid(selectedobj["id"])
                     folder = getorcreatefolder(parentid, f"{selectedobj['nombre']}_VOUCHERS")
-                    borrados = limpiarduplicadosvouchers(folder["id"])
+                    borrados, errores = limpiarduplicadosvouchers(folder["id"])
                     if borrados:
                         st.success(f"Se han eliminado {borrados} archivo(s) duplicado(s), conservando el más reciente de cada uno.")
                     else:
-                        st.info("No se han encontrado duplicados.")
+                        st.info("No se han encontrado duplicados para borrar.")
+                    if errores:
+                        st.error("Hubo errores al borrar algunos duplicados:")
+                        for err in errores:
+                            st.markdown(f'<div class="cvcfit-log-line" style="color:#D97706">{html.escape(err)}</div>', unsafe_allow_html=True)
                 except Exception as exc:
                     st.error(f"Error limpiando duplicados: {exc}")
 
