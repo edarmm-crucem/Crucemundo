@@ -1149,6 +1149,17 @@ def formatestadopagobadge(value):
 # BLOQUE 13B: LÓGICA DE NEGOCIO — IMPRIMIR BONOS (VOUCHERS)
 # ============================================================
 
+def getexistingvouchernames(folderid, sheettitles):
+    """Devuelve el conjunto de nombres de PDF que ya existen en la carpeta de vouchers."""
+    items = listfolderitems(folderid, foldersonly=False)
+    nombresenfolder = {item["name"].strip() for item in items}
+    existentes = set()
+    for title in sheettitles:
+        pdfname = safefilename(title) + ".pdf"
+        if pdfname in nombresenfolder:
+            existentes.add(pdfname)
+    return existentes
+    
 def getparentfolderid(fileid):
     service = getdriveservice()
     file = service.files().get(fileId=fileid, fields="parents", supportsAllDrives=True).execute()
@@ -1242,10 +1253,10 @@ def uploadpdftofolderconfirmado(folderid, filename, pdfbytes, maxretries=5, maxc
     return subido
 
 
-def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, delayseconds=2.0):
+def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, delayseconds=2.0, overwrite_map=None):
     """
-    Genera PDFs para las hojas '_VOUCHER' de uno en uno, de forma estrictamente secuencial:
-    exporta -> sube -> confirma que está en la carpeta -> solo entonces pasa al siguiente.
+    overwrite_map: dict {nombre_pdf: True/False}. Si un archivo está marcado como False,
+    se omite (no se regenera ni se sobrescribe).
     """
     yield {"type": "status", "msg": "Buscando hojas de vouchers..."}
     sheets = getsheettitleswithids(spreadsheetid)
@@ -1266,9 +1277,19 @@ def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, 
 
     total = len(seleccionadas)
     exitos = 0
+    omitidos = 0
     for idx, sheet in enumerate(seleccionadas, start=1):
+        pdfname = safefilename(sheet["title"]) + ".pdf"
         yield {"type": "progress", "current": idx, "total": total, "file": sheet["title"],
-               "msg": f"Generando {idx}/{total}: {sheet['title']}"}
+               "msg": f"Procesando {idx}/{total}: {sheet['title']}"}
+
+        if overwrite_map is not None and overwrite_map.get(pdfname) is False:
+            omitidos += 1
+            yield {"type": "status", "msg": f"⏭ {sheet['title']} omitido (ya existía, no se reemplaza)."}
+            if idx < total:
+                time.sleep(delayseconds)
+            continue
+
         try:
             lastrow = getsheetlastrowapprox(spreadsheetid, sheet["title"])
             portrait = lastrow > 35
@@ -1276,7 +1297,6 @@ def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, 
             yield {"type": "status", "msg": f"Exportando PDF de {sheet['title']}..."}
             pdfbytes = exportvoucherpdfbytes(spreadsheetid, sheet["sheetId"], portrait)
 
-            pdfname = safefilename(sheet["title"]) + ".pdf"
             yield {"type": "status", "msg": f"Subiendo {pdfname} a Drive..."}
             uploadpdftofolderconfirmado(folderid, pdfname, pdfbytes)
 
@@ -1290,13 +1310,43 @@ def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, 
                 time.sleep(delayseconds)
 
     yield {
-        "type": "done", "exitos": exitos, "total": total,
+        "type": "done", "exitos": exitos, "total": total, "omitidos": omitidos,
         "folderid": folderid,
         "folderurl": folder.get("webViewLink") or f"https://drive.google.com/drive/folders/{folderid}",
     }
+    
 # ============================================================
 # BLOQUE 14: CALLBACKS DE WIDGETS (onChange)
 # ============================================================
+
+
+def onbonosyearchange():
+    st.session_state.bonosyear = st.session_state.get("bonosyearwidget")
+    st.session_state.bonosboat = None
+    st.session_state.bonossalida = None
+    st.session_state.pop("bonosboatwidget", None)
+    st.session_state.pop("bonossalidawidget", None)
+    st.session_state.bonosresult = None
+    st.session_state.bonos_confirm_pending = None
+    st.session_state.bonos_overwrite_choices = {}
+
+
+def onbonosboatchange():
+    st.session_state.bonosboat = st.session_state.get("bonosboatwidget")
+    st.session_state.bonossalida = None
+    st.session_state.pop("bonossalidawidget", None)
+    st.session_state.bonosresult = None
+    st.session_state.bonos_confirm_pending = None
+    st.session_state.bonos_overwrite_choices = {}
+
+
+def onbonossalidachange():
+    st.session_state.bonossalida = st.session_state.get("bonossalidawidget")
+    st.session_state.bonosresult = None
+    st.session_state.bonoslog = []
+    st.session_state.bonos_confirm_pending = None
+    st.session_state.bonos_overwrite_choices = {}
+
 
 def resetsalidadownstream(level):
     if level == "year":
@@ -2178,7 +2228,7 @@ if st.session_state.get("openimprimirbonosform"):
             placeholder="Selecciona una salida / Select a departure",
             key="bonossalidawidget", on_change=onbonossalidachange, disabled=not selectedboat)
 
-        if selecteddeparture:
+if selecteddeparture:
             selectedobj = next((d for d in departures if d["nombre"] == selecteddeparture), None)
 
             st.markdown("#### ¿Qué quieres generar? / What do you want to generate?")
@@ -2197,14 +2247,66 @@ if st.session_state.get("openimprimirbonosform"):
             elif generaruno:
                 modo, locatorval = "UNO", bonoslocator
 
+            # Paso 0: al pulsar generar, comprobar qué PDFs ya existen antes de tocar nada
             if modo and selectedobj:
+                try:
+                    sheets = getsheettitleswithids(selectedobj["id"])
+                    seleccionadas = [s for s in sheets if "_VOUCHER" in s["title"].upper()]
+                    if modo == "UNO":
+                        target = str(locatorval or "").strip().upper()
+                        seleccionadas = [s for s in seleccionadas if target in s["title"].upper()]
+                    parentid = getparentfolderid(selectedobj["id"])
+                    folder = getorcreatefolder(parentid, f"{selectedobj['nombre']}_VOUCHERS")
+                    existentes = getexistingvouchernames(folder["id"], [s["title"] for s in seleccionadas])
+                    st.session_state.bonos_confirm_pending = {
+                        "spreadsheetid": selectedobj["id"], "spreadsheetname": selectedobj["nombre"],
+                        "modo": modo, "locatorval": locatorval, "existentes": sorted(existentes),
+                    }
+                    st.session_state.bonos_overwrite_choices = {}
+                except Exception as exc:
+                    st.error(f"Error comprobando duplicados: {exc}")
+                    st.session_state.bonos_confirm_pending = None
+
+            pending = st.session_state.get("bonos_confirm_pending")
+
+            # Paso 1: si hay duplicados, pedir decisión antes de generar nada
+            if pending and pending["existentes"]:
+                st.warning(f"{len(pending['existentes'])} PDF(s) ya existen en la carpeta. ¿Qué hacemos con cada uno?")
+                choices = st.session_state.get("bonos_overwrite_choices", {})
+                for nombreexistente in pending["existentes"]:
+                    eleccion = st.radio(
+                        nombreexistente, options=["Reemplazar", "Omitir (mantener el actual)"],
+                        index=0, key=f"bonos_choice_{nombreexistente}", horizontal=True,
+                    )
+                    choices[nombreexistente] = (eleccion == "Reemplazar")
+                st.session_state.bonos_overwrite_choices = choices
+
+                confcol1, confcol2 = st.columns([1, 3])
+                with confcol1:
+                    confirmar = st.button("✅ Confirmar y generar", key="btnbonosconfirmar")
+                with confcol2:
+                    cancelar = st.button("✖ Cancelar", key="btnbonoscancelar")
+
+                if cancelar:
+                    st.session_state.bonos_confirm_pending = None
+                    st.session_state.bonos_overwrite_choices = {}
+                    st.rerun()
+                if not confirmar:
+                    pending = None  # esperar confirmación
+
+            # Paso 2: generar (sin duplicados, o tras confirmación)
+            if pending:
+                overwrite_map = st.session_state.get("bonos_overwrite_choices", {}) or {}
                 progressbar = st.progress(0.0, text="Iniciando...")
                 statusbox = st.empty()
                 logbox = st.empty()
                 loglines = []
                 try:
                     result = None
-                    for event in imprimirbonosgenerator(selectedobj["id"], selectedobj["nombre"], modo, locatorval):
+                    for event in imprimirbonosgenerator(
+                        pending["spreadsheetid"], pending["spreadsheetname"],
+                        pending["modo"], pending["locatorval"], overwrite_map=overwrite_map,
+                    ):
                         etype = event.get("type")
                         if etype == "progress":
                             pct = event["current"] / event["total"]
@@ -2228,14 +2330,18 @@ if st.session_state.get("openimprimirbonosform"):
                     if result:
                         st.session_state.bonosresult = result
                         st.session_state.bonoslog = loglines
-                        if result["exitos"] == result["total"]:
-                            st.success(f"Se han generado {result['exitos']} de {result['total']} PDFs correctamente.")
+                        omitidos = result.get("omitidos", 0)
+                        if result["exitos"] + omitidos == result["total"]:
+                            st.success(f"Se han generado {result['exitos']} de {result['total']} PDFs ({omitidos} omitidos).")
                         else:
                             st.warning(f"Se han generado {result['exitos']} de {result['total']} PDFs. Revisa los errores abajo.")
+                    st.session_state.bonos_confirm_pending = None
+                    st.session_state.bonos_overwrite_choices = {}
                 except Exception as exc:
                     progressbar.empty()
                     statusbox.empty()
                     st.error(f"Error: {exc}")
+                    st.session_state.bonos_confirm_pending = None
 
         bonoslogsaved = st.session_state.get("bonoslog")
         if bonoslogsaved:
