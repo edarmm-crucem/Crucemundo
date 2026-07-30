@@ -11,6 +11,7 @@ import pytz
 import requests
 import streamlit as st
 import time
+import html
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -2226,7 +2227,10 @@ if st.session_state.get("openimprimirbonosform"):
         if bonoslogsaved:
             st.markdown('<div class="cvcfit-status-card" style="margin-top:0.75rem;">', unsafe_allow_html=True)
             st.markdown("**Incidencias**")
-            st.markdown("<br>".join(f'<div class="cvcfit-log-line">{line}</div>' for line in bonoslogsaved), unsafe_allow_html=True)
+            st.markdown(
+                "<br>".join(f'<div class="cvcfit-log-line">{html.escape(str(line))}</div>' for line in bonoslogsaved),
+                unsafe_allow_html=True,
+            )
             st.markdown("</div>", unsafe_allow_html=True)
 
         bonosresult = st.session_state.get("bonosresult")
