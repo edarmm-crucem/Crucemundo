@@ -1153,7 +1153,8 @@ def formatestadopagobadge(value):
 def limpiarduplicadosvouchers(folderid):
     """
     Para cada nombre de archivo duplicado en la carpeta, conserva solo el más reciente
-    (por modifiedTime) y borra el resto. Devuelve (borrados, errores).
+    (por modifiedTime) y borra el resto. Un 404 al borrar cuenta como éxito (el archivo
+    ya no existe, que es justamente el objetivo). Devuelve (borrados, errores_reales).
     """
     service = getdriveservice()
     items = listfolderitems(folderid, foldersonly=False)
@@ -1172,6 +1173,10 @@ def limpiarduplicadosvouchers(folderid):
                 service.files().delete(fileId=sobrante["id"], supportsAllDrives=True).execute()
                 borrados += 1
             except Exception as exc:
+                status = getattr(getattr(exc, "resp", None), "status", None)
+                if status == 404:
+                    borrados += 1  # ya no existía: objetivo cumplido
+                    continue
                 errores.append(f"{name} ({sobrante.get('id')}): {str(exc) or repr(exc)}")
     return borrados, errores
 
