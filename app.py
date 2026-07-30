@@ -1149,6 +1149,21 @@ def formatestadopagobadge(value):
 # BLOQUE 13B: LÓGICA DE NEGOCIO — IMPRIMIR BONOS (VOUCHERS)
 # ============================================================
 
+def listarchivosporname(folderid, filename):
+    """Devuelve todos los archivos con ese nombre exacto en la carpeta, con su id, fecha y link."""
+    service = getdriveservice()
+    encontrados = []
+    for item in listfolderitems(folderid, foldersonly=False):
+        if item["name"].strip() == filename.strip():
+            encontrados.append({
+                "id": item["id"],
+                "name": item["name"],
+                "modifiedTime": item.get("modifiedTime", ""),
+                "createdTime": item.get("createdTime", ""),
+                "webViewLink": item.get("webViewLink") or f"https://drive.google.com/file/d/{item['id']}/view",
+            })
+    encontrados.sort(key=lambda f: f.get("modifiedTime", ""), reverse=True)
+    return encontrados
 
 def limpiarduplicadosvouchers(folderid):
     """
@@ -2236,7 +2251,6 @@ if st.session_state.get("opensalidaform"):
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-
 # ============================================================
 # BLOQUE 21B: PANEL — IMPRIMIR BONOS
 # ============================================================
@@ -2276,21 +2290,47 @@ if st.session_state.get("openimprimirbonosform"):
         if selecteddeparture:
             selectedobj = next((d for d in departures if d["nombre"] == selecteddeparture), None)
 
-            if st.button("🧹 Limpiar duplicados en la carpeta de vouchers", key="btnlimpiarduplicados"):
-                try:
-                    parentid = getparentfolderid(selectedobj["id"])
-                    folder = getorcreatefolder(parentid, f"{selectedobj['nombre']}_VOUCHERS")
-                    borrados, errores = limpiarduplicadosvouchers(folder["id"])
-                    if borrados:
-                        st.success(f"Se han eliminado {borrados} archivo(s) duplicado(s), conservando el más reciente de cada uno.")
-                    else:
-                        st.info("No se han encontrado duplicados para borrar.")
-                    if errores:
-                        st.error("Hubo errores al borrar algunos duplicados:")
-                        for err in errores:
-                            st.markdown(f'<div class="cvcfit-log-line" style="color:#D97706">{html.escape(err)}</div>', unsafe_allow_html=True)
-                except Exception as exc:
-                    st.error(f"Error limpiando duplicados: {exc}")
+            diagcol1, diagcol2 = st.columns(2, gap="medium")
+            with diagcol1:
+                if st.button("🧹 Limpiar duplicados en la carpeta de vouchers", key="btnlimpiarduplicados"):
+                    try:
+                        parentid = getparentfolderid(selectedobj["id"])
+                        folder = getorcreatefolder(parentid, f"{selectedobj['nombre']}_VOUCHERS")
+                        borrados, errores = limpiarduplicadosvouchers(folder["id"])
+                        if borrados:
+                            st.success(f"Se han eliminado {borrados} archivo(s) duplicado(s), conservando el más reciente de cada uno.")
+                        else:
+                            st.info("No se han encontrado duplicados para borrar.")
+                        if errores:
+                            st.error("Hubo errores al borrar algunos duplicados:")
+                            for err in errores:
+                                st.markdown(f'<div class="cvcfit-log-line" style="color:#D97706">{html.escape(err)}</div>', unsafe_allow_html=True)
+                    except Exception as exc:
+                        st.error(f"Error limpiando duplicados: {exc}")
+            with diagcol2:
+                if st.button("🔍 Ver duplicados detallados (diagnóstico)", key="btnverduplicados"):
+                    try:
+                        parentid = getparentfolderid(selectedobj["id"])
+                        folder = getorcreatefolder(parentid, f"{selectedobj['nombre']}_VOUCHERS")
+                        items = listfolderitems(folder["id"], foldersonly=False)
+                        porname = {}
+                        for item in items:
+                            porname.setdefault(item["name"].strip(), []).append(item)
+                        conduplicados = {n: lst for n, lst in porname.items() if len(lst) > 1}
+                        if not conduplicados:
+                            st.info("Según la API, no hay ningún nombre duplicado en esta carpeta ahora mismo.")
+                        else:
+                            for name, lst in conduplicados.items():
+                                st.markdown(f"**{name}** — {len(lst)} copias encontradas por la API:")
+                                for it in sorted(lst, key=lambda f: f.get("modifiedTime", ""), reverse=True):
+                                    link = it.get("webViewLink") or f"https://drive.google.com/file/d/{it['id']}/view"
+                                    st.markdown(
+                                        f'<div class="cvcfit-log-line">ID: {html.escape(it["id"])} · Modificado: {html.escape(it.get("modifiedTime",""))} · '
+                                        f'<a href="{link}" target="_blank" rel="noopener noreferrer">Abrir</a></div>',
+                                        unsafe_allow_html=True,
+                                    )
+                    except Exception as exc:
+                        st.error(f"Error listando duplicados: {exc}")
 
             st.markdown("#### ¿Qué quieres generar? / What do you want to generate?")
             modocol1, modocol2 = st.columns(2, gap="medium")
@@ -2424,6 +2464,8 @@ if st.session_state.get("openimprimirbonosform"):
         st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
 
+
+    
     
 # ============================================================
 # BLOQUE 22: PANEL — CREAR CRUCERO
