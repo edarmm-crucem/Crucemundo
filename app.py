@@ -10,6 +10,7 @@ import uuid
 import pytz 
 import requests
 import streamlit as st
+import time
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -1162,7 +1163,7 @@ def getsheetlastrowapprox(spreadsheetid, sheettitle):
     return len(values)
 
 
-def exportvoucherpdfbytes(spreadsheetid, gid, portrait):
+def exportvoucherpdfbytes(spreadsheetid, gid, portrait, maxretries=5):
     creds = getgooglecreds().with_scopes([
         "https://www.googleapis.com/auth/drive",
         "https://www.googleapis.com/auth/spreadsheets",
@@ -1174,9 +1175,17 @@ def exportvoucherpdfbytes(spreadsheetid, gid, portrait):
         f"&scale=4&fitw=true&sheetnames=false&printtitle=false"
         f"&pagenumbers=false&gridlines=false&fzr=false&gid={gid}"
     )
-    response = requests.get(exporturl, headers={"Authorization": f"Bearer {creds.token}"}, timeout=60)
-    response.raise_for_status()
-    return response.content
+    delay = 3
+    for attempt in range(1, maxretries + 1):
+        response = requests.get(exporturl, headers={"Authorization": f"Bearer {creds.token}"}, timeout=60)
+        if response.status_code == 429:
+            if attempt == maxretries:
+                response.raise_for_status()
+            time.sleep(delay)
+            delay *= 2
+            continue
+        response.raise_for_status()
+        return response.content
 
 
 def uploadpdftofolder(folderid, filename, pdfbytes):
@@ -1191,11 +1200,12 @@ def uploadpdftofolder(folderid, filename, pdfbytes):
     ).execute()
 
 
-def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator):
+def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, delayseconds=2.0):
     """
     Genera PDFs para las hojas cuyo nombre contiene '_VOUCHER' dentro del spreadsheet indicado.
     modo: "TODOS" para procesar todas las hojas de voucher, "UNO" para filtrar por targetlocator.
     Sube cada PDF a una carpeta '<spreadsheetname>_VOUCHERS' junto al propio spreadsheet en Drive.
+    Incluye una pausa entre exportaciones para evitar 429 Too Many Requests de Google.
     """
     yield {"type": "status", "msg": "Buscando hojas de vouchers..."}
     sheets = getsheettitleswithids(spreadsheetid)
@@ -1228,13 +1238,15 @@ def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator):
             exitos += 1
         except Exception as exc:
             yield {"type": "error", "msg": f"Error en {sheet['title']}: {str(exc)}"}
+        finally:
+            if idx < total:
+                time.sleep(delayseconds)
 
     yield {
         "type": "done", "exitos": exitos, "total": total,
         "folderid": folderid,
         "folderurl": folder.get("webViewLink") or f"https://drive.google.com/drive/folders/{folderid}",
     }
-
 
 # ============================================================
 # BLOQUE 14: CALLBACKS DE WIDGETS (onChange)
