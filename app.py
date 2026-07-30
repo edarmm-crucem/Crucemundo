@@ -1188,24 +1188,34 @@ def exportvoucherpdfbytes(spreadsheetid, gid, portrait, maxretries=5):
         return response.content
 
 
-def uploadpdftofolder(folderid, filename, pdfbytes):
+def uploadpdftofolder(folderid, filename, pdfbytes, maxretries=5):
     service = getdriveservice()
-    existing = findfilebyname(folderid, filename)
-    if existing:
-        service.files().delete(fileId=existing["id"], supportsAllDrives=True).execute()
-    media = MediaIoBaseUpload(io.BytesIO(pdfbytes), mimetype="application/pdf", resumable=False)
-    body = {"name": filename, "parents": [folderid]}
-    return service.files().create(
-        body=body, media_body=media, fields="id, name, webViewLink", supportsAllDrives=True
-    ).execute()
+    delay = 3
+    for attempt in range(1, maxretries + 1):
+        try:
+            existing = findfilebyname(folderid, filename)
+            if existing:
+                service.files().delete(fileId=existing["id"], supportsAllDrives=True).execute()
+            media = MediaIoBaseUpload(io.BytesIO(pdfbytes), mimetype="application/pdf", resumable=False)
+            body = {"name": filename, "parents": [folderid]}
+            return service.files().create(
+                body=body, media_body=media, fields="id, name, webViewLink", supportsAllDrives=True
+            ).execute()
+        except Exception as exc:
+            status = getattr(getattr(exc, "resp", None), "status", None)
+            if status == 429 and attempt < maxretries:
+                time.sleep(delay)
+                delay *= 2
+                continue
+            raise
 
 
-def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, delayseconds=2.0):
+def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, delayseconds=3.0):
     """
     Genera PDFs para las hojas cuyo nombre contiene '_VOUCHER' dentro del spreadsheet indicado.
     modo: "TODOS" para procesar todas las hojas de voucher, "UNO" para filtrar por targetlocator.
     Sube cada PDF a una carpeta '<spreadsheetname>_VOUCHERS' junto al propio spreadsheet en Drive.
-    Incluye una pausa entre exportaciones para evitar 429 Too Many Requests de Google.
+    Procesa de uno en uno: exporta, sube y confirma antes de pasar al siguiente.
     """
     yield {"type": "status", "msg": "Buscando hojas de vouchers..."}
     sheets = getsheettitleswithids(spreadsheetid)
@@ -1234,10 +1244,15 @@ def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, 
             portrait = lastrow > 35
             pdfbytes = exportvoucherpdfbytes(spreadsheetid, sheet["sheetId"], portrait)
             pdfname = safefilename(sheet["title"]) + ".pdf"
-            uploadpdftofolder(folderid, pdfname, pdfbytes)
+            subido = uploadpdftofolder(folderid, pdfname, pdfbytes)
+            confirmado = findfilebyname(folderid, pdfname)
+            if not confirmado:
+                raise Exception("El PDF no aparece en la carpeta tras subirlo (subida no confirmada).")
             exitos += 1
+            yield {"type": "status", "msg": f"✔ {sheet['title']} generado y confirmado en Drive."}
         except Exception as exc:
-            yield {"type": "error", "msg": f"Error en {sheet['title']}: {str(exc)}"}
+            mensaje = str(exc).strip() or repr(exc)
+            yield {"type": "error", "msg": f"Error en {sheet['title']}: {mensaje}"}
         finally:
             if idx < total:
                 time.sleep(delayseconds)
