@@ -1149,6 +1149,25 @@ def formatestadopagobadge(value):
 # BLOQUE 13B: LÓGICA DE NEGOCIO — IMPRIMIR BONOS (VOUCHERS)
 # ============================================================
 
+def deleteallfilesbyname(folderid, filename, maxretries=3):
+    """Borra TODOS los archivos con ese nombre exacto en la carpeta (limpia duplicados)."""
+    service = getdriveservice()
+    for item in listfolderitems(folderid, foldersonly=False):
+        if item["name"].strip() == filename.strip():
+            delay = 2
+            for attempt in range(1, maxretries + 1):
+                try:
+                    service.files().delete(fileId=item["id"], supportsAllDrives=True).execute()
+                    break
+                except Exception as delexc:
+                    delstatus = getattr(getattr(delexc, "resp", None), "status", None)
+                    if delstatus == 404:
+                        break  # ya no existe, no pasa nada
+                    if attempt == maxretries:
+                        raise
+                    time.sleep(delay)
+                    delay *= 2
+                    
 def getexistingvouchernames(folderid, sheettitles):
     """Devuelve el conjunto de nombres de PDF que ya existen en la carpeta de vouchers."""
     items = listfolderitems(folderid, foldersonly=False)
@@ -1217,19 +1236,11 @@ def uploadpdftofolderconfirmado(folderid, filename, pdfbytes, maxretries=5, maxc
     """
     service = getdriveservice()
     delay = 3
-    # --- Paso 1: subir (con reintento si Drive da 429) ---
+    # --- Paso 1: borrar cualquier duplicado existente y subir (con reintento si Drive da 429) ---
     subido = None
     for attempt in range(1, maxretries + 1):
         try:
-            existing = findfilebyname(folderid, filename)
-            if existing:
-                try:
-                    service.files().delete(fileId=existing["id"], supportsAllDrives=True).execute()
-                except Exception as delexc:
-                    delstatus = getattr(getattr(delexc, "resp", None), "status", None)
-                    if delstatus != 404:
-                        raise
-                    # Ya no existe: no pasa nada, seguimos con la subida.
+            deleteallfilesbyname(folderid, filename)
             media = MediaIoBaseUpload(io.BytesIO(pdfbytes), mimetype="application/pdf", resumable=False)
             body = {"name": filename, "parents": [folderid]}
             subido = service.files().create(
