@@ -1217,14 +1217,19 @@ def uploadpdftofolderconfirmado(folderid, filename, pdfbytes, maxretries=5, maxc
     """
     service = getdriveservice()
     delay = 3
-
     # --- Paso 1: subir (con reintento si Drive da 429) ---
     subido = None
     for attempt in range(1, maxretries + 1):
         try:
             existing = findfilebyname(folderid, filename)
             if existing:
-                service.files().delete(fileId=existing["id"], supportsAllDrives=True).execute()
+                try:
+                    service.files().delete(fileId=existing["id"], supportsAllDrives=True).execute()
+                except Exception as delexc:
+                    delstatus = getattr(getattr(delexc, "resp", None), "status", None)
+                    if delstatus != 404:
+                        raise
+                    # Ya no existe: no pasa nada, seguimos con la subida.
             media = MediaIoBaseUpload(io.BytesIO(pdfbytes), mimetype="application/pdf", resumable=False)
             body = {"name": filename, "parents": [folderid]}
             subido = service.files().create(
@@ -1238,7 +1243,6 @@ def uploadpdftofolderconfirmado(folderid, filename, pdfbytes, maxretries=5, maxc
                 delay *= 2
                 continue
             raise
-
     # --- Paso 2: confirmar que está en la carpeta antes de continuar ---
     confirmdelay = 2
     for attempt in range(1, maxconfirmretries + 1):
@@ -1249,9 +1253,7 @@ def uploadpdftofolderconfirmado(folderid, filename, pdfbytes, maxretries=5, maxc
             raise Exception(f"El PDF '{filename}' se subió pero no se pudo confirmar en la carpeta tras {maxconfirmretries} intentos.")
         time.sleep(confirmdelay)
         confirmdelay += 1
-
     return subido
-
 
 def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, delayseconds=2.0, overwrite_map=None):
     """
