@@ -1149,6 +1149,20 @@ def formatestadopagobadge(value):
 # BLOQUE 13B: LÓGICA DE NEGOCIO — IMPRIMIR BONOS (VOUCHERS)
 # ============================================================
 
+
+def filearchivorealmente(fileid):
+    """Comprueba con una consulta directa (no listado) si el archivo realmente existe."""
+    service = getdriveservice()
+    try:
+        service.files().get(fileId=fileid, fields="id, trashed", supportsAllDrives=True).execute()
+        return True
+    except Exception as exc:
+        status = getattr(getattr(exc, "resp", None), "status", None)
+        if status == 404:
+            return False
+        raise
+
+
 def listarchivosporname(folderid, filename):
     """Devuelve todos los archivos con ese nombre exacto en la carpeta, con su id, fecha y link."""
     service = getdriveservice()
@@ -2316,12 +2330,16 @@ if st.session_state.get("openimprimirbonosform"):
                         porname = {}
                         for item in items:
                             porname.setdefault(item["name"].strip(), []).append(item)
-                        conduplicados = {n: lst for n, lst in porname.items() if len(lst) > 1}
+                        conduplicados = {}
+                        for name, lst in porname.items():
+                            reales = [f for f in lst if filearchivorealmente(f["id"])]
+                            if len(reales) > 1:
+                                conduplicados[name] = reales
                         if not conduplicados:
-                            st.info("Según la API, no hay ningún nombre duplicado en esta carpeta ahora mismo.")
+                            st.info("No hay duplicados reales confirmados (los que veías eran entradas fantasma del índice de Drive).")
                         else:
                             for name, lst in conduplicados.items():
-                                st.markdown(f"**{name}** — {len(lst)} copias encontradas por la API:")
+                                st.markdown(f"**{name}** — {len(lst)} copias REALES confirmadas:")
                                 for it in sorted(lst, key=lambda f: f.get("modifiedTime", ""), reverse=True):
                                     link = it.get("webViewLink") or f"https://drive.google.com/file/d/{it['id']}/view"
                                     st.markdown(
