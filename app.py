@@ -1155,12 +1155,22 @@ def getparentfolderid(fileid):
     return parents[0] if parents else DRIVEROOTID
 
 
-def getsheetlastrowapprox(spreadsheetid, sheettitle):
+def getsheetlastrowapprox(spreadsheetid, sheettitle, maxretries=5):
     sheetsservice = getsheetsservice()
-    values = sheetsservice.spreadsheets().values().get(
-        spreadsheetId=spreadsheetid, range=f"{sheettitle}!A1:A200", majorDimension="ROWS",
-    ).execute().get("values", [])
-    return len(values)
+    delay = 3
+    for attempt in range(1, maxretries + 1):
+        try:
+            values = sheetsservice.spreadsheets().values().get(
+                spreadsheetId=spreadsheetid, range=f"{sheettitle}!A1:A200", majorDimension="ROWS",
+            ).execute().get("values", [])
+            return len(values)
+        except Exception as exc:
+            status = getattr(getattr(exc, "resp", None), "status", None)
+            if status == 429 and attempt < maxretries:
+                time.sleep(delay)
+                delay *= 2
+                continue
+            raise
 
 
 def exportvoucherpdfbytes(spreadsheetid, gid, portrait, maxretries=5):
@@ -1188,9 +1198,16 @@ def exportvoucherpdfbytes(spreadsheetid, gid, portrait, maxretries=5):
         return response.content
 
 
-def uploadpdftofolder(folderid, filename, pdfbytes, maxretries=5):
+def uploadpdftofolderconfirmado(folderid, filename, pdfbytes, maxretries=5, maxconfirmretries=5):
+    """
+    Sube el PDF a Drive y NO devuelve el control hasta confirmar que el archivo
+    aparece listado en la carpeta destino (con reintentos de subida y de confirmación).
+    """
     service = getdriveservice()
     delay = 3
+
+    # --- Paso 1: subir (con reintento si Drive da 429) ---
+    subido = None
     for attempt in range(1, maxretries + 1):
         try:
             existing = findfilebyname(folderid, filename)
@@ -1198,9 +1215,10 @@ def uploadpdftofolder(folderid, filename, pdfbytes, maxretries=5):
                 service.files().delete(fileId=existing["id"], supportsAllDrives=True).execute()
             media = MediaIoBaseUpload(io.BytesIO(pdfbytes), mimetype="application/pdf", resumable=False)
             body = {"name": filename, "parents": [folderid]}
-            return service.files().create(
+            subido = service.files().create(
                 body=body, media_body=media, fields="id, name, webViewLink", supportsAllDrives=True
             ).execute()
+            break
         except Exception as exc:
             status = getattr(getattr(exc, "resp", None), "status", None)
             if status == 429 and attempt < maxretries:
@@ -1209,13 +1227,24 @@ def uploadpdftofolder(folderid, filename, pdfbytes, maxretries=5):
                 continue
             raise
 
+    # --- Paso 2: confirmar que está en la carpeta antes de continuar ---
+    confirmdelay = 2
+    for attempt in range(1, maxconfirmretries + 1):
+        confirmado = findfilebyname(folderid, filename)
+        if confirmado:
+            return confirmado
+        if attempt == maxconfirmretries:
+            raise Exception(f"El PDF '{filename}' se subió pero no se pudo confirmar en la carpeta tras {maxconfirmretries} intentos.")
+        time.sleep(confirmdelay)
+        confirmdelay += 1
 
-def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, delayseconds=3.0):
+    return subido
+
+
+def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, delayseconds=2.0):
     """
-    Genera PDFs para las hojas cuyo nombre contiene '_VOUCHER' dentro del spreadsheet indicado.
-    modo: "TODOS" para procesar todas las hojas de voucher, "UNO" para filtrar por targetlocator.
-    Sube cada PDF a una carpeta '<spreadsheetname>_VOUCHERS' junto al propio spreadsheet en Drive.
-    Procesa de uno en uno: exporta, sube y confirma antes de pasar al siguiente.
+    Genera PDFs para las hojas '_VOUCHER' de uno en uno, de forma estrictamente secuencial:
+    exporta -> sube -> confirma que está en la carpeta -> solo entonces pasa al siguiente.
     """
     yield {"type": "status", "msg": "Buscando hojas de vouchers..."}
     sheets = getsheettitleswithids(spreadsheetid)
@@ -1242,14 +1271,16 @@ def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, 
         try:
             lastrow = getsheetlastrowapprox(spreadsheetid, sheet["title"])
             portrait = lastrow > 35
+
+            yield {"type": "status", "msg": f"Exportando PDF de {sheet['title']}..."}
             pdfbytes = exportvoucherpdfbytes(spreadsheetid, sheet["sheetId"], portrait)
+
             pdfname = safefilename(sheet["title"]) + ".pdf"
-            subido = uploadpdftofolder(folderid, pdfname, pdfbytes)
-            confirmado = findfilebyname(folderid, pdfname)
-            if not confirmado:
-                raise Exception("El PDF no aparece en la carpeta tras subirlo (subida no confirmada).")
+            yield {"type": "status", "msg": f"Subiendo {pdfname} a Drive..."}
+            uploadpdftofolderconfirmado(folderid, pdfname, pdfbytes)
+
             exitos += 1
-            yield {"type": "status", "msg": f"✔ {sheet['title']} generado y confirmado en Drive."}
+            yield {"type": "status", "msg": f"✔ {sheet['title']} confirmado en carpeta."}
         except Exception as exc:
             mensaje = str(exc).strip() or repr(exc)
             yield {"type": "error", "msg": f"Error en {sheet['title']}: {mensaje}"}
@@ -1262,7 +1293,6 @@ def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, 
         "folderid": folderid,
         "folderurl": folder.get("webViewLink") or f"https://drive.google.com/drive/folders/{folderid}",
     }
-
 # ============================================================
 # BLOQUE 14: CALLBACKS DE WIDGETS (onChange)
 # ============================================================
