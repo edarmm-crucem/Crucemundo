@@ -2199,6 +2199,8 @@ if st.session_state.get("openimprimirbonosform"):
 
             if modo and selectedobj:
                 progressbar = st.progress(0.0, text="Iniciando...")
+                statusbox = st.empty()
+                logbox = st.empty()
                 loglines = []
                 try:
                     result = None
@@ -2207,11 +2209,22 @@ if st.session_state.get("openimprimirbonosform"):
                         if etype == "progress":
                             pct = event["current"] / event["total"]
                             progressbar.progress(pct, text=event["msg"])
+                            statusbox.markdown(f'<div class="cvcfit-log-line">{html.escape(event["msg"])}</div>', unsafe_allow_html=True)
+                        elif etype == "status":
+                            statusbox.markdown(f'<div class="cvcfit-log-line">{html.escape(event["msg"])}</div>', unsafe_allow_html=True)
+                            loglines.append(event["msg"])
                         elif etype == "error":
                             loglines.append(event["msg"])
+                            statusbox.markdown(f'<div class="cvcfit-log-line" style="color:#D97706">{html.escape(event["msg"])}</div>', unsafe_allow_html=True)
                         elif etype == "done":
                             result = event
                             progressbar.progress(1.0, text="Proceso finalizado")
+                            statusbox.empty()
+                    if loglines:
+                        logbox.markdown(
+                            "<br>".join(f'<div class="cvcfit-log-line">{html.escape(str(line))}</div>' for line in loglines[-30:]),
+                            unsafe_allow_html=True,
+                        )
                     if result:
                         st.session_state.bonosresult = result
                         st.session_state.bonoslog = loglines
@@ -2221,6 +2234,7 @@ if st.session_state.get("openimprimirbonosform"):
                             st.warning(f"Se han generado {result['exitos']} de {result['total']} PDFs. Revisa los errores abajo.")
                 except Exception as exc:
                     progressbar.empty()
+                    statusbox.empty()
                     st.error(f"Error: {exc}")
 
         bonoslogsaved = st.session_state.get("bonoslog")
