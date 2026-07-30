@@ -2195,6 +2195,9 @@ if st.session_state.get("opensalidaform"):
 # ============================================================
 # BLOQUE 21B: PANEL — IMPRIMIR BONOS
 # ============================================================
+# ============================================================
+# BLOQUE 21B: PANEL — IMPRIMIR BONOS
+# ============================================================
 
 if st.session_state.get("openimprimirbonosform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
@@ -2228,7 +2231,7 @@ if st.session_state.get("openimprimirbonosform"):
             placeholder="Selecciona una salida / Select a departure",
             key="bonossalidawidget", on_change=onbonossalidachange, disabled=not selectedboat)
 
-if selecteddeparture:
+        if selecteddeparture:
             selectedobj = next((d for d in departures if d["nombre"] == selecteddeparture), None)
 
             st.markdown("#### ¿Qué quieres generar? / What do you want to generate?")
@@ -2362,8 +2365,6 @@ if selecteddeparture:
     except Exception as exc:
         st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
-
-
 # ============================================================
 # BLOQUE 22: PANEL — CREAR CRUCERO
 # ============================================================
