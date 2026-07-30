@@ -3,6 +3,7 @@
 # ============================================================
 
 import re
+import io
 import urllib.parse
 from datetime import date, datetime
 import uuid
@@ -12,6 +13,7 @@ import streamlit as st
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
 st.set_page_config(
     page_title="Crucemundo Hub",
     page_icon="favicon1.png",
@@ -127,6 +129,7 @@ STATEDEFAULTS = {
     "openinformebarcoform": False,
     "opennuevobarcoform": False,
     "openbuscarclientesform": False,
+    "openimprimirbonosform": False,
 
     "salidayear": None,
     "salidaboat": None,
@@ -177,6 +180,12 @@ STATEDEFAULTS = {
     "buscarclientes_query": "",
     "buscarclientes_matches": [],
     "buscarclientes_lastmodified": None,
+
+    "bonosyear": None,
+    "bonosboat": None,
+    "bonossalida": None,
+    "bonosresult": None,
+    "bonoslog": [],
 }
 
 STATEGROUPS = {
@@ -221,6 +230,11 @@ STATEGROUPS = {
         "buscarclientes_query", "buscarclientes_matches",
         "buscarclientes_lastmodified", "buscarclientes_querywidget",
     ],
+    "bonos": [
+        "bonosyear", "bonosboat", "bonossalida",
+        "bonosyearwidget", "bonosboatwidget", "bonossalidawidget",
+        "bonoslocatorwidget", "bonosresult", "bonoslog",
+    ],
 }
 
 PANELFLAGS = {
@@ -234,6 +248,7 @@ PANELFLAGS = {
     "informebarco": "openinformebarcoform",
     "nuevobarco": "opennuevobarcoform",
     "buscarclientes": "openbuscarlientesform",
+    "imprimirbonos": "openimprimirbonosform",
 }
 
 for key, value in STATEDEFAULTS.items():
@@ -1129,6 +1144,99 @@ def formatestadopagobadge(value):
 
 
 # ============================================================
+# BLOQUE 13B: LÓGICA DE NEGOCIO — IMPRIMIR BONOS (VOUCHERS)
+# ============================================================
+
+def getparentfolderid(fileid):
+    service = getdriveservice()
+    file = service.files().get(fileId=fileid, fields="parents", supportsAllDrives=True).execute()
+    parents = file.get("parents", [])
+    return parents[0] if parents else DRIVEROOTID
+
+
+def getsheetlastrowapprox(spreadsheetid, sheettitle):
+    sheetsservice = getsheetsservice()
+    values = sheetsservice.spreadsheets().values().get(
+        spreadsheetId=spreadsheetid, range=f"{sheettitle}!A1:A200", majorDimension="ROWS",
+    ).execute().get("values", [])
+    return len(values)
+
+
+def exportvoucherpdfbytes(spreadsheetid, gid, portrait):
+    creds = getgooglecreds().with_scopes([
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/spreadsheets",
+    ])
+    creds.refresh(Request())
+    exporturl = (
+        f"https://docs.google.com/spreadsheets/d/{spreadsheetid}/export"
+        f"?format=pdf&size=A4&portrait={'true' if portrait else 'false'}"
+        f"&scale=4&fitw=true&sheetnames=false&printtitle=false"
+        f"&pagenumbers=false&gridlines=false&fzr=false&gid={gid}"
+    )
+    response = requests.get(exporturl, headers={"Authorization": f"Bearer {creds.token}"}, timeout=60)
+    response.raise_for_status()
+    return response.content
+
+
+def uploadpdftofolder(folderid, filename, pdfbytes):
+    service = getdriveservice()
+    existing = findfilebyname(folderid, filename)
+    if existing:
+        service.files().delete(fileId=existing["id"], supportsAllDrives=True).execute()
+    media = MediaIoBaseUpload(io.BytesIO(pdfbytes), mimetype="application/pdf", resumable=False)
+    body = {"name": filename, "parents": [folderid]}
+    return service.files().create(
+        body=body, media_body=media, fields="id, name, webViewLink", supportsAllDrives=True
+    ).execute()
+
+
+def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator):
+    """
+    Genera PDFs para las hojas cuyo nombre contiene '_VOUCHER' dentro del spreadsheet indicado.
+    modo: "TODOS" para procesar todas las hojas de voucher, "UNO" para filtrar por targetlocator.
+    Sube cada PDF a una carpeta '<spreadsheetname>_VOUCHERS' junto al propio spreadsheet en Drive.
+    """
+    yield {"type": "status", "msg": "Buscando hojas de vouchers..."}
+    sheets = getsheettitleswithids(spreadsheetid)
+    seleccionadas = [s for s in sheets if "_VOUCHER" in s["title"].upper()]
+
+    if modo == "UNO":
+        target = str(targetlocator or "").strip().upper()
+        seleccionadas = [s for s in seleccionadas if target in s["title"].upper()]
+        if not seleccionadas:
+            raise Exception(f"No se encontró ningún voucher con el localizador {target}.")
+
+    if not seleccionadas:
+        raise Exception("No se han encontrado hojas que terminen en '_VOUCHER'.")
+
+    parentid = getparentfolderid(spreadsheetid)
+    folder = getorcreatefolder(parentid, f"{spreadsheetname}_VOUCHERS")
+    folderid = folder["id"]
+
+    total = len(seleccionadas)
+    exitos = 0
+    for idx, sheet in enumerate(seleccionadas, start=1):
+        yield {"type": "progress", "current": idx, "total": total, "file": sheet["title"],
+               "msg": f"Generando {idx}/{total}: {sheet['title']}"}
+        try:
+            lastrow = getsheetlastrowapprox(spreadsheetid, sheet["title"])
+            portrait = lastrow > 35
+            pdfbytes = exportvoucherpdfbytes(spreadsheetid, sheet["sheetId"], portrait)
+            pdfname = safefilename(sheet["title"]) + ".pdf"
+            uploadpdftofolder(folderid, pdfname, pdfbytes)
+            exitos += 1
+        except Exception as exc:
+            yield {"type": "error", "msg": f"Error en {sheet['title']}: {str(exc)}"}
+
+    yield {
+        "type": "done", "exitos": exitos, "total": total,
+        "folderid": folderid,
+        "folderurl": folder.get("webViewLink") or f"https://drive.google.com/drive/folders/{folderid}",
+    }
+
+
+# ============================================================
 # BLOQUE 14: CALLBACKS DE WIDGETS (onChange)
 # ============================================================
 
@@ -1210,6 +1318,28 @@ def oninformeboatchange():
 
 def oninformesalidachange():
     st.session_state.informesalida = st.session_state.get("informesalidawidget")
+
+
+def onbonosyearchange():
+    st.session_state.bonosyear = st.session_state.get("bonosyearwidget")
+    st.session_state.bonosboat = None
+    st.session_state.bonossalida = None
+    st.session_state.pop("bonosboatwidget", None)
+    st.session_state.pop("bonossalidawidget", None)
+    st.session_state.bonosresult = None
+
+
+def onbonosboatchange():
+    st.session_state.bonosboat = st.session_state.get("bonosboatwidget")
+    st.session_state.bonossalida = None
+    st.session_state.pop("bonossalidawidget", None)
+    st.session_state.bonosresult = None
+
+
+def onbonossalidachange():
+    st.session_state.bonossalida = st.session_state.get("bonossalidawidget")
+    st.session_state.bonosresult = None
+    st.session_state.bonoslog = []
 
 
 # ============================================================
@@ -1383,6 +1513,7 @@ st.markdown(
     .card-informebarco { background: #EAF7FB; border-color: #BFDDE8; --card-btn-bg:#D2EDF6; --card-btn-border:#3A90B0; --card-btn-text:#2B6881; --card-btn-shadow:rgba(43,104,129,0.16); }
     .card-nuevobarco { background: #EEF6FF; border-color: #C7DCF9; --card-btn-bg:#DCEBFF; --card-btn-border:#4A80CC; --card-btn-text:#27518A; --card-btn-shadow:rgba(39,81,138,0.16); }
     .card-buscar { background: #F3EEFF; border-color: #D8C8F9; --card-btn-bg:#E5D8FF; --card-btn-border:#8A5AE0; --card-btn-text:#5230A0; --card-btn-shadow:rgba(82,48,160,0.16); }
+    .card-imprimirbonos { background: #FDF4E7; border-color: #F1D9A8; --card-btn-bg:#FCE7BF; --card-btn-border:#C98A2A; --card-btn-text:#7A5518; --card-btn-shadow:rgba(122,85,24,0.16); }
 
     .action-top { display: flex; align-items: flex-start; gap: 0.65rem; }
     .action-icon {
@@ -1834,6 +1965,19 @@ row2_cards = [
         "action": lambda: openpanel("nuevobarco"),
     },
 ]
+
+row3_cards = [
+    {
+        "cardclass": "card-imprimirbonos",
+        "icon": "🖨️",
+        "titlees": "Imprimir Bonos",
+        "titleen": "Print Vouchers",
+        "buttonlabel": "Imprimir Bonos",
+        "key": "btnimprimirbonosopen",
+        "action": lambda: openpanel("imprimirbonos"),
+    },
+]
+
 st.markdown(
     '<hr style="border: none; border-top: 5px solid #6B7280; margin: 0.5rem 0;">',
     unsafe_allow_html=True,
@@ -1845,6 +1989,10 @@ for col, card in zip(row1_cols, row1_cards):
 
 row2_cols = st.columns([1.1, 1.1, 1.1, 1.1, 1.1, 1.1], gap="medium")
 for col, card in zip(row2_cols, row2_cards):
+    renderactioncard(col, card)
+
+row3_cols = st.columns([1.1, 1.1, 1.1, 1.1, 1.1, 1.1], gap="medium")
+for col, card in zip(row3_cols, row3_cards):
     renderactioncard(col, card)
 
 
@@ -1934,6 +2082,106 @@ if st.session_state.get("opensalidaform"):
     except Exception as exc:
         st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ============================================================
+# BLOQUE 21B: PANEL — IMPRIMIR BONOS
+# ============================================================
+
+if st.session_state.get("openimprimirbonosform"):
+    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
+    panelheader("Imprimir Bonos / Print Vouchers", "closeimprimirbonospanel")
+    try:
+        years = getyears()
+        currentyear = st.session_state.get("bonosyear")
+        if currentyear not in years:
+            currentyear = None
+        selectedyear = st.selectbox("AÑO / YEAR", options=years,
+            index=years.index(currentyear) if currentyear in years else None,
+            placeholder="Selecciona un año / Select a year",
+            key="bonosyearwidget", on_change=onbonosyearchange)
+
+        boats = getboats(selectedyear) if selectedyear else []
+        currentboat = st.session_state.get("bonosboat")
+        if currentboat not in boats:
+            currentboat = None
+        selectedboat = st.selectbox("BARCO / SHIP", options=boats,
+            index=boats.index(currentboat) if currentboat in boats else None,
+            placeholder="Selecciona un barco / Select a ship",
+            key="bonosboatwidget", on_change=onbonosboatchange, disabled=not selectedyear)
+
+        departures = getdepartures(selectedyear, selectedboat) if selectedyear and selectedboat else []
+        departurenames = [d["nombre"] for d in departures]
+        currentdep = st.session_state.get("bonossalida")
+        if currentdep not in departurenames:
+            currentdep = None
+        selecteddeparture = st.selectbox("SALIDA / DEPARTURE", options=departurenames,
+            index=departurenames.index(currentdep) if currentdep in departurenames else None,
+            placeholder="Selecciona una salida / Select a departure",
+            key="bonossalidawidget", on_change=onbonossalidachange, disabled=not selectedboat)
+
+        if selecteddeparture:
+            selectedobj = next((d for d in departures if d["nombre"] == selecteddeparture), None)
+
+            st.markdown("#### ¿Qué quieres generar? / What do you want to generate?")
+            modocol1, modocol2 = st.columns(2, gap="medium")
+            with modocol1:
+                st.markdown("**Todos los vouchers**")
+                generartodos = st.button("🖨️ Generar TODOS", key="btnbonostodos")
+            with modocol2:
+                st.markdown("**Solo un voucher**")
+                bonoslocator = st.text_input("Localizador", key="bonoslocatorwidget", placeholder="Ej: ABC123")
+                generaruno = st.button("🖨️ Generar SOLO ESTE", key="btnbonosuno", disabled=not bonoslocator)
+
+            modo, locatorval = None, None
+            if generartodos:
+                modo = "TODOS"
+            elif generaruno:
+                modo, locatorval = "UNO", bonoslocator
+
+            if modo and selectedobj:
+                progressbar = st.progress(0.0, text="Iniciando...")
+                loglines = []
+                try:
+                    result = None
+                    for event in imprimirbonosgenerator(selectedobj["id"], selectedobj["nombre"], modo, locatorval):
+                        etype = event.get("type")
+                        if etype == "progress":
+                            pct = event["current"] / event["total"]
+                            progressbar.progress(pct, text=event["msg"])
+                        elif etype == "error":
+                            loglines.append(event["msg"])
+                        elif etype == "done":
+                            result = event
+                            progressbar.progress(1.0, text="Proceso finalizado")
+                    if result:
+                        st.session_state.bonosresult = result
+                        st.session_state.bonoslog = loglines
+                        if result["exitos"] == result["total"]:
+                            st.success(f"Se han generado {result['exitos']} de {result['total']} PDFs correctamente.")
+                        else:
+                            st.warning(f"Se han generado {result['exitos']} de {result['total']} PDFs. Revisa los errores abajo.")
+                except Exception as exc:
+                    progressbar.empty()
+                    st.error(f"Error: {exc}")
+
+        bonoslogsaved = st.session_state.get("bonoslog")
+        if bonoslogsaved:
+            st.markdown('<div class="cvcfit-status-card" style="margin-top:0.75rem;">', unsafe_allow_html=True)
+            st.markdown("**Incidencias**")
+            st.markdown("<br>".join(f'<div class="cvcfit-log-line">{line}</div>' for line in bonoslogsaved), unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        bonosresult = st.session_state.get("bonosresult")
+        if bonosresult:
+            st.markdown(
+                f'<a class="done-link" href="{bonosresult["folderurl"]}" target="_blank" rel="noopener noreferrer">📁 Abrir carpeta de vouchers</a>',
+                unsafe_allow_html=True,
+            )
+    except Exception as exc:
+        st.exception(exc)
+    st.markdown("</div>", unsafe_allow_html=True)
+
 
 # ============================================================
 # BLOQUE 22: PANEL — CREAR CRUCERO
