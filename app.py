@@ -833,11 +833,14 @@ def updatecrucerosheet(spreadsheetid, barco):
     ).execute()
 
 
-def createcrucerofile(barco, fechaobj):
+def createcrucerofile(barco, fechaobj, tipo="N"):
     if not barco or not fechaobj:
         raise Exception("Faltan datos de barco o fecha.")
+    if tipo not in ("N", "L", "S"):
+        raise Exception(f"Tipo de crucero no válido: {tipo}")
+    sufijotipo = "" if tipo == "N" else tipo
     anio = str(fechaobj.year)
-    nombrenuevo = safefilename(f"{barco}_{fechaobj.strftime('%y%m%d')}")
+    nombrenuevo = safefilename(f"{barco}_{fechaobj.strftime('%y%m%d')}{sufijotipo}")
     carpetaanio = getorcreatefolder(DRIVEROOTID, anio)
     carpetabarco = getorcreatefolder(carpetaanio["id"], barco)
     duplicado = findfilebyname(carpetabarco["id"], nombrenuevo)
@@ -859,8 +862,8 @@ def createcrucerofile(barco, fechaobj):
         "year": anio,
         "boat": barco,
         "folderid": carpetabarco["id"],
+        "tipo": tipo,
     }
-
 
 def getyearsbyroot(rootid):
     folders = listfolderitems(rootid, foldersonly=True)
@@ -2424,9 +2427,22 @@ if st.session_state.get("openimprimirbonosform"):
                 value=date.today(),
                 format="DD/MM/YYYY",
             )
+
+            tipooptionscrucero = {
+                "Normal (única salida) / Normal (single departure)": "N",
+                "Larga / Long (L)": "L",
+                "Corta / Short (S)": "S",
+            }
+            tipolabel = st.selectbox(
+                "TIPO DE CRUCERO / CRUISE TYPE",
+                options=list(tipooptionscrucero.keys()),
+                key="crucerotipowidget",
+            )
+            cruceroTipo = tipooptionscrucero.get(tipolabel, "N")
     
             if cruceroboat and fechasalida:
-                previewname = f"{cruceroboat}_{fechasalida.strftime('%y%m%d')}"
+                sufijopreview = "" if cruceroTipo == "N" else cruceroTipo
+                previewname = f"{cruceroboat}_{fechasalida.strftime('%y%m%d')}{sufijopreview}"
                 st.caption(f"Nombre previsto / Expected name: {previewname}")
     
             if st.button("Preparar Crucero", key="btncrearcruceroaction", disabled=not (cruceroyear and cruceroboat and fechasalida)):
@@ -2435,11 +2451,11 @@ if st.session_state.get("openimprimirbonosform"):
                 else:
                     safeaudit(
                         "request_create_cruise",
-                        f"Petición crear crucero: {cruceroboat} {fechasalida}",
+                        f"Petición crear crucero: {cruceroboat} {fechasalida} ({cruceroTipo})",
                         panel="crucero",
-                        extra={"request_type": "create_cruise"},
+                        extra={"request_type": "create_cruise", "tipo": cruceroTipo},
                     )
-                    result = createcrucerofile(cruceroboat, fechasalida)
+                    result = createcrucerofile(cruceroboat, fechasalida, cruceroTipo)
                     st.session_state.cruceroresult = result
     
             result = st.session_state.get("cruceroresult")
