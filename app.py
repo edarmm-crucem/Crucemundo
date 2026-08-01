@@ -188,6 +188,12 @@ STATEDEFAULTS = {
     "bonossalida": None,
     "bonosresult": None,
     "bonoslog": [],
+
+    "envioyear": None,
+    "envioboat": None,
+    "enviosalida": None,
+    "envioresult": None,
+    "enviolog": [],
 }
 
 STATEGROUPS = {
@@ -237,6 +243,11 @@ STATEGROUPS = {
         "bonosyearwidget", "bonosboatwidget", "bonossalidawidget",
         "bonoslocatorwidget", "bonosresult", "bonoslog",
     ],
+    "envio": [
+        "envioyear", "envioboat", "enviosalida",
+        "envioyearwidget", "envioboatwidget", "enviosalidawidget",
+        "envioresult", "enviolog",
+    ],
 }
 
 PANELFLAGS = {
@@ -251,6 +262,7 @@ PANELFLAGS = {
     "nuevobarco": "opennuevobarcoform",
     "buscarclientes": "openbuscarlientesform",
     "imprimirbonos": "openimprimirbonosform",
+    "enviarconfirmacion": "openenvioform",
 }
 
 for key, value in STATEDEFAULTS.items():
@@ -1337,6 +1349,153 @@ def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, 
         "folderurl": folder.get("webViewLink") or f"https://drive.google.com/drive/folders/{folderid}",
     }
 
+# ============================================================
+# BLOQUE 13C: LÓGICA DE NEGOCIO — ENVIAR CONFIRMACIÓN (GMAIL)
+# ============================================================
+
+from googleapiclient.http import MediaIoBaseDownload
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+
+GMAILSCOPES = ["https://www.googleapis.com/auth/gmail.compose"]
+
+
+def getgmailservice(useremail):
+    creds = getgooglecreds().with_subject(useremail).with_scopes(GMAILSCOPES)
+    return build("gmail", "v1", credentials=creds)
+
+
+def downloadfilebytes(fileid):
+    service = getdriveservice()
+    request = service.files().get_media(fileId=fileid, supportsAllDrives=True)
+    buf = io.BytesIO()
+    downloader = MediaIoBaseDownload(buf, request)
+    done = False
+    while not done:
+        _, done = downloader.next_chunk()
+    return buf.getvalue()
+
+
+def findconfirmationsheets(spreadsheetid):
+    sheets = getsheettitleswithids(spreadsheetid)
+    matches = []
+    for sheet in sheets:
+        title = sheet["title"]
+        try:
+            b2 = str(getsinglecell(spreadsheetid, title, "B2") or "").upper()
+            if "PROFORMA" not in b2 and "BOOKING" not in b2:
+                continue
+            g10 = str(getsinglecell(spreadsheetid, title, "G10") or "").strip().upper()
+            if g10 == "CANCELADO":
+                continue
+            matches.append(sheet)
+        except Exception:
+            continue
+    return matches
+
+
+def extractconfirmaciondata(spreadsheetid, sheettitle):
+    cells = getsheetcellsbatch(
+        spreadsheetid, sheettitle,
+        ["G11", "G8", "G13", "G17", "K17", "G18", "K18", "G19", "G24", "P24", "Q24"],
+    )
+    return {
+        "localizador": str(cells.get("G11", "")).strip(),
+        "email": str(cells.get("G8", "")).strip(),
+        "barco": str(cells.get("G13", "")).strip(),
+        "fechasalida": str(cells.get("G17", "")).strip(),
+        "fechallegada": str(cells.get("K17", "")).strip(),
+        "dias": str(cells.get("G18", "")).strip(),
+        "noches": str(cells.get("K18", "")).strip(),
+        "itinerario": str(cells.get("G19", "")).strip(),
+        "nombres": str(cells.get("G24", "")).strip(),
+        "documentos": str(cells.get("P24", "")).strip(),
+        "cabinas": str(cells.get("Q24", "")).strip(),
+        "sheettitle": sheettitle,
+    }
+
+
+def findvoucherpdf(spreadsheetid, spreadsheetname, localizador):
+    parentid = getparentfolderid(spreadsheetid)
+    folder = findchildfolder(parentid, f"{spreadsheetname}_VOUCHERS")
+    if not folder:
+        return None
+    target = localizador.strip().upper()
+    if not target:
+        return None
+    for item in listfolderitems(folder["id"], foldersonly=False):
+        name = item["name"].strip().upper()
+        if name.endswith(".PDF") and "VOUCHER" in name and target in name:
+            return item
+    return None
+
+
+def creategmaildraft(useremail, toemail, subject, body, attachmentbytes, attachmentfilename):
+    service = getgmailservice(useremail)
+    message = MIMEMultipart()
+    if toemail:
+        message["to"] = toemail
+    message["subject"] = subject
+    message.attach(MIMEText(body))
+    part = MIMEApplication(attachmentbytes, _subtype="pdf")
+    part.add_header("Content-Disposition", "attachment", filename=attachmentfilename)
+    message.attach(part)
+    raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+    return service.users().drafts().create(
+        userId="me", body={"message": {"raw": raw}}
+    ).execute()
+
+
+def enviarconfirmacionesgenerator(spreadsheetid, spreadsheetname, useremail):
+    yield {"type": "status", "msg": "Buscando confirmaciones (PROFORMA/BOOKING, no canceladas)..."}
+    sheets = findconfirmationsheets(spreadsheetid)
+    if not sheets:
+        raise Exception("No se han encontrado hojas de confirmación (PROFORMA/BOOKING) sin cancelar.")
+
+    total = len(sheets)
+    exitos = 0
+    resultados = []
+
+    for idx, sheet in enumerate(sheets, start=1):
+        title = sheet["title"]
+        yield {"type": "progress", "current": idx, "total": total, "file": title,
+               "msg": f"Procesando {idx}/{total}: {title}"}
+        try:
+            data = extractconfirmaciondata(spreadsheetid, title)
+            localizador = data["localizador"]
+            if not localizador:
+                yield {"type": "error", "msg": f"Hoja {title}: sin localizador en G11, se omite."}
+                continue
+
+            yield {"type": "status", "msg": f"Buscando bono/voucher para {localizador}..."}
+            voucherfile = findvoucherpdf(spreadsheetid, spreadsheetname, localizador)
+            if not voucherfile:
+                yield {"type": "error", "msg": f"{localizador}: no se encontró el PDF de voucher en {spreadsheetname}_VOUCHERS."}
+                continue
+
+            yield {"type": "status", "msg": f"Descargando PDF de {localizador}..."}
+            pdfbytes = downloadfilebytes(voucherfile["id"])
+
+            subject = f"Envio de Bono {localizador}"
+            body = f"Anexo BONO localizador {localizador}"
+
+            yield {"type": "status", "msg": f"Creando borrador Gmail para {localizador}..."}
+            creategmaildraft(useremail, data["email"], subject, body, pdfbytes, voucherfile["name"])
+
+            exitos += 1
+            data["voucherfile"] = voucherfile["name"]
+            resultados.append(data)
+            yield {"type": "status", "msg": f"✔ Borrador creado para {localizador}."}
+        except Exception as exc:
+            yield {"type": "error", "msg": f"Error en {title}: {str(exc)}"}
+        finally:
+            if idx < total:
+                time.sleep(1.0)
+
+    yield {"type": "done", "exitos": exitos, "total": total, "resultados": resultados}
+
+
 
     
 # ============================================================
@@ -1368,10 +1527,30 @@ def onbonossalidachange():
     st.session_state.bonossalida = st.session_state.get("bonossalidawidget")
     st.session_state.bonosresult = None
     st.session_state.bonoslog = []
-    st.session_state.bonos_confirm_pending = None
-    st.session_state.bonos_needs_confirm = False
 
 
+def onenvioyearchange():
+    st.session_state.envioyear = st.session_state.get("envioyearwidget")
+    st.session_state.envioboat = None
+    st.session_state.enviosalida = None
+    st.session_state.pop("envioboatwidget", None)
+    st.session_state.pop("enviosalidawidget", None)
+    st.session_state.envioresult = None
+    st.session_state.enviolog = []
+
+
+def onenvioboatchange():
+    st.session_state.envioboat = st.session_state.get("envioboatwidget")
+    st.session_state.enviosalida = None
+    st.session_state.pop("enviosalidawidget", None)
+    st.session_state.envioresult = None
+    st.session_state.enviolog = []
+
+
+def onenviosalidachange():
+    st.session_state.enviosalida = st.session_state.get("enviosalidawidget")
+    st.session_state.envioresult = None
+    st.session_state.enviolog = []
 def resetsalidadownstream(level):
     if level == "year":
         st.session_state.salidaboat = None
@@ -1646,7 +1825,9 @@ st.markdown(
     .card-nuevobarco { background: #EEF6FF; border-color: #C7DCF9; --card-btn-bg:#DCEBFF; --card-btn-border:#4A80CC; --card-btn-text:#27518A; --card-btn-shadow:rgba(39,81,138,0.16); }
     .card-buscar { background: #F3EEFF; border-color: #D8C8F9; --card-btn-bg:#E5D8FF; --card-btn-border:#8A5AE0; --card-btn-text:#5230A0; --card-btn-shadow:rgba(82,48,160,0.16); }
     .card-imprimirbonos { background: #FDF4E7; border-color: #F1D9A8; --card-btn-bg:#FCE7BF; --card-btn-border:#C98A2A; --card-btn-text:#7A5518; --card-btn-shadow:rgba(122,85,24,0.16); }
+    .card-enviarconfirmacion { background: #FDECEA; border-color: #F3B8B0; --card-btn-bg:#FBD1C9; --card-btn-border:#D9583F; --card-btn-text:#8C2E1D; --card-btn-shadow:rgba(140,46,29,0.16); }
 
+    
     .action-top { display: flex; align-items: flex-start; gap: 0.65rem; }
     .action-icon {
     width: 26px; height: 26px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
@@ -2108,6 +2289,15 @@ row3_cards = [
         "key": "btnimprimirbonosopen",
         "action": lambda: openpanel("imprimirbonos"),
     },
+    {
+        "cardclass": "card-enviarconfirmacion",
+        "icon": "✉️",
+        "titlees": "Enviar Confirmación",
+        "titleen": "Send Confirmation",
+        "buttonlabel": "Enviar Confirmación",
+        "key": "btnenviarconfirmacionopen",
+        "action": lambda: openpanel("enviarconfirmacion"),
+    },
 ]
 
 st.markdown(
@@ -2549,6 +2739,119 @@ if st.session_state.get("opencruceroform"):
     except Exception as exc:
         st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
+
+# ============================================================
+# BLOQUE 22B: PANEL — ENVIAR CONFIRMACIÓN
+# ============================================================
+
+if st.session_state.get("openenvioform"):
+    st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
+    panelheader("Enviar Confirmación / Send Confirmation", "closeenviopanel")
+    try:
+        years = getyears()
+        currentyear = st.session_state.get("envioyear")
+        if currentyear not in years:
+            currentyear = None
+        selectedyear = st.selectbox("AÑO / YEAR", options=years,
+            index=years.index(currentyear) if currentyear in years else None,
+            placeholder="Selecciona un año / Select a year",
+            key="envioyearwidget", on_change=onenvioyearchange)
+
+        boats = getboats(selectedyear) if selectedyear else []
+        currentboat = st.session_state.get("envioboat")
+        if currentboat not in boats:
+            currentboat = None
+        selectedboat = st.selectbox("BARCO / SHIP", options=boats,
+            index=boats.index(currentboat) if currentboat in boats else None,
+            placeholder="Selecciona un barco / Select a ship",
+            key="envioboatwidget", on_change=onenvioboatchange, disabled=not selectedyear)
+
+        departures = getdepartures(selectedyear, selectedboat) if selectedyear and selectedboat else []
+        departurenames = [d["nombre"] for d in departures]
+        currentdep = st.session_state.get("enviosalida")
+        if currentdep not in departurenames:
+            currentdep = None
+        selecteddeparture = st.selectbox("SALIDA / DEPARTURE", options=departurenames,
+            index=departurenames.index(currentdep) if currentdep in departurenames else None,
+            placeholder="Selecciona una salida / Select a departure",
+            key="enviosalidawidget", on_change=onenviosalidachange, disabled=not selectedboat)
+
+        if selecteddeparture:
+            selectedobj = next((d for d in departures if d["nombre"] == selecteddeparture), None)
+            st.caption("Se buscarán todas las hojas con PROFORMA o BOOKING en B2, excluyendo CANCELADO en G10, y se creará un borrador de Gmail por cada una en tu propio buzón.")
+            enviarbtn = st.button("✉️ Buscar confirmaciones y crear borradores", key="btnenviarconfirmaciones")
+
+            if enviarbtn and selectedobj:
+                progressbar = st.progress(0.0, text="Iniciando...")
+                statusbox = st.empty()
+                logbox = st.empty()
+                loglines = []
+                useremail = st.session_state.get("useremail", "")
+                try:
+                    result = None
+                    for event in enviarconfirmacionesgenerator(selectedobj["id"], selectedobj["nombre"], useremail):
+                        etype = event.get("type")
+                        if etype == "progress":
+                            pct = event["current"] / event["total"]
+                            progressbar.progress(pct, text=event["msg"])
+                            statusbox.markdown(f'<div class="cvcfit-log-line">{html.escape(event["msg"])}</div>', unsafe_allow_html=True)
+                        elif etype == "status":
+                            statusbox.markdown(f'<div class="cvcfit-log-line">{html.escape(event["msg"])}</div>', unsafe_allow_html=True)
+                        elif etype == "error":
+                            loglines.append(event["msg"])
+                            statusbox.markdown(f'<div class="cvcfit-log-line" style="color:#D97706">{html.escape(event["msg"])}</div>', unsafe_allow_html=True)
+                        elif etype == "done":
+                            result = event
+                            progressbar.progress(1.0, text="Proceso finalizado")
+                            statusbox.empty()
+                    if loglines:
+                        logbox.markdown(
+                            "<br>".join(f'<div class="cvcfit-log-line" style="color:#D97706">{html.escape(str(line))}</div>' for line in loglines[-30:]),
+                            unsafe_allow_html=True,
+                        )
+                    else:
+                        logbox.empty()
+                    if result:
+                        st.session_state.envioresult = result
+                        st.session_state.enviolog = loglines
+                        if result["exitos"] == result["total"]:
+                            st.success(f"Se han creado {result['exitos']} de {result['total']} borradores correctamente en tu Gmail.")
+                        else:
+                            st.warning(f"Se han creado {result['exitos']} de {result['total']} borradores. Revisa las incidencias abajo.")
+                except Exception as exc:
+                    progressbar.empty()
+                    statusbox.empty()
+                    st.error(f"Error: {exc}")
+
+        enviologsaved = st.session_state.get("enviolog")
+        if enviologsaved:
+            st.markdown('<div class="cvcfit-status-card" style="margin-top:0.75rem;">', unsafe_allow_html=True)
+            st.markdown("**Incidencias**")
+            st.markdown(
+                "<br>".join(f'<div class="cvcfit-log-line" style="color:#D97706">{html.escape(str(line))}</div>' for line in enviologsaved),
+                unsafe_allow_html=True,
+            )
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        envioresultsaved = st.session_state.get("envioresult")
+        if envioresultsaved and envioresultsaved.get("resultados"):
+            st.markdown('<div class="cvcfit-status-card" style="margin-top:0.75rem;">', unsafe_allow_html=True)
+            st.markdown("**Borradores creados**")
+            for r in envioresultsaved["resultados"]:
+                st.markdown(
+                    f'<div class="cvcfit-log-line">✔ {html.escape(r.get("localizador",""))} · '
+                    f'{html.escape(r.get("email") or "sin email")} · voucher: {html.escape(r.get("voucherfile",""))}</div>',
+                    unsafe_allow_html=True,
+                )
+            st.markdown("</div>", unsafe_allow_html=True)
+
+    except Exception as exc:
+        st.exception(exc)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+
+
 
 # ============================================================
 # BLOQUE 23: PANEL — AÑADIR AGENCIA
