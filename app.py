@@ -2341,7 +2341,8 @@ if st.session_state.get("openimprimirbonosform"):
                             statusbox.markdown(f'<div class="cvcfit-log-line">{html.escape(event["msg"])}</div>', unsafe_allow_html=True)
                         elif etype == "status":
                             statusbox.markdown(f'<div class="cvcfit-log-line">{html.escape(event["msg"])}</div>', unsafe_allow_html=True)
-                            loglines.append(event["msg"])
+                            # Los mensajes de éxito NO se guardan en loglines: solo sirven
+                            # de feedback momentáneo mientras se procesa, no como incidencia.
                         elif etype == "error":
                             loglines.append(event["msg"])
                             statusbox.markdown(f'<div class="cvcfit-log-line" style="color:#D97706">{html.escape(event["msg"])}</div>', unsafe_allow_html=True)
@@ -2351,9 +2352,11 @@ if st.session_state.get("openimprimirbonosform"):
                             statusbox.empty()
                     if loglines:
                         logbox.markdown(
-                            "<br>".join(f'<div class="cvcfit-log-line">{html.escape(str(line))}</div>' for line in loglines[-30:]),
+                            "<br>".join(f'<div class="cvcfit-log-line" style="color:#D97706">{html.escape(str(line))}</div>' for line in loglines[-30:]),
                             unsafe_allow_html=True,
                         )
+                    else:
+                        logbox.empty()
                     if result:
                         st.session_state.bonosresult = result
                         st.session_state.bonoslog = loglines
@@ -2373,7 +2376,7 @@ if st.session_state.get("openimprimirbonosform"):
             st.markdown('<div class="cvcfit-status-card" style="margin-top:0.75rem;">', unsafe_allow_html=True)
             st.markdown("**Incidencias**")
             st.markdown(
-                "<br>".join(f'<div class="cvcfit-log-line">{html.escape(str(line))}</div>' for line in bonoslogsaved),
+                "<br>".join(f'<div class="cvcfit-log-line" style="color:#D97706">{html.escape(str(line))}</div>' for line in bonoslogsaved),
                 unsafe_allow_html=True,
             )
             st.markdown("</div>", unsafe_allow_html=True)
@@ -2386,6 +2389,7 @@ if st.session_state.get("openimprimirbonosform"):
             )
     except Exception as exc:
         st.exception(exc)
+    st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
     
 # ============================================================
