@@ -2796,6 +2796,24 @@ if st.session_state.get("openenvioform"):
             selectedobj = next((d for d in departures if d["nombre"] == selecteddeparture), None)
             st.caption("Se buscarán todas las hojas con PROFORMA o BOOKING en B2, excluyendo CANCELADO en G10, y se creará un borrador de Gmail por cada una en tu propio buzón.")
             enviarbtn = st.button("✉️ Buscar confirmaciones y crear borradores", key="btnenviarconfirmaciones")
+            verificarbtn = st.button("🔍 Verificar borradores en mi Gmail (debug)", key="btnverificarborradores")
+            if verificarbtn:
+                try:
+                    useremail = st.session_state.get("useremail", "")
+                    service = getgmailservice(useremail)
+                    drafts = service.users().drafts().list(userId="me", maxResults=20).execute()
+                    items = drafts.get("drafts", [])
+                    if not items:
+                        st.info(f"Conexión OK con {useremail}, pero no hay borradores todavía.")
+                    else:
+                        st.success(f"✅ Conexión OK. Hay {len(items)} borrador(es) en la cuenta {useremail}.")
+                        for d in items[:10]:
+                            detail = service.users().drafts().get(userId="me", id=d["id"], format="metadata").execute()
+                            headers = detail.get("message", {}).get("payload", {}).get("headers", [])
+                            subject = next((h["value"] for h in headers if h["name"] == "Subject"), "(sin asunto)")
+                            st.markdown(f'<div class="cvcfit-log-line">• {html.escape(subject)}</div>', unsafe_allow_html=True)
+                except Exception as exc:
+                    st.error(f"Error al conectar: {exc}")
 
             if enviarbtn and selectedobj:
                 progressbar = st.progress(0.0, text="Iniciando...")
