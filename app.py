@@ -1588,11 +1588,13 @@ def onenvioboatchange():
     st.session_state.envioresult = None
     st.session_state.enviolog = []
 
-
 def onenviosalidachange():
     st.session_state.enviosalida = st.session_state.get("enviosalidawidget")
     st.session_state.envioresult = None
     st.session_state.enviolog = []
+    st.session_state.envio_items = []
+
+
 def resetsalidadownstream(level):
     if level == "year":
         st.session_state.salidaboat = None
@@ -2783,17 +2785,24 @@ if st.session_state.get("opencruceroform"):
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ============================================================
-# BLOQUE 22B: PANEL — ENVIAR CONFIRMACIÓN
+# BLOQUE 22B: PANEL — ENVIAR CONFIRMACIÓN (vía Gmail compose, sin API)
 # ============================================================
+
+def buildgmailcomposeurl(to, subject, body):
+    params = {"view": "cm", "fs": "1", "to": to or "", "su": subject, "body": body}
+    return "https://mail.google.com/mail/?" + urllib.parse.urlencode(params)
+
+
 if st.session_state.get("openenvioform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     panelheader("Enviar Confirmación / Send Confirmation", "closeenviopanel")
-    st.warning(
-        "⚠️ Función pendiente de activar: falta autorizar la delegación de dominio en Google "
-        "Workspace Admin para el scope de Gmail. Hasta que un administrador de crucemundo.com "
-        "lo configure (Client ID `116607126447824968963`, scope `gmail.compose`), esta acción "
-        "dará error para cualquier usuario. Puedes seguir probando mientras se resuelve."
+
+    st.info(
+        "Por cada confirmación se genera un enlace a Gmail con destinatario, asunto y cuerpo "
+        "ya rellenados. Gmail no permite adjuntar archivos automáticamente desde un enlace, "
+        "así que descarga el PDF primero y adjúntalo tú en la ventana que se abra."
     )
+
     try:
         years = getyears()
         currentyear = st.session_state.get("envioyear")
@@ -2825,98 +2834,60 @@ if st.session_state.get("openenvioform"):
 
         if selecteddeparture:
             selectedobj = next((d for d in departures if d["nombre"] == selecteddeparture), None)
-            st.caption("Se buscarán todas las hojas con PROFORMA o BOOKING en B2, excluyendo CANCELADO en G10, y se creará un borrador de Gmail por cada una en tu propio buzón.")
-            enviarbtn = st.button("✉️ Buscar confirmaciones y crear borradores", key="btnenviarconfirmaciones")
-            verificarbtn = st.button("🔍 Verificar borradores en mi Gmail (debug)", key="btnverificarborradores")
-            if verificarbtn:
-                try:
-                    useremail = st.session_state.get("useremail", "")
-                    service = getgmailservice(useremail)
-                    drafts = service.users().drafts().list(userId="me", maxResults=20).execute()
-                    items = drafts.get("drafts", [])
-                    if not items:
-                        st.info(f"Conexión OK con {useremail}, pero no hay borradores todavía.")
-                    else:
-                        st.success(f"✅ Conexión OK. Hay {len(items)} borrador(es) en la cuenta {useremail}.")
-                        for d in items[:10]:
-                            detail = service.users().drafts().get(userId="me", id=d["id"], format="metadata").execute()
-                            headers = detail.get("message", {}).get("payload", {}).get("headers", [])
-                            subject = next((h["value"] for h in headers if h["name"] == "Subject"), "(sin asunto)")
-                            st.markdown(f'<div class="cvcfit-log-line">• {html.escape(subject)}</div>', unsafe_allow_html=True)
-                except Exception as exc:
-                    st.error(f"Error al conectar: {exc}")
 
-            if enviarbtn and selectedobj:
-                progressbar = st.progress(0.0, text="Iniciando...")
-                statusbox = st.empty()
-                logbox = st.empty()
-                loglines = []
-                useremail = st.session_state.get("useremail", "")
+            if st.button("🔍 Listar confirmaciones", key="btnlistarconfirmaciones"):
                 try:
-                    result = None
-                    for event in enviarconfirmacionesgenerator(selectedobj["id"], selectedobj["nombre"], useremail):
-                        etype = event.get("type")
-                        if etype == "progress":
-                            pct = event["current"] / event["total"]
-                            progressbar.progress(pct, text=event["msg"])
-                            statusbox.markdown(f'<div class="cvcfit-log-line">{html.escape(event["msg"])}</div>', unsafe_allow_html=True)
-                        elif etype == "status":
-                            statusbox.markdown(f'<div class="cvcfit-log-line">{html.escape(event["msg"])}</div>', unsafe_allow_html=True)
-                        elif etype == "error":
-                            loglines.append(event["msg"])
-                            statusbox.markdown(f'<div class="cvcfit-log-line" style="color:#D97706">{html.escape(event["msg"])}</div>', unsafe_allow_html=True)
-                        elif etype == "done":
-                            result = event
-                            progressbar.progress(1.0, text="Proceso finalizado")
-                            statusbox.empty()
-                    if loglines:
-                        logbox.markdown(
-                            "<br>".join(f'<div class="cvcfit-log-line" style="color:#D97706">{html.escape(str(line))}</div>' for line in loglines[-30:]),
+                    sheets = findconfirmationsheets(selectedobj["id"])
+                    items = []
+                    for sheet in sheets:
+                        data = extractconfirmaciondata(selectedobj["id"], sheet["title"])
+                        if not data["localizador"]:
+                            continue
+                        voucherfile = findvoucherpdf(selectedobj["id"], selectedobj["nombre"], data["localizador"])
+                        items.append({
+                            **data,
+                            "voucherfileid": voucherfile["id"] if voucherfile else None,
+                            "voucherfilename": voucherfile["name"] if voucherfile else None,
+                        })
+                    st.session_state.envio_items = items
+                    if not items:
+                        st.warning("No se han encontrado confirmaciones (PROFORMA/BOOKING, no canceladas) con localizador.")
+                except Exception as exc:
+                    st.error(str(exc))
+                    st.session_state.envio_items = []
+
+            for item in st.session_state.get("envio_items", []):
+                with st.container(border=True):
+                    st.markdown(f"**{item['localizador']}** · {item.get('email') or 'sin email'}")
+                    cold, colg = st.columns([1, 1])
+                    cachekey = f"pdfbytes_{item['voucherfileid']}"
+                    with cold:
+                        if not item["voucherfileid"]:
+                            st.caption("⚠️ No se encontró el bono en la carpeta de vouchers.")
+                        elif cachekey not in st.session_state:
+                            if st.button("Preparar PDF", key=f"prep_{item['localizador']}"):
+                                st.session_state[cachekey] = downloadfilebytes(item["voucherfileid"])
+                                st.rerun()
+                        else:
+                            st.download_button(
+                                "⬇️ Descargar bono",
+                                data=st.session_state[cachekey],
+                                file_name=item["voucherfilename"],
+                                mime="application/pdf",
+                                key=f"dl_{item['localizador']}",
+                            )
+                    with colg:
+                        subject = f"Envio de Bono {item['localizador']}"
+                        body = f"Anexo BONO localizador {item['localizador']}"
+                        url = buildgmailcomposeurl(item.get("email"), subject, body)
+                        st.markdown(
+                            f'<a class="done-link" href="{url}" target="_blank" rel="noopener noreferrer">✉️ Abrir Gmail</a>',
                             unsafe_allow_html=True,
                         )
-                    else:
-                        logbox.empty()
-                    if result:
-                        st.session_state.envioresult = result
-                        st.session_state.enviolog = loglines
-                        if result["exitos"] == result["total"]:
-                            st.success(f"Se han creado {result['exitos']} de {result['total']} borradores correctamente en tu Gmail.")
-                        else:
-                            st.warning(f"Se han creado {result['exitos']} de {result['total']} borradores. Revisa las incidencias abajo.")
-                except Exception as exc:
-                    progressbar.empty()
-                    statusbox.empty()
-                    st.error(f"Error: {exc}")
-
-        enviologsaved = st.session_state.get("enviolog")
-        if enviologsaved:
-            st.markdown('<div class="cvcfit-status-card" style="margin-top:0.75rem;">', unsafe_allow_html=True)
-            st.markdown("**Incidencias**")
-            st.markdown(
-                "<br>".join(f'<div class="cvcfit-log-line" style="color:#D97706">{html.escape(str(line))}</div>' for line in enviologsaved),
-                unsafe_allow_html=True,
-            )
-            st.markdown("</div>", unsafe_allow_html=True)
-
-        envioresultsaved = st.session_state.get("envioresult")
-        if envioresultsaved and envioresultsaved.get("resultados"):
-            st.markdown('<div class="cvcfit-status-card" style="margin-top:0.75rem;">', unsafe_allow_html=True)
-            st.markdown("**Borradores creados**")
-            for r in envioresultsaved["resultados"]:
-                st.markdown(
-                    f'<div class="cvcfit-log-line">✔ {html.escape(r.get("localizador",""))} · '
-                    f'{html.escape(r.get("email") or "sin email")} · voucher: {html.escape(r.get("voucherfile",""))}</div>',
-                    unsafe_allow_html=True,
-                )
-            st.markdown("</div>", unsafe_allow_html=True)
 
     except Exception as exc:
         st.exception(exc)
     st.markdown("</div>", unsafe_allow_html=True)
-
-
-
-
 
 # ============================================================
 # BLOQUE 23: PANEL — AÑADIR AGENCIA
