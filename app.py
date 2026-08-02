@@ -1349,6 +1349,7 @@ def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, 
         "folderurl": folder.get("webViewLink") or f"https://drive.google.com/drive/folders/{folderid}",
     }
 
+
 # ============================================================
 # BLOQUE 13C: LÓGICA DE NEGOCIO — ENVIAR CONFIRMACIÓN (GMAIL)
 # ============================================================
@@ -1377,27 +1378,43 @@ def downloadfilebytes(fileid):
     return buf.getvalue()
 
 
+def sheetscallwithretry(func, *args, maxretries=6, **kwargs):
+    delay = 4
+    for attempt in range(1, maxretries + 1):
+        try:
+            return func(*args, **kwargs)
+        except Exception as exc:
+            status = getattr(getattr(exc, "resp", None), "status", None)
+            if status == 429 and attempt < maxretries:
+                time.sleep(delay)
+                delay *= 2
+                continue
+            raise
+
+
 def findconfirmationsheets(spreadsheetid):
     sheets = getsheettitleswithids(spreadsheetid)
     matches = []
     for sheet in sheets:
         title = sheet["title"]
         try:
-            b2 = str(getsinglecell(spreadsheetid, title, "B2") or "").upper()
+            cells = sheetscallwithretry(getsheetcellsbatch, spreadsheetid, title, ["B2", "G10"])
+            b2 = str(cells.get("B2", "") or "").upper()
             if "PROFORMA" not in b2 and "BOOKING" not in b2:
                 continue
-            g10 = str(getsinglecell(spreadsheetid, title, "G10") or "").strip().upper()
+            g10 = str(cells.get("G10", "") or "").strip().upper()
             if g10 == "CANCELADO":
                 continue
             matches.append(sheet)
         except Exception:
             continue
+        time.sleep(0.5)
     return matches
 
 
 def extractconfirmaciondata(spreadsheetid, sheettitle):
-    cells = getsheetcellsbatch(
-        spreadsheetid, sheettitle,
+    cells = sheetscallwithretry(
+        getsheetcellsbatch, spreadsheetid, sheettitle,
         ["G11", "G8", "G13", "G17", "K17", "G18", "K18", "G19", "G24", "P24", "Q24"],
     )
     return {
@@ -1491,10 +1508,9 @@ def enviarconfirmacionesgenerator(spreadsheetid, spreadsheetname, useremail):
             yield {"type": "error", "msg": f"Error en {title}: {str(exc)}"}
         finally:
             if idx < total:
-                time.sleep(1.0)
+                time.sleep(2.0)
 
     yield {"type": "done", "exitos": exitos, "total": total, "resultados": resultados}
-
 
 
     
