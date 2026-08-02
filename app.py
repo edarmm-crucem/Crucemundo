@@ -1353,6 +1353,32 @@ def imprimirbonosgenerator(spreadsheetid, spreadsheetname, modo, targetlocator, 
 # ============================================================
 # BLOQUE 13C: LÓGICA DE NEGOCIO — ENVIAR CONFIRMACIÓN (GMAIL)
 # ============================================================
+#
+# ⚠️ PENDIENTE DE CONFIGURACIÓN — Domain-Wide Delegation (Google Workspace)
+# ------------------------------------------------------------------------
+# Esta funcionalidad usa la cuenta de servicio (con_subject = email del usuario
+# logueado en la app) para crear borradores en Gmail. Para que funcione, un
+# administrador del Workspace de crucemundo.com debe autorizar la delegación
+# de dominio con estos datos EXACTOS:
+#
+#   Client ID:  116607126447824968963
+#   Scope:      https://www.googleapis.com/auth/gmail.compose
+#
+# Dónde configurarlo:
+#   admin.google.com → Seguridad → Controles de acceso y datos →
+#   Controles de API → Delegación en todo el dominio → Añadir nuevo
+#   (o editar si ya existe una entrada con ese Client ID y falta el scope).
+#
+# Mientras esto no esté hecho, el botón de "Enviar Confirmación" fallará
+# SIEMPRE, para CUALQUIER usuario @crucemundo.com, con este error:
+#
+#   unauthorized_client: Client is unauthorized to retrieve access tokens
+#   using this method, or client not authorized for any of the scopes requested.
+#
+# No es un fallo del código: es un permiso pendiente de activar a nivel de
+# dominio, una única vez, y afecta a todos los usuarios por igual hasta que
+# se resuelva.
+# ------------------------------------------------------------------------
 
 from googleapiclient.http import MediaIoBaseDownload
 from email.mime.multipart import MIMEMultipart
@@ -2763,6 +2789,12 @@ if st.session_state.get("opencruceroform"):
 if st.session_state.get("openenvioform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     panelheader("Enviar Confirmación / Send Confirmation", "closeenviopanel")
+        st.warning(
+        "⚠️ Función pendiente de activar: falta autorizar la delegación de dominio en Google "
+        "Workspace Admin para el scope de Gmail. Hasta que un administrador de crucemundo.com "
+        "lo configure (Client ID `116607126447824968963`, scope `gmail.compose`), esta acción "
+        "dará error para cualquier usuario. Puedes seguir probando mientras se resuelve."
+    )
     try:
         years = getyears()
         currentyear = st.session_state.get("envioyear")
