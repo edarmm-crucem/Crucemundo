@@ -2785,16 +2785,15 @@ if st.session_state.get("opencruceroform"):
 # ============================================================
 # BLOQUE 22B: PANEL — ENVIAR CONFIRMACIÓN
 # ============================================================
-
 if st.session_state.get("openenvioform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
     panelheader("Enviar Confirmación / Send Confirmation", "closeenviopanel")
-        st.warning(
+    st.warning(
         "⚠️ Función pendiente de activar: falta autorizar la delegación de dominio en Google "
         "Workspace Admin para el scope de Gmail. Hasta que un administrador de crucemundo.com "
         "lo configure (Client ID `116607126447824968963`, scope `gmail.compose`), esta acción "
         "dará error para cualquier usuario. Puedes seguir probando mientras se resuelve."
-        )
+    )
     try:
         years = getyears()
         currentyear = st.session_state.get("envioyear")
