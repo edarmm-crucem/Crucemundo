@@ -2892,10 +2892,10 @@ if st.session_state.get("openenvioform"):
                     st.markdown(f'<a class="done-link" href="{url}" target="_blank" rel="noopener noreferrer">✉️ Abrir Gmail</a>', unsafe_allow_html=True)
                     
                     url = buildgmailcomposeurl(item.get("email"), subject, body_lines)
-                        st.markdown(
-                            f'<a class="done-link" href="{url}" target="_blank" rel="noopener noreferrer">✉️ Abrir Gmail</a>',
-                            unsafe_allow_html=True,
-                        )
+                    st.markdown(
+                        f'<a class="done-link" href="{url}" target="_blank" rel="noopener noreferrer">✉️ Abrir Gmail</a>',
+                        unsafe_allow_html=True,
+                    )
 
     except Exception as exc:
         st.exception(exc)
