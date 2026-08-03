@@ -2878,18 +2878,19 @@ if st.session_state.get("openenvioform"):
                                 key=f"dl_{item['localizador']}",
                             )
                     with colg:
-                    subject = f"Envío de Bono {item['localizador']}"
-                    body_lines = [
-                        "Buenos días,",
-                        "",
-                        f"Le adjuntamos el bono de confirmación correspondiente al localizador {item['localizador']}.",
-                        "",
-                        "Quedamos a su disposición para cualquier duda.",
-                        "",
-                        "Un saludo,",
-                    ]
+                        subject = f"Envío de Bono {item['localizador']}"
+                        body_lines = [
+                            "Buenos días,",
+                            "",
+                            f"Le adjuntamos el bono de confirmación correspondiente al localizador {item['localizador']}.",
+                            "",
+                            "Quedamos a su disposición para cualquier duda.",
+                            "",
+                            "Un saludo,",
+                        ]
                     url = buildgmailcomposeurl(item.get("email"), subject, body_lines)
                     st.markdown(f'<a class="done-link" href="{url}" target="_blank" rel="noopener noreferrer">✉️ Abrir Gmail</a>', unsafe_allow_html=True)
+                    
 url = buildgmailcomposeurl(item.get("email"), subject, body_lines)
                         st.markdown(
                             f'<a class="done-link" href="{url}" target="_blank" rel="noopener noreferrer">✉️ Abrir Gmail</a>',
