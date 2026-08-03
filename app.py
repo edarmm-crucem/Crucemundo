@@ -2788,7 +2788,8 @@ if st.session_state.get("opencruceroform"):
 # BLOQUE 22B: PANEL — ENVIAR CONFIRMACIÓN (vía Gmail compose, sin API)
 # ============================================================
 
-def buildgmailcomposeurl(to, subject, body):
+def buildgmailcomposeurl(to, subject, body_lines):
+    body = "\n".join(body_lines)
     params = {"view": "cm", "fs": "1", "to": to or "", "su": subject, "body": body}
     return "https://mail.google.com/mail/?" + urllib.parse.urlencode(params)
 
@@ -2877,9 +2878,19 @@ if st.session_state.get("openenvioform"):
                                 key=f"dl_{item['localizador']}",
                             )
                     with colg:
-                        subject = f"Envio de Bono {item['localizador']}"
-                        body = f"Anexo BONO localizador {item['localizador']}"
-                        url = buildgmailcomposeurl(item.get("email"), subject, body)
+                    subject = f"Envío de Bono {item['localizador']}"
+                    body_lines = [
+                        "Buenos días,",
+                        "",
+                        f"Le adjuntamos el bono de confirmación correspondiente al localizador {item['localizador']}.",
+                        "",
+                        "Quedamos a su disposición para cualquier duda.",
+                        "",
+                        "Un saludo,",
+                    ]
+                    url = buildgmailcomposeurl(item.get("email"), subject, body_lines)
+                    st.markdown(f'<a class="done-link" href="{url}" target="_blank" rel="noopener noreferrer">✉️ Abrir Gmail</a>', unsafe_allow_html=True)
+url = buildgmailcomposeurl(item.get("email"), subject, body_lines)
                         st.markdown(
                             f'<a class="done-link" href="{url}" target="_blank" rel="noopener noreferrer">✉️ Abrir Gmail</a>',
                             unsafe_allow_html=True,
