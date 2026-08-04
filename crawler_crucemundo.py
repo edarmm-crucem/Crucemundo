@@ -9,14 +9,13 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 
-
-# ===============================
+# =====================================
 # CONFIGURACION
-# ===============================
+# =====================================
 
-DOMAIN = "https://crucemundo.es"
+INICIO = "https://crucemundo.es/"
 
-INICIO = DOMAIN + "/"
+DOMINIO = "crucemundo.es"
 
 DOCUMENT_ID = "1-MklRtqm3n31WxMduWlyV1Lj_lwws7wkEIIBqgToycs"
 
@@ -25,17 +24,15 @@ GOOGLE_KEY = "credentials.json"
 
 MAX_PAGINAS = 300
 
-ESPERA = 1500
 
 
-
-# ===============================
+# =====================================
 # GOOGLE DOCS
-# ===============================
+# =====================================
 
 def escribir_google_doc(texto):
 
-    scopes=[
+    scopes = [
         "https://www.googleapis.com/auth/documents"
     ]
 
@@ -58,11 +55,10 @@ def escribir_google_doc(texto):
     ).execute()
 
 
-
     peticiones=[]
 
 
-    contenido=doc.get(
+    contenido = doc.get(
         "body",
         {}
     ).get(
@@ -73,7 +69,7 @@ def escribir_google_doc(texto):
 
     if len(contenido)>1:
 
-        fin=contenido[-1].get(
+        fin = contenido[-1].get(
             "endIndex",
             1
         )
@@ -117,35 +113,41 @@ def escribir_google_doc(texto):
 
 
 
-# ===============================
+
+
+
+
+
+
+
+# =====================================
 # LIMPIAR HTML
-# ===============================
+# =====================================
 
 def limpiar(html):
 
-    soup=BeautifulSoup(
+    soup = BeautifulSoup(
         html,
         "html.parser"
     )
 
 
-    for x in soup(
-        [
-            "script",
-            "style",
-            "noscript"
-        ]
-    ):
+    for x in soup([
+        "script",
+        "style",
+        "noscript",
+        "svg"
+    ]):
         x.extract()
 
 
-    texto=soup.get_text(
+    texto = soup.get_text(
         " ",
         strip=True
     )
 
 
-    texto=re.sub(
+    texto = re.sub(
         r"\s+",
         " ",
         texto
@@ -156,240 +158,189 @@ def limpiar(html):
 
 
 
+# =====================================
+# NORMALIZAR URL
+# =====================================
+
+def normalizar_url(url):
+
+    p = urllib.parse.urlparse(url)
 
 
-# ===============================
-# ENLACES INTERNOS
-# ===============================
+    dominio = p.netloc.lower()
 
-async def sacar_enlaces(page,url_actual):
+    dominio = dominio.replace(
+        "www.",
+        ""
+    )
 
 
-    enlaces=await page.locator(
+    ruta = p.path.rstrip("/")
+
+
+    return dominio + ruta
+
+
+
+# =====================================
+# COMPROBAR DOMINIO
+# =====================================
+
+def es_interna(url):
+
+    try:
+
+        p = urllib.parse.urlparse(url)
+
+
+        dominio = p.netloc.lower()
+
+        dominio = dominio.replace(
+            "www.",
+            ""
+        )
+
+
+        return dominio == DOMINIO
+
+
+    except:
+
+        return False
+
+
+
+
+# =====================================
+# SACAR ENLACES
+# =====================================
+
+async def sacar_enlaces(page):
+
+
+    datos = await page.locator(
         "a"
     ).evaluate_all(
         """
-        els=>els.map(e=>e.href)
+        els => els.map(e => ({
+            url:e.href,
+            texto:e.innerText
+        }))
         """
     )
 
 
-    resultado=[]
+    enlaces=[]
 
+    descubre=[]
 
-    for enlace in enlaces:
 
 
-        if not enlace:
-            continue
+    for dato in datos:
 
 
-        enlace=urllib.parse.urljoin(
-            url_actual,
-            enlace
-        )
+        url = dato["url"]
 
+        texto = dato["texto"].strip()
 
-        enlace=enlace.split("#")[0]
 
 
-        # quitar www
-        enlace=enlace.replace(
-            "https://www.crucemundo.es",
-            "https://crucemundo.es"
-        )
+        if texto.lower() == "descubre":
 
+            if url not in descubre:
 
-        if not enlace.startswith(DOMAIN):
-            continue
-
-
-
-        basura=[
-            ".pdf",
-            ".doc",
-            ".xls",
-            ".zip",
-            "logout",
-            "olvidoAcceso",
-            "altaagencias"
-        ]
-
-
-        if any(
-            x in enlace.lower()
-            for x in basura
-        ):
-            continue
-
-
-
-        if enlace not in resultado:
-            resultado.append(enlace)
-
-
-
-    return resultado
-
-
-
-
-
-
-
-
-
-
-
-# ===============================
-# CAPTURAR AJAX / XHR
-# ===============================
-
-async def capturar_ajax(page):
-
-    ajax=[]
-
-
-    async def respuesta(response):
-
-        url=response.url
-
-
-        if url not in ajax:
-
-            tipo=response.request.resource_type
-
-
-            if tipo in [
-                "xhr",
-                "fetch"
-            ]:
-
-                ajax.append(url)
-
-
-
-    page.on(
-        "response",
-        respuesta
-    )
-
-
-    return ajax
-
-
-
-
-
-# ===============================
-# EXTRAER UNA PAGINA
-# ===============================
-
-async def visitar_pagina(page,url):
-
-
-    print()
-    print("--------------------------------")
-    print("Visitando:")
-    print(url)
-
-
-
-    ajax=[]
-
-
-    async def guardar_ajax(response):
-
-        if response.request.resource_type in [
-            "xhr",
-            "fetch"
-        ]:
-
-            if response.url not in ajax:
-                ajax.append(
-                    response.url
+                descubre.append(
+                    url
                 )
 
 
 
-    page.on(
-        "response",
-        guardar_ajax
-    )
+        if not es_interna(url):
+
+            continue
 
 
+
+        excluir=[
+
+            ".pdf",
+            ".doc",
+            ".docx",
+            ".xls",
+            ".xlsx",
+            ".zip",
+            "/download",
+            "olvidoAcceso",
+            "logout"
+
+        ]
+
+
+
+        if any(
+            x.lower() in url.lower()
+            for x in excluir
+        ):
+
+            continue
+
+
+
+        if url not in enlaces:
+
+            enlaces.append(
+                url
+            )
+
+
+
+    return enlaces, descubre
+
+
+
+
+
+
+
+# =====================================
+# EXTRAER UNA PAGINA
+# =====================================
+
+async def extraer_pagina(page, url):
 
     try:
+
+        print()
+        print("--------------------------------")
+        print("Visitando:")
+        print(url)
 
 
         await page.goto(
             url,
-            wait_until="networkidle",
+            wait_until="domcontentloaded",
             timeout=60000
         )
 
 
         await page.wait_for_timeout(
-            ESPERA
+            1500
         )
 
 
-
-        html=await page.content()
-
+        html = await page.content()
 
 
-        titulo=await page.title()
+        titulo = await page.title()
 
 
-
-        texto=limpiar(
+        texto = limpiar(
             html
         )
 
 
 
-        # Mostrar AJAX encontrados
-
-        if ajax:
-
-            print(
-                "AJAX encontrados:",
-                len(ajax)
-            )
-
-
-            for a in ajax:
-
-                if (
-                    "init" in a.lower()
-                    or "php" in a.lower()
-                    or "json" in a.lower()
-                    or "ajax" in a.lower()
-                ):
-
-                    print(
-                        "POSIBLE DATOS:",
-                        a
-                    )
-
-
-
-        enlaces=await sacar_enlaces(
-            page,
-            url
-        )
-
-
-
-        print(
-            "Enlaces encontrados:",
-            len(enlaces)
-        )
-
-
-
-        resultado=f"""
+        return f"""
 
 ==================================================
 
@@ -401,22 +352,13 @@ TITULO:
 {titulo}
 
 
-AJAX:
-
-{chr(10).join(ajax)}
-
-
 CONTENIDO:
 
-{texto[:8000]}
+{texto[:10000]}
 
 ==================================================
 
 """
-
-
-        return resultado,enlaces
-
 
 
     except Exception as e:
@@ -429,7 +371,179 @@ CONTENIDO:
         )
 
 
-        return "",[]
+        return ""
+
+
+
+
+# =====================================
+# CRAWLER PRINCIPAL
+# =====================================
+
+async def crawler():
+
+
+    visitadas=set()
+
+    pendientes=[
+        INICIO
+    ]
+
+
+    salida=[]
+
+    descubre=[]
+
+
+    async with async_playwright() as p:
+
+
+        browser = await p.chromium.launch(
+            headless=True
+        )
+
+
+        page = await browser.new_page()
+
+
+
+        numero=0
+
+
+
+        while pendientes and len(visitadas)<MAX_PAGINAS:
+
+
+            url = pendientes.pop(0)
+
+
+
+            clave = normalizar_url(
+                url
+            )
+
+
+            if clave in visitadas:
+
+                continue
+
+
+
+            visitadas.add(
+                clave
+            )
+
+
+            numero += 1
+
+
+
+            print()
+            print("================================")
+            print("PAGINA:", numero)
+            print("Visitadas:", len(visitadas))
+            print("Pendientes:", len(pendientes))
+            print("URL:", url)
+            print("================================")
+
+
+
+            # Saltar ficheros
+
+            if re.search(
+                r"\.(pdf|doc|docx|xls|xlsx|zip)$",
+                url,
+                re.I
+            ):
+
+                continue
+
+
+
+            texto = await extraer_pagina(
+                page,
+                url
+            )
+
+
+
+            if texto:
+
+                salida.append(
+                    texto
+                )
+
+
+
+            try:
+
+
+                nuevos, nuevos_descubre = await sacar_enlaces(
+                    page
+                )
+
+
+
+                for d in nuevos_descubre:
+
+                    if d not in descubre:
+
+                        descubre.append(
+                            d
+                        )
+
+
+
+                for enlace in nuevos:
+
+
+                    clave_enlace = normalizar_url(
+                        enlace
+                    )
+
+
+                    if clave_enlace not in visitadas:
+
+
+                        if enlace not in pendientes:
+
+                            pendientes.append(
+                                enlace
+                            )
+
+
+
+                print(
+                    "Enlaces encontrados:",
+                    len(nuevos)
+                )
+
+
+
+                if nuevos_descubre:
+
+                    print(
+                        "DESCUBRE encontrados:",
+                        nuevos_descubre
+                    )
+
+
+
+            except Exception as e:
+
+
+                print(
+                    "ERROR SACANDO ENLACES:",
+                    e
+                )
+
+
+
+        await browser.close()
+
+
+
+    return salida, descubre
 
 
 
@@ -439,10 +553,10 @@ CONTENIDO:
 
 
 # =====================================
-# MAIN
+# EJECUCION
 # =====================================
 
-if __name__=="__main__":
+if __name__ == "__main__":
 
 
     print("""
@@ -458,14 +572,13 @@ INICIANDO CRAWLER CRUCEMUNDO
 
 
 
-    documento="\n".join(
+    documento = "\n".join(
         datos
     )
 
 
 
     documento += """
-
 
 
 
@@ -477,14 +590,16 @@ ENLACES CON TEXTO DESCUBRE
 
 
 
-    for x in descubre:
+    for enlace in descubre:
 
         documento += (
-            x+"\n"
+            enlace +
+            "\n"
         )
 
 
 
+    print()
     print(
         "TOTAL PAGINAS:",
         len(datos)
@@ -492,7 +607,7 @@ ENLACES CON TEXTO DESCUBRE
 
 
     print(
-        "DESCUBRE encontrados:",
+        "TOTAL DESCUBRE:",
         len(descubre)
     )
 
@@ -515,5 +630,3 @@ ENLACES CON TEXTO DESCUBRE
 CRAWLER FINALIZADO
 ====================================
 """)
-
-
