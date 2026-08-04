@@ -1,8 +1,11 @@
 import asyncio
 import re
-import urllib.parse
+import os
+import requests
 
 from bs4 import BeautifulSoup
+from urllib.parse import urljoin, urlparse
+
 from playwright.async_api import async_playwright
 
 from google.oauth2 import service_account
@@ -13,21 +16,40 @@ from googleapiclient.discovery import build
 # CONFIGURACION
 # =====================================
 
-INICIO = "https://crucemundo.es/"
+DOMAIN = "https://crucemundo.es"
 
-DOMINIO = "crucemundo.es"
+START_URL = DOMAIN + "/"
 
 DOCUMENT_ID = "1-MklRtqm3n31WxMduWlyV1Lj_lwws7wkEIIBqgToycs"
 
 GOOGLE_KEY = "credentials.json"
 
 
-MAX_PAGINAS = 300
+# =====================================
+# FILTROS
+# =====================================
 
+EXTENSIONES_IGNORAR = [
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".webp",
+    ".svg",
+    ".pdf",
+    ".doc",
+    ".docx",
+    ".xls",
+    ".xlsx",
+    ".zip",
+    ".rar",
+    ".mp4",
+    ".mp3"
+]
 
 
 # =====================================
-# GOOGLE DOCS
+# GOOGLE DOC
 # =====================================
 
 def escribir_google_doc(texto):
@@ -75,17 +97,18 @@ def escribir_google_doc(texto):
         )
 
 
-        peticiones.append(
-            {
-                "deleteContentRange":{
-                    "range":{
-                        "startIndex":1,
-                        "endIndex":fin-1
+        if fin>2:
+
+            peticiones.append(
+                {
+                    "deleteContentRange":{
+                        "range":{
+                            "startIndex":1,
+                            "endIndex":fin-1
+                        }
                     }
                 }
-            }
-        )
-
+            )
 
 
     peticiones.append(
@@ -111,190 +134,169 @@ def escribir_google_doc(texto):
     print("Google Doc actualizado")
 
 
+# ===============================
+# FUNCIONES AUXILIARES
+# ===============================
+
+def es_url_valida(url):
+
+    if not url:
+        return False
+
+    url = url.lower()
+
+
+    # Ignorar imágenes
+    extensiones_no_validas = [
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".webp",
+        ".svg",
+        ".ico",
+        ".bmp",
+        ".tif",
+        ".tiff"
+    ]
+
+
+    for ext in extensiones_no_validas:
+        if url.endswith(ext):
+            return False
+
+
+    # Ignorar documentos
+    documentos = [
+        ".pdf",
+        ".doc",
+        ".docx",
+        ".xls",
+        ".xlsx",
+        ".zip"
+    ]
+
+
+    for ext in documentos:
+        if url.endswith(ext):
+            return False
+
+
+    return True
 
 
 
 
-
-
-
-
-
-# =====================================
-# LIMPIAR HTML
-# =====================================
-
-def limpiar(html):
-
-    soup = BeautifulSoup(
-        html,
-        "html.parser"
-    )
-
-
-    for x in soup([
-        "script",
-        "style",
-        "noscript",
-        "svg"
-    ]):
-        x.extract()
-
-
-    texto = soup.get_text(
-        " ",
-        strip=True
-    )
-
-
-    texto = re.sub(
-        r"\s+",
-        " ",
-        texto
-    )
-
-
-    return texto
-
-
-
-# =====================================
-# NORMALIZAR URL
-# =====================================
 
 def normalizar_url(url):
 
-    p = urllib.parse.urlparse(url)
+    if not url:
+        return None
 
 
-    dominio = p.netloc.lower()
-
-    dominio = dominio.replace(
-        "www.",
-        ""
-    )
+    url = url.split("#")[0]
 
 
-    ruta = p.path.rstrip("/")
+    if url.startswith("//"):
+        url="https:"+url
 
 
-    return dominio + ruta
+    if url.startswith("/"):
+        url = DOMAIN + url
 
 
-
-# =====================================
-# COMPROBAR DOMINIO
-# =====================================
-
-def es_interna(url):
-
-    try:
-
-        p = urllib.parse.urlparse(url)
-
-
-        dominio = p.netloc.lower()
-
-        dominio = dominio.replace(
-            "www.",
-            ""
-        )
-
-
-        return dominio == DOMINIO
-
-
-    except:
-
-        return False
+    return url.rstrip("/")
 
 
 
 
-# =====================================
-# SACAR ENLACES
-# =====================================
-
-async def sacar_enlaces(page):
 
 
-    datos = await page.locator(
-        "a"
-    ).evaluate_all(
+# ===============================
+# EXTRAER ENLACES
+# ===============================
+
+async def extraer_enlaces(page):
+
+    enlaces = await page.locator("a").evaluate_all(
         """
-        els => els.map(e => ({
-            url:e.href,
-            texto:e.innerText
+        elementos => elementos.map(a => ({
+            texto:a.innerText.trim(),
+            href:a.href
         }))
         """
     )
 
 
-    enlaces=[]
-
-    descubre=[]
+    resultado=[]
 
 
-
-    for dato in datos:
-
-
-        url = dato["url"]
-
-        texto = dato["texto"].strip()
+    for e in enlaces:
 
 
-
-        if texto.lower() == "descubre":
-
-            if url not in descubre:
-
-                descubre.append(
-                    url
-                )
+        url = normalizar_url(
+            e["href"]
+        )
 
 
-
-        if not es_interna(url):
-
+        if not es_url_valida(url):
             continue
 
 
-
-        excluir=[
-
-            ".pdf",
-            ".doc",
-            ".docx",
-            ".xls",
-            ".xlsx",
-            ".zip",
-            "/download",
-            "olvidoAcceso",
-            "logout"
-
-        ]
-
-
-
-        if any(
-            x.lower() in url.lower()
-            for x in excluir
-        ):
-
+        if not url.startswith(DOMAIN):
             continue
 
 
+        texto = e["texto"]
 
-        if url not in enlaces:
 
-            enlaces.append(
-                url
+        resultado.append(
+            {
+                "url":url,
+                "texto":texto
+            }
+        )
+
+
+    return resultado
+
+
+
+
+
+
+
+# ===============================
+# BUSCAR DESCUBRE
+# ===============================
+
+async def buscar_descubre(page,url):
+
+    encontrados=[]
+
+
+    enlaces = await extraer_enlaces(page)
+
+
+    for e in enlaces:
+
+
+        texto = e["texto"].upper()
+
+
+        if "DESCUBRE" in texto:
+
+
+            encontrados.append(
+                {
+                    "texto":e["texto"],
+                    "url":e["url"]
+                }
             )
 
 
 
-    return enlaces, descubre
+    return encontrados
 
 
 
@@ -302,18 +304,22 @@ async def sacar_enlaces(page):
 
 
 
-# =====================================
-# EXTRAER UNA PAGINA
-# =====================================
 
-async def extraer_pagina(page, url):
+
+
+# ==================================================
+# PROCESAR UNA PAGINA
+# ==================================================
+
+async def procesar_pagina(page, url):
 
     try:
 
-        print()
-        print("--------------------------------")
-        print("Visitando:")
+        print("")
+        print("====================================")
+        print("VISITANDO:")
         print(url)
+        print("====================================")
 
 
         await page.goto(
@@ -324,75 +330,148 @@ async def extraer_pagina(page, url):
 
 
         await page.wait_for_timeout(
-            1500
+            1000
         )
 
 
         html = await page.content()
 
 
-        titulo = await page.title()
-
+        # Guardar texto de la página
 
         texto = limpiar(
             html
         )
 
 
+        contenido.append(
+            f"""
 
-        return f"""
-
-==================================================
-
+====================================
 URL:
 {url}
 
-
-TITULO:
-{titulo}
-
-
 CONTENIDO:
-
-{texto[:10000]}
-
-==================================================
+{texto[:8000]}
 
 """
+        )
+
+
+        # Buscar enlaces DESCUBRE
+
+        encontrados = await buscar_descubre(
+            page,
+            url
+        )
+
+
+        for d in encontrados:
+
+
+            existe = False
+
+
+            for x in descubre:
+
+                if x["url"] == d["url"]:
+                    existe=True
+                    break
+
+
+            if not existe:
+
+                print(
+                    "DESCUBRE ENCONTRADO:",
+                    d["texto"],
+                    "->",
+                    d["url"]
+                )
+
+
+                descubre.append(
+                    {
+                        "pagina":url,
+                        "texto":d["texto"],
+                        "url":d["url"]
+                    }
+                )
+
+
+
+        # Sacar nuevos enlaces
+
+        enlaces = await extraer_enlaces(
+            page
+        )
+
+
+        nuevos = 0
+
+
+        for e in enlaces:
+
+
+            enlace = e["url"]
+
+
+            if enlace not in visitadas and enlace not in pendientes:
+
+                pendientes.add(
+                    enlace
+                )
+
+                nuevos += 1
+
+
+
+        print(
+            "Nuevos enlaces:",
+            nuevos
+        )
+
+
+        print(
+            "Pendientes:",
+            len(pendientes)
+        )
+
 
 
     except Exception as e:
 
 
         print(
-            "ERROR:",
-            url,
+            "ERROR EN:",
+            url
+        )
+
+        print(
             e
         )
 
 
-        return ""
 
 
 
 
-# =====================================
+# ==================================================
 # CRAWLER PRINCIPAL
-# =====================================
+# ==================================================
 
 async def crawler():
 
 
-    visitadas=set()
+    print("")
+    print("====================================")
+    print("INICIANDO CRAWLER CRUCEMUNDO")
+    print("SIN SITEMAP")
+    print("====================================")
 
-    pendientes=[
-        INICIO
-    ]
 
-
-    salida=[]
-
-    descubre=[]
+    pendientes.add(
+        START_URL
+    )
 
 
     async with async_playwright() as p:
@@ -407,135 +486,55 @@ async def crawler():
 
 
 
-        numero=0
+        contador=0
 
 
 
-        while pendientes and len(visitadas)<MAX_PAGINAS:
+        while pendientes:
 
 
-            url = pendientes.pop(0)
+            url = pendientes.pop()
 
 
-
-            clave = normalizar_url(
+            url = normalizar_url(
                 url
             )
 
 
-            if clave in visitadas:
+            if not url:
+                continue
 
+
+
+            if url in visitadas:
                 continue
 
 
 
             visitadas.add(
-                clave
-            )
-
-
-            numero += 1
-
-
-
-            print()
-            print("================================")
-            print("PAGINA:", numero)
-            print("Visitadas:", len(visitadas))
-            print("Pendientes:", len(pendientes))
-            print("URL:", url)
-            print("================================")
-
-
-
-            # Saltar ficheros
-
-            if re.search(
-                r"\.(pdf|doc|docx|xls|xlsx|zip)$",
-                url,
-                re.I
-            ):
-
-                continue
-
-
-
-            texto = await extraer_pagina(
-                page,
                 url
             )
 
 
-
-            if texto:
-
-                salida.append(
-                    texto
-                )
+            contador += 1
 
 
+            print("")
+            print(
+                "PAGINA:",
+                contador
+            )
 
-            try:
-
-
-                nuevos, nuevos_descubre = await sacar_enlaces(
-                    page
-                )
-
-
-
-                for d in nuevos_descubre:
-
-                    if d not in descubre:
-
-                        descubre.append(
-                            d
-                        )
+            print(
+                "Visitadas:",
+                len(visitadas)
+            )
 
 
-
-                for enlace in nuevos:
-
-
-                    clave_enlace = normalizar_url(
-                        enlace
-                    )
-
-
-                    if clave_enlace not in visitadas:
-
-
-                        if enlace not in pendientes:
-
-                            pendientes.append(
-                                enlace
-                            )
-
-
-
-                print(
-                    "Enlaces encontrados:",
-                    len(nuevos)
-                )
-
-
-
-                if nuevos_descubre:
-
-                    print(
-                        "DESCUBRE encontrados:",
-                        nuevos_descubre
-                    )
-
-
-
-            except Exception as e:
-
-
-                print(
-                    "ERROR SACANDO ENLACES:",
-                    e
-                )
+            await procesar_pagina(
+                page,
+                url
+            )
 
 
 
@@ -543,7 +542,14 @@ async def crawler():
 
 
 
-    return salida, descubre
+    print("")
+    print("====================================")
+    print("CRAWLER TERMINADO")
+    print("TOTAL PAGINAS:",
+          len(visitadas))
+    print("TOTAL DESCUBRE:",
+          len(descubre))
+    print("====================================")
 
 
 
@@ -551,71 +557,115 @@ async def crawler():
 
 
 
+# ==================================================
+# GENERAR INFORME FINAL
+# ==================================================
 
-# =====================================
-# EJECUCION
-# =====================================
+def generar_documento():
 
-if __name__ == "__main__":
-
-
-    print("""
-====================================
-INICIANDO CRAWLER CRUCEMUNDO
-====================================
-""")
+    salida = []
 
 
-    datos, descubre = asyncio.run(
-        crawler()
+    salida.append(
+        "CRAWLER CRUCEMUNDO\n"
+    )
+
+
+    salida.append(
+        "====================================\n"
+    )
+
+
+    salida.append(
+        f"TOTAL PAGINAS VISITADAS: {len(visitadas)}\n"
+    )
+
+
+    salida.append(
+        f"TOTAL ENLACES DESCUBRE: {len(descubre)}\n"
+    )
+
+
+    salida.append(
+        "\n\n"
     )
 
 
 
-    documento = "\n".join(
-        datos
+    salida.append(
+        "LISTADO DESCUBRE\n"
     )
 
 
-
-    documento += """
-
-
-
-==================================================
-ENLACES CON TEXTO DESCUBRE
-==================================================
-
-"""
+    salida.append(
+        "====================================\n"
+    )
 
 
+    for d in descubre:
 
-    for enlace in descubre:
 
-        documento += (
-            enlace +
+        salida.append(
             "\n"
+            "PAGINA DONDE APARECE:\n"
+            + d["pagina"]
+            + "\n\n"
+            "TEXTO DEL ENLACE:\n"
+            + d["texto"]
+            + "\n\n"
+            "DESTINO:\n"
+            + d["url"]
+            + "\n"
+            "------------------------------------\n"
         )
 
 
 
-    print()
-    print(
-        "TOTAL PAGINAS:",
-        len(datos)
+    salida.append(
+        "\n\n"
+        "CONTENIDO DE PAGINAS\n"
+    )
+
+
+    salida.append(
+        "====================================\n"
+    )
+
+
+    for c in contenido:
+
+        salida.append(
+            c
+        )
+
+
+
+    return "".join(
+        salida
+    )
+
+
+
+
+
+# ==================================================
+# EJECUCION
+# ==================================================
+
+if __name__ == "__main__":
+
+
+    asyncio.run(
+        crawler()
     )
 
 
     print(
-        "TOTAL DESCUBRE:",
-        len(descubre)
+        "Generando documento..."
     )
 
 
-
-    print(
-        "Escribiendo Google Doc..."
-    )
+    documento = generar_documento()
 
 
 
@@ -624,9 +674,21 @@ ENLACES CON TEXTO DESCUBRE
     )
 
 
+    print("")
+    print("====================================")
+    print("FINALIZADO CORRECTAMENTE")
+    print("====================================")
 
-    print("""
-====================================
-CRAWLER FINALIZADO
-====================================
-""")
+
+
+
+
+
+
+
+
+
+
+
+
+
