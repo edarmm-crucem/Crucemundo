@@ -13,18 +13,25 @@ jobs:
     - name: Descargar código
       uses: actions/checkout@v4
 
+
     - name: Instalar Python
       uses: actions/setup-python@v5
       with:
         python-version: "3.12"
+
+
+    - name: Crear credentials Google
+      run: |
+        echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials.json
+        ls -l credentials.json
+
 
     - name: Instalar librerías
       run: |
         pip install -r requirements.txt
         playwright install chromium
 
+
     - name: Ejecutar crawler
-      env:
-        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
       run: |
         python crawler_crucemundo.py
