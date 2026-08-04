@@ -2055,6 +2055,8 @@ if not st.session_state.authenticated:
     st.stop()
 
 
+
+
 # ============================================================
 # BLOQUE 18: CABECERA DEL PORTAL Y VARIABLES DE SESIÓN
 # ============================================================
@@ -2120,7 +2122,7 @@ st.markdown(
 st.markdown(
     """
     <style>
-    #crm_nav button, #proba_nav button, #ocup_nav button {
+    #crm_nav button, #proba_nav button, #ocup_nav button, #claude_nav button {
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -2142,7 +2144,7 @@ st.markdown(
         cursor: pointer !important;
         transition: filter 0.15s ease, transform 0.15s ease !important;
     }
-    #crm_nav button:hover, #proba_nav button:hover, #ocup_nav button:hover {
+    #crm_nav button:hover, #proba_nav button:hover, #ocup_nav button:hover, #claude_nav button:hover {
         filter: brightness(0.94) !important;
         transform: translateY(-1px) !important;
     }
@@ -2151,8 +2153,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-nav_label_crm, nav_btn_crm, nav_label_fit, nav_btn_fit, nav_label_ocup, nav_btn_ocup, _ = st.columns(
-    [0.18, 0.85, 0.18, 0.95, 0.18, 0.85, 5], gap="small"
+nav_label_crm, nav_btn_crm, nav_label_fit, nav_btn_fit, nav_label_ocup, nav_btn_ocup, nav_label_ia, nav_btn_ia, _ = st.columns(
+    [0.18, 0.85, 0.18, 0.95, 0.18, 0.85, 0.18, 1.1, 5], gap="small"
 )
 
 with nav_label_crm:
@@ -2172,6 +2174,15 @@ with nav_label_ocup:
 with nav_btn_ocup:
     if st.button("Ocupación / Occupancy", key="ocup_nav", use_container_width=False):
         st.switch_page("pages/OCUP.py")
+
+with nav_label_ia:
+    st.markdown('<div style="padding-top:2px"><span class="web-chip-blue">IA</span></div>', unsafe_allow_html=True)
+with nav_btn_ia:
+    if st.button("🤖 Pregunta a Claude", key="claude_nav", use_container_width=False):
+        st.switch_page("pages/Claude.py")
+
+
+
         
 # ============================================================
 # BLOQUE 19: TARJETAS DE ACCIÓN — DEFINICIÓN Y RENDER
