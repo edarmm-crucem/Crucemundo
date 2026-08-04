@@ -178,48 +178,48 @@ def leer_sitemap():
 
 async def sacar_barcos(page):
 
-
     print("Entrando en flota...")
-
 
     await page.goto(
         FLOTA,
-        wait_until="domcontentloaded",
+        wait_until="networkidle",
         timeout=60000
     )
 
-
-    # Esperar carga JS
-
-    await page.wait_for_timeout(5000)
-
+    await page.wait_for_timeout(3000)
 
     html = await page.content()
 
+    print("HTML FLOTA:", len(html))
 
 
-    barcos = re.findall(
-        r'https?://[^"\']*barcoscrucemundo[^"\']*',
-        html,
-        re.I
+    # Guardamos una muestra para revisar si hace falta
+    if "barcoscrucemundo" in html:
+        print("Encontrado barcoscrucemundo en HTML")
+    else:
+        print("NO aparece barcoscrucemundo")
+
+
+    enlaces = await page.locator("a").evaluate_all(
+        """
+        els => els.map(e => e.href)
+        """
     )
 
 
     resultado=[]
 
 
-    for b in barcos:
+    for url in enlaces:
 
+        if (
+            "barcoscrucemundo" in url.lower()
+            or "/barco" in url.lower()
+            or "/ms-" in url.lower()
+        ):
 
-        b=b.replace(
-            "&amp;",
-            "&"
-        )
-
-
-        if b not in resultado:
-            resultado.append(b)
-
+            if url not in resultado:
+                resultado.append(url)
 
 
     print(
@@ -229,10 +229,6 @@ async def sacar_barcos(page):
 
 
     return resultado
-
-
-
-
 
 # ===============================
 # EXTRAER PAGINA
