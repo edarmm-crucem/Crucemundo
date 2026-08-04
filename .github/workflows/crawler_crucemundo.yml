@@ -24,5 +24,7 @@ jobs:
         playwright install chromium
 
     - name: Ejecutar crawler
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
       run: |
         python crawler_crucemundo.py
