@@ -6,6 +6,7 @@ import streamlit as st
 import anthropic
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from openai import OpenAI
 
 st.set_page_config(page_title="Pregunta a Claude", page_icon="🤖", layout="wide")
 
@@ -38,27 +39,40 @@ def getdocumenttext():
     return data.decode("utf-8") if isinstance(data, bytes) else data
 
 
+from openai import OpenAI
+
 def preguntaraldocumento(documenttext, pregunta, historial):
-    client = anthropic.Anthropic(api_key=st.secrets["anthropicapikey"])
+    apikey = st.secrets.get("openrouterapikey")
+    if not apikey:
+        raise Exception(
+            "Falta 'openrouterapikey' en los Secrets de Streamlit Cloud "
+            "(Manage app → Settings → Secrets)."
+        )
+
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=apikey,
+    )
 
     systemprompt = f"""Eres un asistente que responde preguntas basándose en el contenido
 del documento "{DOCUMENTNAME}", que se actualiza automáticamente cada noche con información
 extraída de la página web de Crucemundo. Responde solo con lo que aparece en el documento;
-si algo no está, dilo claramente en vez de inventarlo.
+si algo no está, dilo claramente en vez de inventarlo."""
 
---- CONTENIDO DEL DOCUMENTO ---
-{documenttext}
---- FIN DEL DOCUMENTO ---
-"""
+    messages = [
+        {"role": "system", "content": systemprompt + "\n\n--- CONTENIDO DEL DOCUMENTO ---\n" + documenttext + "\n--- FIN ---"},
+    ] + historial + [{"role": "user", "content": pregunta}]
 
-    messages = historial + [{"role": "user", "content": pregunta}]
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=1500,
-        system=systemprompt,
+    response = client.chat.completions.create(
+        model="anthropic/claude-sonnet-5",  # o el modelo que prefieras, ver nota abajo
         messages=messages,
+        max_tokens=1500,
+        extra_headers={
+            "HTTP-Referer": "https://crucemundo.streamlit.app",  # opcional pero recomendado por OpenRouter
+            "X-Title": "Crucemundo Hub",
+        },
     )
-    return response.content[0].text
+    return response.choices[0].message.content
 
 
 st.markdown("### 🤖 Pregunta a Claude")
