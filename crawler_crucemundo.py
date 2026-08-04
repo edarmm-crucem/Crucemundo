@@ -1,6 +1,6 @@
 import asyncio
 import re
-from urllib.parse import urljoin, urlparse
+import urllib.parse
 
 from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright
@@ -9,32 +9,42 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 
-# ======================================================
-# CONFIGURACIÓN
-# ======================================================
+
+# ===============================
+# CONFIGURACION
+# ===============================
 
 DOMAIN = "https://crucemundo.es"
 
-START_URL = DOMAIN + "/"
+INICIO = DOMAIN + "/"
 
 DOCUMENT_ID = "1-MklRtqm3n31WxMduWlyV1Lj_lwws7wkEIIBqgToycs"
 
 GOOGLE_KEY = "credentials.json"
 
-MAX_TEXTO = 8000
 
-TIMEOUT = 60000
+MAX_PAGINAS = 300
+
+ESPERA = 1500
+
+
+
+# ===============================
+# GOOGLE DOCS
+# ===============================
 
 def escribir_google_doc(texto):
 
-    scopes = [
+    scopes=[
         "https://www.googleapis.com/auth/documents"
     ]
+
 
     creds = service_account.Credentials.from_service_account_file(
         GOOGLE_KEY,
         scopes=scopes
     )
+
 
     service = build(
         "docs",
@@ -42,13 +52,17 @@ def escribir_google_doc(texto):
         credentials=creds
     )
 
+
     doc = service.documents().get(
         documentId=DOCUMENT_ID
     ).execute()
 
-    requests = []
 
-    contenido = doc.get(
+
+    peticiones=[]
+
+
+    contenido=doc.get(
         "body",
         {}
     ).get(
@@ -56,72 +70,87 @@ def escribir_google_doc(texto):
         []
     )
 
-    if len(contenido) > 1:
 
-        fin = contenido[-1]["endIndex"]
+    if len(contenido)>1:
 
-        requests.append(
+        fin=contenido[-1].get(
+            "endIndex",
+            1
+        )
+
+
+        peticiones.append(
             {
-                "deleteContentRange": {
-                    "range": {
-                        "startIndex": 1,
-                        "endIndex": fin - 1
+                "deleteContentRange":{
+                    "range":{
+                        "startIndex":1,
+                        "endIndex":fin-1
                     }
                 }
             }
         )
 
-    requests.append(
+
+
+    peticiones.append(
         {
-            "insertText": {
-                "location": {
-                    "index": 1
+            "insertText":{
+                "location":{
+                    "index":1
                 },
-                "text": texto
+                "text":texto
             }
         }
     )
 
+
     service.documents().batchUpdate(
         documentId=DOCUMENT_ID,
         body={
-            "requests": requests
+            "requests":peticiones
         }
     ).execute()
+
 
     print("Google Doc actualizado")
 
 
 
 
-def limpiar_html(html):
+# ===============================
+# LIMPIAR HTML
+# ===============================
 
-    soup = BeautifulSoup(
+def limpiar(html):
+
+    soup=BeautifulSoup(
         html,
         "html.parser"
     )
 
-    for tag in soup(
+
+    for x in soup(
         [
             "script",
             "style",
-            "noscript",
-            "svg",
-            "iframe"
+            "noscript"
         ]
     ):
-        tag.decompose()
+        x.extract()
 
-    texto = soup.get_text(
+
+    texto=soup.get_text(
         " ",
         strip=True
     )
 
-    texto = re.sub(
+
+    texto=re.sub(
         r"\s+",
         " ",
         texto
     )
+
 
     return texto
 
@@ -129,435 +158,362 @@ def limpiar_html(html):
 
 
 
+# ===============================
+# ENLACES INTERNOS
+# ===============================
+
+async def sacar_enlaces(page,url_actual):
 
 
-
-
-def normalizar(url):
-
-    url = url.split("#")[0]
-
-    url = url.rstrip("/")
-
-    return url
-
-
-
-def es_interna(url):
-
-    return urlparse(url).netloc.endswith(
-        "crucemundo.es"
+    enlaces=await page.locator(
+        "a"
+    ).evaluate_all(
+        """
+        els=>els.map(e=>e.href)
+        """
     )
 
 
+    resultado=[]
 
-def ignorar(url):
 
-    url = url.lower()
+    for enlace in enlaces:
 
-    extensiones = (
 
-        ".pdf",
-        ".jpg",
-        ".jpeg",
-        ".png",
-        ".gif",
-        ".svg",
-        ".webp",
-        ".css",
-        ".js",
-        ".ico",
-        ".zip",
-        ".xml",
-        ".woff",
-        ".woff2",
-        ".ttf",
-        ".eot",
-        ".mp4",
-        ".mp3",
-        ".avi"
+        if not enlace:
+            continue
 
+
+        enlace=urllib.parse.urljoin(
+            url_actual,
+            enlace
+        )
+
+
+        enlace=enlace.split("#")[0]
+
+
+        # quitar www
+        enlace=enlace.replace(
+            "https://www.crucemundo.es",
+            "https://crucemundo.es"
+        )
+
+
+        if not enlace.startswith(DOMAIN):
+            continue
+
+
+
+        basura=[
+            ".pdf",
+            ".doc",
+            ".xls",
+            ".zip",
+            "logout",
+            "olvidoAcceso",
+            "altaagencias"
+        ]
+
+
+        if any(
+            x in enlace.lower()
+            for x in basura
+        ):
+            continue
+
+
+
+        if enlace not in resultado:
+            resultado.append(enlace)
+
+
+
+    return resultado
+
+
+
+
+
+
+
+
+
+
+
+# ===============================
+# CAPTURAR AJAX / XHR
+# ===============================
+
+async def capturar_ajax(page):
+
+    ajax=[]
+
+
+    async def respuesta(response):
+
+        url=response.url
+
+
+        if url not in ajax:
+
+            tipo=response.request.resource_type
+
+
+            if tipo in [
+                "xhr",
+                "fetch"
+            ]:
+
+                ajax.append(url)
+
+
+
+    page.on(
+        "response",
+        respuesta
     )
 
-    if url.endswith(extensiones):
-        return True
 
-    if "mailto:" in url:
-        return True
-
-    if "tel:" in url:
-        return True
-
-    if "javascript:" in url:
-        return True
-
-    return False
+    return ajax
 
 
 
-# ======================================================
-# EXTRAER UNA PÁGINA
-# ======================================================
 
-async def procesar_pagina(page, url):
+
+# ===============================
+# EXTRAER UNA PAGINA
+# ===============================
+
+async def visitar_pagina(page,url):
+
+
+    print()
+    print("--------------------------------")
+    print("Visitando:")
+    print(url)
+
+
+
+    ajax=[]
+
+
+    async def guardar_ajax(response):
+
+        if response.request.resource_type in [
+            "xhr",
+            "fetch"
+        ]:
+
+            if response.url not in ajax:
+                ajax.append(
+                    response.url
+                )
+
+
+
+    page.on(
+        "response",
+        guardar_ajax
+    )
+
+
 
     try:
 
-        print("\nVisitando:", url)
 
         await page.goto(
             url,
             wait_until="networkidle",
-            timeout=TIMEOUT
+            timeout=60000
         )
 
-        await page.wait_for_timeout(1000)
 
-        titulo = await page.title()
-
-        html = await page.content()
-
-        texto = limpiar_html(html)
-
-        enlaces = await page.locator("a[href]").evaluate_all(
-            """
-            els => els.map(e => e.href)
-            """
+        await page.wait_for_timeout(
+            ESPERA
         )
 
-        nuevos = []
 
-        for enlace in enlaces:
 
-            if not enlace:
-                continue
+        html=await page.content()
 
-            enlace = urljoin(url, enlace)
 
-            enlace = normalizar(enlace)
 
-            if not es_interna(enlace):
-                continue
+        titulo=await page.title()
 
-            if ignorar(enlace):
-                continue
 
-            nuevos.append(enlace)
 
-        nuevos = list(dict.fromkeys(nuevos))
+        texto=limpiar(
+            html
+        )
 
-        print("Enlaces encontrados:", len(nuevos))
 
-        bloque = f"""
+
+        # Mostrar AJAX encontrados
+
+        if ajax:
+
+            print(
+                "AJAX encontrados:",
+                len(ajax)
+            )
+
+
+            for a in ajax:
+
+                if (
+                    "init" in a.lower()
+                    or "php" in a.lower()
+                    or "json" in a.lower()
+                    or "ajax" in a.lower()
+                ):
+
+                    print(
+                        "POSIBLE DATOS:",
+                        a
+                    )
+
+
+
+        enlaces=await sacar_enlaces(
+            page,
+            url
+        )
+
+
+
+        print(
+            "Enlaces encontrados:",
+            len(enlaces)
+        )
+
+
+
+        resultado=f"""
 
 ==================================================
 
 URL:
 {url}
 
-==================================================
 
 TITULO:
 {titulo}
 
-==================================================
+
+AJAX:
+
+{chr(10).join(ajax)}
+
 
 CONTENIDO:
 
-{texto[:MAX_TEXTO]}
+{texto[:8000]}
+
+==================================================
 
 """
 
-        return bloque, nuevos
+
+        return resultado,enlaces
+
+
 
     except Exception as e:
 
-        print("ERROR:", url)
-        print(e)
 
-        return "", []
-
-
-
-
-
-
-
-
-# ======================================================
-# COLA
-# ======================================================
-
-class Cola:
-
-    def __init__(self):
-
-        self.pendientes = []
-
-        self.visitadas = set()
-
-    def agregar(self, url):
-
-        url = normalizar(url)
-
-        if url in self.visitadas:
-            return
-
-        if url in self.pendientes:
-            return
-
-        self.pendientes.append(url)
-
-    def siguiente(self):
-
-        if not self.pendientes:
-            return None
-
-        return self.pendientes.pop(0)
-
-    def visitar(self, url):
-
-        self.visitadas.add(
-            normalizar(url)
+        print(
+            "ERROR:",
+            url,
+            e
         )
 
 
+        return "",[]
 
 
-# ======================================================
-# MOTOR DEL CRAWLER
-# ======================================================
-
-async def ejecutar_crawler():
-
-    salida = []
-
-    cola = Cola()
-
-    cola.agregar(
-        START_URL
-    )
 
 
-    async with async_playwright() as p:
 
 
-        browser = await p.chromium.launch(
-            headless=True
-        )
 
 
-        page = await browser.new_page()
+# =====================================
+# MAIN
+# =====================================
+
+if __name__=="__main__":
 
 
-        contador = 0
+    print("""
+====================================
+INICIANDO CRAWLER CRUCEMUNDO
+====================================
+""")
 
 
-        while True:
-
-
-            url = cola.siguiente()
-
-
-            if not url:
-                break
-
-
-            if url in cola.visitadas:
-                continue
-
-
-            cola.visitar(url)
-
-
-            contador += 1
-
-
-            print(
-                "\n===================================="
-            )
-
-            print(
-                "PÁGINA",
-                contador
-            )
-
-            print(
-                "Visitadas:",
-                len(cola.visitadas)
-            )
-
-            print(
-                "Pendientes:",
-                len(cola.pendientes)
-            )
-
-
-            texto, enlaces = await procesar_pagina(
-                page,
-                url
-            )
-
-
-            if texto:
-
-                salida.append(
-                    texto
-                )
-
-
-            for enlace in enlaces:
-
-                cola.agregar(
-                    enlace
-                )
-
-
-        await browser.close()
-
-
-    print(
-        "\nTOTAL PÁGINAS:",
-        len(cola.visitadas)
-    )
-
-
-    return "\n".join(
-        salida
+    datos, descubre = asyncio.run(
+        crawler()
     )
 
 
 
+    documento="\n".join(
+        datos
+    )
+
+
+
+    documento += """
 
 
 
 
-# ======================================================
-# GUARDAR RESULTADO
-# ======================================================
-
-def preparar_documento(texto):
-
-    if not texto:
-
-        return (
-            "No se ha encontrado contenido."
-        )
-
-
-    cabecera = """
-
-CRAWLER CRUCEMUNDO
-==================
-
-Fecha de rastreo automática.
+==================================================
+ENLACES CON TEXTO DESCUBRE
+==================================================
 
 """
 
-    return cabecera + texto
 
 
+    for x in descubre:
 
-# ======================================================
-# MAIN
-# ======================================================
+        documento += (
+            x+"\n"
+        )
 
-async def main():
+
 
     print(
-        "===================================="
-    )
-
-    print(
-        "INICIANDO CRAWLER CRUCEMUNDO"
-    )
-
-    print(
-        "URL inicial:",
-        START_URL
-    )
-
-    print(
-        "===================================="
+        "TOTAL PAGINAS:",
+        len(datos)
     )
 
 
-    documento = await ejecutar_crawler()
+    print(
+        "DESCUBRE encontrados:",
+        len(descubre)
+    )
 
 
-    documento = preparar_documento(
+
+    print(
+        "Escribiendo Google Doc..."
+    )
+
+
+
+    escribir_google_doc(
         documento
     )
 
 
-    print(
-        "\nEscribiendo Google Doc..."
-    )
 
-
-    try:
-
-        escribir_google_doc(
-            documento
-        )
-
-
-    except Exception as e:
-
-        print(
-            "ERROR GOOGLE DOC:"
-        )
-
-        print(e)
-
-        # Guardar copia local si falla Google
-
-        with open(
-            "resultado_crawler.txt",
-            "w",
-            encoding="utf-8"
-        ) as f:
-
-            f.write(
-                documento
-            )
-
-
-        print(
-            "Guardado resultado_crawler.txt"
-        )
-
-
-
-    print(
-        "\n===================================="
-    )
-
-    print(
-        "CRAWLER FINALIZADO"
-    )
-
-    print(
-        "===================================="
-    )
-
-
-
-# ======================================================
-# EJECUCIÓN
-# ======================================================
-
-if __name__ == "__main__":
-
-
-    asyncio.run(
-        main()
-    )
-
-
-
-
-
-
+    print("""
+====================================
+CRAWLER FINALIZADO
+====================================
+""")
 
 
