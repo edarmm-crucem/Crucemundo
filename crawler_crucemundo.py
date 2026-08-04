@@ -1,6 +1,8 @@
 import asyncio
 import re
 import requests
+import os
+
 from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright
 
@@ -24,6 +26,7 @@ DOCUMENT_ID = "1-MklRtqm3n31WxMduWlyV1Lj_lwws7wkEIIBqgToycs"
 GOOGLE_KEY = "credentials.json"
 
 
+
 # ===============================
 # GOOGLE DOCS
 # ===============================
@@ -34,10 +37,12 @@ def escribir_google_doc(texto):
         "https://www.googleapis.com/auth/documents"
     ]
 
+
     creds = service_account.Credentials.from_service_account_file(
         GOOGLE_KEY,
         scopes=scopes
     )
+
 
     service = build(
         "docs",
@@ -50,6 +55,7 @@ def escribir_google_doc(texto):
         documentId=DOCUMENT_ID,
         body={
             "requests":[
+
                 {
                     "deleteContent":{
                         "range":{
@@ -58,6 +64,7 @@ def escribir_google_doc(texto):
                         }
                     }
                 },
+
                 {
                     "insertText":{
                         "location":{
@@ -66,13 +73,16 @@ def escribir_google_doc(texto):
                         "text":texto
                     }
                 }
+
             ]
         }
+
     ).execute()
 
 
+
 # ===============================
-# LIMPIEZA TEXTO
+# LIMPIAR HTML
 # ===============================
 
 def limpiar(html):
@@ -82,8 +92,13 @@ def limpiar(html):
         "html.parser"
     )
 
+
     for x in soup(
-        ["script","style","noscript"]
+        [
+            "script",
+            "style",
+            "noscript"
+        ]
     ):
         x.extract()
 
@@ -100,7 +115,9 @@ def limpiar(html):
         texto
     )
 
+
     return texto
+
 
 
 
@@ -112,10 +129,12 @@ def leer_sitemap():
 
     urls=[]
 
+
     r=requests.get(
         SITEMAP,
         timeout=30
     )
+
 
     locs=re.findall(
         r"<loc>(.*?)</loc>",
@@ -133,24 +152,38 @@ def leer_sitemap():
 
 
 
+
+
 # ===============================
 # EXTRAER BARCOS
 # ===============================
 
 async def sacar_barcos(page):
 
+
+    print("Entrando en flota...")
+
+
     await page.goto(
         FLOTA,
-        wait_until="networkidle"
+        wait_until="domcontentloaded",
+        timeout=60000
     )
+
+
+    # Esperar carga JS
+
+    await page.wait_for_timeout(5000)
 
 
     html = await page.content()
 
 
-    barcos=re.findall(
-        r'href="([^"]*barcoscrucemundo[^"]*)"',
-        html
+
+    barcos = re.findall(
+        r'https?://[^"\']*barcoscrucemundo[^"\']*',
+        html,
+        re.I
     )
 
 
@@ -159,15 +192,27 @@ async def sacar_barcos(page):
 
     for b in barcos:
 
-        if not b.startswith("http"):
-            b=DOMAIN+b
+
+        b=b.replace(
+            "&amp;",
+            "&"
+        )
 
 
         if b not in resultado:
             resultado.append(b)
 
 
+
+    print(
+        "Barcos detectados:",
+        resultado
+    )
+
+
     return resultado
+
+
 
 
 
@@ -179,10 +224,27 @@ async def extraer_pagina(page,url):
 
     try:
 
+
+        # Saltar descargas
+
+        if url.endswith(".pdf") or "pdfcrucerodisp" in url:
+            print(
+                "SALTO PDF:",
+                url
+            )
+            return ""
+
+
+
         await page.goto(
             url,
-            wait_until="networkidle",
+            wait_until="domcontentloaded",
             timeout=60000
+        )
+
+
+        await page.wait_for_timeout(
+            1500
         )
 
 
@@ -195,32 +257,33 @@ async def extraer_pagina(page,url):
         texto = limpiar(html)
 
 
+
         return f"""
 
-==============================
-URL
-==============================
+==================================================
 
+URL:
 {url}
 
 
-==============================
-TITULO
-==============================
+==================================================
 
+TITULO:
 {titulo}
 
 
-==============================
-CONTENIDO
-==============================
+==================================================
 
-{texto[:6000]}
+CONTENIDO:
+
+{texto[:8000]}
 
 """
 
 
+
     except Exception as e:
+
 
         print(
             "ERROR",
@@ -228,12 +291,15 @@ CONTENIDO
             e
         )
 
+
         return ""
 
 
 
+
+
 # ===============================
-# PROCESO PRINCIPAL
+# PROCESO
 # ===============================
 
 async def crawler():
@@ -243,6 +309,7 @@ async def crawler():
 
 
     urls=leer_sitemap()
+
 
 
     async with async_playwright() as p:
@@ -256,12 +323,10 @@ async def crawler():
         page = await browser.new_page()
 
 
-        print(
-            "Extrayendo flota..."
+
+        barcos = await sacar_barcos(
+            page
         )
-
-
-        barcos = await sacar_barcos(page)
 
 
         print(
@@ -270,7 +335,10 @@ async def crawler():
         )
 
 
-        urls.extend(barcos)
+
+        urls.extend(
+            barcos
+        )
 
 
         urls=list(
@@ -278,7 +346,16 @@ async def crawler():
         )
 
 
+
+        print(
+            "TOTAL URL:",
+            len(urls)
+        )
+
+
+
         for i,url in enumerate(urls):
+
 
             print(
                 i+1,
@@ -294,7 +371,8 @@ async def crawler():
             )
 
 
-            salida.append(texto)
+            if texto:
+                salida.append(texto)
 
 
 
@@ -302,8 +380,14 @@ async def crawler():
 
 
 
+
     documento="\n".join(
         salida
+    )
+
+
+    print(
+        "Escribiendo Google Doc..."
     )
 
 
@@ -315,6 +399,7 @@ async def crawler():
     print(
         "FINALIZADO"
     )
+
 
 
 
