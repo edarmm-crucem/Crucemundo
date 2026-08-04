@@ -37,12 +37,10 @@ def escribir_google_doc(texto):
         "https://www.googleapis.com/auth/documents"
     ]
 
-
     creds = service_account.Credentials.from_service_account_file(
         GOOGLE_KEY,
         scopes=scopes
     )
-
 
     service = build(
         "docs",
@@ -50,34 +48,54 @@ def escribir_google_doc(texto):
         credentials=creds
     )
 
+    doc = service.documents().get(
+        documentId=DOCUMENT_ID
+    ).execute()
+
+
+    requests=[]
+
+    contenido = doc.get("body", {}).get("content", [])
+
+    if len(contenido) > 1:
+
+        ultimo = contenido[-1]
+
+        fin = ultimo.get("endIndex",1)
+
+        requests.append(
+            {
+                "deleteContentRange":{
+                    "range":{
+                        "startIndex":1,
+                        "endIndex":fin-1
+                    }
+                }
+            }
+        )
+
+
+    requests.append(
+        {
+            "insertText":{
+                "location":{
+                    "index":1
+                },
+                "text":texto
+            }
+        }
+    )
+
 
     service.documents().batchUpdate(
         documentId=DOCUMENT_ID,
         body={
-            "requests":[
-
-                {
-                    "deleteContent":{
-                        "range":{
-                            "startIndex":1,
-                            "endIndex":999999
-                        }
-                    }
-                },
-
-                {
-                    "insertText":{
-                        "location":{
-                            "index":1
-                        },
-                        "text":texto
-                    }
-                }
-
-            ]
+            "requests":requests
         }
-
     ).execute()
+
+
+    print("Google Doc actualizado")
 
 
 
