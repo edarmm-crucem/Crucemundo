@@ -1,7 +1,6 @@
 import asyncio
 import re
-import requests
-import os
+from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright
@@ -10,26 +9,21 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 
-# ===============================
+# ======================================================
 # CONFIGURACIÓN
-# ===============================
+# ======================================================
 
 DOMAIN = "https://crucemundo.es"
 
-SITEMAP = DOMAIN + "/sitemap.xml"
-
-FLOTA = DOMAIN + "/flota-cruceros-fluviales"
+START_URL = DOMAIN + "/"
 
 DOCUMENT_ID = "1-MklRtqm3n31WxMduWlyV1Lj_lwws7wkEIIBqgToycs"
 
-
 GOOGLE_KEY = "credentials.json"
 
+MAX_TEXTO = 8000
 
-
-# ===============================
-# GOOGLE DOCS
-# ===============================
+TIMEOUT = 60000
 
 def escribir_google_doc(texto):
 
@@ -52,80 +46,76 @@ def escribir_google_doc(texto):
         documentId=DOCUMENT_ID
     ).execute()
 
+    requests = []
 
-    requests=[]
-
-    contenido = doc.get("body", {}).get("content", [])
+    contenido = doc.get(
+        "body",
+        {}
+    ).get(
+        "content",
+        []
+    )
 
     if len(contenido) > 1:
 
-        ultimo = contenido[-1]
-
-        fin = ultimo.get("endIndex",1)
+        fin = contenido[-1]["endIndex"]
 
         requests.append(
             {
-                "deleteContentRange":{
-                    "range":{
-                        "startIndex":1,
-                        "endIndex":fin-1
+                "deleteContentRange": {
+                    "range": {
+                        "startIndex": 1,
+                        "endIndex": fin - 1
                     }
                 }
             }
         )
 
-
     requests.append(
         {
-            "insertText":{
-                "location":{
-                    "index":1
+            "insertText": {
+                "location": {
+                    "index": 1
                 },
-                "text":texto
+                "text": texto
             }
         }
     )
 
-
     service.documents().batchUpdate(
         documentId=DOCUMENT_ID,
         body={
-            "requests":requests
+            "requests": requests
         }
     ).execute()
-
 
     print("Google Doc actualizado")
 
 
 
-# ===============================
-# LIMPIAR HTML
-# ===============================
 
-def limpiar(html):
+def limpiar_html(html):
 
     soup = BeautifulSoup(
         html,
         "html.parser"
     )
 
-
-    for x in soup(
+    for tag in soup(
         [
             "script",
             "style",
-            "noscript"
+            "noscript",
+            "svg",
+            "iframe"
         ]
     ):
-        x.extract()
-
+        tag.decompose()
 
     texto = soup.get_text(
         " ",
         strip=True
     )
-
 
     texto = re.sub(
         r"\s+",
@@ -133,250 +123,220 @@ def limpiar(html):
         texto
     )
 
-
     return texto
 
 
 
 
-# ===============================
-# SITEMAP
-# ===============================
-
-def leer_sitemap():
-
-    urls=[]
 
 
-    r=requests.get(
-        SITEMAP,
-        timeout=30
+
+
+
+def normalizar(url):
+
+    url = url.split("#")[0]
+
+    url = url.rstrip("/")
+
+    return url
+
+
+
+def es_interna(url):
+
+    return urlparse(url).netloc.endswith(
+        "crucemundo.es"
     )
 
 
-    locs=re.findall(
-        r"<loc>(.*?)</loc>",
-        r.text
+
+def ignorar(url):
+
+    url = url.lower()
+
+    extensiones = (
+
+        ".pdf",
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".svg",
+        ".webp",
+        ".css",
+        ".js",
+        ".ico",
+        ".zip",
+        ".xml",
+        ".woff",
+        ".woff2",
+        ".ttf",
+        ".eot",
+        ".mp4",
+        ".mp3",
+        ".avi"
+
     )
 
+    if url.endswith(extensiones):
+        return True
 
-    for u in locs:
+    if "mailto:" in url:
+        return True
 
-        if "reservarcrucero" not in u:
-            urls.append(u)
+    if "tel:" in url:
+        return True
 
+    if "javascript:" in url:
+        return True
 
-    return urls
-
-
-
-
-
-# ===============================
-# EXTRAER BARCOS
-# ===============================
-
-# ===============================
-# EXTRAER BARCOS
-# ===============================
-
-async def sacar_barcos(page):
-
-    print("Entrando en flota...")
-
-    await page.goto(
-        FLOTA,
-        wait_until="networkidle",
-        timeout=60000
-    )
-
-    await page.wait_for_timeout(5000)
-
-    html = await page.content()
-
-    print("HTML FLOTA:", len(html))
-
-
-    # Guardar HTML para inspección si falla
-    with open("flota_debug.html", "w", encoding="utf-8") as f:
-        f.write(html)
-
-
-    if "DESCUBRE" in html.upper():
-        print("Encontrado texto DESCUBRE")
-    else:
-        print("NO aparece DESCUBRE")
-
-
-    resultado=[]
-
-
-    # Buscar enlaces visibles con DESCUBRE
-    enlaces = await page.locator("a").evaluate_all(
-        """
-        els => els.map(e => ({
-            texto: e.innerText,
-            href: e.href,
-            html: e.outerHTML
-        }))
-        """
-    )
-
-
-    for e in enlaces:
-
-        texto = (e["texto"] or "").strip().upper()
-
-
-        if "DESCUBRE" in texto:
-
-            url = e["href"]
-
-
-            if url and url not in resultado:
-
-                resultado.append(url)
-
-
-    print(
-        "Enlaces DESCUBRE encontrados:",
-        len(resultado)
-    )
-
-
-    # Si no encuentra nada, buscamos cualquier enlace
-    # cercano a texto MS
-    if len(resultado)==0:
-
-
-        print("Buscando bloques con MS...")
-
-
-        bloques = await page.locator(
-            "body"
-        ).inner_text()
-
-
-        encontrados = re.findall(
-            r"https?://[^\s]+",
-            html
-        )
-
-
-        for u in encontrados:
-
-            if (
-                "barco" in u.lower()
-                or "crucemundo" in u.lower()
-            ):
-
-                if u not in resultado:
-                    resultado.append(u)
+    return False
 
 
 
-    print(
-        "Barcos detectados:",
-        resultado
-    )
+# ======================================================
+# EXTRAER UNA PÁGINA
+# ======================================================
 
-
-    return resultado
-
-# ===============================
-# EXTRAER PAGINA
-# ===============================
-
-async def extraer_pagina(page,url):
+async def procesar_pagina(page, url):
 
     try:
 
-
-        # Saltar descargas
-
-        if url.endswith(".pdf") or "pdfcrucerodisp" in url:
-            print(
-                "SALTO PDF:",
-                url
-            )
-            return ""
-
-
+        print("\nVisitando:", url)
 
         await page.goto(
             url,
-            wait_until="domcontentloaded",
-            timeout=60000
+            wait_until="networkidle",
+            timeout=TIMEOUT
         )
 
-
-        await page.wait_for_timeout(
-            1500
-        )
-
-
-        html = await page.content()
-
+        await page.wait_for_timeout(1000)
 
         titulo = await page.title()
 
+        html = await page.content()
 
-        texto = limpiar(html)
+        texto = limpiar_html(html)
 
+        enlaces = await page.locator("a[href]").evaluate_all(
+            """
+            els => els.map(e => e.href)
+            """
+        )
 
+        nuevos = []
 
-        return f"""
+        for enlace in enlaces:
+
+            if not enlace:
+                continue
+
+            enlace = urljoin(url, enlace)
+
+            enlace = normalizar(enlace)
+
+            if not es_interna(enlace):
+                continue
+
+            if ignorar(enlace):
+                continue
+
+            nuevos.append(enlace)
+
+        nuevos = list(dict.fromkeys(nuevos))
+
+        print("Enlaces encontrados:", len(nuevos))
+
+        bloque = f"""
 
 ==================================================
 
 URL:
 {url}
 
-
 ==================================================
 
 TITULO:
 {titulo}
 
-
 ==================================================
 
 CONTENIDO:
 
-{texto[:8000]}
+{texto[:MAX_TEXTO]}
 
 """
 
-
+        return bloque, nuevos
 
     except Exception as e:
 
+        print("ERROR:", url)
+        print(e)
 
-        print(
-            "ERROR",
-            url,
-            e
+        return "", []
+
+
+
+
+
+
+
+
+# ======================================================
+# COLA
+# ======================================================
+
+class Cola:
+
+    def __init__(self):
+
+        self.pendientes = []
+
+        self.visitadas = set()
+
+    def agregar(self, url):
+
+        url = normalizar(url)
+
+        if url in self.visitadas:
+            return
+
+        if url in self.pendientes:
+            return
+
+        self.pendientes.append(url)
+
+    def siguiente(self):
+
+        if not self.pendientes:
+            return None
+
+        return self.pendientes.pop(0)
+
+    def visitar(self, url):
+
+        self.visitadas.add(
+            normalizar(url)
         )
 
 
-        return ""
 
 
+# ======================================================
+# MOTOR DEL CRAWLER
+# ======================================================
 
+async def ejecutar_crawler():
 
+    salida = []
 
-# ===============================
-# PROCESO
-# ===============================
+    cola = Cola()
 
-async def crawler():
-
-
-    salida=[]
-
-
-    urls=leer_sitemap()
-
+    cola.agregar(
+        START_URL
+    )
 
 
     async with async_playwright() as p:
@@ -390,88 +350,214 @@ async def crawler():
         page = await browser.new_page()
 
 
-
-        barcos = await sacar_barcos(
-            page
-        )
+        contador = 0
 
 
-        print(
-            "Barcos encontrados:",
-            len(barcos)
-        )
+        while True:
 
 
-
-        urls.extend(
-            barcos
-        )
+            url = cola.siguiente()
 
 
-        urls=list(
-            dict.fromkeys(urls)
-        )
+            if not url:
+                break
 
 
-
-        print(
-            "TOTAL URL:",
-            len(urls)
-        )
+            if url in cola.visitadas:
+                continue
 
 
+            cola.visitar(url)
 
-        for i,url in enumerate(urls):
+
+            contador += 1
 
 
             print(
-                i+1,
-                "/",
-                len(urls),
-                url
+                "\n===================================="
+            )
+
+            print(
+                "PÁGINA",
+                contador
+            )
+
+            print(
+                "Visitadas:",
+                len(cola.visitadas)
+            )
+
+            print(
+                "Pendientes:",
+                len(cola.pendientes)
             )
 
 
-            texto = await extraer_pagina(
+            texto, enlaces = await procesar_pagina(
                 page,
                 url
             )
 
 
             if texto:
-                salida.append(texto)
 
+                salida.append(
+                    texto
+                )
+
+
+            for enlace in enlaces:
+
+                cola.agregar(
+                    enlace
+                )
 
 
         await browser.close()
 
 
+    print(
+        "\nTOTAL PÁGINAS:",
+        len(cola.visitadas)
+    )
 
 
-    documento="\n".join(
+    return "\n".join(
         salida
     )
 
 
+
+
+
+
+
+# ======================================================
+# GUARDAR RESULTADO
+# ======================================================
+
+def preparar_documento(texto):
+
+    if not texto:
+
+        return (
+            "No se ha encontrado contenido."
+        )
+
+
+    cabecera = """
+
+CRAWLER CRUCEMUNDO
+==================
+
+Fecha de rastreo automática.
+
+"""
+
+    return cabecera + texto
+
+
+
+# ======================================================
+# MAIN
+# ======================================================
+
+async def main():
+
     print(
-        "Escribiendo Google Doc..."
+        "===================================="
+    )
+
+    print(
+        "INICIANDO CRAWLER CRUCEMUNDO"
+    )
+
+    print(
+        "URL inicial:",
+        START_URL
+    )
+
+    print(
+        "===================================="
     )
 
 
-    escribir_google_doc(
+    documento = await ejecutar_crawler()
+
+
+    documento = preparar_documento(
         documento
     )
 
 
     print(
-        "FINALIZADO"
+        "\nEscribiendo Google Doc..."
+    )
+
+
+    try:
+
+        escribir_google_doc(
+            documento
+        )
+
+
+    except Exception as e:
+
+        print(
+            "ERROR GOOGLE DOC:"
+        )
+
+        print(e)
+
+        # Guardar copia local si falla Google
+
+        with open(
+            "resultado_crawler.txt",
+            "w",
+            encoding="utf-8"
+        ) as f:
+
+            f.write(
+                documento
+            )
+
+
+        print(
+            "Guardado resultado_crawler.txt"
+        )
+
+
+
+    print(
+        "\n===================================="
+    )
+
+    print(
+        "CRAWLER FINALIZADO"
+    )
+
+    print(
+        "===================================="
     )
 
 
 
+# ======================================================
+# EJECUCIÓN
+# ======================================================
 
-if __name__=="__main__":
+if __name__ == "__main__":
+
 
     asyncio.run(
-        crawler()
+        main()
     )
+
+
+
+
+
+
+
+
