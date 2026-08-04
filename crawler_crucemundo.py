@@ -176,6 +176,10 @@ def leer_sitemap():
 # EXTRAER BARCOS
 # ===============================
 
+# ===============================
+# EXTRAER BARCOS
+# ===============================
+
 async def sacar_barcos(page):
 
     print("Entrando en flota...")
@@ -186,40 +190,89 @@ async def sacar_barcos(page):
         timeout=60000
     )
 
-    await page.wait_for_timeout(3000)
+    await page.wait_for_timeout(5000)
 
     html = await page.content()
 
     print("HTML FLOTA:", len(html))
 
 
-    # Guardamos una muestra para revisar si hace falta
-    if "barcoscrucemundo" in html:
-        print("Encontrado barcoscrucemundo en HTML")
+    # Guardar HTML para inspección si falla
+    with open("flota_debug.html", "w", encoding="utf-8") as f:
+        f.write(html)
+
+
+    if "DESCUBRE" in html.upper():
+        print("Encontrado texto DESCUBRE")
     else:
-        print("NO aparece barcoscrucemundo")
-
-
-    enlaces = await page.locator("a").evaluate_all(
-        """
-        els => els.map(e => e.href)
-        """
-    )
+        print("NO aparece DESCUBRE")
 
 
     resultado=[]
 
 
-    for url in enlaces:
+    # Buscar enlaces visibles con DESCUBRE
+    enlaces = await page.locator("a").evaluate_all(
+        """
+        els => els.map(e => ({
+            texto: e.innerText,
+            href: e.href,
+            html: e.outerHTML
+        }))
+        """
+    )
 
-        if (
-            "barcoscrucemundo" in url.lower()
-            or "/barco" in url.lower()
-            or "/ms-" in url.lower()
-        ):
 
-            if url not in resultado:
+    for e in enlaces:
+
+        texto = (e["texto"] or "").strip().upper()
+
+
+        if "DESCUBRE" in texto:
+
+            url = e["href"]
+
+
+            if url and url not in resultado:
+
                 resultado.append(url)
+
+
+    print(
+        "Enlaces DESCUBRE encontrados:",
+        len(resultado)
+    )
+
+
+    # Si no encuentra nada, buscamos cualquier enlace
+    # cercano a texto MS
+    if len(resultado)==0:
+
+
+        print("Buscando bloques con MS...")
+
+
+        bloques = await page.locator(
+            "body"
+        ).inner_text()
+
+
+        encontrados = re.findall(
+            r"https?://[^\s]+",
+            html
+        )
+
+
+        for u in encontrados:
+
+            if (
+                "barco" in u.lower()
+                or "crucemundo" in u.lower()
+            ):
+
+                if u not in resultado:
+                    resultado.append(u)
+
 
 
     print(
