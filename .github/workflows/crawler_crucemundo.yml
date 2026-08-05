@@ -27,6 +27,24 @@ jobs:
             echo "No se encontró el secret GOOGLE_CREDENTIALS; se ejecutará sin credenciales de GCP."
           fi
 
+      - name: (temporal) Mostrar client_email del service account si existe
+        if: always()
+        run: |
+          if [ -f credentials.json ]; then
+            echo "client_email del service account:"
+            python - <<'PY'
+import json,sys
+try:
+    j=json.load(open("credentials.json"))
+    print(j.get("client_email"))
+except Exception as e:
+    print("Error leyendo credentials.json:", e, file=sys.stderr)
+    raise
+PY
+          else
+            echo "No hay credentials.json"
+          fi
+
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -50,15 +68,23 @@ jobs:
         run: |
           set -e
           # Ejecutar con credenciales si existen
-          if [ -f credentials.json ] && [ -n "${CRUCEMUNDO_DOC_ID}" ]; then
-            echo "Ejecutando crawler con service account y document-id"
-            python crawler_crucemundo.py --out crawler_output.txt --google-key credentials.json --document-id "${CRUCEMUNDO_DOC_ID}" --gcs-bucket "${GCS_BUCKET}" --headless || true
-          elif [ -f credentials.json ] && [ -z "${CRUCEMUNDO_DOC_ID}" ]; then
-            echo "Service account disponible pero no hay CRUCEMUNDO_DOC_ID; ejecutando sin document-id (se intentará crear nuevo doc si hay cuota)"
-            python crawler_crucemundo.py --out crawler_output.txt --google-key credentials.json --gcs-bucket "${GCS_BUCKET}" --headless || true
+          if [ -f credentials.json ]; then
+            echo "Ejecutando crawler con service account (intentará subir visited_urls a Drive/GCS)"
+            python crawler_crucemundo.py \
+              --out crawler_output.txt \
+              --urls-out visited_urls.txt \
+              --upload-urls-drive \
+              --upload-urls-gcs \
+              --google-key credentials.json \
+              --document-id "${CRUCEMUNDO_DOC_ID}" \
+              --gcs-bucket "${GCS_BUCKET}" \
+              --headless || true
           else
             echo "No hay credentials.json: ejecutando crawler en modo local (solo salida local)"
-            python crawler_crucemundo.py --out crawler_output.txt --headless || true
+            python crawler_crucemundo.py \
+              --out crawler_output.txt \
+              --urls-out visited_urls.txt \
+              --headless || true
           fi
 
       - name: Sanity check output
@@ -67,19 +93,29 @@ jobs:
           ls -la || true
           echo ">>>> Ficheros crawler_output.txt* <<<<"
           ls -lh crawler_output.txt crawler_output.txt.gz || true
-          echo ">>>> Primeras 200 líneas (si existen) <<<<"
+          echo ">>>> Fichero visited_urls.txt (si existe) <<<<"
+          ls -lh visited_urls.txt visited_urls.txt.gz || true
+          echo ">>>> Primeras 200 líneas crawler_output.txt (si existen) <<<<"
           head -n 200 crawler_output.txt || true
+          echo ">>>> Primeras 200 líneas visited_urls.txt (si existen) <<<<"
+          head -n 200 visited_urls.txt || true
 
       - name: Compress output (opcional)
         if: always()
         run: |
           if [ -f crawler_output.txt ]; then
             gzip -c crawler_output.txt > crawler_output.txt.gz
-            echo "Compressed to crawler_output.txt.gz"
+            echo "Compressed crawler_output.txt -> crawler_output.txt.gz"
           else
             echo "No existe crawler_output.txt para comprimir"
           fi
-          ls -lh crawler_output.txt* || true
+          if [ -f visited_urls.txt ]; then
+            gzip -c visited_urls.txt > visited_urls.txt.gz
+            echo "Compressed visited_urls.txt -> visited_urls.txt.gz"
+          else
+            echo "No existe visited_urls.txt para comprimir"
+          fi
+          ls -lh crawler_output.txt* visited_urls.txt* || true
 
       - name: Upload crawler output artifact
         if: always()
@@ -89,4 +125,6 @@ jobs:
           path: |
             crawler_output.txt.gz
             crawler_output.txt
+            visited_urls.txt.gz
+            visited_urls.txt
           retention-days: 30
