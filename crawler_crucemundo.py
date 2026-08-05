@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 """
 crawler_crucemundo.py - Crawler mejorado para crucemundo.es
+- Extrae el contenido principal y limpia ruido antes de guardar
 - Concurrency control (multiple workers)
 - Cola asincrónica y deduplicación
 - Normalización de URLs
 - Manejo de errores y reintentos
-- Escritura local atómica
+- Escritura local atómica periódica (flush intermedio)
 - Subida a Google Docs/Drive vía Service Account o OAuth usuario
 - Fallback: si Drive falla por cuota, sube a Google Cloud Storage (bucket configurado)
 - Guarda last_doc_id.txt si crea uno nuevo
@@ -26,6 +27,8 @@ import pathlib
 import traceback
 import datetime
 import json
+import tempfile
+import time
 from dataclasses import dataclass
 from typing import List, Set, Optional
 from urllib.parse import urljoin, urlparse
@@ -40,6 +43,9 @@ from googleapiclient.errors import HttpError
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import google.auth.exceptions
+
+# Drive resumable upload
+from googleapiclient.http import MediaFileUpload
 
 # Google Cloud Storage client for fallback
 from google.cloud import storage
@@ -75,6 +81,7 @@ class CrawlerConfig:
     headless: bool = True
     wait_after_load_ms: int = 800
     user_agent: str = "CrucemundoCrawler/1.0 (+https://crucemundo.es)"
+    flush_every: int = 50  # guardar intermedio cada N páginas
 
 
 # ----------------------------------
@@ -143,6 +150,10 @@ class Crawler:
         self.logger = logging.getLogger("crawler")
         self.logger.setLevel(logging.INFO)
 
+        # flush control (guarda intermedio cada N páginas)
+        self._pages_since_flush = 0
+        self._flush_every = getattr(config, "flush_every", 50)
+
     @staticmethod
     def normalize_url(base: str, link: str) -> Optional[str]:
         if not link:
@@ -190,12 +201,156 @@ class Crawler:
 
     @staticmethod
     def extract_text(html: str) -> str:
+        # fallback: extrae todo el texto sin limpieza heurística
         soup = BeautifulSoup(html, "html.parser")
         for tag in soup(["script", "style", "noscript", "svg", "header", "footer", "nav"]):
             tag.extract()
         text = soup.get_text(" ", strip=True)
         text = re.sub(r"\s+", " ", text)
         return text
+
+    # --- Limpieza inteligente del contenido principal ---
+    def clean_text(self, text: str) -> str:
+        """
+        Limpia ruido del texto:
+        - Colapsa espacios
+        - Filtra frases cortas repetidas
+        - Quita líneas tipo lista extensas (muchas comas)
+        - Quita bloques con demasiadas palabras capitalizadas (menús)
+        - Elimina párrafos que contienen muchas palabras/keywords de navegación/reserva
+        Devuelve texto con párrafos separados por salto de línea simple.
+        """
+        if not text:
+            return ""
+
+        text = re.sub(r"\s+", " ", text).strip()
+        # fragmentar por oraciones/segmentos para filtrar
+        segments = re.split(r"(?<=[\.\!\?])\s+", text)
+
+        cleaned = []
+        short_seen = {}
+        junk_keywords = [
+            "resérvalo", "reservar", "home", "inicio", "contacto", "hable",
+            "buscar", "reservas", "login", "usuario", "password", "cookies",
+            "aceptar", "política", "condiciones", "mensaje enviado", "teléfono",
+            "whatsapp", "reservas", "ofertas", "últimas", "síguenos", "suscríbete"
+        ]
+
+        for seg in segments:
+            s = seg.strip()
+            if not s:
+                continue
+
+            low = s.lower()
+
+            # 1) Filtrar repeticiones de frases muy cortas (evitar menús repetidos)
+            if len(s) < 30:
+                key = re.sub(r"\s+", " ", low)
+                short_seen[key] = short_seen.get(key, 0) + 1
+                if short_seen[key] > 2:
+                    continue
+
+            # 2) Filtrar listas muy largas separadas por comas (p. ej. listado de países)
+            if s.count(",") > 6 and len(s.split()) > 20:
+                continue
+
+            # 3) Filtrar bloques con demasiadas palabras Capitalizadas (menus / cabeceras)
+            words = s.split()
+            cap_words = sum(1 for w in words if w and w[0].isupper())
+            if len(words) and cap_words > max(10, len(words) * 0.6):
+                continue
+
+            # 4) Filtrar si contiene muchas de las palabras junk
+            if sum(1 for kw in junk_keywords if kw in low) >= 2:
+                continue
+
+            # 5) Filtrar líneas que son muy cortas y no aportan contenido (p. ej. "Home", "Reservar")
+            if len(s) < 8 and s.isalpha():
+                continue
+
+            cleaned.append(s)
+
+        # Unir en párrafos (doble salto para legibilidad)
+        out = "\n\n".join(cleaned)
+
+        # Eliminar duplicados consecutivos
+        lines = [ln.strip() for ln in out.splitlines() if ln.strip()]
+        dedup = []
+        for ln in lines:
+            if not dedup or ln != dedup[-1]:
+                dedup.append(ln)
+
+        return "\n".join(dedup)
+
+    def extract_main_text(self, html: str) -> str:
+        """
+        Intenta localizar el contenido principal de la página:
+        - Prioriza <article> y <main>
+        - Busca div/section con id/class que contengan 'content', 'main', 'article', 'post', 'entry', 'page', 'body'
+        - Si no hay candidatos, usa el body limpiado
+        Luego pasa el texto por clean_text().
+        """
+        soup = BeautifulSoup(html, "html.parser")
+
+        # Eliminar bloques obvios
+        for tag in soup(["script", "style", "noscript", "svg", "header", "footer", "nav", "aside", "form"]):
+            tag.decompose()
+
+        candidates = []
+
+        # 1) article / main
+        for sel in ("article", "main"):
+            for node in soup.find_all(sel):
+                txt = node.get_text(" ", strip=True)
+                if len(txt) > 120:
+                    candidates.append(txt)
+
+        # 2) div/section con ids/classes que sugieran contenido principal
+        pattern = re.compile(r"(content|main|article|post|entry|page|body|texto|contenido|detalle)", re.I)
+        for node in soup.find_all(["div", "section"]):
+            node_id = node.get("id") or ""
+            classes = " ".join(node.get("class") or [])
+            if pattern.search(node_id) or pattern.search(classes):
+                txt = node.get_text(" ", strip=True)
+                if len(txt) > 120:
+                    candidates.append(txt)
+
+        # 3) fallback: tomar el elemento con mayor cantidad de texto (heurística)
+        if not candidates:
+            max_text = ""
+            for node in soup.find_all(["div", "section", "body"]):
+                txt = node.get_text(" ", strip=True)
+                if len(txt) > len(max_text):
+                    max_text = txt
+            if max_text:
+                candidates.append(max_text)
+
+        # seleccionar el candidato más largo
+        if candidates:
+            best = max(candidates, key=lambda s: len(s))
+        else:
+            best = soup.get_text(" ", strip=True)
+
+        return self.clean_text(best)
+
+    def _maybe_flush_results(self):
+        """Guarda resultados parciales en el fichero local cada _flush_every páginas."""
+        self._pages_since_flush += 1
+        if self._pages_since_flush >= self._flush_every:
+            try:
+                out = "\n".join(self.results)
+                out_path = pathlib.Path(self.config.out_path)
+                tmp = out_path.with_suffix(".tmp")
+                with open(tmp, "w", encoding="utf-8") as f:
+                    f.write(out)
+                    f.flush()
+                    os.fsync(f.fileno())
+                tmp.replace(out_path)
+                self.logger.info("Flush intermedio guardado en %s (%d bytes)", out_path, out_path.stat().st_size)
+            except Exception:
+                self.logger.exception("Error guardando flush intermedio")
+            finally:
+                self._pages_since_flush = 0
 
     async def fetch_and_process(self, page, url: str):
         self.logger.info("Visitando: %s", url)
@@ -207,12 +362,19 @@ class Crawler:
                 await page.wait_for_timeout(self.config.wait_after_load_ms)
                 title = await page.title()
                 html = await page.content()
-                texto = self.extract_text(html)
+
+                # Usar el extractor "principal" y limpieza antes de guardar
+                texto = self.extract_main_text(html)
+
                 self.results.append(
                     "\n\n========================================\n\n"
                     f"URL:\n{url}\n\nTITULO:\n{title}\n\n\nCONTENIDO:\n\n{texto}\n\n"
                     "========================================\n\n"
                 )
+
+                # flush intermedio
+                self._maybe_flush_results()
+
                 nuevos = 0
                 for destino in self.extract_links(html, url):
                     if destino not in self.visited:
@@ -328,11 +490,29 @@ class Crawler:
             self.logger.exception("Fallo subiendo a GCS: %s", e)
             return False
 
+    def _upload_text_via_drive_media(self, drive_service, text: str, name_prefix: str = "IA_BRUTO"):
+        """Sube el texto como archivo .txt y solicita conversión a Google Docs en una sola llamada."""
+        try:
+            tmp = pathlib.Path(tempfile.gettempdir()) / f"crawler_upload_{int(time.time())}.txt"
+            with open(tmp, "w", encoding="utf-8") as f:
+                f.write(text)
+            file_metadata = {
+                "name": f"{name_prefix} - backup {datetime.datetime.utcnow().strftime('%Y-%m-%d_%H%M%S')}",
+                "mimeType": "application/vnd.google-apps.document",  # pide conversión a Google Doc
+            }
+            media = MediaFileUpload(str(tmp), mimetype="text/plain", resumable=True)
+            created = drive_service.files().create(body=file_metadata, media_body=media, fields="id,webViewLink").execute()
+            return created.get("id"), created.get("webViewLink")
+        except Exception as e:
+            self.logger.exception("Fallo subiendo via MediaFileUpload: %s", e)
+            raise
+
     def write_google_doc(self, text: str):
         """Escribe en Google Doc usando oAuth de usuario o service account según configuración.
         Siempre escribe copia local atómica (self.config.out_path).
         Si doc objetivo existe y hay permisos, lo sobrescribe. Si no y hay cuota, crea uno nuevo y guarda last_doc_id.txt.
         Si Drive falla por cuota, intenta fallback a GCS si se configuró bucket.
+        Para archivos grandes usa MediaFileUpload para convertir a Google Doc en una sola petición.
         """
         out_fname = pathlib.Path(self.config.out_path)
         try:
@@ -382,6 +562,8 @@ class Crawler:
 
         target_id = self.config.document_id
 
+        # If there is a target_id, try to overwrite it (by deleting contents then inserting),
+        # otherwise, use a single MediaFileUpload conversion to create new doc.
         if target_id:
             try:
                 doc = docs_service.documents().get(documentId=target_id).execute()
@@ -395,7 +577,8 @@ class Crawler:
                             body={"requests": [{"deleteContentRange": {"range": {"startIndex": 1, "endIndex": end_index - 1}}}]},
                         ).execute()
                         self.logger.info("Contenido previo eliminado en doc ID=%s", target_id)
-                BLOQUE = 50000
+                # Insert in reasonable-size chunks to avoid enormous requests
+                BLOQUE = 100000  # aumentar a 100k para reducir llamadas
                 position = 1
                 for i in range(0, len(text), BLOQUE):
                     chunk = text[i : i + BLOQUE]
@@ -428,35 +611,9 @@ class Crawler:
                 self.logger.exception("Error al acceder/actualizar doc objetivo: %s", e)
                 # continue to try to create new doc
 
-        # If we reach here, either no target_id or failed to use it; try to create new doc if quota allows
-        if quota_info and quota_info.get("remaining") is not None:
-            if quota_info["remaining"] <= 0:
-                self.logger.error("Drive sin espacio disponible (remaining=%s). No se creará nuevo documento.", quota_info["remaining"])
-                # Try GCS fallback
-                gcs_bucket = self.config.gcs_bucket or os.getenv("GCS_BUCKET")
-                if gcs_bucket and out_fname.exists():
-                    dest = f"crawler_output_{datetime.datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.txt"
-                    ok = self._upload_to_gcs(out_fname, gcs_bucket, dest_name=dest)
-                    if ok:
-                        self.logger.info("Fallback: archivo subido a GCS: gs://%s/%s", gcs_bucket, dest)
-                    else:
-                        self.logger.error("Fallback a GCS falló.")
-                else:
-                    self.logger.info("No se configuró GCS_BUCKET; no se intentó subir a GCS.")
-                return
-
-        # Create new doc
+        # Create new doc using MediaFileUpload to convert .txt -> Google Doc in single request
         try:
-            new_id, new_link = self._create_new_doc_and_return(docs_service, drive_service)
-            BLOQUE = 50000
-            position = 1
-            for i in range(0, len(text), BLOQUE):
-                chunk = text[i : i + BLOQUE]
-                docs_service.documents().batchUpdate(
-                    documentId=new_id,
-                    body={"requests": [{"insertText": {"location": {"index": position}, "text": chunk}}]},
-                ).execute()
-                position += len(chunk)
+            new_id, new_link = self._upload_text_via_drive_media(drive_service, text)
             self.config.document_id = new_id
             with open(LAST_DOC_ID, "w", encoding="utf-8") as f:
                 f.write(new_id)
@@ -512,6 +669,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--concurrency", type=int, default=3, help="Número de workers concurrentes")
     p.add_argument("--headless", action="store_true", help="Forzar headless (útil en CI). Si no hay DISPLAY se activará automáticamente.")
     p.add_argument("--no-headless", action="store_true", help="Forzar modo con interfaz (requiere DISPLAY/X server)")
+    p.add_argument("--flush-every", type=int, default=None, help="Guardar intermedio cada N páginas (opcional)")
     return p.parse_args()
 
 
@@ -541,11 +699,14 @@ def main():
         concurrency=args.concurrency,
         headless=headless_flag,
     )
+    if args.flush_every:
+        cfg.flush_every = args.flush_every
+
     crawler = Crawler(cfg)
 
     logging.getLogger("crawler").info(
-        "Iniciando crawler - start=%s domain=%s concurrency=%d max_pages=%d out=%s use_user_oauth=%s headless=%s gcs_bucket=%s",
-        cfg.start_url, cfg.domain, cfg.concurrency, cfg.max_pages, cfg.out_path, cfg.use_user_oauth, cfg.headless, cfg.gcs_bucket
+        "Iniciando crawler - start=%s domain=%s concurrency=%d max_pages=%d out=%s use_user_oauth=%s headless=%s gcs_bucket=%s flush_every=%s",
+        cfg.start_url, cfg.domain, cfg.concurrency, cfg.max_pages, cfg.out_path, cfg.use_user_oauth, cfg.headless, cfg.gcs_bucket, cfg.flush_every
     )
 
     async def run():
