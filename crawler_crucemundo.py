@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-crawler.py - Crawler mejorado para crucemundo.es
+crawler_crucemundo.py - Crawler mejorado para crucemundo.es
 - Concurrency control (multiple workers)
 - Cola asincrónica y deduplicación
 - Normalización de URLs
