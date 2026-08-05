@@ -35,6 +35,9 @@ resultado = []
 
 def escribir_google_doc(texto):
 
+    print("Entrando en escribir_google_doc")
+    print("Caracteres:", len(texto))
+
     scopes = [
         "https://www.googleapis.com/auth/documents"
     ]
@@ -50,14 +53,11 @@ def escribir_google_doc(texto):
         credentials=creds
     )
 
-
     doc = service.documents().get(
         documentId=DOCUMENT_ID
     ).execute()
 
-
-    peticiones=[]
-
+    print("Documento:", doc["title"])
 
     contenido = doc.get(
         "body",
@@ -67,51 +67,65 @@ def escribir_google_doc(texto):
         []
     )
 
+    # borrar contenido actual
 
-    if len(contenido)>1:
+    if len(contenido) > 1:
 
         fin = contenido[-1].get(
             "endIndex",
             1
         )
 
-        peticiones.append(
-            {
-                "deleteContentRange":
-                {
-                    "range":
+        service.documents().batchUpdate(
+            documentId=DOCUMENT_ID,
+            body={
+                "requests": [
                     {
-                        "startIndex":1,
-                        "endIndex":fin-1
+                        "deleteContentRange": {
+                            "range": {
+                                "startIndex": 1,
+                                "endIndex": fin - 1
+                            }
+                        }
                     }
-                }
+                ]
             }
+        ).execute()
+
+        print("Contenido anterior eliminado")
+
+    BLOQUE = 50000
+
+    posicion = 1
+
+    for i in range(0, len(texto), BLOQUE):
+
+        trozo = texto[i:i + BLOQUE]
+
+        service.documents().batchUpdate(
+            documentId=DOCUMENT_ID,
+            body={
+                "requests": [
+                    {
+                        "insertText": {
+                            "location": {
+                                "index": posicion
+                            },
+                            "text": trozo
+                        }
+                    }
+                ]
+            }
+        ).execute()
+
+        posicion += len(trozo)
+
+        print(
+            f"Enviados {posicion} caracteres"
         )
 
+    print("Google Doc actualizado correctamente")
 
-    peticiones.append(
-        {
-            "insertText":
-            {
-                "location":
-                {
-                    "index":1
-                },
-                "text":texto
-            }
-        }
-    )
-
-
-    service.documents().batchUpdate(
-        documentId=DOCUMENT_ID,
-        body={
-            "requests":peticiones
-        }
-    ).execute()
-
-
-    print("Google Doc actualizado")
 
 
 
@@ -327,7 +341,7 @@ TITULO:
 
 CONTENIDO:
 
-{texto[:12000]}
+{texto}
 
 ========================================
 
