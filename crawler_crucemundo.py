@@ -11,10 +11,7 @@ crawler_crucemundo.py - Crawler mejorado para crucemundo.es
 - Subida a Google Docs/Drive vía Service Account o OAuth usuario
 - Fallback: si Drive falla por cuota, sube a Google Cloud Storage (bucket configurado)
 - Guarda last_doc_id.txt si crea uno nuevo
-
-Requisitos:
-pip install playwright beautifulsoup4 google-api-python-client google-auth google-auth-oauthlib google-cloud-storage unidecode
-python -m playwright install chromium
+- NUEVO: guarda visited_urls.txt (orden de visita) y opcionalmente lo sube a GCS o Drive
 """
 from __future__ import annotations
 
@@ -63,6 +60,7 @@ DEFAULT_OUT = "crawler_output.txt"
 DEFAULT_ON_ERROR_OUT = "crawler_output_on_error.txt"
 LAST_DOC_ID = "last_doc_id.txt"
 TOKEN_CACHE = "token_user.json"
+DEFAULT_URLS_OUT = "visited_urls.txt"
 
 
 @dataclass
@@ -76,6 +74,7 @@ class CrawlerConfig:
     drive_folder_id: Optional[str] = None
     gcs_bucket: Optional[str] = None
     out_path: str = DEFAULT_OUT
+    urls_out: str = DEFAULT_URLS_OUT
     max_pages: int = 1000
     concurrency: int = 3
     headless: bool = True
@@ -144,7 +143,8 @@ def load_user_oauth_creds(client_secrets_path: str):
 class Crawler:
     def __init__(self, config: CrawlerConfig):
         self.config = config
-        self.visited: Set[str] = set()
+        self.visited: Set[str] = set()        # for fast membership checks
+        self.visited_list: List[str] = []     # preserve order of visits
         self.results: List[str] = []
         self.queue: asyncio.Queue[str] = asyncio.Queue()
         self.logger = logging.getLogger("crawler")
@@ -413,7 +413,9 @@ class Crawler:
                 if url in self.visited:
                     self.queue.task_done()
                     continue
+                # mark visited (set + ordered list)
                 self.visited.add(url)
+                self.visited_list.append(url)
                 await self.fetch_and_process(page, url)
                 self.queue.task_done()
                 if len(self.visited) >= self.config.max_pages:
@@ -648,6 +650,58 @@ class Crawler:
                 self.logger.exception("No se pudo escribir %s: %s", DEFAULT_ON_ERROR_OUT, e3)
             return
 
+    # -----------------------
+    # New: write visited URLs
+    # -----------------------
+    def write_visited_urls(self, urls_out: Optional[str] = None, upload_gcs: bool = False, upload_drive: bool = False, drive_key: Optional[str] = None):
+        """
+        Escribe self.visited_list en urls_out (una URL por línea con timestamp).
+        Si upload_gcs=True y config.gcs_bucket presente, intenta subir el fichero a GCS.
+        Si upload_drive=True and drive_key provided, intenta crear un Google Doc con el contenido (conversion).
+        """
+        urls_out = urls_out or self.config.urls_out
+        p = pathlib.Path(urls_out)
+        ts = datetime.datetime.utcnow().isoformat() + "Z"
+        try:
+            with open(p, "w", encoding="utf-8") as f:
+                f.write(f"# Visited URLs - start={self.config.start_url} domain={self.config.domain} generated_at={ts}\n")
+                for u in self.visited_list:
+                    f.write(u + "\n")
+            self.logger.info("Visited URLs written to %s (%d urls)", p, len(self.visited_list))
+        except Exception as e:
+            self.logger.exception("Error writing visited URLs file %s: %s", p, e)
+            return
+
+        # Try upload to GCS if requested
+        if upload_gcs:
+            bucket = self.config.gcs_bucket or os.getenv("GCS_BUCKET")
+            if bucket:
+                try:
+                    ok = self._upload_to_gcs(p, bucket, dest_name=f"visited_urls_{datetime.datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.txt")
+                    if ok:
+                        self.logger.info("Visited URLs uploaded to GCS: gs://%s/%s", bucket, p.name)
+                except Exception as e:
+                    self.logger.exception("Failed uploading visited URLs to GCS: %s", e)
+            else:
+                self.logger.warning("upload_gcs requested but no GCS bucket configured (config.gcs_bucket or env GCS_BUCKET)")
+
+        # Try create Google Doc if requested
+        if upload_drive:
+            key = drive_key or self.config.google_key or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+            if not key:
+                self.logger.warning("upload_drive requested but no google_key provided")
+            else:
+                try:
+                    creds = load_service_account_creds(key)
+                    drive_service = build("drive", "v3", credentials=creds)
+                    # read file content
+                    with open(p, "r", encoding="utf-8") as f:
+                        txt = f.read()
+                    new_id, link = self._upload_text_via_drive_media(drive_service, txt, name_prefix="Visited_URLs")
+                    self.logger.info("Visited URLs Google Doc created: ID=%s link=%s", new_id, link)
+                except Exception as e:
+                    self.logger.exception("Failed creating Google Doc for visited URLs: %s", e)
+
 
 # ----------------------------------
 # CLI / Entrypoint
@@ -665,6 +719,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--drive-folder-id", default=None, help="ID de carpeta en Drive donde crear nuevos docs (opcional)")
     p.add_argument("--gcs-bucket", default=os.getenv("GCS_BUCKET", None), help="Nombre del bucket GCS para fallback (opcional)")
     p.add_argument("--out", default=DEFAULT_OUT, help="Ruta local de salida (crawler_output.txt por defecto)")
+    p.add_argument("--urls-out", default=DEFAULT_URLS_OUT, help="Ruta local para guardar visited URLs (visited_urls.txt por defecto)")
+    p.add_argument("--upload-urls-gcs", action="store_true", help="Subir visited_urls.txt a GCS (requiere --gcs-bucket o env GCS_BUCKET)")
+    p.add_argument("--upload-urls-drive", action="store_true", help="Crear Google Doc con visited_urls.txt (requiere --google-key o GOOGLE_APPLICATION_CREDENTIALS)")
     p.add_argument("--max-pages", type=int, default=500, help="Max páginas a rastrear")
     p.add_argument("--concurrency", type=int, default=3, help="Número de workers concurrentes")
     p.add_argument("--headless", action="store_true", help="Forzar headless (útil en CI). Si no hay DISPLAY se activará automáticamente.")
@@ -695,6 +752,7 @@ def main():
         drive_folder_id=args.drive_folder_id,
         gcs_bucket=args.gcs_bucket,
         out_path=args.out,
+        urls_out=args.urls_out,
         max_pages=args.max_pages,
         concurrency=args.concurrency,
         headless=headless_flag,
@@ -705,8 +763,8 @@ def main():
     crawler = Crawler(cfg)
 
     logging.getLogger("crawler").info(
-        "Iniciando crawler - start=%s domain=%s concurrency=%d max_pages=%d out=%s use_user_oauth=%s headless=%s gcs_bucket=%s flush_every=%s",
-        cfg.start_url, cfg.domain, cfg.concurrency, cfg.max_pages, cfg.out_path, cfg.use_user_oauth, cfg.headless, cfg.gcs_bucket, cfg.flush_every
+        "Iniciando crawler - start=%s domain=%s concurrency=%d max_pages=%d out=%s urls_out=%s use_user_oauth=%s headless=%s gcs_bucket=%s flush_every=%s",
+        cfg.start_url, cfg.domain, cfg.concurrency, cfg.max_pages, cfg.out_path, cfg.urls_out, cfg.use_user_oauth, cfg.headless, cfg.gcs_bucket, cfg.flush_every
     )
 
     async def run():
@@ -716,7 +774,11 @@ def main():
 
     documento = "\n".join(crawler.results)
     crawler.write_google_doc(documento)
-    logging.info("Proceso terminado. Páginas visitadas: %d", len(crawler.visited))
+
+    # write visited URLs and optionally upload
+    crawler.write_visited_urls(urls_out=cfg.urls_out, upload_gcs=args.upload_urls_gcs, upload_drive=args.upload_urls_drive, drive_key=cfg.google_key)
+
+    logging.info("Proceso terminado. Páginas visitadas: %d", len(crawler.visited_list))
 
 
 if __name__ == "__main__":
