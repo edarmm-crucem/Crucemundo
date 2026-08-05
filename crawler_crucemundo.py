@@ -1,565 +1,108 @@
-import asyncio
-import re
-import requests
-import os
-
+from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
-from playwright.async_api import async_playwright
+from urllib.parse import urljoin, urlparse
+from collections import deque
+import time
 
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-
-
-# ==================================
-# CONFIGURACION
-# ==================================
-
-INICIO = "https://crucemundo.es/"
-
-DOMINIO = "crucemundo.es"
-
-DOCUMENT_ID = "1-MklRtqm3n31WxMduWlyV1Lj_lwws7wkEIIBqgToycs"
-
-GOOGLE_KEY = "credentials.json"
-
+URL_INICIAL = "https://tudominio.com"
+ARCHIVO_SALIDA = "contenido_completo.txt"
 
 visitadas = set()
-pendientes = set()
+pendientes = deque([URL_INICIAL])
 
-resultado = []
+dominio = urlparse(URL_INICIAL).netloc
 
+with sync_playwright() as p:
 
-# ==================================
-# GOOGLE DOC
-# ==================================
+    browser = p.chromium.launch(headless=True)
+    page = browser.new_page()
 
-def escribir_google_doc(texto):
-
-    scopes = [
-        "https://www.googleapis.com/auth/documents"
-    ]
-
-    creds = service_account.Credentials.from_service_account_file(
-        GOOGLE_KEY,
-        scopes=scopes
-    )
-
-    service = build(
-        "docs",
-        "v1",
-        credentials=creds
-    )
-
-
-    doc = service.documents().get(
-        documentId=DOCUMENT_ID
-    ).execute()
-
-
-    peticiones=[]
-
-
-    contenido = doc.get(
-        "body",
-        {}
-    ).get(
-        "content",
-        []
-    )
-
-
-    if len(contenido)>1:
-
-        fin = contenido[-1].get(
-            "endIndex",
-            1
-        )
-
-        peticiones.append(
-            {
-                "deleteContentRange":
-                {
-                    "range":
-                    {
-                        "startIndex":1,
-                        "endIndex":fin-1
-                    }
-                }
-            }
-        )
-
-
-    peticiones.append(
-        {
-            "insertText":
-            {
-                "location":
-                {
-                    "index":1
-                },
-                "text":texto
-            }
-        }
-    )
-
-
-    service.documents().batchUpdate(
-        documentId=DOCUMENT_ID,
-        body={
-            "requests":peticiones
-        }
-    ).execute()
-
-
-    print("Google Doc actualizado")
-
-
-
-# ==================================
-# EXTRAER ENLACES
-# ==================================
-
-async def obtener_enlaces(page):
-
-
-    enlaces = await page.locator(
-        "a"
-    ).evaluate_all(
-        """
-        elementos => elementos.map(a => ({
-            texto: a.innerText || "",
-            url: a.href || ""
-        }))
-        """
-    )
-
-
-    nuevos=[]
-
-
-    for enlace in enlaces:
-
-
-        url = enlace["url"].strip()
-
-
-        if not url:
-            continue
-
-
-        # quitar anclas
-        url = url.split("#")[0]
-
-
-        # normalizar
-        url = url.replace(
-            "www.crucemundo.es",
-            "crucemundo.es"
-        )
-
-
-        # solo dominio principal
-        if DOMINIO not in url:
-            continue
-
-
-
-        # ignorar recursos
-
-        if re.search(
-            r"\.(jpg|jpeg|png|gif|webp|svg|ico|bmp|css|js|woff|ttf)$",
-            url,
-            re.I
-        ):
-            continue
-
-
-
-        # ignorar documentos
-
-        if re.search(
-            r"\.(pdf|doc|docx|xls|xlsx|zip)$",
-            url,
-            re.I
-        ):
-            continue
-
-
-
-        # ignorar descargas conocidas
-
-        if any(
-            x in url.lower()
-            for x in [
-                "pdfcrucerodisp",
-                "/download"
-            ]
-        ):
-            continue
-
-
-
-        nuevos.append(
-            {
-                "url":url,
-                "texto":enlace["texto"].strip()
-            }
-        )
-
-
-
-    # quitar duplicados
-
-    salida=[]
-
-    vistos=set()
-
-
-    for x in nuevos:
-
-
-        if x["url"] not in vistos:
-
-            vistos.add(
-                x["url"]
-            )
-
-            salida.append(
-                x
-            )
-
-
-    return salida
-
-
-
-
-
-
-
-
-
-
-
-
-
-# ==================================
-# LEER PAGINA Y AÑADIR CONTENIDO
-# ==================================
-
-async def leer_pagina(page, url):
-
-    try:
-
-
-        print("")
-        print("--------------------------------")
-        print("VISITANDO:")
-        print(url)
-        print("--------------------------------")
-
-
-        await page.goto(
-            url,
-            wait_until="domcontentloaded",
-            timeout=60000
-        )
-
-
-        await page.wait_for_timeout(
-            1000
-        )
-
-
-        titulo = await page.title()
-
-
-        html = await page.content()
-
-
-        soup = BeautifulSoup(
-            html,
-            "html.parser"
-        )
-
-
-        # quitar código innecesario
-
-        for x in soup(
-            [
-                "script",
-                "style",
-                "noscript",
-                "svg"
-            ]
-        ):
-            x.extract()
-
-
-
-        texto = soup.get_text(
-            " ",
-            strip=True
-        )
-
-
-        texto = re.sub(
-            r"\s+",
-            " ",
-            texto
-        )
-
-
-
-        # guardar información
-
-        resultado.append(
-            f"""
-
-========================================
-
-URL:
-{url}
-
-TITULO:
-{titulo}
-
-
-CONTENIDO:
-
-{texto[:12000]}
-
-========================================
-
-"""
-        )
-
-
-
-        enlaces = await obtener_enlaces(
-            page
-        )
-
-
-        print(
-            "Enlaces encontrados:",
-            len(enlaces)
-        )
-
-
-        nuevos = 0
-
-
-        for enlace in enlaces:
-
-
-            destino = enlace["url"]
-
-
-            if destino not in visitadas and destino not in pendientes:
-
-                pendientes.add(
-                    destino
-                )
-
-                nuevos += 1
-
-
-        print(
-            "Nuevos enlaces:",
-            nuevos
-        )
-
-
-
-    except Exception as e:
-
-
-        print(
-            "ERROR:",
-            url,
-            e
-        )
-
-
-
-# ==================================
-# PROCESO PRINCIPAL
-# ==================================
-
-async def crawler():
-
-
-    print(
-        "===================================="
-    )
-
-    print(
-        "INICIANDO CRAWLER CRUCEMUNDO"
-    )
-
-    print(
-        "SIN SITEMAP"
-    )
-
-    print(
-        "===================================="
-    )
-
-
-
-    pendientes.add(
-        INICIO
-    )
-
-
-
-    async with async_playwright() as p:
-
-
-        browser = await p.chromium.launch(
-            headless=True
-        )
-
-
-        page = await browser.new_page()
-
-
-
-        contador = 0
-
-
+    with open(ARCHIVO_SALIDA, "w", encoding="utf-8") as salida:
 
         while pendientes:
 
-
-            url = pendientes.pop()
-
+            url = pendientes.popleft()
 
             if url in visitadas:
                 continue
 
+            try:
+                print(f"Procesando: {url}")
 
+                page.goto(
+                    url,
+                    wait_until="networkidle",
+                    timeout=60000
+                )
 
-            visitadas.add(
-                url
-            )
+                time.sleep(1)
 
+                html = page.content()
 
-            contador += 1
+                soup = BeautifulSoup(html, "html.parser")
 
+                visitadas.add(url)
 
-            print("")
-            print(
-                "PAGINA",
-                contador
-            )
+                for tag in soup([
+                    "script",
+                    "style",
+                    "noscript",
+                    "svg"
+                ]):
+                    tag.decompose()
 
-            print(
-                "Visitadas:",
-                len(visitadas)
-            )
+                titulo = ""
 
-            print(
-                "Pendientes:",
-                len(pendientes)
-            )
+                if soup.title:
+                    titulo = soup.title.get_text(strip=True)
 
+                texto = soup.get_text(
+                    separator="\n",
+                    strip=True
+                )
 
+                salida.write("\n")
+                salida.write("=" * 120 + "\n")
+                salida.write(f"URL: {url}\n")
+                salida.write(f"TITULO: {titulo}\n")
+                salida.write("=" * 120 + "\n\n")
+                salida.write(texto)
+                salida.write("\n\n")
 
-            await leer_pagina(
-                page,
-                url
-            )
+                enlaces = soup.find_all("a", href=True)
 
+                for enlace in enlaces:
 
+                    href = enlace["href"]
 
-        await browser.close()
+                    if href.startswith("#"):
+                        continue
 
+                    if href.startswith("mailto:"):
+                        continue
 
+                    if href.startswith("tel:"):
+                        continue
 
-    print("")
-    print(
-        "===================================="
-    )
+                    url_absoluta = urljoin(url, href)
 
-    print(
-        "FIN CRAWLER"
-    )
+                    parsed = urlparse(url_absoluta)
 
-    print(
-        "TOTAL PAGINAS:",
-        len(visitadas)
-    )
+                    url_limpia = (
+                        f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+                    )
 
-    print(
-        "===================================="
-    )
+                    if (
+                        parsed.netloc == dominio
+                        and url_limpia not in visitadas
+                        and url_limpia not in pendientes
+                    ):
+                        pendientes.append(url_limpia)
 
+            except Exception as e:
+                print(f"Error en {url}: {e}")
 
+    browser.close()
 
-
-
-
-
-
-
-
-
-
-
-# ==================================
-# FINAL
-# ==================================
-
-if __name__ == "__main__":
-
-
-    asyncio.run(
-        crawler()
-    )
-
-
-    print(
-        ""
-    )
-
-    print(
-        "Creando documento..."
-    )
-
-
-    documento = "\n".join(
-        resultado
-    )
-
-
-    escribir_google_doc(
-        documento
-    )
-
-
-    print(
-        ""
-    )
-
-    print(
-        "===================================="
-    )
-
-    print(
-        "PROCESO TERMINADO"
-    )
-
-    print(
-        "===================================="
-    )
-
-
-
-
-
-
-
-
-
+print(f"\nTotal URLs visitadas: {len(visitadas)}")
+print(f"TXT generado: {ARCHIVO_SALIDA}")
