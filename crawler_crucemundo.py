@@ -8,11 +8,11 @@ crawler_crucemundo.py - Crawler mejorado para crucemundo.es
 - Manejo de errores y reintentos
 - Escritura local atómica
 - Subida a Google Docs/Drive vía Service Account o OAuth usuario
-- Si el doc objetivo no es accesible, puede crear uno nuevo (si hay cuota)
+- Fallback: si Drive falla por cuota, sube a Google Cloud Storage (bucket configurado)
 - Guarda last_doc_id.txt si crea uno nuevo
 
 Requisitos:
-pip install playwright beautifulsoup4 google-api-python-client google-auth google-auth-oauthlib unidecode
+pip install playwright beautifulsoup4 google-api-python-client google-auth google-auth-oauthlib google-cloud-storage unidecode
 python -m playwright install chromium
 """
 from __future__ import annotations
@@ -41,6 +41,9 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import google.auth.exceptions
 
+# Google Cloud Storage client for fallback
+from google.cloud import storage
+
 # ----------------------------------
 # Config / Defaults
 # ----------------------------------
@@ -65,6 +68,7 @@ class CrawlerConfig:
     client_secrets: Optional[str] = None  # oauth client secrets for user flow
     use_user_oauth: bool = False
     drive_folder_id: Optional[str] = None
+    gcs_bucket: Optional[str] = None
     out_path: str = DEFAULT_OUT
     max_pages: int = 1000
     concurrency: int = 3
@@ -304,10 +308,31 @@ class Crawler:
             self.logger.debug("No se pudo obtener cuota de Drive: %s", repr(e))
             return None
 
+    def _upload_to_gcs(self, local_path: pathlib.Path, bucket_name: str, dest_name: Optional[str] = None):
+        """Sube local_path a gs://{bucket_name}/{dest_name} usando las credenciales del runner."""
+        try:
+            if not bucket_name:
+                self.logger.error("GCS bucket no proporcionado.")
+                return False
+            dest_name = dest_name or local_path.name
+            # If credentials.json exists and GOOGLE_APPLICATION_CREDENTIALS not set, set it
+            if os.path.exists("credentials.json") and not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
+                os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.abspath("credentials.json")
+            client = storage.Client()
+            bucket = client.bucket(bucket_name)
+            blob = bucket.blob(dest_name)
+            blob.upload_from_filename(str(local_path))
+            self.logger.info("Subido a GCS: gs://%s/%s", bucket_name, dest_name)
+            return True
+        except Exception as e:
+            self.logger.exception("Fallo subiendo a GCS: %s", e)
+            return False
+
     def write_google_doc(self, text: str):
         """Escribe en Google Doc usando oAuth de usuario o service account según configuración.
         Siempre escribe copia local atómica (self.config.out_path).
         Si doc objetivo existe y hay permisos, lo sobrescribe. Si no y hay cuota, crea uno nuevo y guarda last_doc_id.txt.
+        Si Drive falla por cuota, intenta fallback a GCS si se configuró bucket.
         """
         out_fname = pathlib.Path(self.config.out_path)
         try:
@@ -352,6 +377,8 @@ class Crawler:
         quota_info = self._get_drive_quota(drive_service)
         if quota_info:
             self.logger.info("Drive quota: limit=%s usage=%s remaining=%s", quota_info["limit"], quota_info["usage"], quota_info["remaining"])
+        else:
+            self.logger.info("Drive quota info no disponible (remaining=None)")
 
         target_id = self.config.document_id
 
@@ -384,15 +411,41 @@ class Crawler:
                 self.logger.warning("No se pudo escribir en doc objetivo (ID=%s): %s", target_id, err)
                 if "storageQuotaExceeded" in err:
                     self.logger.error("Quota de Drive excedida; no se intentará crear otro documento.")
+                    # Try fallback to GCS
+                    gcs_bucket = self.config.gcs_bucket or os.getenv("GCS_BUCKET")
+                    if gcs_bucket and out_fname.exists():
+                        dest = f"crawler_output_{datetime.datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.txt"
+                        ok = self._upload_to_gcs(out_fname, gcs_bucket, dest_name=dest)
+                        if ok:
+                            self.logger.info("Fallback: archivo subido a GCS: gs://%s/%s", gcs_bucket, dest)
+                        else:
+                            self.logger.error("Fallback a GCS falló.")
+                    else:
+                        self.logger.info("No se configuró GCS_BUCKET; no se intentó subir a GCS.")
                     return
+                # otherwise continue to try creating a new doc
             except Exception as e:
                 self.logger.exception("Error al acceder/actualizar doc objetivo: %s", e)
+                # continue to try to create new doc
 
+        # If we reach here, either no target_id or failed to use it; try to create new doc if quota allows
         if quota_info and quota_info.get("remaining") is not None:
             if quota_info["remaining"] <= 0:
                 self.logger.error("Drive sin espacio disponible (remaining=%s). No se creará nuevo documento.", quota_info["remaining"])
+                # Try GCS fallback
+                gcs_bucket = self.config.gcs_bucket or os.getenv("GCS_BUCKET")
+                if gcs_bucket and out_fname.exists():
+                    dest = f"crawler_output_{datetime.datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.txt"
+                    ok = self._upload_to_gcs(out_fname, gcs_bucket, dest_name=dest)
+                    if ok:
+                        self.logger.info("Fallback: archivo subido a GCS: gs://%s/%s", gcs_bucket, dest)
+                    else:
+                        self.logger.error("Fallback a GCS falló.")
+                else:
+                    self.logger.info("No se configuró GCS_BUCKET; no se intentó subir a GCS.")
                 return
 
+        # Create new doc
         try:
             new_id, new_link = self._create_new_doc_and_return(docs_service, drive_service)
             BLOQUE = 50000
@@ -414,9 +467,28 @@ class Crawler:
             self.logger.exception("HttpError al intentar crear nuevo doc: %s", err)
             if "storageQuotaExceeded" in err:
                 self.logger.error("Drive quota exceeded al crear doc; manteniendo copia local.")
+                # Try fallback to GCS
+                gcs_bucket = self.config.gcs_bucket or os.getenv("GCS_BUCKET")
+                if gcs_bucket and out_fname.exists():
+                    dest = f"crawler_output_{datetime.datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.txt"
+                    ok = self._upload_to_gcs(out_fname, gcs_bucket, dest_name=dest)
+                    if ok:
+                        self.logger.info("Fallback: archivo subido a GCS: gs://%s/%s", gcs_bucket, dest)
+                    else:
+                        self.logger.error("Fallback a GCS falló.")
+                else:
+                    self.logger.info("No se configuró GCS_BUCKET; no se intentó subir a GCS.")
             return
         except Exception as e:
             self.logger.exception("Fallo creando nuevo doc: %s", traceback.format_exc())
+            # As last resort, save partial large output
+            try:
+                err_fname = pathlib.Path(DEFAULT_ON_ERROR_OUT)
+                with open(err_fname, "w", encoding="utf-8") as f:
+                    f.write(text[:1_000_000])
+                self.logger.info("Salida parcial guardada en %s", err_fname)
+            except Exception as e3:
+                self.logger.exception("No se pudo escribir %s: %s", DEFAULT_ON_ERROR_OUT, e3)
             return
 
 
@@ -434,6 +506,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--client-secrets", default=os.getenv("CLIENT_SECRETS", "client_secrets.json"), help="Ruta a client_secrets.json (OAuth user flow)")
     p.add_argument("--use-user-oauth", action="store_true", help="Usar OAuth de usuario (interactive) en vez de service account")
     p.add_argument("--drive-folder-id", default=None, help="ID de carpeta en Drive donde crear nuevos docs (opcional)")
+    p.add_argument("--gcs-bucket", default=os.getenv("GCS_BUCKET", None), help="Nombre del bucket GCS para fallback (opcional)")
     p.add_argument("--out", default=DEFAULT_OUT, help="Ruta local de salida (crawler_output.txt por defecto)")
     p.add_argument("--max-pages", type=int, default=500, help="Max páginas a rastrear")
     p.add_argument("--concurrency", type=int, default=3, help="Número de workers concurrentes")
@@ -447,9 +520,6 @@ def main():
     logging.basicConfig(format="%(asctime)s [%(levelname)s] %(name)s: %(message)s", level=logging.INFO)
 
     # Determine headless behavior:
-    # - If --headless specified -> headless True
-    # - Else if --no-headless specified -> headless False
-    # - Else auto-detect: if no DISPLAY -> headless True, else headless False
     if args.headless:
         headless_flag = True
     elif args.no_headless:
@@ -465,6 +535,7 @@ def main():
         client_secrets=args.client_secrets if args.client_secrets and os.path.exists(args.client_secrets) else None,
         use_user_oauth=args.use_user_oauth,
         drive_folder_id=args.drive_folder_id,
+        gcs_bucket=args.gcs_bucket,
         out_path=args.out,
         max_pages=args.max_pages,
         concurrency=args.concurrency,
@@ -473,8 +544,8 @@ def main():
     crawler = Crawler(cfg)
 
     logging.getLogger("crawler").info(
-        "Iniciando crawler - start=%s domain=%s concurrency=%d max_pages=%d out=%s use_user_oauth=%s headless=%s",
-        cfg.start_url, cfg.domain, cfg.concurrency, cfg.max_pages, cfg.out_path, cfg.use_user_oauth, cfg.headless
+        "Iniciando crawler - start=%s domain=%s concurrency=%d max_pages=%d out=%s use_user_oauth=%s headless=%s gcs_bucket=%s",
+        cfg.start_url, cfg.domain, cfg.concurrency, cfg.max_pages, cfg.out_path, cfg.use_user_oauth, cfg.headless, cfg.gcs_bucket
     )
 
     async def run():
