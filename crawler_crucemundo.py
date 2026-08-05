@@ -15,7 +15,6 @@ Requisitos:
 pip install playwright beautifulsoup4 google-api-python-client google-auth google-auth-oauthlib unidecode
 python -m playwright install chromium
 """
-
 from __future__ import annotations
 
 import argparse
@@ -81,7 +80,6 @@ class CrawlerConfig:
 SCOPES = [
     "https://www.googleapis.com/auth/documents",
     "https://www.googleapis.com/auth/drive",
-    # if you only need readonly support, change scopes accordingly
 ]
 
 
@@ -105,9 +103,7 @@ def load_user_oauth_creds(client_secrets_path: str):
         try:
             with open(TOKEN_CACHE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            # Build credentials from saved token - use google.oauth2.credentials if needed
             from google.oauth2.credentials import Credentials
-
             creds = Credentials.from_authorized_user_info(data, SCOPES)
         except Exception:
             creds = None
@@ -121,7 +117,6 @@ def load_user_oauth_creds(client_secrets_path: str):
         if not creds:
             flow = InstalledAppFlow.from_client_secrets_file(client_secrets_path, SCOPES)
             creds = flow.run_local_server(port=0)
-        # Save for next time
         try:
             with open(TOKEN_CACHE, "w", encoding="utf-8") as f:
                 f.write(creds.to_json())
@@ -289,7 +284,6 @@ class Crawler:
         """Crea un nuevo Google Doc y devuelve (doc_id, webViewLink)."""
         new_name = f"{name_prefix} - backup {datetime.datetime.utcnow().strftime('%Y-%m-%d_%H%M%S')}"
         file_metadata = {"name": new_name, "mimeType": "application/vnd.google-apps.document"}
-        # Si el usuario proporcionó folder id, colócalo allí
         if self.config.drive_folder_id:
             file_metadata["parents"] = [self.config.drive_folder_id]
         created = drive_service.files().create(body=file_metadata, fields="id,webViewLink").execute()
@@ -327,7 +321,6 @@ class Crawler:
         except Exception as e:
             self.logger.exception("Fallo al escribir copia local %s: %s", out_fname, e)
 
-        # Decide qué credenciales usar
         creds = None
         docs_service = None
         drive_service = None
@@ -340,7 +333,6 @@ class Crawler:
                 self.logger.info("Se mantiene copia local y se aborta intento de subida.")
                 return
         else:
-            # service account mode (if provided)
             if not self.config.google_key:
                 self.logger.info("No se proporcionó google_key ni uso de OAuth usuario; no se intentará subir.")
                 return
@@ -350,7 +342,6 @@ class Crawler:
                 self.logger.exception("No se pudieron cargar credenciales de service account: %s", e)
                 return
 
-        # Build services
         try:
             docs_service = build("docs", "v1", credentials=creds)
             drive_service = build("drive", "v3", credentials=creds)
@@ -358,19 +349,16 @@ class Crawler:
             self.logger.exception("No se pudieron construir servicios de Google APIs: %s", e)
             return
 
-        # Check drive quota (informativo)
         quota_info = self._get_drive_quota(drive_service)
         if quota_info:
             self.logger.info("Drive quota: limit=%s usage=%s remaining=%s", quota_info["limit"], quota_info["usage"], quota_info["remaining"])
 
         target_id = self.config.document_id
 
-        # If there's a target id, try to write into it
         if target_id:
             try:
                 doc = docs_service.documents().get(documentId=target_id).execute()
                 self.logger.info("Acceso a Google Doc objetivo OK. Título: %s", doc.get("title"))
-                # remove previous content (between 1 and endIndex-1)
                 body = doc.get("body", {}).get("content", [])
                 if len(body) > 1:
                     end_index = body[-1].get("endIndex", 1)
@@ -380,7 +368,6 @@ class Crawler:
                             body={"requests": [{"deleteContentRange": {"range": {"startIndex": 1, "endIndex": end_index - 1}}}]},
                         ).execute()
                         self.logger.info("Contenido previo eliminado en doc ID=%s", target_id)
-                # Insert text in blocks
                 BLOQUE = 50000
                 position = 1
                 for i in range(0, len(text), BLOQUE):
@@ -395,24 +382,17 @@ class Crawler:
             except HttpError as he:
                 err = repr(he)
                 self.logger.warning("No se pudo escribir en doc objetivo (ID=%s): %s", target_id, err)
-                # if quota exceeded, bail out early
                 if "storageQuotaExceeded" in err:
                     self.logger.error("Quota de Drive excedida; no se intentará crear otro documento.")
                     return
-                # else continue and maybe try create new doc
-
             except Exception as e:
                 self.logger.exception("Error al acceder/actualizar doc objetivo: %s", e)
-                # continue to try to create new doc if possible
 
-        # If we reach here, either no target_id or failed to use it; try to create new doc if quota allows
         if quota_info and quota_info.get("remaining") is not None:
-            # Simple heuristic: if remaining is zero or negative, avoid creating
             if quota_info["remaining"] <= 0:
                 self.logger.error("Drive sin espacio disponible (remaining=%s). No se creará nuevo documento.", quota_info["remaining"])
                 return
 
-        # Create new doc
         try:
             new_id, new_link = self._create_new_doc_and_return(docs_service, drive_service)
             BLOQUE = 50000
@@ -457,13 +437,26 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--out", default=DEFAULT_OUT, help="Ruta local de salida (crawler_output.txt por defecto)")
     p.add_argument("--max-pages", type=int, default=500, help="Max páginas a rastrear")
     p.add_argument("--concurrency", type=int, default=3, help="Número de workers concurrentes")
-    p.add_argument("--headless", action="store_true", help="Ejecutar navegador en headless")
+    p.add_argument("--headless", action="store_true", help="Forzar headless (útil en CI). Si no hay DISPLAY se activará automáticamente.")
+    p.add_argument("--no-headless", action="store_true", help="Forzar modo con interfaz (requiere DISPLAY/X server)")
     return p.parse_args()
 
 
 def main():
     args = parse_args()
     logging.basicConfig(format="%(asctime)s [%(levelname)s] %(name)s: %(message)s", level=logging.INFO)
+
+    # Determine headless behavior:
+    # - If --headless specified -> headless True
+    # - Else if --no-headless specified -> headless False
+    # - Else auto-detect: if no DISPLAY -> headless True, else headless False
+    if args.headless:
+        headless_flag = True
+    elif args.no_headless:
+        headless_flag = False
+    else:
+        headless_flag = os.environ.get("DISPLAY") is None
+
     cfg = CrawlerConfig(
         start_url=args.start,
         domain=args.domain,
@@ -475,13 +468,14 @@ def main():
         out_path=args.out,
         max_pages=args.max_pages,
         concurrency=args.concurrency,
-        headless=args.headless,
+        headless=headless_flag,
     )
     crawler = Crawler(cfg)
 
-    # Log startup info
-    logging.getLogger("crawler").info("Iniciando crawler - start=%s domain=%s concurrency=%d max_pages=%d out=%s use_user_oauth=%s",
-                                      cfg.start_url, cfg.domain, cfg.concurrency, cfg.max_pages, cfg.out_path, cfg.use_user_oauth)
+    logging.getLogger("crawler").info(
+        "Iniciando crawler - start=%s domain=%s concurrency=%d max_pages=%d out=%s use_user_oauth=%s headless=%s",
+        cfg.start_url, cfg.domain, cfg.concurrency, cfg.max_pages, cfg.out_path, cfg.use_user_oauth, cfg.headless
+    )
 
     async def run():
         await crawler.crawl()
@@ -489,7 +483,6 @@ def main():
     asyncio.run(run())
 
     documento = "\n".join(crawler.results)
-    # Save/write
     crawler.write_google_doc(documento)
     logging.info("Proceso terminado. Páginas visitadas: %d", len(crawler.visited))
 
