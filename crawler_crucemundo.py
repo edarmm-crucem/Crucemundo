@@ -5,25 +5,34 @@ Crawler mejorado para crucemundo.es
 - Concurrency control (multiple workers)
 - Cola asincrónica y deduplicación
 - Normalización de URLs
-- Mejor manejo de errores y reintentos
-- Opción de guardar localmente si no hay credenciales de Google
+- Manejo de errores y reintentos
+- Opción de escribir en Google Docs; si falla, crea uno nuevo y guarda el nuevo ID
+- Siempre deja copia local crawler_output.txt y last_doc_id.txt (si crea uno nuevo)
+
+Requisitos:
+pip install playwright beautifulsoup4 google-api-python-client google-auth unidecode
+y ejecutar: playwright install chromium
 """
+from __future__ import annotations
 
 import argparse
 import asyncio
 import logging
 import os
 import re
+import pathlib
+import traceback
+import datetime
 from dataclasses import dataclass
-from typing import List, Set
+from typing import List, Set, Optional
 from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 
-# Google API
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 # ----------------------------------
 # Config / Defaults
@@ -34,16 +43,13 @@ EXT_RESOURCES_RE = re.compile(
 )
 EXT_DOCS_RE = re.compile(r"\.(?:pdf|doc|docx|xls|xlsx|zip)$", re.I)
 
-# ----------------------------------
-# Dataclasses
-# ----------------------------------
 
 @dataclass
 class CrawlerConfig:
     start_url: str
     domain: str
-    document_id: str | None = None
-    google_key: str | None = None
+    document_id: Optional[str] = None
+    google_key: Optional[str] = None
     max_pages: int = 1000
     concurrency: int = 3
     headless: bool = True
@@ -55,6 +61,7 @@ class CrawlerConfig:
 # Crawler
 # ----------------------------------
 
+
 class Crawler:
     def __init__(self, config: CrawlerConfig):
         self.config = config
@@ -65,33 +72,27 @@ class Crawler:
         self.logger.setLevel(logging.INFO)
 
     @staticmethod
-    def normalize_url(base: str, link: str) -> str | None:
+    def normalize_url(base: str, link: str) -> Optional[str]:
         if not link:
             return None
-        # Remove anchors
         link = link.split("#", 1)[0].strip()
-        # Resolve relative URLs
         url = urljoin(base, link)
         parsed = urlparse(url)
         if not parsed.scheme.startswith("http"):
             return None
-        # Normalize host e.g. www.crucemundo.es -> crucemundo.es
         netloc = parsed.netloc.replace("www.", "")
         normalized = parsed._replace(netloc=netloc).geturl()
         return normalized
 
     def allowed_url(self, url: str) -> bool:
-        # Same domain?
         try:
             netloc = urlparse(url).netloc
             if self.config.domain not in netloc:
                 return False
         except Exception:
             return False
-        # Skip static resources / documents
         if EXT_RESOURCES_RE.search(url) or EXT_DOCS_RE.search(url):
             return False
-        # Skip obvious download paths
         low = url.lower()
         if "pdfcrucerodisp" in low or "/download" in low:
             return False
@@ -107,7 +108,6 @@ class Crawler:
                 continue
             if self.allowed_url(url):
                 links.append(url)
-        # preserve order but dedupe
         seen = set()
         out = []
         for u in links:
@@ -119,10 +119,9 @@ class Crawler:
     @staticmethod
     def extract_text(html: str) -> str:
         soup = BeautifulSoup(html, "html.parser")
-        for tag in soup(["script", "style", "noscript", "svg"]):
+        for tag in soup(["script", "style", "noscript", "svg", "header", "footer", "nav"]):
             tag.extract()
         text = soup.get_text(" ", strip=True)
-        # collapse whitespace
         text = re.sub(r"\s+", " ", text)
         return text
 
@@ -138,9 +137,10 @@ class Crawler:
                 html = await page.content()
                 texto = self.extract_text(html)
                 self.results.append(
-                    f"\n\n========================================\n\nURL:\n{url}\n\nTITULO:\n{title}\n\n\nCONTENIDO:\n\n{texto}\n\n========================================\n\n"
+                    "\n\n========================================\n\n"
+                    f"URL:\n{url}\n\nTITULO:\n{title}\n\n\nCONTENIDO:\n\n{texto}\n\n"
+                    "========================================\n\n"
                 )
-                # Extract new links
                 nuevos = 0
                 for destino in self.extract_links(html, url):
                     if destino not in self.visited:
@@ -160,7 +160,6 @@ class Crawler:
             return
         if url in self.visited:
             return
-        # Small safety: avoid queueing beyond max_pages
         total_seen = len(self.visited) + self.queue.qsize()
         if total_seen >= self.config.max_pages:
             return
@@ -173,7 +172,6 @@ class Crawler:
                 try:
                     url = await asyncio.wait_for(self.queue.get(), timeout=5.0)
                 except asyncio.TimeoutError:
-                    # No items for a while -> check exit condition
                     if self.queue.empty():
                         break
                     else:
@@ -181,92 +179,171 @@ class Crawler:
                 if url in self.visited:
                     self.queue.task_done()
                     continue
-                # Mark visited early to avoid duplicates
                 self.visited.add(url)
                 await self.fetch_and_process(page, url)
                 self.queue.task_done()
-                # Respect max_pages
                 if len(self.visited) >= self.config.max_pages:
                     self.logger.info("Alcanzado max_pages (%d).", self.config.max_pages)
                     break
         finally:
-            await page.close()
+            try:
+                await page.close()
+            except Exception:
+                pass
 
     async def crawl(self):
         await self.queue.put(self.config.start_url)
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=self.config.headless)
-            # Create worker tasks
             workers = [
                 asyncio.create_task(self.worker(browser, i))
                 for i in range(max(1, self.config.concurrency))
             ]
-            # Wait until queue is processed or max_pages reached
             await self.queue.join()
-            # Cancel workers
             for w in workers:
                 w.cancel()
+            try:
+                await asyncio.gather(*workers, return_exceptions=True)
+            except Exception:
+                pass
             await browser.close()
 
     # ----------------------------------
-    # Google Docs writer (synchronous)
+    # Google Docs writer + helpers
     # ----------------------------------
 
+    def _create_new_doc_and_return(self, docs_service, drive_service, name_prefix: str = "IA_BRUTO"):
+        """Crea un nuevo Google Doc y devuelve (doc_id, webViewLink)."""
+        new_name = f"{name_prefix} - backup {datetime.datetime.utcnow().strftime('%Y-%m-%d_%H%M%S')}"
+        file_metadata = {"name": new_name, "mimeType": "application/vnd.google-apps.document"}
+        created = drive_service.files().create(body=file_metadata, fields="id,webViewLink").execute()
+        new_id = created.get("id")
+        link = created.get("webViewLink")
+        self.logger.info("Nuevo Google Doc creado: %s (ID=%s)", new_name, new_id)
+        return new_id, link
+
     def write_google_doc(self, text: str):
-        if not self.config.document_id or not self.config.google_key:
-            # fallback: write local file
-            fname = "crawler_output.txt"
-            with open(fname, "w", encoding="utf-8") as f:
+        """Intentar escribir en Google Doc; si falla, crear uno nuevo y escribir ahí.
+        Siempre escribe copia local de seguridad y guarda nuevo doc id en last_doc_id.txt cuando crea uno nuevo.
+        """
+        out_fname = pathlib.Path.cwd() / "crawler_output.txt"
+        try:
+            tmp = out_fname.with_suffix(".tmp")
+            with open(tmp, "w", encoding="utf-8") as f:
                 f.write(text)
-            self.logger.info("Credenciales de Google no proporcionadas: guardado en %s", fname)
+                f.flush()
+                os.fsync(f.fileno())
+            tmp.replace(out_fname)
+            self.logger.info("Copia local escrita en %s (%d bytes)", out_fname, out_fname.stat().st_size)
+        except Exception as e:
+            self.logger.exception("Fallo al escribir copia local %s: %s", out_fname, e)
+
+        # If no google key provided, stop here (we have local copy)
+        if not self.config.google_key:
+            self.logger.info("No se proporcionó google_key; no se intentará subir a Google Docs.")
             return
 
-        scopes = ["https://www.googleapis.com/auth/documents"]
         try:
-            creds = service_account.Credentials.from_service_account_file(
-                self.config.google_key, scopes=scopes
-            )
-            service = build("docs", "v1", credentials=creds)
-            doc = service.documents().get(documentId=self.config.document_id).execute()
-            self.logger.info("Documento: %s", doc.get("title"))
+            scopes = ["https://www.googleapis.com/auth/documents", "https://www.googleapis.com/auth/drive"]
+            creds = service_account.Credentials.from_service_account_file(self.config.google_key, scopes=scopes)
+            docs_service = build("docs", "v1", credentials=creds)
+            drive_service = build("drive", "v3", credentials=creds)
 
-            contenido = doc.get("body", {}).get("content", [])
-            # Delete existing content except the required leading element
-            if len(contenido) > 1:
-                fin = contenido[-1].get("endIndex", 1)
-                service.documents().batchUpdate(
-                    documentId=self.config.document_id,
-                    body={
-                        "requests": [
-                            {"deleteContentRange": {"range": {"startIndex": 1, "endIndex": fin - 1}}}
-                        ]
-                    },
-                ).execute()
-                self.logger.info("Contenido anterior eliminado")
+            target_id = self.config.document_id
+            if target_id:
+                try:
+                    doc = docs_service.documents().get(documentId=target_id).execute()
+                    self.logger.info("Acceso a Google Doc objetivo OK. Título: %s", doc.get("title"))
+                except HttpError as he:
+                    self.logger.warning(
+                        "No se puede acceder al doc configurado (ID=%s): %s", target_id, repr(he)
+                    )
+                    new_id, new_link = self._create_new_doc_and_return(docs_service, drive_service)
+                    target_id = new_id
+                    self.config.document_id = new_id
+                    with open("last_doc_id.txt", "w", encoding="utf-8") as f:
+                        f.write(new_id)
+                    self.logger.info("Nuevo ID guardado en last_doc_id.txt (ID=%s)", new_id)
+            else:
+                new_id, new_link = self._create_new_doc_and_return(docs_service, drive_service)
+                target_id = new_id
+                self.config.document_id = new_id
+                with open("last_doc_id.txt", "w", encoding="utf-8") as f:
+                    f.write(new_id)
+                self.logger.info("Nuevo ID guardado en last_doc_id.txt (ID=%s)", new_id)
+
+            try:
+                doc = docs_service.documents().get(documentId=target_id).execute()
+                body = doc.get("body", {}).get("content", [])
+                if len(body) > 1:
+                    end_index = body[-1].get("endIndex", 1)
+                    if end_index > 1:
+                        docs_service.documents().batchUpdate(
+                            documentId=target_id,
+                            body={"requests": [{"deleteContentRange": {"range": {"startIndex": 1, "endIndex": end_index - 1}}}]},
+                        ).execute()
+                        self.logger.info("Contenido previo eliminado en doc ID=%s", target_id)
+            except HttpError as he:
+                self.logger.warning("No se pudo limpiar contenido previo del doc ID=%s: %s", target_id, repr(he))
 
             BLOQUE = 50000
-            posicion = 1
+            position = 1
             for i in range(0, len(text), BLOQUE):
-                trozo = text[i : i + BLOQUE]
-                service.documents().batchUpdate(
-                    documentId=self.config.document_id,
-                    body={"requests": [{"insertText": {"location": {"index": posicion}, "text": trozo}}]},
+                chunk = text[i : i + BLOQUE]
+                docs_service.documents().batchUpdate(
+                    documentId=target_id,
+                    body={"requests": [{"insertText": {"location": {"index": position}, "text": chunk}}]},
                 ).execute()
-                posicion += len(trozo)
-                self.logger.info("Enviados %d caracteres", posicion)
-            self.logger.info("Google Doc actualizado correctamente")
+                position += len(chunk)
+                self.logger.info("Subido bloque hasta %d caracteres al doc ID=%s", position, target_id)
+
+            self.logger.info("Google Doc (ID=%s) actualizado correctamente.", target_id)
+
+        except HttpError as he:
+            self.logger.exception("HttpError al intentar escribir en Google Docs: %s", repr(he))
+            try:
+                creds = service_account.Credentials.from_service_account_file(self.config.google_key, scopes=scopes)
+                docs_service = build("docs", "v1", credentials=creds)
+                drive_service = build("drive", "v3", credentials=creds)
+                new_id, new_link = self._create_new_doc_and_return(docs_service, drive_service)
+                BLOQUE = 50000
+                position = 1
+                for i in range(0, len(text), BLOQUE):
+                    chunk = text[i : i + BLOQUE]
+                    docs_service.documents().batchUpdate(
+                        documentId=new_id,
+                        body={"requests": [{"insertText": {"location": {"index": position}, "text": chunk}}]},
+                    ).execute()
+                    position += len(chunk)
+                self.config.document_id = new_id
+                with open("last_doc_id.txt", "w", encoding="utf-8") as f:
+                    f.write(new_id)
+                self.logger.info("Fallback: nuevo Google Doc creado y escrito (ID=%s). Guardado en last_doc_id.txt", new_id)
+            except Exception as e2:
+                self.logger.exception("Fallo también al crear/escribir nuevo doc: %s\n%s", e2, traceback.format_exc())
+                try:
+                    err_fname = pathlib.Path.cwd() / "crawler_output_on_error.txt"
+                    with open(err_fname, "w", encoding="utf-8") as f:
+                        f.write(text[:1_000_000])
+                    self.logger.info("Salida parcial guardada en %s", err_fname)
+                except Exception as e3:
+                    self.logger.exception("No se pudo escribir %s: %s", "crawler_output_on_error.txt", e3)
+
         except Exception as e:
-            self.logger.exception("Error al escribir en Google Docs: %s", e)
-            # fallback local
-            fname = "crawler_output_on_error.txt"
-            with open(fname, "w", encoding="utf-8") as f:
-                f.write(text[:1000000])  # write at most first MB to avoid disk floods
-            self.logger.info("Salida guardada localmente en %s", fname)
+            self.logger.exception("Error inesperado al subir a Google Docs: %s\n%s", e, traceback.format_exc())
+            try:
+                err_fname = pathlib.Path.cwd() / "crawler_output_on_error.txt"
+                with open(err_fname, "w", encoding="utf-8") as f:
+                    f.write(text[:1_000_000])
+                self.logger.info("Salida parcial guardada en %s", err_fname)
+            except Exception as e3:
+                self.logger.exception("No se pudo escribir %s: %s", "crawler_output_on_error.txt", e3)
 
 
 # ----------------------------------
 # CLI / Entrypoint
 # ----------------------------------
+
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Crawler mejorado para crucemundo.es")
@@ -287,10 +364,10 @@ def main():
         start_url=args.start,
         domain=args.domain,
         document_id=args.document_id,
-        google_key=args.google_key if os.path.exists(args.google_key) else None,
+        google_key=args.google_key if args.google_key and os.path.exists(args.google_key) else None,
         max_pages=args.max_pages,
         concurrency=args.concurrency,
-        headless=True,
+        headless=True,  # keep headless True by default; change here if desired
     )
     crawler = Crawler(cfg)
 
@@ -300,6 +377,7 @@ def main():
     asyncio.run(run())
 
     documento = "\n".join(crawler.results)
+    # Save/write
     crawler.write_google_doc(documento)
     logging.info("Proceso terminado. Páginas visitadas: %d", len(crawler.visited))
 
