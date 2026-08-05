@@ -16,31 +16,33 @@ jobs:
           python-version: "3.12"
 
       - name: Preparar credenciales de Google (si están)
+        env:
+          GOOGLE_CREDENTIALS_B64: ${{ secrets.GOOGLE_CREDENTIALS_B64 || '' }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS || '' }}
         run: |
-          if [ -n "${{ secrets.GOOGLE_CREDENTIALS }}" ]; then
-            echo "Escribiendo credentials.json desde secret GOOGLE_CREDENTIALS"
-            printf '%s' "${{ secrets.GOOGLE_CREDENTIALS }}" > credentials.json
+          set -euxo pipefail
+          # Prefer base64-encoded secret to avoid newline issues
+          if [ -n "${GOOGLE_CREDENTIALS_B64}" ]; then
+            echo "Decodificando GOOGLE_CREDENTIALS_B64 -> credentials.json"
+            echo "${GOOGLE_CREDENTIALS_B64}" | base64 --decode > credentials.json
             chmod 600 credentials.json
             echo "GOOGLE_APPLICATION_CREDENTIALS=credentials.json" >> $GITHUB_ENV
-            ls -l credentials.json
+          elif [ -n "${GOOGLE_CREDENTIALS}" ]; then
+            echo "Escribiendo credentials.json desde secret GOOGLE_CREDENTIALS"
+            printf '%s' "${GOOGLE_CREDENTIALS}" > credentials.json
+            chmod 600 credentials.json
+            echo "GOOGLE_APPLICATION_CREDENTIALS=credentials.json" >> $GITHUB_ENV
           else
-            echo "No se encontró el secret GOOGLE_CREDENTIALS; se ejecutará sin credenciales de GCP."
+            echo "No se encontró el secret GOOGLE_CREDENTIALS ni GOOGLE_CREDENTIALS_B64; se ejecutará sin credenciales de GCP."
           fi
 
-      - name: (temporal) Mostrar client_email del service account si existe
+      - name: (temporal) Validar credentials.json y mostrar client_email
         if: always()
         run: |
+          set -euxo pipefail
           if [ -f credentials.json ]; then
-            echo "client_email del service account:"
-            python - <<'PY'
-import json,sys
-try:
-    j=json.load(open("credentials.json"))
-    print(j.get("client_email"))
-except Exception as e:
-    print("Error leyendo credentials.json:", e, file=sys.stderr)
-    raise
-PY
+            echo "Validando credentials.json (mostrando solo client_email)"
+            python -c "import json,sys; j=json.load(open('credentials.json')); print('client_email:', j.get('client_email'))"
           else
             echo "No hay credentials.json"
           fi
@@ -55,6 +57,7 @@ PY
 
       - name: Instalar librerías
         run: |
+          set -euxo pipefail
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install playwright beautifulsoup4 google-api-python-client google-auth google-auth-oauthlib google-cloud-storage unidecode
@@ -66,7 +69,9 @@ PY
           CRUCEMUNDO_DOC_ID: ${{ secrets.CRUCEMUNDO_DOC_ID || '' }}
           GCS_BUCKET: ${{ secrets.GCS_BUCKET || '' }}
         run: |
-          set -e
+          set -euxo pipefail
+          echo "Archivos en workspace antes de ejecutar:"
+          ls -la
           # Ejecutar con credenciales si existen
           if [ -f credentials.json ]; then
             echo "Ejecutando crawler con service account (intentará subir visited_urls a Drive/GCS)"
@@ -78,17 +83,19 @@ PY
               --google-key credentials.json \
               --document-id "${CRUCEMUNDO_DOC_ID}" \
               --gcs-bucket "${GCS_BUCKET}" \
-              --headless || true
+              --headless
           else
             echo "No hay credentials.json: ejecutando crawler en modo local (solo salida local)"
             python crawler_crucemundo.py \
               --out crawler_output.txt \
               --urls-out visited_urls.txt \
-              --headless || true
+              --headless
           fi
 
       - name: Sanity check output
+        if: always()
         run: |
+          set -euxo pipefail
           echo ">>>> Workspace: $PWD <<<<"
           ls -la || true
           echo ">>>> Ficheros crawler_output.txt* <<<<"
@@ -103,6 +110,7 @@ PY
       - name: Compress output (opcional)
         if: always()
         run: |
+          set -euxo pipefail
           if [ -f crawler_output.txt ]; then
             gzip -c crawler_output.txt > crawler_output.txt.gz
             echo "Compressed crawler_output.txt -> crawler_output.txt.gz"
