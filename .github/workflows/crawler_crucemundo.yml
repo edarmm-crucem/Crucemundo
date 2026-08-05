@@ -5,33 +5,88 @@ on:
 
 jobs:
   crawler:
-
     runs-on: ubuntu-latest
-
     steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
 
-    - name: Descargar código
-      uses: actions/checkout@v4
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
+      - name: Preparar credenciales de Google (si están)
+        run: |
+          if [ -n "${{ secrets.GOOGLE_CREDENTIALS }}" ]; then
+            echo "Escribiendo credentials.json desde secret GOOGLE_CREDENTIALS"
+            printf '%s' "${{ secrets.GOOGLE_CREDENTIALS }}" > credentials.json
+            chmod 600 credentials.json
+            echo "GOOGLE_APPLICATION_CREDENTIALS=credentials.json" >> $GITHUB_ENV
+            ls -l credentials.json
+          else
+            echo "No se encontró el secret GOOGLE_CREDENTIALS; se ejecutará sin credenciales de GCP."
+          fi
 
-    - name: Instalar Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.12"
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
+      - name: Instalar librerías
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install playwright beautifulsoup4 google-api-python-client google-auth google-auth-oauthlib google-cloud-storage unidecode
+          # instalar browsers y dependencias del sistema
+          python -m playwright install --with-deps
 
-    - name: Crear credentials Google
-      run: |
-        echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials.json
-        ls -l credentials.json
+      - name: Ejecutar crawler
+        env:
+          CRUCEMUNDO_DOC_ID: ${{ secrets.CRUCEMUNDO_DOC_ID || '' }}
+          GCS_BUCKET: ${{ secrets.GCS_BUCKET || '' }}
+        run: |
+          set -e
+          # Ejecutar con credenciales si existen
+          if [ -f credentials.json ] && [ -n "${CRUCEMUNDO_DOC_ID}" ]; then
+            echo "Ejecutando crawler con service account y document-id"
+            python crawler_crucemundo.py --out crawler_output.txt --google-key credentials.json --document-id "${CRUCEMUNDO_DOC_ID}" --gcs-bucket "${GCS_BUCKET}" --headless || true
+          elif [ -f credentials.json ] && [ -z "${CRUCEMUNDO_DOC_ID}" ]; then
+            echo "Service account disponible pero no hay CRUCEMUNDO_DOC_ID; ejecutando sin document-id (se intentará crear nuevo doc si hay cuota)"
+            python crawler_crucemundo.py --out crawler_output.txt --google-key credentials.json --gcs-bucket "${GCS_BUCKET}" --headless || true
+          else
+            echo "No hay credentials.json: ejecutando crawler en modo local (solo salida local)"
+            python crawler_crucemundo.py --out crawler_output.txt --headless || true
+          fi
 
+      - name: Sanity check output
+        run: |
+          echo ">>>> Workspace: $PWD <<<<"
+          ls -la || true
+          echo ">>>> Ficheros crawler_output.txt* <<<<"
+          ls -lh crawler_output.txt crawler_output.txt.gz || true
+          echo ">>>> Primeras 200 líneas (si existen) <<<<"
+          head -n 200 crawler_output.txt || true
 
-    - name: Instalar librerías
-      run: |
-        pip install -r requirements.txt
-        playwright install chromium
+      - name: Compress output (opcional)
+        if: always()
+        run: |
+          if [ -f crawler_output.txt ]; then
+            gzip -c crawler_output.txt > crawler_output.txt.gz
+            echo "Compressed to crawler_output.txt.gz"
+          else
+            echo "No existe crawler_output.txt para comprimir"
+          fi
+          ls -lh crawler_output.txt* || true
 
-
-    - name: Ejecutar crawler
-      run: |
-        python crawler_crucemundo.py
+      - name: Upload crawler output artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crawler-output
+          path: |
+            crawler_output.txt.gz
+            crawler_output.txt
+          retention-days: 30
