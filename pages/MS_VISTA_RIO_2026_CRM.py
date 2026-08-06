@@ -377,7 +377,7 @@ st.markdown('''
     header[data-testid="stHeader"] { display: none !important; }
     .portal-header { padding: 0.1rem 0 0.55rem 0; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.55rem; }
     .portal-header-left { display: flex; align-items: center; gap: 1.2rem; }
-    .portal-logo { height: 50px; width: auto; object-fit: contain; display: block; }
+    .portal-logo { height: 75px; width: auto; object-fit: contain; display: block; }
     .portal-title { font-size: 0.96rem; font-weight: 500; color: #4B5563; line-height: 1.2; }
     .portal-title strong { color: #111827; }
     .portal-title-en { margin-top: 0.12rem; font-style: italic; color: #6B7280; font-size: 0.82rem; }
