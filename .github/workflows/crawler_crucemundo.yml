@@ -2,7 +2,7 @@ name: Actualizar Crucemundo
 on:
   workflow_dispatch:
   schedule:
-    - cron: cron: '0 22 * * *'
+    - cron: '0 22 * * *'
 concurrency:
   group: crucemundo-crawler
   cancel-in-progress: false
