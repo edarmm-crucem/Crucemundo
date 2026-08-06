@@ -7,7 +7,7 @@ from googleapiclient.discovery import build
 from google.oauth2 import service_account
 from collections import defaultdict
 
-st.set_page_config(page_title="MS VISTA RIO", page_icon="crucemundo_final.gif", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="MS VISTA RIO", page_icon="favicon1.png", layout="wide", initial_sidebar_state="collapsed")
 
 #### BLOQUE 2: AUTH
 if not st.session_state.get("authenticated"):
