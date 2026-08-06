@@ -45,44 +45,30 @@ def escribir_google_doc(texto):
         credentials=creds
     )
 
-    try:
-        # 1. Leer el documento para saber cuántos caracteres tiene realmente
-        doc = service.documents().get(documentId=DOCUMENT_ID).execute()
-        end_index = doc["body"]["content"][-1]["endIndex"] - 1
-        print(f"[GDOC] Documento leido OK. Longitud actual: {end_index}")
 
-        requests_batch = []
-
-        # Solo borrar si hay algo que borrar (si end_index es 1, el doc esta vacio)
-        if end_index > 1:
-            requests_batch.append({
-                "deleteContentRange": {
-                    "range": {"startIndex": 1, "endIndex": end_index}
+    service.documents().batchUpdate(
+        documentId=DOCUMENT_ID,
+        body={
+            "requests":[
+                {
+                    "deleteContent":{
+                        "range":{
+                            "startIndex":1,
+                            "endIndex":999999
+                        }
+                    }
+                },
+                {
+                    "insertText":{
+                        "location":{
+                            "index":1
+                        },
+                        "text":texto
+                    }
                 }
-            })
-
-        # Google Docs tiene un limite de ~1.000.000 caracteres por doc
-        texto_final = texto[:999000]
-
-        requests_batch.append({
-            "insertText": {
-                "location": {"index": 1},
-                "text": texto_final
-            }
-        })
-
-        result = service.documents().batchUpdate(
-            documentId=DOCUMENT_ID,
-            body={"requests": requests_batch}
-        ).execute()
-
-        print("[GDOC] batchUpdate ejecutado correctamente.")
-        print("[GDOC] replies:", len(result.get("replies", [])))
-
-    except Exception as e:
-        print("[GDOC] ERROR AL ESCRIBIR EN GOOGLE DOCS:")
-        print(repr(e))
-        raise  # relanzar para que el fallo sea visible y no pase desapercibido
+            ]
+        }
+    ).execute()
 
 
 # ===============================
@@ -137,10 +123,10 @@ def leer_sitemap():
     )
 
 
+    # Antes se excluían las URLs que contenían "reservarcrucero".
+    # Ahora se incluyen todas las URLs del sitemap sin filtrar.
     for u in locs:
-
-        if "reservarcrucero" not in u:
-            urls.append(u)
+        urls.append(u)
 
 
     return urls
@@ -193,11 +179,22 @@ async def extraer_pagina(page,url):
 
     try:
 
-        await page.goto(
-            url,
-            wait_until="networkidle",
-            timeout=60000
-        )
+        try:
+            await page.goto(
+                url,
+                wait_until="networkidle",
+                timeout=60000
+            )
+
+        except Exception:
+            # Si la página nunca llega a "networkidle" (p.ej. peticiones
+            # continuas de un widget, chat, etc.), reintentamos exigiendo
+            # solo que el HTML esté cargado, para no perdernos la página.
+            await page.goto(
+                url,
+                wait_until="domcontentloaded",
+                timeout=60000
+            )
 
 
         html = await page.content()
