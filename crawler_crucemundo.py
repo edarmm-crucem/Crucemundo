@@ -37,6 +37,19 @@ SEED_URLS = [
 # (escríbelo tú a mano una vez). Todo lo que haya DESPUÉS lo sobrescribe el crawler.
 MARCADOR = "FIN INFORMACION MANUAL"
 
+# Etiquetas HTML que casi siempre son ruido (menús, footer, cookies, formularios...)
+# y no aportan información útil sobre cruceros/destinos.
+ETIQUETAS_A_DESCARTAR = [
+    "script", "style", "noscript",
+    "nav", "header", "footer",
+    "form", "button", "iframe", "svg",
+    "aside",
+]
+
+# Longitud mínima de una línea para conservarla. Filtra restos sueltos tipo
+# "Inicio", "Menú", "Aceptar", "×", etc. que quedan tras limpiar el HTML.
+LONGITUD_MINIMA_LINEA = 3
+
 
 # ===============================
 # GOOGLE DOCS
@@ -187,29 +200,44 @@ def escribir_google_doc(texto):
 # ===============================
 
 def limpiar(html):
+    """
+    Extrae el texto útil de una página, descartando menús, cabecera, pie de
+    página, formularios y otros bloques que se repiten en todas las páginas
+    del sitio y no aportan información real sobre cruceros/destinos.
+    """
 
     soup = BeautifulSoup(
         html,
         "html.parser"
     )
 
-    for x in soup(
-        ["script", "style", "noscript"]
-    ):
-        x.extract()
+    for etiqueta in ETIQUETAS_A_DESCARTAR:
+        for x in soup.find_all(etiqueta):
+            x.extract()
 
-    texto = soup.get_text(
-        " ",
-        strip=True
-    )
+    # Obtenemos el texto línea a línea (en vez de todo pegado con espacios)
+    # para poder filtrar líneas basura y quitar duplicados fácilmente.
+    lineas_crudas = soup.get_text("\n").split("\n")
 
-    texto = re.sub(
-        r"\s+",
-        " ",
-        texto
-    )
+    lineas_limpias = []
+    vistas = set()
 
-    return texto
+    for linea in lineas_crudas:
+
+        linea = re.sub(r"\s+", " ", linea).strip()
+
+        if len(linea) < LONGITUD_MINIMA_LINEA:
+            continue
+
+        # Evita repetir la misma línea varias veces seguidas en la misma
+        # página (típico de menús desplegables duplicados en HTML).
+        if linea in vistas:
+            continue
+
+        vistas.add(linea)
+        lineas_limpias.append(linea)
+
+    return " ".join(lineas_limpias)
 
 
 # ===============================
