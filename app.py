@@ -99,7 +99,7 @@ import base64
 def getlogobase64():
     try:
         with open("crucemundo_final.gif", "rb") as f:
-            return "data:image/png;base64," + base64.b64encode(f.read()).decode()
+            return "data:image/gif;base64," + base64.b64encode(f.read()).decode()
     except Exception:
         return ""
 
