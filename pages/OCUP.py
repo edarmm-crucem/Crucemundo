@@ -26,7 +26,7 @@ if not st.session_state.get("authenticated"):
     st.stop()
 
 # ── Constantes ────────────────────────────────────────────────────────────────
-LOGOURL = "favicon1.png"
+LOGOURL = "crucemundo_final.gig"
 FOLDER_CRM_ROOT = "1aPckLqAn_sKHaMJPBdA0hnW2jegT1rT-"
 TIMEZONE        = pytz.timezone("Europe/Madrid")
 
@@ -35,7 +35,7 @@ import base64
 
 def getlogobase64():
     try:
-        with open("favicon1.png", "rb") as f:
+        with open("crucemundo_final.gif", "rb") as f:
             return "data:image/png;base64," + base64.b64encode(f.read()).decode()
     except Exception:
         return ""
