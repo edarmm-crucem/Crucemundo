@@ -7,8 +7,11 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from openai import OpenAI
 
-st.set_page_config(page_title="Pregunta a Claude", page_icon="🤖", layout="wide")
-
+st.set_page_config(
+    page_title="Pregunta a Claude",
+    page_icon="favicon1.png",
+    layout="wide"
+)
 DOCUMENTID = "1-MklRtqm3n31WxMduWlyV1Lj_lwws7wkEIIBqgToycs"
 DOCUMENTNAME = "IA_BRUTO"
 
