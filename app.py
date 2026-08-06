@@ -1748,7 +1748,7 @@ st.markdown(
     .login-page { min-height: auto; display: flex; align-items: flex-start; justify-content: center; padding: 0.2rem 1rem 1rem; }
     .login-shell { width: 100%; max-width: 390px; margin: 0 auto; }
     .login-head { text-align: center; margin-bottom: 0.55rem; }
-    .login-logo { height: 56px; width: auto; margin: 0 auto 0.65rem auto; display: block; }
+    .login-logo { height: 100px; width: auto; margin: 0 auto 0.65rem auto; display: block; }
     .login-title { font-size: 1.08rem; font-weight: 800; color: #1F2937; }
     .login-subtitle { font-size: 0.78rem; color: #667085; margin-top: 0.28rem; }
     .login-form-box { background: transparent !important; border: none !important; padding: 0 !important; }
