@@ -1,25 +1,11 @@
 name: Actualizar Crucemundo
-2
- 
-3
 on:
-4
-workflow_dispatch:
-5
-schedule:
-6
-- cron: '0 22 * * *'
-7
- 
-8
+  workflow_dispatch:
+  schedule:
+    - cron: cron: '0 22 * * *'
 concurrency:
-9
-group: crucemundo-crawler
-10
-cancel-in-progress: false
-11
- 
-12
+  group: crucemundo-crawler
+  cancel-in-progress: false
 jobs:
   crawler:
     runs-on: ubuntu-latest
