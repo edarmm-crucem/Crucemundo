@@ -30,7 +30,7 @@ st.set_page_config(
 
 FOLDERSESIONESID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
 FOLDERID = "1MxMdeBlUG6v5n2upobsjNbQNQ8F_C_sO"
-LOGOURL = "app/static/favicon1.png"
+LOGOURL = "app/static/crucemundo_final.gif"
 TEMPLATEIDES = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
 TEMPLATEIDGRUPOS = "1Z7ktX3PhVkMibWpzdrDDqAT4aPsmjzSJPf1SgZcL5-w"
 TEMPLATEIDCRUCERO = "1zSJPi6St_Z5Jw1c6eieVnKI4NyEdP7E9n3WTZ9yy3C0"
@@ -98,7 +98,7 @@ import base64
 
 def getlogobase64():
     try:
-        with open("favicon1.png", "rb") as f:
+        with open("crucemundo_final.gif", "rb") as f:
             return "data:image/png;base64," + base64.b64encode(f.read()).decode()
     except Exception:
         return ""
