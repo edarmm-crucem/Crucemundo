@@ -1,6 +1,7 @@
 # ============================================================
 # PÁGINA: PREGUNTA A CLAUDE — lee el documento IA_BRUTO cada vez
-# ============================================================ 
+# (versión optimizada para ahorrar tokens: prompt caching + historial limitado)
+# ============================================================
 
 import streamlit as st
 from google.oauth2 import service_account
@@ -14,6 +15,10 @@ st.set_page_config(
 )
 DOCUMENTID = "1-MklRtqm3n31WxMduWlyV1Lj_lwws7wkEIIBqgToycs"
 DOCUMENTNAME = "IA_BRUTO"
+
+# Cuántos turnos (pares pregunta+respuesta) del historial se reenvían al modelo.
+# Súbelo si necesitas que recuerde conversaciones más largas; bájalo para ahorrar aún más.
+MAXHISTORIALTURNOS = 6
 
 if not st.session_state.get("authenticated"):
     st.warning("Debes iniciar sesión desde la página principal.")
@@ -41,8 +46,6 @@ def getdocumenttext():
     return data.decode("utf-8") if isinstance(data, bytes) else data
 
 
-from openai import OpenAI
-
 def preguntaraldocumento(documenttext, pregunta, historial):
     apikey = st.secrets.get("openrouterapikey")
     if not apikey:
@@ -61,16 +64,36 @@ del documento "{DOCUMENTNAME}", que se actualiza automáticamente cada noche con
 extraída de la página web de Crucemundo. Responde solo con lo que aparece en el documento;
 si algo no está, dilo claramente en vez de inventarlo."""
 
+    # --- OPTIMIZACIÓN 1: prompt caching ---
+    # El documento va en un bloque de "system" separado, marcado como cacheable.
+    # Anthropic cachea este bloque durante ~5 min de inactividad; mientras el
+    # caché esté "caliente", las siguientes preguntas casi no cobran esos
+    # tokens de entrada (ahorro típico del 80-90% en el coste del contexto largo).
+    system_blocks = [
+        {"type": "text", "text": systemprompt},
+        {
+            "type": "text",
+            "text": "--- CONTENIDO DEL DOCUMENTO ---\n" + documenttext + "\n--- FIN ---",
+            "cache_control": {"type": "ephemeral"},
+        },
+    ]
+
+    # --- OPTIMIZACIÓN 2: limitar el historial reenviado ---
+    # historial ya viene como lista de {"role": ..., "content": ...};
+    # cada turno son 2 elementos (user + assistant), así que tomamos
+    # los últimos MAXHISTORIALTURNOS*2 elementos.
+    historialrecortado = historial[-(MAXHISTORIALTURNOS * 2):]
+
     messages = [
-        {"role": "system", "content": systemprompt + "\n\n--- CONTENIDO DEL DOCUMENTO ---\n" + documenttext + "\n--- FIN ---"},
-    ] + historial + [{"role": "user", "content": pregunta}]
+        {"role": "system", "content": system_blocks},
+    ] + historialrecortado + [{"role": "user", "content": pregunta}]
 
     response = client.chat.completions.create(
-        model="anthropic/claude-sonnet-5",  # o el modelo que prefieras, ver nota abajo
+        model="anthropic/claude-sonnet-5",
         messages=messages,
         max_tokens=1500,
         extra_headers={
-            "HTTP-Referer": "https://crucemundo.streamlit.app",  # opcional pero recomendado por OpenRouter
+            "HTTP-Referer": "https://crucemundo.streamlit.app",
             "X-Title": "Crucemundo Hub",
         },
     )
