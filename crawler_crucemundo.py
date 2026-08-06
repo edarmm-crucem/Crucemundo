@@ -20,8 +20,14 @@ FLOTA = DOMAIN + "/flota-cruceros-fluviales"
 
 DOCUMENT_ID = "1-MklRtqm3n31WxMduWlyV1Lj_lwws7wkEIIBqgToycs"
 
-
 GOOGLE_KEY = "credentials.json"
+
+SEED_URLS = [
+    "https://www.crucemundo.es/flota-cruceros-fluviales/",
+    "https://www.crucemundo.es/crucero/",
+    "https://www.crucemundo.es/reservarcrucero/",
+    "https://www.crucemundo.es/destinos/"
+]
 
 
 # ===============================
@@ -45,28 +51,38 @@ def escribir_google_doc(texto):
         credentials=creds
     )
 
+    doc = service.documents().get(
+        documentId=DOCUMENT_ID
+    ).execute()
+
+    end_index = doc["body"]["content"][-1]["endIndex"]
+
+    requests_body = []
+
+    if end_index > 1:
+
+        requests_body.append({
+            "deleteContentRange": {
+                "range": {
+                    "startIndex": 1,
+                    "endIndex": end_index - 1
+                }
+            }
+        })
+
+    requests_body.append({
+        "insertText": {
+            "location": {
+                "index": 1
+            },
+            "text": texto
+        }
+    })
 
     service.documents().batchUpdate(
         documentId=DOCUMENT_ID,
         body={
-            "requests":[
-                {
-                    "deleteContent":{
-                        "range":{
-                            "startIndex":1,
-                            "endIndex":999999
-                        }
-                    }
-                },
-                {
-                    "insertText":{
-                        "location":{
-                            "index":1
-                        },
-                        "text":texto
-                    }
-                }
-            ]
+            "requests": requests_body
         }
     ).execute()
 
@@ -83,16 +99,14 @@ def limpiar(html):
     )
 
     for x in soup(
-        ["script","style","noscript"]
+        ["script", "style", "noscript"]
     ):
         x.extract()
-
 
     texto = soup.get_text(
         " ",
         strip=True
     )
-
 
     texto = re.sub(
         r"\s+",
@@ -103,34 +117,33 @@ def limpiar(html):
     return texto
 
 
-
 # ===============================
 # SITEMAP
 # ===============================
 
 def leer_sitemap():
 
-    urls=[]
+    urls = []
 
-    r=requests.get(
+    r = requests.get(
         SITEMAP,
         timeout=30
     )
 
-    locs=re.findall(
+    locs = re.findall(
         r"<loc>(.*?)</loc>",
         r.text
     )
 
-
-    # Antes se excluían las URLs que contenían "reservarcrucero".
-    # Ahora se incluyen todas las URLs del sitemap sin filtrar.
     for u in locs:
+
+        # evitar PDF que rompe Playwright
+        if "pdfcrucerodisp.php" in u:
+            continue
+
         urls.append(u)
 
-
     return urls
-
 
 
 # ===============================
@@ -144,42 +157,75 @@ async def sacar_barcos(page):
         wait_until="networkidle"
     )
 
-
-    html = await page.content()
-
-
-    barcos=re.findall(
-        r'href="([^"]*barcoscrucemundo[^"]*)"',
-        html
+    links = await page.eval_on_selector_all(
+        "a",
+        "els => els.map(e => e.href)"
     )
 
+    barcos = []
 
-    resultado=[]
+    for l in links:
 
+        if "/barcoscrucemundo/" in l:
 
-    for b in barcos:
+            if l not in barcos:
+                barcos.append(l)
 
-        if not b.startswith("http"):
-            b=DOMAIN+b
-
-
-        if b not in resultado:
-            resultado.append(b)
+    return barcos
 
 
-    return resultado
+# ===============================
+# EXTRAER LINKS DE SEMILLAS
+# ===============================
 
+async def extraer_links(page, url):
+
+    encontrados = []
+
+    try:
+
+        await page.goto(
+            url,
+            wait_until="networkidle",
+            timeout=60000
+        )
+
+        links = await page.eval_on_selector_all(
+            "a",
+            "els => els.map(e => e.href)"
+        )
+
+        for l in links:
+
+            if not l:
+                continue
+
+            if "crucemundo.es" not in l:
+                continue
+
+            encontrados.append(l)
+
+    except Exception as e:
+
+        print(
+            "ERROR LINKS",
+            url,
+            e
+        )
+
+    return encontrados
 
 
 # ===============================
 # EXTRAER PAGINA
 # ===============================
 
-async def extraer_pagina(page,url):
+async def extraer_pagina(page, url):
 
     try:
 
         try:
+
             await page.goto(
                 url,
                 wait_until="networkidle",
@@ -187,24 +233,18 @@ async def extraer_pagina(page,url):
             )
 
         except Exception:
-            # Si la página nunca llega a "networkidle" (p.ej. peticiones
-            # continuas de un widget, chat, etc.), reintentamos exigiendo
-            # solo que el HTML esté cargado, para no perdernos la página.
+
             await page.goto(
                 url,
                 wait_until="domcontentloaded",
                 timeout=60000
             )
 
-
         html = await page.content()
-
 
         titulo = await page.title()
 
-
         texto = limpiar(html)
-
 
         return f"""
 
@@ -214,13 +254,11 @@ URL
 
 {url}
 
-
 ==============================
 TITULO
 ==============================
 
 {titulo}
-
 
 ==============================
 CONTENIDO
@@ -229,7 +267,6 @@ CONTENIDO
 {texto[:6000]}
 
 """
-
 
     except Exception as e:
 
@@ -242,94 +279,105 @@ CONTENIDO
         return ""
 
 
-
 # ===============================
 # PROCESO PRINCIPAL
 # ===============================
 
 async def crawler():
 
+    salida = []
 
-    salida=[]
+    urls = leer_sitemap()
 
-
-    urls=leer_sitemap()
-
+    urls.extend(SEED_URLS)
 
     async with async_playwright() as p:
-
 
         browser = await p.chromium.launch(
             headless=True
         )
 
-
         page = await browser.new_page()
-
 
         print(
             "Extrayendo flota..."
         )
 
-
         barcos = await sacar_barcos(page)
-
 
         print(
             "Barcos encontrados:",
             len(barcos)
         )
 
-
         urls.extend(barcos)
 
+        for seed in SEED_URLS:
 
-        urls=list(
+            print(
+                "Explorando:",
+                seed
+            )
+
+            nuevos = await extraer_links(
+                page,
+                seed
+            )
+
+            urls.extend(nuevos)
+
+        urls = list(
             dict.fromkeys(urls)
         )
 
+        urls = [
+            u for u in urls
+            if (
+                "/crucero/" in u
+                or "/reservarcrucero/" in u
+                or "/barcoscrucemundo/" in u
+                or "/flota-cruceros-fluviales/" in u
+                or "/destinos/" in u
+            )
+        ]
 
-        for i,url in enumerate(urls):
+        print(
+            "URLs finales:",
+            len(urls)
+        )
+
+        for i, url in enumerate(urls):
 
             print(
-                i+1,
+                i + 1,
                 "/",
                 len(urls),
                 url
             )
-
 
             texto = await extraer_pagina(
                 page,
                 url
             )
 
-
             salida.append(texto)
-
-
 
         await browser.close()
 
-
-
-    documento="\n".join(
+    documento = "\n".join(
         salida
     )
-
 
     escribir_google_doc(
         documento
     )
-
 
     print(
         "FINALIZADO"
     )
 
 
-
-if __name__=="__main__":
+if __name__ == "__main__":
 
     asyncio.run(
         crawler()
