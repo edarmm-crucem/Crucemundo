@@ -43,7 +43,7 @@ sheets_rate_limiter = RateLimiter(max_calls=50, per_seconds=60)
 
 # ── constantes ──────────────────────────────────────────────
 DRIVEROOTID   = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
-LOGOURL = "favicon1.png"
+LOGOURL = "crucemundo_final.gif"
 TIMEZONE      = pytz.timezone("Europe/Madrid")
 COLUMNS_ORDER = [
     "#",
@@ -60,7 +60,7 @@ import base64
 
 def getlogobase64():
     try:
-        with open("favicon1.png", "rb") as f:
+        with open("crucemundo_final.gif", "rb") as f:
             return "data:image/png;base64," + base64.b64encode(f.read()).decode()
     except Exception:
         return ""
