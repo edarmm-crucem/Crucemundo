@@ -337,7 +337,8 @@ async def crawler():
         urls = [
             u for u in urls
             if (
-                "/crucero/" in u
+                u in SEED_URLS
+                or "/crucero/" in u
                 or "/reservarcrucero/" in u
                 or "/barcoscrucemundo/" in u
                 or "/flota-cruceros-fluviales/" in u
