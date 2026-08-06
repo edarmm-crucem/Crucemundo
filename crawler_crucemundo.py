@@ -27,6 +27,10 @@ SEED_URLS = [
     "https://www.crucemundo.es/crucero/",
     "https://www.crucemundo.es/reservarcrucero/",
     "https://www.crucemundo.es/destinos/"
+    "https://crucemundo.es/tuviaje/"
+    "https://crucemundo.es/downloads/"
+    "https://crucemundo.es/noticiascrucemundo/"
+    "https://crucemundo.es/contacto/"
 ]
 
 
