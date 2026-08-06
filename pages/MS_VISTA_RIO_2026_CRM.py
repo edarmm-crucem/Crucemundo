@@ -7,7 +7,7 @@ from googleapiclient.discovery import build
 from google.oauth2 import service_account
 from collections import defaultdict
 
-st.set_page_config(page_title="MS VISTA RIO", page_icon="favicon1.png", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="MS VISTA RIO", page_icon="crucemundo_final.gif", layout="wide", initial_sidebar_state="collapsed")
 
 #### BLOQUE 2: AUTH
 if not st.session_state.get("authenticated"):
@@ -32,7 +32,7 @@ ANIO = "2026"                                                             # ← 
 CRMBARCO_NAME = f"{BARCO}_{ANIO}_CRM"
 MASTERCABINASID = "1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI"
 CRMBARCO = "1ApNv3qK-_2ANOVwSZoOchAdwWaeQg0Evz-n54s6T2cE"                   # ← CAMBIAR ID CRM
-LOGOURL = "favicon1.png"
+LOGOURL = "crucemundo_final.gif"
 ROOT_GROUPS = "1MMNH3y1E3jJIp6uUnxbwV0toAtdr2F2M"
 NOMBRE_BARCO_LIMPIO = BARCO.replace("_", " ")
 ESTADOS_VALIDOS = ["LIBRE", "RESERVA", "VENDIDA"]
@@ -44,7 +44,7 @@ import base64
 
 def getlogobase64():
     try:
-        with open("favicon1.png", "rb") as f:
+        with open("crucemundo_final.gif", "rb") as f:
             return "data:image/png;base64," + base64.b64encode(f.read()).decode()
     except Exception:
         return ""
