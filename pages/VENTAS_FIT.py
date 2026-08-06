@@ -408,7 +408,7 @@ section[data-testid="stSidebar"]{display:none!important;}
 }
 .portal-header{padding:0.1rem 0 0.55rem 0;display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:0.55rem;}
 .portal-header-left{display:flex;align-items:center;gap:0.9rem;}
-.portal-logo{height:42px;width:auto;object-fit:contain;display:block;}
+.portal-logo{height:75px;width:auto;object-fit:contain;display:block;}
 .portal-title{font-size:0.96rem;font-weight:800;color:#1F2937;line-height:1.15;}
 .portal-subtitle{font-size:0.72rem;color:#667085;line-height:1.2;margin-top:0.12rem;}
 .user-top{font-size:0.72rem;color:#566079;white-space:nowrap;}
