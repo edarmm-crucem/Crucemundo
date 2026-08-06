@@ -33,10 +33,68 @@ SEED_URLS = [
     "https://crucemundo.es/contacto/"
 ]
 
+# Todo lo que haya ANTES de este texto en el Google Doc se conserva tal cual
+# (escríbelo tú a mano una vez). Todo lo que haya DESPUÉS lo sobrescribe el crawler.
+MARCADOR = "FIN INFORMACION MANUAL"
+
 
 # ===============================
 # GOOGLE DOCS
 # ===============================
+
+def _extraer_texto_y_runs(doc):
+    """
+    Recorre la estructura del documento y devuelve:
+    - full_text: todo el texto concatenado, tal y como lo vería un humano
+    - runs: lista de (offset_en_full_text, indice_real_en_el_doc, texto_del_run)
+      necesaria para poder traducir una posición dentro de full_text a un
+      índice válido para la API de Google Docs (que no trabaja con strings,
+      sino con índices dentro de la estructura del documento).
+    """
+
+    full_text = ""
+    runs = []
+
+    for element in doc["body"]["content"]:
+
+        paragraph = element.get("paragraph")
+
+        if not paragraph:
+            continue
+
+        for el in paragraph.get("elements", []):
+
+            text_run = el.get("textRun")
+
+            if not text_run:
+                continue
+
+            contenido = text_run.get("content", "")
+
+            runs.append((len(full_text), el["startIndex"], contenido))
+
+            full_text += contenido
+
+    return full_text, runs
+
+
+def _indice_doc_desde_offset(runs, offset):
+    """Traduce un offset dentro de full_text al índice real del documento."""
+
+    for run_offset, doc_start, contenido in runs:
+
+        run_len = len(contenido)
+
+        if run_offset <= offset <= run_offset + run_len:
+            return doc_start + (offset - run_offset)
+
+    # Si no se encuentra (no debería pasar), usamos el final del último run.
+    if runs:
+        run_offset, doc_start, contenido = runs[-1]
+        return doc_start + len(contenido)
+
+    return 1
+
 
 def escribir_google_doc(texto):
 
@@ -59,29 +117,62 @@ def escribir_google_doc(texto):
         documentId=DOCUMENT_ID
     ).execute()
 
+    full_text, runs = _extraer_texto_y_runs(doc)
+
     end_index = doc["body"]["content"][-1]["endIndex"]
+
+    marcador_pos = full_text.find(MARCADOR)
 
     requests_body = []
 
-    if end_index > 1:
+    if marcador_pos == -1:
+
+        # El marcador no está en el documento todavía: no tocamos nada de lo
+        # que ya hay (por seguridad, para no borrar info manual sin querer)
+        # y añadimos el marcador + el contenido nuevo al final.
+        print(
+            f"Aviso: no se encontró '{MARCADOR}' en el documento. "
+            "Se añade el marcador y el contenido nuevo al final, sin borrar nada existente."
+        )
+
+        insert_index = end_index - 1
 
         requests_body.append({
-            "deleteContentRange": {
-                "range": {
-                    "startIndex": 1,
-                    "endIndex": end_index - 1
-                }
+            "insertText": {
+                "location": {
+                    "index": insert_index
+                },
+                "text": f"\n\n{MARCADOR}\n\n{texto}"
             }
         })
 
-    requests_body.append({
-        "insertText": {
-            "location": {
-                "index": 1
-            },
-            "text": texto
-        }
-    })
+    else:
+
+        marcador_fin_offset = marcador_pos + len(MARCADOR)
+
+        marcador_fin_doc_index = _indice_doc_desde_offset(runs, marcador_fin_offset)
+
+        # Borra todo lo que hay después del marcador (si hay algo que borrar)
+        if end_index - 1 > marcador_fin_doc_index:
+
+            requests_body.append({
+                "deleteContentRange": {
+                    "range": {
+                        "startIndex": marcador_fin_doc_index,
+                        "endIndex": end_index - 1
+                    }
+                }
+            })
+
+        # Inserta el contenido nuevo justo después del marcador
+        requests_body.append({
+            "insertText": {
+                "location": {
+                    "index": marcador_fin_doc_index
+                },
+                "text": f"\n\n{texto}"
+            }
+        })
 
     service.documents().batchUpdate(
         documentId=DOCUMENT_ID,
