@@ -193,7 +193,7 @@ section[data-testid="stSidebar"]   { display: none !important; }
 .glob-header { padding: 0.8rem 0 0.5rem; display: flex; align-items: center;
     justify-content: space-between; gap: 1rem; margin-bottom: 0.3rem; }
 .glob-header-left { display: flex; align-items: center; gap: 1rem; }
-.glob-logo   { height: 40px; width: auto; object-fit: contain; }
+.glob-logo   { height: 75px; width: auto; object-fit: contain; }
 .glob-title  { font-size: 0.92rem; font-weight: 700; color: #1F2937; line-height: 1.2; }
 .glob-sub    { font-size: 0.7rem; color: #6B7280; margin-top: 0.1rem; }
 .glob-badge  { font-size: 1rem; font-weight: 900; color: #1E3A8A; }
