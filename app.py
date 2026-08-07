@@ -2175,11 +2175,11 @@ with nav_btn_ocup:
     if st.button("Ocupación / Occupancy", key="ocup_nav", use_container_width=False):
         st.switch_page("pages/OCUP.py")
 
-with nav_label_ia:#    
-    st.markdown('<div style="padding-top:2px"><span class="web-chip-blue">IA</span></div>', unsafe_allow_html=True)
-with nav_btn_ia:
-    if st.button("🤖 Pregunta a Claude", key="claude_nav", use_container_width=False):
-        st.switch_page("pages/Claude.py")
+#with nav_label_ia:#    
+#    st.markdown('<div style="padding-top:2px"><span class="web-chip-blue">IA</span></div>', unsafe_allow_html=True)
+#with nav_btn_ia:
+#    if st.button("🤖 Pregunta a Claude", key="claude_nav", use_container_width=False):
+#        st.switch_page("pages/Claude.py")
 
 
 
