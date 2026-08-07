@@ -56,6 +56,7 @@ VALIDUSERS = {
     "anton@crucemundo.com": "Anton",
     "finance@crucemundo.com": "Aleksandr",
     "edarmm@gmail.com": "Esteban",
+    "tyman04958@gmail.com": "Max",
 }
 VALIDPASSWORD = st.secrets.get("apppassword", "")
 
