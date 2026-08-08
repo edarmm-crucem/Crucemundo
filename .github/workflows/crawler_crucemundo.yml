@@ -71,6 +71,8 @@ jobs:
         env:
           CRUCEMUNDO_DOC_ID: ${{ secrets.CRUCEMUNDO_DOC_ID || '' }}
           GCS_BUCKET: ${{ secrets.GCS_BUCKET || '' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_VECTOR_STORE_ID: ${{ secrets.OPENAI_VECTOR_STORE_ID }}
         run: |
           set -euxo pipefail
           echo "Archivos en workspace antes de ejecutar:"
