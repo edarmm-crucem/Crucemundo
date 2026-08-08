@@ -1,4 +1,5 @@
 import asyncio
+import os
 import re
 import requests
 from bs4 import BeautifulSoup
@@ -6,6 +7,7 @@ from playwright.async_api import async_playwright
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from openai import OpenAI
 
 
 # ===============================
@@ -49,6 +51,11 @@ ETIQUETAS_A_DESCARTAR = [
 # Longitud mínima de una línea para conservarla. Filtra restos sueltos tipo
 # "Inicio", "Menú", "Aceptar", "×", etc. que quedan tras limpiar el HTML.
 LONGITUD_MINIMA_LINEA = 3
+
+# Datos para subir el contenido a un Vector Store de OpenAI (búsqueda semántica).
+# El Vector Store se crea UNA sola vez a mano; aquí solo se actualiza su contenido.
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_VECTOR_STORE_ID = os.environ.get("OPENAI_VECTOR_STORE_ID", "")
 
 
 # ===============================
@@ -193,6 +200,78 @@ def escribir_google_doc(texto):
             "requests": requests_body
         }
     ).execute()
+
+
+# ===============================
+# OPENAI VECTOR STORE (búsqueda semántica)
+# ===============================
+
+def actualizar_vector_store(texto):
+    """
+    Sube el contenido actual del crawler al Vector Store de OpenAI, para que
+    el bot pueda hacer búsqueda semántica (file_search) en vez de depender
+    de coincidencia de palabras clave hecha a mano.
+
+    Borra los ficheros anteriores del Vector Store antes de subir el nuevo,
+    para que no se vayan acumulando versiones viejas del documento.
+    """
+
+    if not OPENAI_API_KEY or not OPENAI_VECTOR_STORE_ID:
+        print(
+            "Aviso: falta OPENAI_API_KEY o OPENAI_VECTOR_STORE_ID; "
+            "se omite la actualización del Vector Store."
+        )
+        return
+
+    client = OpenAI(api_key=OPENAI_API_KEY)
+
+    # Borra los ficheros que ya hubiera en el Vector Store.
+    # Se borra cada archivo de forma independiente (try propio por archivo)
+    # para que un fallo puntual en uno no impida borrar el resto.
+    try:
+        archivos_actuales = client.vector_stores.files.list(
+            vector_store_id=OPENAI_VECTOR_STORE_ID
+        )
+
+        borrados = 0
+        fallidos = 0
+
+        for f in archivos_actuales.data:
+            try:
+                client.vector_stores.files.delete(
+                    vector_store_id=OPENAI_VECTOR_STORE_ID,
+                    file_id=f.id
+                )
+                client.files.delete(f.id)
+                borrados += 1
+            except Exception as e_individual:
+                fallidos += 1
+                print(f"Aviso: no se pudo borrar el fichero {f.id}:", e_individual)
+
+        print(f"Vector Store: {borrados} ficheros antiguos borrados, {fallidos} fallidos.")
+
+        if fallidos > 0:
+            print(
+                "ATENCIÓN: quedaron ficheros antiguos sin borrar. "
+                "Revisa manualmente en platform.openai.com/storage/files"
+            )
+
+    except Exception as e:
+        print("Aviso: no se pudo listar los ficheros del Vector Store:", e)
+
+    # Guarda el contenido en un fichero local temporal y lo sube
+    ruta_temporal = "ia_bruto_actual.txt"
+
+    with open(ruta_temporal, "w", encoding="utf-8") as fh:
+        fh.write(texto)
+
+    with open(ruta_temporal, "rb") as fh:
+        client.vector_stores.files.upload_and_poll(
+            vector_store_id=OPENAI_VECTOR_STORE_ID,
+            file=fh
+        )
+
+    print("Vector Store actualizado con el contenido nuevo.")
 
 
 # ===============================
@@ -493,6 +572,10 @@ async def crawler():
     )
 
     escribir_google_doc(
+        documento
+    )
+
+    actualizar_vector_store(
         documento
     )
 
