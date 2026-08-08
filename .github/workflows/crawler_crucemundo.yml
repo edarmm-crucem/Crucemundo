@@ -66,7 +66,7 @@ jobs:
           pip install playwright beautifulsoup4 google-api-python-client google-auth google-auth-oauthlib google-cloud-storage unidecode
           # instalar browsers y dependencias del sistema
           python -m playwright install --with-deps
-
+          python -m playwright install --with-deps
       - name: Ejecutar crawler
         env:
           CRUCEMUNDO_DOC_ID: ${{ secrets.CRUCEMUNDO_DOC_ID || '' }}
