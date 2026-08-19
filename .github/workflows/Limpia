@@ -1,0 +1,33 @@
+name: Limpiar workflow runs
+
+on:
+  workflow_dispatch:
+    inputs:
+      workflow_name:
+        description: 'Archivo del workflow a limpiar (vacío = todos)'
+        required: false
+        default: ''
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  limpiar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Borrar runs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          WF: ${{ inputs.workflow_name }}
+        run: |
+          if [ -z "$WF" ]; then
+            IDS=$(gh run list --repo "$REPO" --limit 1000 --json databaseId --jq '.[].databaseId')
+          else
+            IDS=$(gh run list --repo "$REPO" --workflow "$WF" --limit 1000 --json databaseId --jq '.[].databaseId')
+          fi
+          for id in $IDS; do
+            echo "Borrando run $id"
+            gh run delete "$id" --repo "$REPO" || true
+          done
