@@ -2951,7 +2951,7 @@ if st.session_state.get("opennuevaagenciaform"):
         with rowe1:
             agiva = st.number_input("IVA %", min_value=0.0, max_value=100.0, value=21.0, step=0.5, format="%.2f", key="agiva")
         with rowe2:
-            agivaservicioopcional = st.number_input("IVA SERVICIO OPCIONAL %", min_value=0.0, max_value=100.0, value=21.0, step=0.5, format="%.2f", key="agivaservicioopcional")
+            agivaservicioopcional = st.number_input("COMISION TRASLADOS & EXC. %", min_value=0.0, max_value=100.0, value=8.27, step=0.5, format="%.2f", key="agivaservicioopcional")
         guardaragencia = st.form_submit_button("Guardar Agencia")
         if guardaragencia:
             if not agnombre.strip():
