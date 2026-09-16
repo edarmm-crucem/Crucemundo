@@ -658,12 +658,30 @@ def on_sheet_ping():
         pass
 
     try:
+    
         rows = scan_year(
             selected_year,
             progress_cb=update_progress,
             on_row_verified=on_row_verified,
             on_sheet_ping=on_sheet_ping,
         )
+    
+        if rows:
+    
+            tmp_df = pd.DataFrame(
+                rows,
+                columns=DATA_COLUMNS
+            )
+    
+            st.session_state.vf_excel_bytes = to_excel_bytes(
+                tmp_df,
+                st.session_state.vf_errors
+            )
+
+    st.session_state.vf_results = rows
+
+st.session_state.vf_results = rows
+st.session_state.vf_results = rows
         st.session_state.vf_results      = rows
         st.session_state.vf_year_loaded  = selected_year
         st.session_state.vf_extracted_at = now().strftime("%d/%m/%Y %H:%M")
