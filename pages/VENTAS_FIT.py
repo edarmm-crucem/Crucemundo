@@ -133,24 +133,41 @@ def sheets_svc():
 
 # ── Drive helpers ────────────────────────────────────────────
 def list_children(parent_id, folders_only=False):
+
     svc = drive_svc()
+
     q = f"'{parent_id}' in parents and trashed=false"
+
     if folders_only:
         q += " and mimeType='application/vnd.google-apps.folder'"
-    items, token = [], None
+
+    items = []
+
+    token = None
+
     while True:
-        r = svc.files().list(
+
+        request = svc.files().list(
             q=q,
             fields="nextPageToken, files(id,name,mimeType,webViewLink)",
-            supportsAllDrives=True, includeItemsFromAllDrives=True,
-            corpora="allDrives", pageToken=token, pageSize=1000,
-        ).execute()
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
+            corpora="allDrives",
+            pageToken=token,
+            pageSize=1000,
+        )
+
+        r = execute_with_retry(request)
+
         items.extend(r.get("files", []))
+
         token = r.get("nextPageToken")
+
         if not token:
             break
-    return items
 
+    return items
+    
 def find_child_folder(parent_id, name):
     for f in list_children(parent_id, folders_only=True):
         if f["name"].strip() == name.strip():
@@ -358,15 +375,110 @@ def scan_year(year, progress_cb=None, on_row_verified=None, on_sheet_ping=None):
 
 # ── Export Excel ─────────────────────────────────────────────
 def to_excel_bytes(df: pd.DataFrame) -> bytes:
+
     buf = io.BytesIO()
-    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="VENTAS FIT")
-        ws = writer.sheets["VENTAS FIT"]
-        for col in ws.columns:
-            max_len = max((len(str(cell.value or "")) for cell in col), default=10)
-            ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 50)
+
+    with pd.ExcelWriter(
+        buf,
+        engine="openpyxl"
+    ) as writer:
+
+        # DETALLE
+        df.to_excel(
+            writer,
+            sheet_name="DETALLE",
+            index=False
+        )
+
+        # BARCOS
+        resumen_barco = (
+            df.groupby("BARCO")
+            .agg(
+                RESERVAS=("CONFIRMACION", "count"),
+                PERSONAS=("PERSONAS", "sum"),
+                NETO=("NETO", "sum"),
+                BRUTO=("BRUTO", "sum"),
+            )
+            .reset_index()
+            .sort_values(
+                "NETO",
+                ascending=False
+            )
+        )
+
+        resumen_barco.to_excel(
+            writer,
+            sheet_name="BARCOS",
+            index=False
+        )
+
+        # AGENCIAS
+        resumen_agencia = (
+            df.groupby("AGENCIA")
+            .agg(
+                RESERVAS=("CONFIRMACION", "count"),
+                PERSONAS=("PERSONAS", "sum"),
+                NETO=("NETO", "sum"),
+                BRUTO=("BRUTO", "sum"),
+            )
+            .reset_index()
+            .sort_values(
+                "NETO",
+                ascending=False
+            )
+        )
+
+        resumen_agencia.to_excel(
+            writer,
+            sheet_name="AGENCIAS",
+            index=False
+        )
+
+        # COMERCIALES
+        resumen_comercial = (
+            df.groupby("COMERCIAL")
+            .agg(
+                RESERVAS=("CONFIRMACION", "count"),
+                PERSONAS=("PERSONAS", "sum"),
+                NETO=("NETO", "sum"),
+                BRUTO=("BRUTO", "sum"),
+            )
+            .reset_index()
+            .sort_values(
+                "NETO",
+                ascending=False
+            )
+        )
+
+        resumen_comercial.to_excel(
+            writer,
+            sheet_name="COMERCIALES",
+            index=False
+        )
+
+        for sheet in writer.sheets.values():
+
+            for col in sheet.columns():
+
+                max_len = 0
+
+                for cell in col:
+                    try:
+                        max_len = max(
+                            max_len,
+                            len(str(cell.value or ""))
+                        )
+                    except:
+                        pass
+
+                sheet.column_dimensions[
+                    col[0].column_letter
+                ].width = min(max_len + 4, 60)
+
     buf.seek(0)
+
     return buf.read()
+
 
 # ── Resumen ──────────────────────────────────────────────────
 def build_summary_html(rows):
@@ -511,24 +623,38 @@ if run_scan and selected_year:
     st.session_state.vf_extracted_at = None
 
     prog_bar        = st.progress(0.0, text="Iniciando escaneo…")
-    live_table_slot = st.empty()   # ⚠️ se crea UNA sola vez, fuera del bucle
+    live_table_slot = st.empty()
     rows_acumuladas = []
-
-    def update_progress(done, total, label):
-        pct = done / total if total else 0
-        prog_bar.progress(min(pct, 1.0), text=f"Procesando {done}/{total}: {label}")
-
+    
+    heartbeat = st.empty()
+    
+    ultimo_refresh = 0
+    
     def on_row_verified(row):
-        rows_acumuladas.append(row)
-        if len(rows_acumuladas) % 20 == 0:
-            df_parcial = pd.DataFrame(rows_acumuladas, columns=DATA_COLUMNS)
-            live_table_slot.dataframe(
-                df_parcial.tail(300),
-                use_container_width=True,
-                height=420,
-            )
 
-    def on_sheet_ping():
+    rows_acumuladas.append(row)
+
+    # Solo refrescamos cada 100 reservas
+    if len(rows_acumuladas) % 100 == 0:
+
+        status_box.markdown(
+            f"""
+### Extracción en curso
+
+📦 Reservas encontradas: **{len(rows_acumuladas):,}**
+
+⚠️ Errores detectados: **{len(st.session_state.vf_errors):,}**
+"""
+        )
+def on_sheet_ping():
+
+    try:
+
+        heartbeat.info(
+            f"Reservas verificadas: {len(rows_acumuladas):,}"
+        )
+
+    except:
         pass
 
     try:
@@ -597,11 +723,22 @@ if rows:
     if sel_pago:       df = df[df["PAGO"].isin(sel_pago)]
     if sel_idioma:     df = df[df["IDIOMA"].isin(sel_idioma)]
     if txt_search.strip():
-        mask = df.apply(
-            lambda r: txt_search.strip().lower() in " ".join(str(v) for v in r.values).lower(),
-            axis=1,
+    
+        search_text = txt_search.strip().lower()
+    
+        searchable = (
+            df.astype(str)
+              .agg(" ".join, axis=1)
+              .str.lower()
         )
-        df = df[mask]
+    
+        df = df[
+        searchable.str.contains(
+            search_text,
+            na=False,
+            regex=False
+        )
+    ]
 
     st.markdown(build_summary_html(df.to_dict("records")), unsafe_allow_html=True)
 
