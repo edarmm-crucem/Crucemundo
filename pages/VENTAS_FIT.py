@@ -458,7 +458,7 @@ def to_excel_bytes(df: pd.DataFrame) -> bytes:
 
         for sheet in writer.sheets.values():
 
-            for col in sheet.columns():
+            for col in sheet.columns:
 
                 max_len = 0
 
@@ -617,85 +617,87 @@ if "vf_year_loaded"  not in st.session_state: st.session_state.vf_year_loaded  =
 if "vf_extracted_at" not in st.session_state: st.session_state.vf_extracted_at = None
 
 # ── Escaneo ──────────────────────────────────────────────────
+
 if run_scan and selected_year:
-    st.session_state.vf_results      = None
-    st.session_state.vf_year_loaded  = None
+
+    st.session_state.vf_results = None
+    st.session_state.vf_year_loaded = None
     st.session_state.vf_extracted_at = None
 
-    prog_bar        = st.progress(0.0, text="Iniciando escaneo…")
-    live_table_slot = st.empty()
+    prog_bar = st.progress(
+        0.0,
+        text="Iniciando escaneo..."
+    )
+
+    status_box = st.empty()
+
     rows_acumuladas = []
-    
-    heartbeat = st.empty()
-    
-    ultimo_refresh = 0
-    
-    def on_row_verified(row):
 
-    rows_acumuladas.append(row)
+    def update_progress(done, total, label):
 
-    # Solo refrescamos cada 100 reservas
-    if len(rows_acumuladas) % 100 == 0:
+        pct = done / total if total else 0
 
-        status_box.markdown(
+        prog_bar.progress(
+            min(pct, 1.0),
+            text=f"{done:,}/{total:,} libros"
+        )
+
+        status_box.info(
             f"""
-### Extracción en curso
+Libro actual:
+{label}
 
-📦 Reservas encontradas: **{len(rows_acumuladas):,}**
+Procesados:
+{done:,}/{total:,}
 
-⚠️ Errores detectados: **{len(st.session_state.vf_errors):,}**
+Reservas encontradas:
+{len(rows_acumuladas):,}
 """
         )
-def on_sheet_ping():
 
-    try:
+    def on_row_verified(row):
 
-        heartbeat.info(
-            f"Reservas verificadas: {len(rows_acumuladas):,}"
-        )
+        rows_acumuladas.append(row)
 
-    except:
+    def on_sheet_ping():
+
         pass
 
     try:
-    
+
         rows = scan_year(
             selected_year,
             progress_cb=update_progress,
             on_row_verified=on_row_verified,
             on_sheet_ping=on_sheet_ping,
         )
-    
-        if rows:
-    
-            tmp_df = pd.DataFrame(
-                rows,
-                columns=DATA_COLUMNS
-            )
-    
-            st.session_state.vf_excel_bytes = to_excel_bytes(
-                tmp_df,
-                st.session_state.vf_errors
-            )
 
-    st.session_state.vf_results = rows
+        st.session_state.vf_results = rows
+        st.session_state.vf_year_loaded = selected_year
+        st.session_state.vf_extracted_at = now().strftime(
+            "%d/%m/%Y %H:%M"
+        )
 
-st.session_state.vf_results = rows
-st.session_state.vf_results = rows
-        st.session_state.vf_results      = rows
-        st.session_state.vf_year_loaded  = selected_year
-        st.session_state.vf_extracted_at = now().strftime("%d/%m/%Y %H:%M")
         if not rows:
-            st.info("No se han encontrado reservas para el año seleccionado.")
+
+            st.info(
+                "No se han encontrado reservas para el año seleccionado."
+            )
+
     except Exception as e:
-        st.session_state.vf_results      = rows_acumuladas
-        st.session_state.vf_year_loaded  = selected_year
-        st.session_state.vf_extracted_at = now().strftime("%d/%m/%Y %H:%M")
+
+        st.session_state.vf_results = rows_acumuladas
+        st.session_state.vf_year_loaded = selected_year
+        st.session_state.vf_extracted_at = now().strftime(
+            "%d/%m/%Y %H:%M"
+        )
+
         st.exception(e)
-        st.warning(f"Escaneo interrumpido. Se han procesado {len(rows_acumuladas)} reservas antes del error.")
+
     finally:
+
         prog_bar.empty()
-        live_table_slot.empty()
+        status_box.empty()
 
 # ── Resultado + filtros ──────────────────────────────────────
 rows         = st.session_state.get("vf_results")
