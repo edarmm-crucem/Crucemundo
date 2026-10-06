@@ -642,8 +642,7 @@ def extract_sheet_row(data_by_range):
             .get("values", [])
         )
 
-        if values and values[0\]:
-            return values[0][0]
+        if values and valuesreturn values[0][0]
 
         return ""
 
@@ -654,16 +653,78 @@ def extract_sheet_row(data_by_range):
     if not localizador:
         return None
 
-    if localizador.upper().endswith(
-        "_GROUP"
-    ):
+    if localizador.upper().endswith("_GROUP"):
         return None
 
-    if not LOCALIZADOR_RE.fullmatch(
-        localizador
-    ):
+    if not LOCALIZADOR_RE.fullmatch(localizador):
         return None
 
+    # NETO
+    neto_rows = (
+        data_by_range
+        .get(RANGE_NETO, {})
+        .get("values", [])
+    )
+
+    neto = sum(
+        parse_numeric(value)
+        for row in neto_rows
+        for value in row
+        if value not in (None, "")
+    )
+
+    # PERSONAS
+    persona_values = (
+        data_by_range
+        .get(RANGE_PERSONA, {})
+        .get("values", [])
+    )
+
+    if persona_values and persona_valuestexto_personas = str(
+            persona_values[0][0]
+        ).strip()
+
+        personas = len(
+            [
+                line
+                for line in texto_personas.splitlines()
+                if line.strip()
+            ]
+        )
+    else:
+        personas = 0
+
+    # BRUTO
+    bruto_values = (
+        data_by_range
+        .get(RANGE_BRUTO, {})
+        .get("values", [])
+    )
+
+    if bruto_values and bruto_valuesbruto = parse_numeric(
+            bruto_values[0][0]
+        )
+    else:
+        bruto = 0.0
+
+    return {
+        "BARCO": str(cell("G13")).strip(),
+        "AGENCIA": str(cell("G5")).strip(),
+        "CODIGO": str(cell("P5")).strip(),
+        "GRUPO": str(cell("R5")).strip(),
+        "CONFIRMACION": localizador,
+        "FECHA BOOKING": fmt_date(cell("C3")),
+        "ITINERARIO": str(cell("G19")).strip(),
+        "FECHA SALIDA": fmt_date(cell("G17")),
+        "FECHA LLEGADA": fmt_date(cell("K17")),
+        "NETO": round(neto, 2),
+        "BRUTO": round(bruto, 2),
+        "ESTADO RESERVA": str(cell("G10")).strip(),
+        "PAGO": str(cell("G57")).strip(),
+        "COMERCIAL": str(cell("Q10")).strip(),
+        "PERSONAS": personas,
+        "IDIOMA": str(cell("G23")).strip(),
+    }
     # --------------------------------------------------------
     # NETO
     # --------------------------------------------------------
@@ -691,7 +752,7 @@ def extract_sheet_row(data_by_range):
         .get("values", [])
     )
 
-    if persona_values and persona_values[0\]:
+   if persona_values and persona_values```
         texto_personas = str(
             persona_values[0][0]
         ).strip()
@@ -802,10 +863,7 @@ def read_book(
 ):
     """
     Lee todas las pestañas de un libro agrupando varias
-    pestañas en una sola petición batchGet.
-
-    Esto evita realizar una petición independiente por cada
-    pestaña.
+    pestañas en una única petición batchGet.
     """
 
     try:
@@ -906,7 +964,7 @@ def read_book(
         )
 
         grouped_data = {
-            sheet["title"\]: {}
+            sheet["title"]: {}
             for sheet in sheet_group
         }
 
@@ -919,7 +977,6 @@ def read_book(
                 grouped_data[sheet_title][a1_range] = (
                     value_ranges[index]
                 )
-
             else:
                 grouped_data[sheet_title][a1_range] = {
                     "values": []
@@ -956,7 +1013,6 @@ def read_book(
                     on_sheet_cb(sheet_title)
 
     return results
-
 
 # ============================================================
 # ESCANEO DE UN AÑO
