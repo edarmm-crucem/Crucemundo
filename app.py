@@ -2349,9 +2349,9 @@ row3_cards = [
     {
         "cardclass": "card-enviarconfirmacion",
         "icon": "✉️",
-        "titlees": "Enviar Confirmación",
-        "titleen": "Send Confirmation",
-        "buttonlabel": "Enviar Confirmación",
+        "titlees": "Enviar Bonos",
+        "titleen": "Send Vouchers",
+        "buttonlabel": "Enviar Bonos",
         "key": "btnenviarconfirmacionopen",
         "action": lambda: openpanel("enviarconfirmacion"),
     },
@@ -2809,12 +2809,12 @@ def buildgmailcomposeurl(to, subject, body_lines):
 
 if st.session_state.get("openenvioform"):
     st.markdown('<div class="panel-inline">', unsafe_allow_html=True)
-    panelheader("Enviar Confirmación / Send Confirmation", "closeenviopanel")
+    panelheader("Enviar Bonos por Salida / Send Vouchers by Departure", "closeenviopanel")
 
     st.info(
-        "Por cada confirmación se genera un enlace a Gmail con destinatario, asunto y cuerpo "
-        "ya rellenados. Gmail no permite adjuntar archivos automáticamente desde un enlace, "
-        "así que descarga el PDF primero y adjúntalo tú en la ventana que se abra."
+        "Elige la salida y lista sus confirmaciones. Por cada una se genera un enlace a Gmail "
+        "con destinatario, asunto y cuerpo ya rellenados. Gmail no permite adjuntar archivos "
+        "desde un enlace, así que descarga primero el bono (PDF) y adjúntalo en la ventana que se abra."
     )
 
     try:
@@ -2849,7 +2849,7 @@ if st.session_state.get("openenvioform"):
         if selecteddeparture:
             selectedobj = next((d for d in departures if d["nombre"] == selecteddeparture), None)
 
-            if st.button("🔍 Listar confirmaciones", key="btnlistarconfirmaciones"):
+            if st.button("🔍 Listar bonos de la salida", key="btnlistarconfirmaciones"):
                 try:
                     sheets = findconfirmationsheets(selectedobj["id"])
                     items = []
@@ -2870,7 +2870,12 @@ if st.session_state.get("openenvioform"):
                     st.error(str(exc))
                     st.session_state.envio_items = []
 
-            for item in st.session_state.get("envio_items", []):
+            items = st.session_state.get("envio_items", [])
+            if items:
+                conbono = sum(1 for i in items if i["voucherfileid"])
+                st.caption(f"{len(items)} confirmaciones · {conbono} con bono generado")
+
+            for item in items:
                 with st.container(border=True):
                     st.markdown(f"**{item['localizador']}** · {item.get('email') or 'sin email'}")
                     cold, colg = st.columns([1, 1])
@@ -2895,20 +2900,17 @@ if st.session_state.get("openenvioform"):
                         body_lines = [
                             "Buenos días,",
                             "",
-                            f"Le adjuntamos el bono de confirmación correspondiente al localizador {item['localizador']}.",
+                            f"Le adjuntamos el bono correspondiente al localizador {item['localizador']}.",
                             "",
                             "Quedamos a su disposición para cualquier duda.",
                             "",
                             "Un saludo,",
                         ]
-                    url = buildgmailcomposeurl(item.get("email"), subject, body_lines)
-                    st.markdown(f'<a class="done-link" href="{url}" target="_blank" rel="noopener noreferrer">✉️ Abrir Gmail</a>', unsafe_allow_html=True)
-                    
-                    url = buildgmailcomposeurl(item.get("email"), subject, body_lines)
-                    st.markdown(
-                        f'<a class="done-link" href="{url}" target="_blank" rel="noopener noreferrer">✉️ Abrir Gmail</a>',
-                        unsafe_allow_html=True,
-                    )
+                        url = buildgmailcomposeurl(item.get("email"), subject, body_lines)
+                        st.markdown(
+                            f'<a class="done-link" href="{url}" target="_blank" rel="noopener noreferrer">✉️ Abrir Gmail</a>',
+                            unsafe_allow_html=True,
+                        )
 
     except Exception as exc:
         st.exception(exc)
