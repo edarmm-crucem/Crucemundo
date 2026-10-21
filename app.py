@@ -38,7 +38,7 @@ EXCURSIONESSHEETID = "1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg"
 AGENCYSHEETID = "15yrUtEyIn6ZWT2Oy22f5ISvqovvBuEfSzBVlTTtiy5E"
 AGENCYSHEETNAME = "Datos"
 DRIVEROOTID = "11TP9aDv3ss5PWjeNsbr6WQ3mUS9ioEvm"
-GROUPSROOTID = "1MMNH3y1E3jJIp6uUnxbwV0toAtdr2F2M"
+GROUPSROOTID = "1XvMVCoph3lGZydOu6V4TK32AffE8gxtf"
 BOATREGISTRYSHEETID = "1pvDAEPGkb1DmvbauY-eKk3ymljDvEBvDivijVDUHmGA"
 BOATREGISTRYSHEETNAME = "TICKETS, RESULTADO, ENVIADO TICKET"
 MASTERCLIENTESSHEETID = "1Z4sZolu-F44_WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k"
@@ -394,7 +394,7 @@ def getsessiondurationseconds():
 # BLOQUE 6: COMPONENTES UI REUTILIZABLES
 # ============================================================
 
-def renderkeyvaluegrid(cssprefix, fields):
+def renderkeyvaluegrid(cssfix, fields):
     st.markdown(f'<div class="{cssprefix}-card"><div class="{cssprefix}-grid">', unsafe_allow_html=True)
     for label, value in fields:
         safevalue = value if value not in (None, "") else "-"
