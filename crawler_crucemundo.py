@@ -588,6 +588,22 @@ def normalizar_salidas(texto, url=""):
             f"• Salida {_fmt(f['salida'])}{origen} → llegada {_fmt(f['llegada'])}{destino}: {precio}{aviso}"
         )
 
+    # Fechas futuras que figuran en la lista "Fechas de salida" pero no salen en
+    # la tabla reconstruida: se conservan para no perder ninguna salida.
+    salidas_tabla = {f["salida"] for f in filas}
+    ml = RE_LISTA_FECHAS.search(texto)
+
+    if ml:
+        for fs in re.findall(r"\d{2}-\d{2}-\d{4}", ml.group(1)):
+            d = _a_fecha(fs)
+            if d and d >= HOY and d not in salidas_tabla:
+                salidas_tabla.add(d)
+                lineas.append(
+                    f"• Salida {_fmt(d)}: precio: consultar "
+                    "(fecha publicada sin detalle de llegada ni precio)"
+                )
+                AVISOS.append(f"{url}: salida {_fmt(d)} solo figura en la lista de fechas, no en la tabla")
+
     if lineas:
         bloque_nuevo = (
             "SALIDAS Y PRECIOS (por persona; la salida es el día de embarque y la llegada el de desembarque): "
