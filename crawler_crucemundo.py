@@ -45,6 +45,14 @@ SEED_URLS = [
 # (escríbelo tú a mano una vez). Todo lo que haya DESPUÉS lo sobrescribe el crawler.
 MARCADOR = "FIN INFORMACION MANUAL"
 
+# El bloque manual está entre estos dos delimitadores:
+#   INICIO:  "INFORMACIÓN MANUAL"      (con tilde)
+#   FIN:     "FIN INFORMACION MANUAL"  (sin tilde)
+# Se aceptan también las variantes con/sin tilde por si alguien las retoca.
+# Al buscar el inicio se evita confundirlo con el "INFORMACION MANUAL" del final.
+RE_INICIO_MANUAL = re.compile(r"(?<!FIN )INFORMACI(?:Ó|O\u0301)N MANUAL")
+RE_FIN_MANUAL = re.compile(r"FIN INFORMACI(?:O|Ó|O\u0301)N MANUAL")
+
 # Páginas que se visitan para descubrir enlaces pero NO se guardan:
 # - reservarcrucero: casi todo cookies, con precios "desde" que mezclan barcos
 # - noticiascrucemundo: blog de 2020 (covid, recetas)
@@ -147,6 +155,32 @@ def _indice_doc_desde_offset(runs, offset):
     return 1
 
 
+def _localizar_manual(full_text):
+    """
+    Localiza el bloque manual. Devuelve None si no hay delimitador de fin; si lo
+    hay, devuelve (pos_fin_marcador_inicio, pos_fin_marcador_fin, texto_manual,
+    encontrado_inicio). texto_manual va desde "INFORMACIÓN MANUAL" hasta
+    "FIN INFORMACION MANUAL" incluidos; si no se encuentra el delimitador de
+    inicio, va desde el principio del documento.
+    """
+
+    m_fin = RE_FIN_MANUAL.search(full_text)
+
+    if not m_fin:
+        return None
+
+    m_ini = RE_INICIO_MANUAL.search(full_text, 0, m_fin.start())
+
+    inicio = m_ini.start() if m_ini else 0
+
+    return (
+        m_fin.start(),
+        m_fin.end(),
+        full_text[inicio:m_fin.end()],
+        m_ini is not None
+    )
+
+
 def escribir_google_doc(texto):
     """
     Escribe el contenido del crawler después del marcador y devuelve la parte
@@ -177,13 +211,13 @@ def escribir_google_doc(texto):
 
     end_index = doc["body"]["content"][-1]["endIndex"]
 
-    marcador_pos = full_text.find(MARCADOR)
+    localizado = _localizar_manual(full_text)
 
     requests_body = []
 
     parte_manual = ""
 
-    if marcador_pos == -1:
+    if localizado is None:
 
         # El marcador no está en el documento todavía: no tocamos nada de lo
         # que ya hay (por seguridad, para no borrar info manual sin querer)
@@ -206,9 +240,13 @@ def escribir_google_doc(texto):
 
     else:
 
-        marcador_fin_offset = marcador_pos + len(MARCADOR)
+        _, marcador_fin_offset, parte_manual, encontrado_inicio = localizado
 
-        parte_manual = full_text[:marcador_fin_offset]
+        if not encontrado_inicio:
+            print(
+                "Aviso: no se encontró 'INFORMACIÓN MANUAL' al principio del bloque; "
+                "se usa todo lo que hay antes de 'FIN INFORMACION MANUAL'."
+            )
 
         marcador_fin_doc_index = _indice_doc_desde_offset(runs, marcador_fin_offset)
 
@@ -951,18 +989,20 @@ async def crawler(args):
 
     # Al Vector Store van el bloque manual (reglas, cancelación, documentación...)
     # y el contenido del crawler, para que el bot pueda buscar en los dos.
-    if parte_manual:
-        contenido_vector = parte_manual + "\n\n" + documento
+    # Si no se pudo leer el bloque manual (por ejemplo, falta el marcador en el
+    # documento) NO se actualiza el Vector Store: es preferible mantener la
+    # versión anterior, que sí lo lleva, a dejar al bot sin sus reglas.
+    if parte_manual.strip():
+        actualizar_vector_store(
+            parte_manual + "\n\n" + documento
+        )
     else:
         print(
-            "Aviso: no se obtuvo el bloque manual; el Vector Store llevará solo "
-            "el contenido del crawler."
+            "ATENCIÓN: no se encontró el bloque manual (marcador "
+            f"'{MARCADOR}') en el documento. NO se actualiza el Vector Store "
+            "para no dejar al bot sin sus reglas. Revisa el marcador en el Google Doc."
         )
-        contenido_vector = documento
-
-    actualizar_vector_store(
-        contenido_vector
-    )
+        AVISOS.append("Vector Store NO actualizado: no se pudo leer el bloque manual")
 
     if AVISOS:
         print("\n===== AVISOS DE CALIDAD DE DATOS =====")
