@@ -1,6 +1,10 @@
+import argparse
 import asyncio
 import os
 import re
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
+
 import requests
 from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright
@@ -24,6 +28,8 @@ DOCUMENT_ID = "1-MklRtqm3n31WxMduWlyV1Lj_lwws7wkEIIBqgToycs"
 
 GOOGLE_KEY = "credentials.json"
 
+# Se usan para DESCUBRIR enlaces. Lo que se guarda en el documento lo decide
+# url_valida() más abajo.
 SEED_URLS = [
     "https://www.crucemundo.es/flota-cruceros-fluviales/",
     "https://www.crucemundo.es/crucero/",
@@ -39,6 +45,12 @@ SEED_URLS = [
 # (escríbelo tú a mano una vez). Todo lo que haya DESPUÉS lo sobrescribe el crawler.
 MARCADOR = "FIN INFORMACION MANUAL"
 
+# Páginas que se visitan para descubrir enlaces pero NO se guardan:
+# - reservarcrucero: casi todo cookies, con precios "desde" que mezclan barcos
+# - noticiascrucemundo: blog de 2020 (covid, recetas)
+# - contacto: horarios que contradicen el bloque manual (el contacto va en el manual)
+RUTAS_EXCLUIDAS = ["/reservarcrucero/", "/noticiascrucemundo/", "/contacto/"]
+
 # Etiquetas HTML que casi siempre son ruido (menús, footer, cookies, formularios...)
 # y no aportan información útil sobre cruceros/destinos.
 ETIQUETAS_A_DESCARTAR = [
@@ -48,14 +60,33 @@ ETIQUETAS_A_DESCARTAR = [
     "aside",
 ]
 
+# Bloques del banner de cookies: se eliminan por id/clase. El límite de tamaño
+# evita borrar por error un contenedor grande que solo "mencione" cookies.
+PATRON_COOKIES = re.compile(r"cookie|consent|cmp|iabv2|onetrust|cybot|gdpr|rgpd", re.I)
+MAX_TEXTO_BLOQUE_COOKIES = 8000
+
+# Red de seguridad: desde estas marcas hasta el final de la página es banner de
+# cookies (así venía en el documento actual: siempre al final).
+MARCAS_FIN_CONTENIDO = ["Powered by CookiePage"]
+
 # Longitud mínima de una línea para conservarla. Filtra restos sueltos tipo
 # "Inicio", "Menú", "Aceptar", "×", etc. que quedan tras limpiar el HTML.
 LONGITUD_MINIMA_LINEA = 3
+
+# Tope de seguridad por página (antes se cortaba a 6000 y se perdían itinerarios,
+# barcos y alojamiento). Una ficha completa ronda los 10.000-15.000 caracteres.
+MAX_CARACTERES_PAGINA = 60000
+
+# Fecha de hoy, para descartar salidas pasadas.
+HOY = datetime.now(ZoneInfo("Europe/Madrid")).date()
 
 # Datos para subir el contenido a un Vector Store de OpenAI (búsqueda semántica).
 # El Vector Store se crea UNA sola vez a mano; aquí solo se actualiza su contenido.
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_VECTOR_STORE_ID = os.environ.get("OPENAI_VECTOR_STORE_ID", "")
+
+# Avisos de calidad de datos detectados durante la ejecución (se imprimen al final).
+AVISOS = []
 
 
 # ===============================
@@ -117,6 +148,11 @@ def _indice_doc_desde_offset(runs, offset):
 
 
 def escribir_google_doc(texto):
+    """
+    Escribe el contenido del crawler después del marcador y devuelve la parte
+    manual (todo lo que hay hasta el marcador incluido), para poder subirla
+    también al Vector Store. Si no hay marcador, devuelve "".
+    """
 
     scopes = [
         "https://www.googleapis.com/auth/documents"
@@ -145,6 +181,8 @@ def escribir_google_doc(texto):
 
     requests_body = []
 
+    parte_manual = ""
+
     if marcador_pos == -1:
 
         # El marcador no está en el documento todavía: no tocamos nada de lo
@@ -169,6 +207,8 @@ def escribir_google_doc(texto):
     else:
 
         marcador_fin_offset = marcador_pos + len(MARCADOR)
+
+        parte_manual = full_text[:marcador_fin_offset]
 
         marcador_fin_doc_index = _indice_doc_desde_offset(runs, marcador_fin_offset)
 
@@ -201,6 +241,8 @@ def escribir_google_doc(texto):
         }
     ).execute()
 
+    return parte_manual
+
 
 # ===============================
 # OPENAI VECTOR STORE (búsqueda semántica)
@@ -208,12 +250,12 @@ def escribir_google_doc(texto):
 
 def actualizar_vector_store(texto):
     """
-    Sube el contenido actual del crawler al Vector Store de OpenAI, para que
-    el bot pueda hacer búsqueda semántica (file_search) en vez de depender
-    de coincidencia de palabras clave hecha a mano.
+    Sube el contenido actual al Vector Store de OpenAI, para que el bot pueda
+    hacer búsqueda semántica (file_search).
 
-    Borra los ficheros anteriores del Vector Store antes de subir el nuevo,
-    para que no se vayan acumulando versiones viejas del documento.
+    Orden seguro: primero SUBE el fichero nuevo y solo si queda procesado
+    correctamente BORRA los antiguos. Así, si la subida falla, el bot sigue
+    teniendo la versión anterior en vez de quedarse sin información.
     """
 
     if not OPENAI_API_KEY or not OPENAI_VECTOR_STORE_ID:
@@ -225,37 +267,14 @@ def actualizar_vector_store(texto):
 
     client = OpenAI(api_key=OPENAI_API_KEY)
 
-    # Borra los ficheros que ya hubiera en el Vector Store.
-    # Se borra cada archivo de forma independiente (try propio por archivo)
-    # para que un fallo puntual en uno no impida borrar el resto.
+    # Ficheros que ya hay (se recorren todas las páginas del listado).
+    antiguos = []
+
     try:
-        archivos_actuales = client.vector_stores.files.list(
+        for f in client.vector_stores.files.list(
             vector_store_id=OPENAI_VECTOR_STORE_ID
-        )
-
-        borrados = 0
-        fallidos = 0
-
-        for f in archivos_actuales.data:
-            try:
-                client.vector_stores.files.delete(
-                    vector_store_id=OPENAI_VECTOR_STORE_ID,
-                    file_id=f.id
-                )
-                client.files.delete(f.id)
-                borrados += 1
-            except Exception as e_individual:
-                fallidos += 1
-                print(f"Aviso: no se pudo borrar el fichero {f.id}:", e_individual)
-
-        print(f"Vector Store: {borrados} ficheros antiguos borrados, {fallidos} fallidos.")
-
-        if fallidos > 0:
-            print(
-                "ATENCIÓN: quedaron ficheros antiguos sin borrar. "
-                "Revisa manualmente en platform.openai.com/storage/files"
-            )
-
+        ):
+            antiguos.append(f.id)
     except Exception as e:
         print("Aviso: no se pudo listar los ficheros del Vector Store:", e)
 
@@ -266,9 +285,46 @@ def actualizar_vector_store(texto):
         fh.write(texto)
 
     with open(ruta_temporal, "rb") as fh:
-        client.vector_stores.files.upload_and_poll(
+        nuevo = client.vector_stores.files.upload_and_poll(
             vector_store_id=OPENAI_VECTOR_STORE_ID,
             file=fh
+        )
+
+    if getattr(nuevo, "status", None) != "completed":
+        print(
+            "ATENCIÓN: el fichero nuevo no quedó 'completed' "
+            f"(estado: {getattr(nuevo, 'status', None)}). "
+            "No se borra la versión anterior."
+        )
+        return
+
+    # Borra los antiguos, cada uno con su propio try para que un fallo
+    # puntual no impida borrar el resto.
+    borrados = 0
+    fallidos = 0
+
+    for fid in antiguos:
+
+        if fid == nuevo.id:
+            continue
+
+        try:
+            client.vector_stores.files.delete(
+                vector_store_id=OPENAI_VECTOR_STORE_ID,
+                file_id=fid
+            )
+            client.files.delete(fid)
+            borrados += 1
+        except Exception as e_individual:
+            fallidos += 1
+            print(f"Aviso: no se pudo borrar el fichero {fid}:", e_individual)
+
+    print(f"Vector Store: {borrados} ficheros antiguos borrados, {fallidos} fallidos.")
+
+    if fallidos > 0:
+        print(
+            "ATENCIÓN: quedaron ficheros antiguos sin borrar. "
+            "Revisa manualmente en platform.openai.com/storage/files"
         )
 
     print("Vector Store actualizado con el contenido nuevo.")
@@ -281,8 +337,8 @@ def actualizar_vector_store(texto):
 def limpiar(html):
     """
     Extrae el texto útil de una página, descartando menús, cabecera, pie de
-    página, formularios y otros bloques que se repiten en todas las páginas
-    del sitio y no aportan información real sobre cruceros/destinos.
+    página, formularios, el banner de cookies y otros bloques que no aportan
+    información real sobre cruceros/destinos.
     """
 
     soup = BeautifulSoup(
@@ -294,29 +350,304 @@ def limpiar(html):
         for x in soup.find_all(etiqueta):
             x.extract()
 
-    # Obtenemos el texto línea a línea (en vez de todo pegado con espacios)
-    # para poder filtrar líneas basura y quitar duplicados fácilmente.
-    lineas_crudas = soup.get_text("\n").split("\n")
+    # Banner de cookies (por id/clase)
+    candidatos = []
 
+    for x in soup.find_all(True):
+
+        if x.name in ("html", "body", "main"):
+            continue
+
+        ident = " ".join([x.get("id") or ""] + list(x.get("class") or []))
+
+        if PATRON_COOKIES.search(ident) and len(x.get_text()) < MAX_TEXTO_BLOQUE_COOKIES:
+            candidatos.append(x)
+
+    for x in candidatos:
+        if not x.decomposed:
+            x.decompose()
+
+    # Texto línea a línea para poder filtrar líneas basura.
+    # IMPORTANTE: solo se eliminan repeticiones CONSECUTIVAS (menús duplicados).
+    # Antes se eliminaba cualquier línea ya vista en la página, y eso borraba
+    # fechas y precios repetidos de las tablas de salidas (por ejemplo la fecha
+    # de llegada de una salida que es a la vez la fecha de salida de la
+    # siguiente), que es lo que provocaba errores como confundir el día de
+    # llegada con el de salida.
     lineas_limpias = []
-    vistas = set()
+    previa = None
 
-    for linea in lineas_crudas:
+    for linea in soup.get_text("\n").split("\n"):
 
         linea = re.sub(r"\s+", " ", linea).strip()
 
         if len(linea) < LONGITUD_MINIMA_LINEA:
             continue
 
-        # Evita repetir la misma línea varias veces seguidas en la misma
-        # página (típico de menús desplegables duplicados en HTML).
-        if linea in vistas:
+        if linea == previa:
             continue
 
-        vistas.add(linea)
+        previa = linea
         lineas_limpias.append(linea)
 
-    return " ".join(lineas_limpias)
+    texto = " ".join(lineas_limpias)
+
+    # Red de seguridad: si el banner de cookies se coló, se corta desde su marca.
+    for marca in MARCAS_FIN_CONTENIDO:
+        i = texto.find(marca)
+        if i != -1:
+            texto = texto[:i].rstrip()
+
+    return texto
+
+
+# ===============================
+# SALIDAS Y PRECIOS (tabla clara)
+# ===============================
+
+RE_TABLA_SALIDAS = re.compile(
+    r"Salida Desde Llegada Precio Desde Reservar(.*?)(?=Duración|INCLUIDO)",
+    re.S
+)
+
+RE_LISTA_FECHAS = re.compile(
+    r"(?:Duración\s+)?Fechas de salida\s*(.*?)\s*(?=Ciudades)",
+    re.S
+)
+
+RE_TOKEN = re.compile(
+    r"\d{2}-\d{2}-\d{4}"          # fecha dd-mm-aaaa
+    r"|\d+(?:[.,]\d+)?\s?€"       # precio
+    r"|[^\W\d_][^\d€]*"           # palabras (puertos, RESERVAR, títulos...)
+)
+
+
+def _a_fecha(s):
+    try:
+        d, m, y = (int(p) for p in s.split("-"))
+        return date(y, m, d)
+    except Exception:
+        return None
+
+
+def _fmt(d):
+    return d.strftime("%d-%m-%Y")
+
+
+def _dias_del_crucero(texto):
+    """Duración en días, tal como aparece en la cabecera ('Río Danubio 5 días 470€')."""
+    m = re.search(r"(\d+)\s*días\s+\d", texto)
+    return int(m.group(1)) if m else None
+
+
+def _filas_de_la_tabla(bloque):
+    """
+    Convierte el texto plano de la tabla en filas {salida, llegada, precios, puertos}.
+    Orden de las celdas en la web: salida, [puerto], llegada, [puerto], precio(s).
+    Con dos precios, el primero es el normal y el segundo el de oferta.
+    """
+
+    filas = []
+    fila = None
+
+    for m in RE_TOKEN.finditer(bloque):
+
+        tok = m.group(0).strip()
+
+        if not tok:
+            continue
+
+        if re.fullmatch(r"\d{2}-\d{2}-\d{4}", tok):
+
+            d = _a_fecha(tok)
+
+            if d is None:
+                continue
+
+            if fila is None or fila["llegada"] is not None:
+                fila = {
+                    "salida": d, "llegada": None, "precios": [],
+                    "p_salida": "", "p_llegada": ""
+                }
+                filas.append(fila)
+            else:
+                fila["llegada"] = d
+
+        elif tok.endswith("€"):
+
+            if fila is not None and fila["llegada"] is not None:
+                fila["precios"].append(re.sub(r"\s+", "", tok))
+
+        else:
+
+            if fila is None or "RESERVAR" in tok.upper():
+                continue
+
+            if fila["llegada"] is None:
+                if not fila["p_salida"]:
+                    fila["p_salida"] = tok
+            elif not fila["precios"] and not fila["p_llegada"]:
+                fila["p_llegada"] = tok
+
+    return filas
+
+
+def normalizar_salidas(texto, url=""):
+    """
+    Sustituye la tabla de salidas aplanada por una línea clara por salida:
+      • Salida 08-12-2026 → llegada 12-12-2026: precio 940.00€, oferta 470.00€
+    y quita las salidas ya pasadas. Valida cada fila con la duración del
+    crucero (llegada = salida + días - 1); si no cuadra, la marca para verificar
+    en vez de darla por buena.
+    """
+
+    m = RE_TABLA_SALIDAS.search(texto)
+
+    if not m:
+        return filtrar_lista_fechas(texto)
+
+    filas = _filas_de_la_tabla(m.group(1))
+
+    if not filas:
+        return filtrar_lista_fechas(texto)
+
+    dias = _dias_del_crucero(texto)
+
+    lineas = []
+
+    for f in filas:
+
+        if f["llegada"] is None:
+            AVISOS.append(f"{url}: fila sin fecha de llegada ({_fmt(f['salida'])})")
+            continue
+
+        if f["salida"] < HOY:
+            continue
+
+        cuadra = dias is None or (f["llegada"] - f["salida"]).days == dias - 1
+
+        if not cuadra:
+            AVISOS.append(
+                f"{url}: salida {_fmt(f['salida'])} → llegada {_fmt(f['llegada'])} "
+                f"no cuadra con {dias} días"
+            )
+
+        origen = f" ({f['p_salida']})" if f["p_salida"] else ""
+        destino = f" ({f['p_llegada']})" if f["p_llegada"] else ""
+
+        if len(f["precios"]) == 0:
+            precio = "precio: consultar"
+        elif len(f["precios"]) == 1:
+            precio = f"precio {f['precios'][0]}"
+        elif len(f["precios"]) == 2:
+            precio = f"precio {f['precios'][0]}, oferta {f['precios'][1]}"
+        else:
+            precio = "precios " + ", ".join(f["precios"])
+
+        aviso = "" if cuadra else " [VERIFICAR: las fechas no cuadran con la duración; consultar con atención al cliente]"
+
+        lineas.append(
+            f"• Salida {_fmt(f['salida'])}{origen} → llegada {_fmt(f['llegada'])}{destino}: {precio}{aviso}"
+        )
+
+    if lineas:
+        bloque_nuevo = (
+            "SALIDAS Y PRECIOS (por persona; la salida es el día de embarque y la llegada el de desembarque): "
+            + " ".join(lineas) + " "
+        )
+    else:
+        bloque_nuevo = (
+            "SALIDAS Y PRECIOS: no hay salidas futuras publicadas en la web. "
+            "Consultar con atención al cliente. "
+        )
+
+    texto = texto[:m.start()] + bloque_nuevo + texto[m.end():]
+
+    # La lista "Fechas de salida" queda redundante (y a veces incompleta):
+    # la información buena está ya en SALIDAS Y PRECIOS.
+    texto = RE_LISTA_FECHAS.sub("", texto)
+
+    return texto
+
+
+def filtrar_lista_fechas(texto):
+    """Si no se pudo reconstruir la tabla, al menos quita las fechas ya pasadas de la lista."""
+
+    def _filtrar(m):
+
+        fechas = re.findall(r"\d{2}-\d{2}-\d{4}", m.group(1))
+        futuras = [f for f in fechas if (_a_fecha(f) or HOY) >= HOY]
+
+        if futuras:
+            return "Fechas de salida: " + " | ".join(futuras) + " "
+
+        return "Fechas de salida: no hay fechas futuras publicadas. "
+
+    return RE_LISTA_FECHAS.sub(_filtrar, texto)
+
+
+# ===============================
+# URLS
+# ===============================
+
+def url_valida(u):
+    """Decide si una URL se guarda en el documento."""
+
+    if any(r in u for r in RUTAS_EXCLUIDAS):
+        return False
+
+    # Índice /crucero/ vacío: la web responde "este crucero ha zarpado" (404)
+    if re.search(r"/crucero/?$", u.split("?")[0].split("#")[0]):
+        return False
+
+    return (
+        u in SEED_URLS
+        or "/crucero/" in u
+        or "/barcoscrucemundo/" in u
+        or "/flota-cruceros-fluviales/" in u
+        or "/destinos/" in u
+    )
+
+
+def _clave_url(u):
+    """Clave para detectar la misma página con distinto aspecto (www, barra final, slug)."""
+
+    m = re.search(r"/barcoscrucemundo/(\d+)/", u)
+    if m:
+        return "barco:" + m.group(1)
+
+    m = re.search(r"/crucero/.+?/(\d+)/?$", u)
+    if m:
+        return "crucero:" + m.group(1)
+
+    k = u.split("?")[0].split("#")[0].lower()
+    k = re.sub(r"^https?://(www\.)?", "", k)
+
+    return k.rstrip("/")
+
+
+def deduplicar_urls(urls):
+    """Una sola URL por página. Entre variantes, prefiere la del slug sin 'quot'/'antilde'."""
+
+    elegidas = {}
+
+    for u in urls:
+
+        k = _clave_url(u)
+
+        actual = elegidas.get(k)
+
+        if actual is None:
+            elegidas[k] = u
+            continue
+
+        peso_u = (("quot" in u) or ("antilde" in u), len(u))
+        peso_a = (("quot" in actual) or ("antilde" in actual), len(actual))
+
+        if peso_u < peso_a:
+            elegidas[k] = u
+
+    return list(elegidas.values())
 
 
 # ===============================
@@ -448,6 +779,11 @@ async def extraer_pagina(page, url):
 
         texto = limpiar(html)
 
+        texto = normalizar_salidas(texto, url)
+
+        if len(texto) > MAX_CARACTERES_PAGINA:
+            AVISOS.append(f"{url}: página cortada a {MAX_CARACTERES_PAGINA} caracteres")
+
         return f"""
 
 ==============================
@@ -466,7 +802,7 @@ TITULO
 CONTENIDO
 ==============================
 
-{texto[:6000]}
+{texto[:MAX_CARACTERES_PAGINA]}
 
 """
 
@@ -482,10 +818,40 @@ CONTENIDO
 
 
 # ===============================
+# ARGUMENTOS (compatibles con el workflow de GitHub Actions)
+# ===============================
+
+def leer_argumentos():
+    """
+    El workflow pasa varias opciones (--out, --urls-out, --document-id,
+    --google-key, --headless, ...). Se aceptan todas; las que este script no
+    usa se ignoran sin error.
+    """
+
+    global DOCUMENT_ID, GOOGLE_KEY
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--out", default="")
+    parser.add_argument("--urls-out", default="")
+    parser.add_argument("--document-id", default="")
+    parser.add_argument("--google-key", default="")
+
+    args, _ = parser.parse_known_args()
+
+    if args.document_id:
+        DOCUMENT_ID = args.document_id
+
+    if args.google_key:
+        GOOGLE_KEY = args.google_key
+
+    return args
+
+
+# ===============================
 # PROCESO PRINCIPAL
 # ===============================
 
-async def crawler():
+async def crawler(args):
 
     salida = []
 
@@ -532,17 +898,9 @@ async def crawler():
             dict.fromkeys(urls)
         )
 
-        urls = [
-            u for u in urls
-            if (
-                u in SEED_URLS
-                or "/crucero/" in u
-                or "/reservarcrucero/" in u
-                or "/barcoscrucemundo/" in u
-                or "/flota-cruceros-fluviales/" in u
-                or "/destinos/" in u
-            )
-        ]
+        urls = [u for u in urls if url_valida(u)]
+
+        urls = deduplicar_urls(urls)
 
         print(
             "URLs finales:",
@@ -571,13 +929,45 @@ async def crawler():
         salida
     )
 
-    escribir_google_doc(
+    print(
+        "Tamaño del contenido del crawler:",
+        len(documento),
+        "caracteres en",
+        len(urls),
+        "páginas"
+    )
+
+    if args.out:
+        with open(args.out, "w", encoding="utf-8") as fh:
+            fh.write(documento)
+
+    if args.urls_out:
+        with open(args.urls_out, "w", encoding="utf-8") as fh:
+            fh.write("\n".join(urls))
+
+    parte_manual = escribir_google_doc(
         documento
     )
 
+    # Al Vector Store van el bloque manual (reglas, cancelación, documentación...)
+    # y el contenido del crawler, para que el bot pueda buscar en los dos.
+    if parte_manual:
+        contenido_vector = parte_manual + "\n\n" + documento
+    else:
+        print(
+            "Aviso: no se obtuvo el bloque manual; el Vector Store llevará solo "
+            "el contenido del crawler."
+        )
+        contenido_vector = documento
+
     actualizar_vector_store(
-        documento
+        contenido_vector
     )
+
+    if AVISOS:
+        print("\n===== AVISOS DE CALIDAD DE DATOS =====")
+        for a in AVISOS:
+            print("-", a)
 
     print(
         "FINALIZADO"
@@ -587,5 +977,5 @@ async def crawler():
 if __name__ == "__main__":
 
     asyncio.run(
-        crawler()
+        crawler(leer_argumentos())
     )
