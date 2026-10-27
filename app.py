@@ -1833,7 +1833,6 @@ st.markdown(
     }
     .web-chip { background: #FFE69A; border: 1px solid #F2C94C; color: #7A5900 !important; }
     .web-chip-green { background: #DDF7E6; border: 1px solid #9FDEB4; color: #17663B !important; }
-    .web-chip-doc { background: #FFEDD5; border: 1px solid #FDBA74; color: #9A3412 !important; }
     .web-chip-blue { background: #E0ECFF; border: 1px solid #BFD4FF; color: #1E4FBF !important; cursor: default; }
     .web-chip-purple { background: #EDE9FE; border: 1px solid #C4B5FD; color: #5B21B6 !important; }
     .user-pill {
@@ -2115,12 +2114,12 @@ st.markdown(
     </div>
     <div class="section-head-row-green">
         <span class="web-chip-blue">ENLACES A DOCUMENTOS</span>
-        <a class="web-chip-doc" href="https://docs.google.com/spreadsheets/d/1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit" target="_blank" rel="noopener noreferrer">📊 MASTER Cabinas</a>
-        <a class="web-chip-doc" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44_WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊 MASTER Clientes</a>
-        <a class="web-chip-doc" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊 Excursiones</a>
-        <a class="web-chip-doc" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCR_HJr9TCD7VWrGI6nDhMtwi27cMJL_1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊 Ventas FIT</a>
-        <a class="web-chip-doc" href="https://docs.google.com/spreadsheets/d/1LJtzmq9OUUj9_WjQ3RVyKh-rdQNBBk155N5WV9apucQ/edit" target="_blank" rel="noopener noreferrer">📊 PRE-FORM</a>
-        <a class="web-chip-doc" href="https://docs.google.com/spreadsheets/d/1GYclq4YkcTCe4Fuj_ajRnkeIJjaBFDLzQSMIMKXqdWg/edit" target="_blank" rel="noopener noreferrer">📊 Diccionario</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1K-Tn_E3QEhCplOP-IFHbKZc-vtKAxFEUBbZVK14EjJI/edit" target="_blank" rel="noopener noreferrer">📊 MASTER Cabinas</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1Z4sZolu-F44_WfMV7ZiYlelSU3SLU6JVO1MmqLeIZ0k/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊 MASTER Clientes</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1ojMHeoosUyel8BA2XTmDsmyDJf_vvJrrJNOyxn2u1jg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊 Excursiones</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1mlUYqtwTzLCR_HJr9TCD7VWrGI6nDhMtwi27cMJL_1s/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">📊 Ventas FIT</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1LJtzmq9OUUj9_WjQ3RVyKh-rdQNBBk155N5WV9apucQ/edit" target="_blank" rel="noopener noreferrer">📊 PRE-FORM PASSENGERS</a>
+        <a class="web-chip-green" href="https://docs.google.com/spreadsheets/d/1GYclq4YkcTCe4Fuj_ajRnkeIJjaBFDLzQSMIMKXqdWg/edit" target="_blank" rel="noopener noreferrer">📊 Diccionario</a>
     </div>
     ''',
     unsafe_allow_html=True,
