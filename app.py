@@ -12,7 +12,7 @@ import requests
 import streamlit as st
 import time
 import html
-from google.auth.transport.requests import Request
+from google.auth.transport.requests import Requestdef renderkeyvaluegrid(cs
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
@@ -395,18 +395,23 @@ def getsessiondurationseconds():
 # ============================================================
 
 def renderkeyvaluegrid(cssfix, fields):
-    st.markdown(f'<div class="{cssprefix}-card"><div class="{cssprefix}-grid">', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="{cssfix}-card"><div class="{cssfix}-grid">',
+        unsafe_allow_html=True,
+    )
+
     for label, value in fields:
         safevalue = value if value not in (None, "") else "-"
         st.markdown(
             f'''
             <div>
-                <div class="{cssprefix}-item-label">{label}</div>
-                <div class="{cssprefix}-item-value">{safevalue}</div>
+                <div class="{cssfix}-item-label">{label}</div>
+                <div class="{cssfix}-item-value">{safevalue}</div>
             </div>
             ''',
             unsafe_allow_html=True,
         )
+
     st.markdown("</div></div>", unsafe_allow_html=True)
 
 
